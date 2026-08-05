@@ -60,6 +60,8 @@ Tomadas de loop-engineering (maker/checker, STATE.md, presupuestos, gates):
 ### Métricas
 - Startup: regex `Done (Xs)!`; join: timestamps de login/spawn del bot; cps: Chunky (vanilla/Paper) o contador propio; TPS: spark o endpoint propio; RAM: RSS por OS (Linux `ps`, Windows `Get-Process`).
 
+> Para el prompt copy-paste de cada fase del roadmap (F0-F8) ve a **[PROMPTS.md](PROMPTS.md)**.
+
 ## 5. Plantillas de prompts
 
 ### 5.1 Prompt de coordinador (run-level, en español)

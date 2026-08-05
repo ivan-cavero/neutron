@@ -112,6 +112,7 @@ neutron/
 - **[ROADMAP.md](ROADMAP.md)** — fases F0-F8 con criterios de salida medibles, timeline, riesgos y mitigaciones.
 - **[BENCHMARKS.md](BENCHMARKS.md)** — cómo medimos: startup, join, chunks/s, TPS, RAM. Baselines verificados y targets.
 - **[ORCHESTRATION.md](ORCHESTRATION.md)** — Orca ADE, reglas para agentes, prompts de ejemplo y tareas grandes listas para desplegar.
+- **[PROMPTS.md](PROMPTS.md)** — el prompt copy-paste de CADA fase del roadmap (F0-F8), listo para pegar en Orca.
 
 ---
 
