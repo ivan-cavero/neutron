@@ -4,9 +4,9 @@
 
 ## 0. DÓNDE SE ESCRIBE TODO (regla de carpeta — no negociable)
 
-**La única carpeta de trabajo es el proyecto: C:\Users\ivang\neutron.** Es la carpeta desde la que se ejecuta todo y donde vive el código, los documentos y los runs.
+**La única carpeta de trabajo es la raíz de este repositorio: la carpeta en la que estamos trabajando en este momento (el directorio de trabajo actual, donde vive este AGENTS.md).** Ahí se ejecuta todo y ahí vive el código, los documentos y los runs. No se asume ninguna ruta absoluta fija: la ruta concreta es la del equipo en el momento de ejecutar.
 
-- Prohibido crear, escribir o editar archivos en rutas externas: worktrees, C:\Users\ivang\orca\workspaces\..., carpetas temporales, otras unidades.
+- Prohibido crear, escribir o editar archivos fuera del directorio de trabajo actual: worktrees, carpetas de herramientas externas (tipo ...\orca\workspaces\...), carpetas temporales, otras unidades.
 - Si encuentras trabajo en una ruta externa, se trae al proyecto y se borra lo externo.
 - Si algo no se puede hacer en el proyecto (por ejemplo, una herramienta exige otra ruta), se pregunta al humano antes de tocar nada.
 
