@@ -6,5 +6,6 @@
 - **Último run**: 000 — Fundación (terminado, 5 ago 2026).
 - **Siguiente run**: 001 — F0: harness de benchmarks + baseline B0.
 - **Herramienta**: opencode (un agente = LEAD + builder; critic como subagente con contexto limpio).
+- **Carpeta de trabajo (regla)**: TODO se escribe en C:\Users\ivang\neutron. Prohibido worktrees/carpetas externas (AGENTS.md §0).
 - **Presupuesto acumulado**: N/A (solo documentación hasta ahora).
 - **Historial**: runs/run-*.md · Método: AGENTS.md §2.

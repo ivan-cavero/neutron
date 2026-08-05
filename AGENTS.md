@@ -1,10 +1,18 @@
 # AGENTS.md — Neutron: cómo trabajamos
 
-> v0.3 · 5 ago 2026 · **opencode lee este archivo automáticamente** al trabajar en el repo. Trabajo 100% con opencode por ahora; si algún día se usa Orca ADE con varios agentes en paralelo, las mismas reglas aplican.
+> v0.4 · 5 ago 2026 · **opencode lee este archivo automáticamente** al trabajar en el repo. Trabajo 100% con opencode por ahora.
+
+## 0. DÓNDE SE ESCRIBE TODO (regla de carpeta — no negociable)
+
+**La única carpeta de trabajo es el proyecto: C:\Users\ivang\neutron.** Es la carpeta desde la que se ejecuta todo y donde vive el código, los documentos y los runs.
+
+- Prohibido crear, escribir o editar archivos en rutas externas: worktrees, C:\Users\ivang\orca\workspaces\..., carpetas temporales, otras unidades.
+- Si encuentras trabajo en una ruta externa, se trae al proyecto y se borra lo externo.
+- Si algo no se puede hacer en el proyecto (por ejemplo, una herramienta exige otra ruta), se pregunta al humano antes de tocar nada.
 
 ## 1. Modelo de trabajo
 
-Un agente opencode hace de **LEAD**: lee el estado, genera el run (con el prompt de §6), ejecuta las tareas y entrega evidencia. La calidad la asegura un **Gauntlet Loop**: cada pieza se construye contra un **bar** y la juzga un **critic** lanzado como subagente con contexto limpio.
+Un agente opencode hace de **LEAD**: lee el estado, genera el run (con el prompt de §7), ejecuta las tareas y entrega evidencia. Todo el trabajo ocurre en la carpeta del proyecto (regla §0): nada de worktrees ni carpetas externas. La calidad la asegura un **Gauntlet Loop**: cada pieza se construye contra un **bar** y la juzga un **critic** lanzado como subagente con contexto limpio.
 
 ```
 LEAD (opencode)
