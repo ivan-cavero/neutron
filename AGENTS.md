@@ -1,6 +1,6 @@
-# Neutron — Operaciones
+# AGENTS.md — Neutron: cómo trabajamos
 
-> Cómo trabajamos: **opencode + Gauntlet Loop**. v0.3 · 5 ago 2026. Trabajo 100% con opencode por ahora; si algún día se usa Orca ADE con varios agentes en paralelo, las mismas reglas aplican.
+> v0.3 · 5 ago 2026 · **opencode lee este archivo automáticamente** al trabajar en el repo. Trabajo 100% con opencode por ahora; si algún día se usa Orca ADE con varios agentes en paralelo, las mismas reglas aplican.
 
 ## 1. Modelo de trabajo
 
@@ -20,7 +20,7 @@ LEAD (opencode)
 - **Builder nunca se autoevalúa**: el critic (subagente, contexto limpio, sin la historia del builder) inspecciona el artefacto REAL — logs, JSON, tests ejecutados por él mismo — no el resumen.
 - **FAIL → el gap más grande**: el critic devuelve UNA cosa, la más importante; se corrige y se repite.
 - **Sin cap arbitrario de rondas**: se para cuando el bar gana, 2 rondas sin mejora, o presupuesto agotado.
-- Origen verificado: Matt Shumer, "How to Run a Gauntlet Loop" (jul 2026) — RESEARCH.md §7.
+- Origen verificado: Matt Shumer, "How to Run a Gauntlet Loop" (jul 2026) — ARCHITECTURE.md (Anexo A, §7).
 
 ## 3. Reglas no negociables
 
@@ -60,8 +60,8 @@ PASO 1 — Lee el estado actual (todo el contexto):
 - runs/README.md (formato de run) y runs/run-*.md (historial completo:
   qué se hizo en cada run, con qué resultado y evidencia)
 - ROADMAP.md (fases, bars, piezas de cada fase)
-- README.md y RESEARCH.md (contexto del proyecto)
-- OPERATIONS.md (normas, operating manual, formato de tarea)
+- README.md (contexto del proyecto)
+- AGENTS.md (este documento: normas, operating manual, formato de tarea)
 
 PASO 2 — Decide el siguiente run:
 - Si ya hay un run de la fase actual en curso → resúmelo y NO dupliques.

@@ -1,6 +1,6 @@
 # runs/ — Historial de runs
 
-Cada run de trabajo queda registrado como `runs/run-NNN.md`. Es la memoria de qué se ha hecho y qué falta: el prompt de generación (OPERATIONS.md §6) lee esta carpeta + STATE.md para decidir el siguiente run.
+Cada run de trabajo queda registrado como `runs/run-NNN.md`. Es la memoria de qué se ha hecho y qué falta: el prompt de generación (AGENTS.md §6) lee esta carpeta + STATE.md para decidir el siguiente run.
 
 ## Formato de cada run
 

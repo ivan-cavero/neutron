@@ -2,14 +2,25 @@
 
 Servidor de Minecraft Java Edition reimplementado desde cero en Rust. Multiplataforma (Windows/Linux/macOS x86-64/ARM64), paridad 1:1 con vanilla, plugins WASM/Lua seguros por construcción, y `main` siempre en la última versión de Minecraft.
 
-**Estado**: PRE-ALPHA · Documentación de diseño v0.2 · 5 ago 2026
+**Estado**: PRE-ALPHA · Fase F0 (ver STATE.md) · 5 ago 2026
+
+## Cómo orientarte (qué leer cuándo)
+
+| Necesitas | Documento |
+|---|---|
+| Saber qué es esto y sus objetivos | este README |
+| Saber en qué punto estamos y qué sigue | STATE.md + runs/ (historial) |
+| El plan completo (fases, bars, pipeline de versiones) | ROADMAP.md |
+| Cómo está diseñado el servidor + evidencia verificada | ARCHITECTURE.md (Anexo A) |
+| Cómo se miden los benchmarks | BENCHMARKS.md |
+| Cómo trabajamos / lanzar el siguiente run | AGENTS.md — opencode lo lee solo |
 
 ## Objetivos
 
 1. **Extreme performance** — rendimiento medido y publicado con metodología reproducible (BENCHMARKS.md), no marketing.
 2. **Security by construction** — plugins en sandbox WASM: un plugin nunca tumba el servidor.
 3. **1:1 vanilla parity** — misma seed → mismo mundo; redstone, iluminación y spawns idénticos; verificado por checksums en CI.
-4. **Version cadence** — `main` = última versión de Mojang en ≤ 7 días (pipeline de extracción + codegen).
+4. **Version cadence** — `main` = última versión de Mojang en ≤ 7 días (pipeline D0-D4).
 
 ## Targets (a validar con BENCHMARKS.md)
 
@@ -30,19 +41,10 @@ neutron/
 ├─ crates/          # neutron-core · data · protocol · worldgen · world · sim · server · plugin · scripting · cli
 ├─ tools/           # mc-extract (jar → JSON) · codegen (JSON → Rust) · patch-bukkit (fase tardía)
 ├─ bench/           # harness de benchmarks + bots + results/
+├─ runs/            # historial de runs (run-NNN.md) — cómo se genera: AGENTS.md §6
 ├─ docs/            # ADRs y documentación técnica
-└─ *.md             # documentación del proyecto (abajo)
+└─ *.md             # README · AGENTS · ARCHITECTURE · ROADMAP · BENCHMARKS · STATE
 ```
-
-## Documentos
-
-| Documento | Propósito |
-|---|---|
-| [RESEARCH.md](RESEARCH.md) | Evidencia verificada con fuentes (base de hechos del proyecto) |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Diseño técnico: capas, paridad, pipeline de versiones, plugins |
-| [ROADMAP.md](ROADMAP.md) | Fases F0-F8 con bars y rondas (Gauntlet Loop) |
-| [BENCHMARKS.md](BENCHMARKS.md) | Metodología de medición: qué medimos y cómo |
-| [OPERATIONS.md](OPERATIONS.md) | Cómo trabajamos: Orca ADE + Gauntlet Loop + prompts por fase |
 
 ## Quick start (dev)
 

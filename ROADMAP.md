@@ -1,6 +1,6 @@
 # Neutron — Roadmap
 
-> El progreso se mide en **BARS y RONDAS**, no en calendario. Un bar es una referencia real e innegociable (checksum, benchmark, server real) que un critic ciego inspecciona (Gauntlet Loop, ver OPERATIONS.md §2). El calendario con agentes es orientativo y se recalibra tras cada fase.
+> El progreso se mide en **BARS y RONDAS**, no en calendario. Un bar es una referencia real e innegociable (checksum, benchmark, server real) que un critic ciego inspecciona (Gauntlet Loop, ver AGENTS.md §2). El calendario con agentes es orientativo y se recalibra tras cada fase.
 
 ## 0. Cómo leer este roadmap
 
@@ -8,7 +8,7 @@
 - **Rondas**: ciclos build → critic → fix. Sin cap arbitrario: se itera hasta que el bar gana, 2 rondas sin mejora, o presupuesto agotado.
 - **Calendario**: estimación asumiendo agentes dedicados (opencode). Es secundario — el bar manda.
 
-## 1. Cadencia de Mojang (verificada — RESEARCH.md §1)
+## 1. Cadencia de Mojang (verificada — ARCHITECTURE.md Anexo A §1)
 
 | Versión | Tipo | Fecha |
 |---|---|---|

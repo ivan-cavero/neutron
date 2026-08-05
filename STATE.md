@@ -7,4 +7,4 @@
 - **Siguiente run**: 001 — F0: harness de benchmarks + baseline B0.
 - **Herramienta**: opencode (un agente = LEAD + builder; critic como subagente con contexto limpio).
 - **Presupuesto acumulado**: N/A (solo documentación hasta ahora).
-- **Historial**: runs/run-*.md · Método: OPERATIONS.md §2.
+- **Historial**: runs/run-*.md · Método: AGENTS.md §2.
