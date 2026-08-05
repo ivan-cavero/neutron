@@ -1,7 +1,0 @@
-{
-  "task-title": "T-B0: Harness de benchmarks",
-  "bar": "un agente distinto al builder ejecuta bench/run.ps1 desde cero en Windows y Linux y reproduce el baseline; 10 bots de join simultáneo sin kicks (p95 < 5 s); cps ±30% vs baselines publicados",
-  "depends_on": [],
-  "budget": { "max_tokens": 200000, "timeout_min": 120 },
-  "spec": "Objetivo: implementar bench/ completo (run.ps1 y run.sh) que levanta vanilla 26.2, Paper última y Pumpkin nightly, conecta bots y mide startup/join/cps/TPS/RAM según BENCHMARKS.md, y genera bench/results/<ID>-<fecha>.json + tabla markdown autogenerada.\n\nAC:\n- B0-1: bench/run.ps1 y bench/run.sh corren de punta a punta en Windows y Linux.\n- B0-2: startup medido por regex 'Done (Xs)!' con 5 runs; mediana reportada.\n- B0-3: 10 bots join simultáneo en vanilla y Paper sin kicks (online-mode=false, throttle de comandos Paper ~15/s); p95 < 5 s.\n- B0-4: cps con Chunky (vanilla/Paper) y método propio (Pumpkin); consistente con baselines publicados ±30%.\n- B0-5: salida JSON validada + tabla markdown autogenerada en bench/results/.\n\nEvidencia requerida: logs crudos en bench/logs/, JSON, tabla.\nDoD: el critic ejecuta el harness desde cero y reproduce B0-3/B0-4."
-}

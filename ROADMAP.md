@@ -6,7 +6,7 @@
 
 - **Bar**: lo que el critic compara contra nuestro artefacto (el "Call of Duty" de cada fase). No se discute: se cumple o no.
 - **Rondas**: ciclos build → critic → fix. Sin cap arbitrario: se itera hasta que el bar gana, 2 rondas sin mejora, o presupuesto agotado.
-- **Calendario**: estimación asumiendo agentes dedicados en paralelo (Orca ADE). Es secundario — el bar manda.
+- **Calendario**: estimación asumiendo agentes dedicados (opencode). Es secundario — el bar manda.
 
 ## 1. Cadencia de Mojang (verificada — RESEARCH.md §1)
 
