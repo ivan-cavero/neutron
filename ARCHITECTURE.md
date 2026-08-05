@@ -91,7 +91,8 @@ noise (density functions) → biome source → surface rules → carvers
 
 ## 7. Simulación (capa `neutron-sim`) — comportamiento vanilla
 
-- **ECS con bevy_ecs** (verificado: Valence, FerrumC y Azalea lo usan en producción; es el estándar de facto en Rust gamedev).
+- **ECS con `bevy_ecs`** — IMPORTANTE: usamos SOLO el crate `bevy_ecs` (la librería de Entity Component System: almacén de entidades + scheduler de systems), **NO el engine Bevy completo** (sin renderer, sin ventanas, sin assets — un servidor no pinta nada). Verificado: Valence, FerrumC y Azalea lo usan en producción; es el estándar de facto.
+- **Qué NO es ECS**: los chunks (arrays densos con palettes), la redstone y los fluidos son simulación por tiles con estructuras de datos propias (§5, redstone en §7). El ECS cubre SOLO la capa de entidades: componentes (posición, salud, AI state, inventario) + systems (movimiento, AI, combate) ejecutados en paralelo por el scheduler por regiones. La capa está aislada en `neutron-sim`: si los benchmarks de F4 lo desaconsejan, se puede sustituir por `hecs` o almacén custom sin tocar el resto.
 - **Tick a 20 TPS** con scheduler por regiones (estilo Folia): cada región (p.ej. 8×8 chunks) tiene su propio loop de tick con **single-writer**; sync global solo donde hace falta (redstone cross-región, física de jugadores). Esto es lo que permite escalar a 1000+ jugadores sin un hilo único.
 - **Redstone** (el mayor reto, verificado): subsistema dedicado con
   - orden de updates exacto de vanilla: **PP: W, E, N, S, D, U · NC: W, E, D, U, N, S** (minecraft.wiki/Block_update);
@@ -160,7 +161,7 @@ Flujo D0-D4, automatizado y con SLA ≤ 7 días tras release de Mojang:
 | Crate | Uso | Estado verificado |
 |---|---|---|
 | tokio | networking, async I/O | estándar |
-| bevy_ecs | simulación de entidades | usado por Valence/FerrumC/Azalea |
+| bevy_ecs | simulación de entidades (solo el crate ECS, sin el engine) | usado por Valence/FerrumC/Azalea |
 | wasmtime | runtime de plugins WASM | referencia de la Bytecode Alliance; elegido por Pumpkin |
 | mlua 0.12 | scripting Lua (5.1-5.5/LuaJIT/Luau) | activo (jul 2026) |
 | redb | KV embeddable (estado global) | activo; sled descartado |
