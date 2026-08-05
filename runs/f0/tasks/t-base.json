@@ -1,0 +1,7 @@
+{
+  "task-title": "T-BASE: Baseline B0 publicado",
+  "bar": "tabla del baseline completa (startup, RAM idle, CPU, cps, TPS, join p50/p95) con JSON crudo, hardware/SO documentado y desviaciones de metodología declaradas; el critic re-ejecuta el escenario de join y compara ±10%",
+  "depends_on": ["T-B0", "T-CI"],
+  "budget": { "max_tokens": 150000, "timeout_min": 180 },
+  "spec": "Objetivo: ejecutar T-B0 y publicar el primer baseline B0 en bench/results/B0-<fecha>.md con vanilla 26.2 (Java 25), Paper última y Pumpkin nightly en NUESTRA máquina de referencia; JSON crudo incluido.\n\nAC:\n- BASE-1: tabla del baseline completa (startup, RAM idle, CPU, cps, TPS, join p50/p95).\n- BASE-2: hardware/SO/Java/Rust documentado en el propio markdown.\n- BASE-3: JSON crudo en bench/results/ y logs en bench/logs/.\n- BASE-4: desviaciones de metodología declaradas explícitamente (sin ocultar nada).\n\nGATE HUMANO: el baseline se publica solo tras aprobación explícita del dueño (gate-create).\nEvidencia requerida: tabla, JSON, logs.\nDoD: el critic re-ejecuta el escenario de join desde cero y compara ±10% con lo publicado."
+}

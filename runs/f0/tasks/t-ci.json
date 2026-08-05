@@ -1,0 +1,7 @@
+{
+  "task-title": "T-CI: Workspace + CI + STATE.md",
+  "bar": "cargo check --workspace y cargo test limpios en Windows y Linux; CI verde en el primer push (fmt, clippy -D warnings, test, cargo deny)",
+  "depends_on": [],
+  "budget": { "max_tokens": 100000, "timeout_min": 90 },
+  "spec": "Objetivo: crear el cargo workspace con la estructura del README (crates neutron-core, neutron-data, neutron-protocol, neutron-worldgen, neutron-world, neutron-sim, neutron-server, neutron-plugin, neutron-scripting, neutron-cli + tools/mc-extract y tools/codegen como esqueleto), CI inicial (fmt, clippy -D warnings, test, cargo deny), plantilla STATE.md y .gitignore.\n\nAC:\n- CI-1: cargo check --workspace y cargo test limpios en Windows y Linux.\n- CI-2: CI verde en el primer push (fmt, clippy, test, deny).\n- CI-3: STATE.md plantilla con bar/budget/estado (formato loop-engineering).\n- CI-4: cada crate compila con una lib.rs mínima documentada, sin código muerto.\n\nEvidencia requerida: salida de cargo check/test y de CI.\nDoD: el critic clona limpio, corre cargo check + cargo test + clippy y pega la salida."
+}
