@@ -116,3 +116,15 @@ temp/
 *.bak
 *.old
 *.orig
+# Bench build artifacts
+bench/libraries/
+bench/versions/
+bench/logs/
+bench/bots/**/node_modules/
+bench/bots/**/target/
+bench/bots/**/build/
+bench/servers/**/*.jar
+bench/servers/**/*.exe
+bench/servers/**/pumpkin
+*.jar
+*.exe

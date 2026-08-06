@@ -25,6 +25,7 @@
 | 4 | — | — | FAIL (4 FAIL + 5 WARN) | Docs critic rejects |
 | 5 | FAIL (2 smoother bugs) | — | FAIL | Smoother found: no `--version` to bot, `* 1000` converts ms→ms×1000 |
 | 6 | PASS ✅ (smoother fixes verified) | — | PASS ✅ (5 doc fixes) | U1/U2/U3 all converge — ready for final smoother |
+| 7 | PASS ✅ (critic final) | PASS ✅ (critic final) | PASS ✅ (critic final) | **Critic ciego: 0 fallos encontrados — 32/32 criterios PASS** |
 
 ### Round 1 — U1 FAIL details
 - **Critical:** `--latency-file` arg never recognized by bot (should be `--output`); bot output JSON format doesn't match harness parser; latency values in seconds but expected in ms
@@ -55,11 +56,26 @@
 3. README claims `level-name = <run-id>` but code writes full path (minor)
 4. README shows `per_run.txt` as universal but it's bash-only (minor)
 
+### Round 7 — Critic final (6 ago 2026)
+- **Resultado: PASS en las 3 unidades** (0 fallos)
+- U1: 10/10 criterios ✅ — 4 server types, warmup, runs, JSON, markdown, startup regex, --version, ms sin multiplicación, memory watcher, bash parsing
+- U2: 10/10 criterios ✅ — flags, stagger, login/spawn, percentiles, JSON output, physicsEnabled, timeout, ms, error handling, help
+- U3: 12/12 criterios ✅ — quick start, prerequisites, arguments, output format, server types, bots, troubleshooting, extending, CI, baselines, correcta nomenclatura, ejemplos sintácticos
+
+## Estado — Fase F0
+
+**U1 ✅ U2 ✅ U3 ✅** — Infraestructura completa. Pendiente U4 (baseline B0).
+
+**Bloqueo**: `bench/servers/` vacío — se necesitan:
+1. Vanilla 26.2 server.jar (minecraft.net)
+2. Paper build 26.x (downloads.papermc.io)
+3. Pumpkin nightly (github.com/Pumpkin-MC/Pumpkin/releases)
+
 ## Open questions for the human
 
-- **Rust installed?** Neutron requires `cargo build --release -p neutron-cli` (5-15 min first build)
-- **Minecraft servers available?** For the actual B0 bar, we need vanilla 26.2 / Paper / Pumpkin binaries
-- **Node.js + Java 25?** Required to run the harness
+- **Servidores disponibles?** Para ejecutar baseline B0 se necesitan server binaries en `bench/servers/vanilla/server.jar`, `bench/servers/paper/server.jar`, `bench/servers/pumpkin/pumpkin`
+- **Node.js + Java 25?** Verificar que están instalados
+- **Neutron no compila aún**: No existe Cargo.toml en raíz — el servidor Neutron empieza en F1
 
 ---
-*Last updated: 6 ago 2026 — Round 6 in progress (fixing smoother bugs)*
+*Last updated: 6 ago 2026 — Round 7 complete. U4 pending (awaiting server binaries)*
