@@ -1,0 +1,118 @@
+# Rust — build artifacts
+target/
+**/*.rs.bk
+
+# Cargo
+.cargo/config.toml
+.cargo/credentials
+
+# Minecraft servers (descargados por el harness)
+bench/servers/vanilla/server.jar
+bench/servers/vanilla/eula.txt
+bench/servers/vanilla/*.log
+bench/servers/vanilla/usercache.json
+bench/servers/vanilla/ops.json
+bench/servers/vanilla/banned-players.json
+bench/servers/vanilla/banned-ips.json
+bench/servers/vanilla/whitelist.json
+bench/servers/paper/*.jar
+bench/servers/paper/eula.txt
+bench/servers/paper/*.log
+bench/servers/pumpkin/*.exe
+bench/servers/pumpkin/pumpkin
+bench/servers/pumpkin/eula.txt
+bench/servers/pumpkin/*.log
+bench/servers/neutron/target/
+
+# Minecraft worlds (generados por tests / benchmarks)
+world/
+world_nether/
+world_the_end/
+bench/servers/*/world/
+bench/servers/*/world_nether/
+bench/servers/*/world_the_end/
+
+# Bots — Node.js
+bench/bots/**/node_modules/
+bench/bots/**/package-lock.json
+bench/bots/**/yarn.lock
+bench/bots/**/pnpm-lock.yaml
+bench/bots/**/*.log
+
+# Bench logs and large results
+bench/logs/
+bench/results/*.json
+# Keep the baseline committed — uncomment to track:
+# !bench/results/baseline-B0.json
+
+# Rust project files
+Cargo.lock
+# Keep Cargo.lock for applications (not libraries) — uncomment to ignore:
+# Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.iml
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.localized
+
+# Logs
+*.log
+**/*.log
+bench/**/*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python (if used for scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Fuzzing
+fuzz/artifacts/
+fuzz/corpus/
+**/fuzz/target/
+
+# Profiling
+*.prof
+*.heaptrack
+*.dhat
+flamegraph.svg
+perf.data
+
+# Packaging
+*.tar.gz
+*.zip
+*.msi
+*.dmg
+*.deb
+*.rpm
+target/package/
+
+# Temporary / misc
+tmp/
+temp/
+*.bak
+*.old
+*.orig

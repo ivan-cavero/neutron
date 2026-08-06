@@ -1,0 +1,18 @@
+# Bot dependencies
+bots/join-bench/node_modules/
+bots/join-bench/package-lock.json
+
+# Benchmark output
+results/*.json
+logs/*
+
+# Server binaries (download or build per-run)
+servers/**/*.jar
+servers/**/*.exe
+servers/**/*.tar.gz
+servers/**/*.zip
+servers/**/*.rb
+
+# Server config (auto-generated per-run)
+server.properties
+server.toml

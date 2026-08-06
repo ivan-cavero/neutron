@@ -13,7 +13,7 @@ Servidor de Minecraft Java Edition reimplementado desde cero en Rust. Multiplata
 | El plan completo (fases, bars, pipeline de versiones) | ROADMAP.md |
 | Cómo está diseñado el servidor + evidencia verificada | ARCHITECTURE.md (Anexo A) |
 | Cómo se miden los benchmarks | BENCHMARKS.md |
-| Cómo trabajamos / lanzar el siguiente run | AGENTS.md — opencode lo lee solo |
+| Cómo trabajamos / lanzar el siguiente run | AGENTS.md — pi lo lee solo |
 
 ## Objetivos
 

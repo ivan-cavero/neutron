@@ -224,7 +224,7 @@ Flujo D0-D4, automatizado y con SLA ≤ 7 días tras release de Mojang:
 
 ### 7. Orca ADE + Gauntlet Loop
 
-22. **Orca**: Stably AI, MIT, onorca.dev; worktrees por tarea + orquestación CLI; soporta OpenCode, Claude Code, Codex. — onorca.dev/docs, github.com/stablyai/orca — ALTA
+22. **Orca**: Stably AI, MIT, onorca.dev; worktrees por tarea + orquestación CLI; soporta pi, Claude Code, Codex. — onorca.dev/docs, github.com/stablyai/orca — ALTA
 23. **Gauntlet Loop**: Matt Shumer, "How to Run a Gauntlet Loop" (somethingbig.ai/gauntlet-loop, jul 2026), repo mshumer/Claude-of-Duty. Núcleo: split → build → blind critic → repeat contra un bar real; sin cap arbitrario de rondas. — somethingbig.ai, Decrypt, ThePromptIndex, We0 — ALTA
 24. Lección del propio Shumer: el bar puede ser **inalcanzable** (su critic nunca ganó a CoD real: 3.59 → 5+/10). El bar tira del trabajo hacia arriba; no se negocia. — somethingbig.ai — ALTA
 

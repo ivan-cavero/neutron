@@ -1,36 +1,74 @@
-# runs/ — Historial de runs
+# Runs — Historial de ejecuciones
 
-Cada run de trabajo queda registrado como `runs/run-NNN.md`. Es la memoria de qué se ha hecho y qué falta: el prompt de generación (AGENTS.md §6) lee esta carpeta + STATE.md para decidir el siguiente run.
+> Cada run se registra aquí con su objetivo, tareas, evidencia y resultado. Formato: `run-NNN.md`.
 
-## Formato de cada run
+## Formato de run
+
+Cada `run-NNN.md` sigue esta estructura:
 
 ```markdown
-# RUN NNN — <nombre corto>
+# run-NNN — <título>
 
 ## Objetivo
-<una frase: qué debe ser verdad al terminar>
+Una frase con lo que debe ser verdad al terminar.
 
 ## Bar
-- <referencia real e innegociable: checksum, benchmark, server real, test>
+Criterios medibles (del ROADMAP.md).
 
 ## Tareas
 ### T1 — <título>
-- Qué: ...
-- AC: ...
-- Evidencia: ...
-- DoD: ...
+- Qué: medible
+- AC: criterios concretos
+- Evidencia: logs, hashes, salidas
+- DoD: qué ejecuta el critic
+
 ### T2 — ...
+...
 
-## Presupuesto
-<orientativo: tokens / tiempo>
+## Evidencia
+(Se pegan aquí los logs crudos con timestamps, hashes, salidas de bots, etc.)
 
-## Estado
-- [ ] pendiente / [ ] en curso / [x] terminado — <fecha>
-- Resultado: <evidencia, números, enlaces>
+## Resultado
+PASS / FAIL (parcial) / BLOCKED
+
+## Rounds
+- R1: T1 PASS, T2 FAIL (motivo)
+- R2: T2 corregido → PASS
 ```
 
-## Reglas
+## Historial
 
-- Numeración correlativa: run-000, run-001, ...
-- Nunca editar un run pasado salvo para actualizar su **Estado**.
-- Un run solo se marca "terminado" cuando el critic dio PASS o el fallo quedó documentado con evidencia.
+| Run | Fase | Resultado | Fecha |
+|---|---|---|---|
+| run-000 | Fundación | TERMINADO | 5 ago 2026 |
+| run-001 | F0 | | |
+| run-002 | F0 | | |
+| ... | ... | ... | ... |
+
+## Cómo generar un run
+
+Copia el prompt de la fase correspondiente desde **ROADMAP.md** (sección 2, "Fases") y pégalo en pi. Pi:
+
+1. Lee STATE.md → decide qué run toca
+2. Crea `runs/run-NNN.md` con el formato arriba
+3. Lanza el Gauntlet Loop (builder → critic → fix → repetir)
+4. Actualiza STATE.md y el historial cuando termine
+
+### Orquestación (qué usa pi detrás de cámaras)
+
+Pi usa **Orca CLI** y **Orca Orchestration** para:
+
+- **Worktrees**: cada builder corre en su propio worktree aislado
+  - `orca worktree create --name <task> --no-parent --agent codex --setup run`
+- **Terminals**: cada worker tiene su terminal gestionada por Orca
+  - `orca terminal create --worktree id:<repoId>::<path> --command "codex"`
+  - `orca terminal send --text "<prompt>" --enter`
+  - `orca terminal read --terminal <handle>`
+- **Orquestación**: DAG de tasks, worker_done, decision gates
+  - `orca orchestration run-create --objective "<objective>"`
+  - `orca orchestration task-create --spec "<spec>" --deps '["task_a"]'`
+  - `orca orchestration worker-start --task <task_id> --worktree new-child`
+  - `orca orchestration check --wait --types worker_done,escalation,question`
+  - `orca orchestration gate-create --task <task_id> --question "¿Aprobado?"`
+- **Seguimiento**: actualizar workbench.md y comentarios del worktree
+  - `orca worktree set --worktree active --comment "F0: <estado>"`
