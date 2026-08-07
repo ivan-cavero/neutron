@@ -1,11 +1,11 @@
 //! Real azalea bot client for benchmark scenarios.
 //!
-//! Each bot runs in its own OS thread with its own tokio runtime,
-//! following the pattern from the working azalea-join-bench.
+//! Uses std::thread::spawn (required by azalea's non-Send types) but with
+//! controlled concurrency to handle large bot counts efficiently.
 
 use azalea::prelude::*;
 use bevy_ecs::prelude::Component;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -40,15 +40,10 @@ pub struct BotState {
     pub index: usize,
     pub t0_millis: u64,
     pub collector: Arc<BenchCollector>,
-    /// Whether to disconnect immediately after spawn (for join benchmarks).
     pub disconnect_on_spawn: bool,
-    /// Whether to walk and count chunks (for CPS benchmarks).
     pub walk_and_count_chunks: bool,
-    /// Walk duration in ticks (for CPS benchmarks).
     pub walk_ticks: u64,
-    /// Whether to spread to a far position (for spread benchmarks).
     pub spread_position: Option<(f64, f64, f64)>,
-    /// Whether to move randomly in a small area (for movement benchmarks).
     pub movement_mode: bool,
 }
 
@@ -90,75 +85,61 @@ async fn bench_handler(bot: Client, event: Event, mut state: BotState) -> eyre::
                 return Ok(());
             }
 
-            // Spread mode: teleport to far position
             if let Some((x, y, z)) = state.spread_position {
                 println!("  [bot-{}] spreading to ({:.0}, {:.0}, {:.0})", state.index, x, y, z);
                 let flags = azalea_protocol::common::movements::MoveFlags::default();
                 let pos = azalea_core::position::Vec3 { x, y, z };
                 let packet = azalea_protocol::packets::game::s_move_player_pos::ServerboundMovePlayerPos { pos, flags };
                 bot.write_packet(packet);
-                // Wait a bit then disconnect
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 bot.disconnect();
                 return Ok(());
             }
 
-            // Movement mode: move in a small area
             if state.movement_mode {
                 println!("  [bot-{}] starting movement pattern", state.index);
                 let mut x = 0.0;
                 let mut z = 0.0;
                 let mut direction = 0.0_f64;
-                let speed = 0.2; // blocks per tick
+                let speed = 0.2;
 
-                for tick in 0..(state.walk_ticks) {
-                    // Change direction every 40 ticks (2 seconds)
+                for tick in 0..state.walk_ticks {
                     if tick % 40 == 0 {
-                        direction += std::f64::consts::FRAC_PI_4; // 45 degrees
+                        direction += std::f64::consts::FRAC_PI_4;
                     }
-
                     x += direction.cos() * speed;
                     z += direction.sin() * speed;
-
-                    // Keep within 50-block radius
                     let dist = (x * x + z * z).sqrt();
                     if dist > 50.0 {
                         x *= 50.0 / dist;
                         z *= 50.0 / dist;
                         direction += std::f64::consts::PI;
                     }
-
                     let flags = azalea_protocol::common::movements::MoveFlags::default();
                     let pos = azalea_core::position::Vec3 { x, y: 65.0, z };
                     let packet = azalea_protocol::packets::game::s_move_player_pos::ServerboundMovePlayerPos { pos, flags };
                     bot.write_packet(packet);
-
-                    // Jump every 60 ticks (3 seconds)
                     if tick % 60 >= 55 {
                         let jump_pos = azalea_core::position::Vec3 { x, y: 65.5, z };
                         let jump_packet = azalea_protocol::packets::game::s_move_player_pos::ServerboundMovePlayerPos { pos: jump_pos, flags };
                         bot.write_packet(jump_packet);
                     }
-
                     tokio::time::sleep(Duration::from_millis(50)).await;
                 }
                 bot.disconnect();
                 return Ok(());
             }
 
-            // CPS mode: walk in straight line counting chunks
             if state.walk_and_count_chunks {
                 println!("  [bot-{}] walking to generate chunks...", state.index);
                 let mut x = 0.0;
-                let speed = 0.2; // blocks per tick (4 blocks/second)
-
+                let speed = 0.2;
                 for tick in 0..state.walk_ticks {
                     x += speed;
                     let flags = azalea_protocol::common::movements::MoveFlags::default();
                     let pos = azalea_core::position::Vec3 { x, y: 65.0, z: 0.0 };
                     let packet = azalea_protocol::packets::game::s_move_player_pos::ServerboundMovePlayerPos { pos, flags };
                     bot.write_packet(packet);
-
                     if tick % 200 == 0 {
                         let chunks = state.collector.chunks_received.load(Ordering::SeqCst);
                         println!(
@@ -181,8 +162,6 @@ async fn bench_handler(bot: Client, event: Event, mut state: BotState) -> eyre::
 }
 
 /// Run a single bot in its own thread with its own tokio runtime.
-///
-/// This follows the pattern from the working azalea-join-bench.
 fn run_bot_thread(
     host: &str,
     port: u16,
@@ -194,7 +173,6 @@ fn run_bot_thread(
     rt.block_on(async move {
         let account = Account::offline(&format!("bench-{}", state.index));
         let addr = format!("{}:{}", host, port);
-
         let _ = tokio::time::timeout(timeout, async {
             ClientBuilder::new_without_plugins()
                 .add_plugins(azalea::DefaultPlugins)
@@ -212,61 +190,98 @@ fn run_bot_thread(
     });
 }
 
-/// Launch N bots for a join-storm scenario.
+/// Launch N bots with controlled concurrency.
 ///
-/// Each bot connects simultaneously, measures join latency, and disconnects.
+/// For large bot counts (>100), bots are launched in batches to avoid
+/// overwhelming the system with threads.
+pub fn launch_bots_batched(
+    host: &str,
+    port: u16,
+    count: usize,
+    batch_size: usize,
+    timeout: Duration,
+    disconnect_on_spawn: bool,
+    walk_and_count_chunks: bool,
+    walk_ticks: u64,
+    spread_positions: bool,
+    movement_mode: bool,
+) -> Arc<BenchCollector> {
+    let collector = Arc::new(BenchCollector::new());
+    let t0_millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let batches: Vec<Vec<usize>> = (0..count)
+        .collect::<Vec<_>>()
+        .chunks(batch_size)
+        .map(|chunk| chunk.to_vec())
+        .collect();
+
+    for (batch_idx, batch) in batches.iter().enumerate() {
+        let mut handles = Vec::with_capacity(batch.len());
+
+        for &i in batch {
+            let state = BotState {
+                index: i,
+                t0_millis,
+                collector: Arc::clone(&collector),
+                disconnect_on_spawn,
+                walk_and_count_chunks,
+                walk_ticks,
+                spread_position: if spread_positions {
+                    Some(((i as f64) * 1001.0, 65.0, 0.0))
+                } else {
+                    None
+                },
+                movement_mode,
+            };
+
+            let host = host.to_string();
+            let handle = std::thread::spawn(move || {
+                run_bot_thread(&host, port, state, timeout);
+            });
+            handles.push(handle);
+
+            // Small stagger within batch
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        // Wait for batch to complete
+        let deadline = Instant::now() + timeout + Duration::from_secs(5);
+        for handle in handles {
+            let remaining = deadline.duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            let _ = handle.join();
+        }
+
+        // Brief pause between batches
+        if batch_idx + 1 < batches.len() {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    collector
+}
+
+/// Launch N bots for a join-storm scenario.
 pub fn launch_join_storm(
     host: &str,
     port: u16,
     count: usize,
     stagger_ms: u64,
 ) -> Arc<BenchCollector> {
-    let collector = Arc::new(BenchCollector::new());
-    let mut handles = Vec::with_capacity(count);
-    let t0_millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-
-    for i in 0..count {
-        let state = BotState {
-            index: i,
-            t0_millis,
-            collector: Arc::clone(&collector),
-            disconnect_on_spawn: true,
-            walk_and_count_chunks: false,
-            walk_ticks: 0,
-            spread_position: None,
-            movement_mode: false,
-        };
-
-        let host = host.to_string();
-        let handle = std::thread::spawn(move || {
-            run_bot_thread(&host, port, state, Duration::from_secs(10));
-        });
-        handles.push(handle);
-
-        if i + 1 < count {
-            std::thread::sleep(Duration::from_millis(stagger_ms));
-        }
-    }
-
-    // Wait for all bots with a global deadline
-    let deadline = Instant::now() + Duration::from_secs(30);
-    for handle in handles {
-        let remaining = deadline.duration_since(Instant::now());
-        if remaining.is_zero() {
-            break;
-        }
-        let _ = handle.join();
-    }
-
-    collector
+    let batch_size = if count > 200 { 50 } else if count > 50 { 25 } else { count };
+    launch_bots_batched(
+        host, port, count, batch_size,
+        Duration::from_secs(10),
+        true, false, 0, false, false,
+    )
 }
 
 /// Launch N bots for a distributed-join scenario.
-///
-/// Each bot connects one per second.
 pub fn launch_distributed(
     host: &str,
     port: u16,
@@ -274,12 +289,12 @@ pub fn launch_distributed(
     interval_secs: u64,
 ) -> Arc<BenchCollector> {
     let collector = Arc::new(BenchCollector::new());
-    let mut handles = Vec::with_capacity(count);
     let t0_millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64;
 
+    let mut handles = Vec::with_capacity(count);
     for i in 0..count {
         let state = BotState {
             index: i,
@@ -291,21 +306,17 @@ pub fn launch_distributed(
             spread_position: None,
             movement_mode: false,
         };
-
         let host = host.to_string();
         let handle = std::thread::spawn(move || {
             run_bot_thread(&host, port, state, Duration::from_secs(10));
         });
         handles.push(handle);
-
-        // Wait 1 second before next bot
         if i + 1 < count {
             std::thread::sleep(Duration::from_secs(interval_secs));
         }
     }
 
-    // Wait for all bots
-    let deadline = Instant::now() + Duration::from_secs(count as u64 * 2 + 10);
+    let deadline = Instant::now() + Duration::from_secs(count as u64 * 2 + 30);
     for handle in handles {
         let remaining = deadline.duration_since(Instant::now());
         if remaining.is_zero() {
@@ -317,160 +328,46 @@ pub fn launch_distributed(
     collector
 }
 
-/// Launch N bots for a CPS (chunk generation) scenario.
-///
-/// Each bot walks in a straight line, counting chunks received.
+/// Launch N bots for a CPS scenario.
 pub fn launch_cps(
     host: &str,
     port: u16,
     count: usize,
     duration_secs: u64,
 ) -> Arc<BenchCollector> {
-    let collector = Arc::new(BenchCollector::new());
-    let mut handles = Vec::with_capacity(count);
-    let t0_millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-    let walk_ticks = duration_secs * 20; // 20 TPS
-
-    for i in 0..count {
-        let state = BotState {
-            index: i,
-            t0_millis,
-            collector: Arc::clone(&collector),
-            disconnect_on_spawn: false,
-            walk_and_count_chunks: true,
-            walk_ticks,
-            spread_position: None,
-            movement_mode: false,
-        };
-
-        let host = host.to_string();
-        let handle = std::thread::spawn(move || {
-            run_bot_thread(&host, port, state, Duration::from_secs(duration_secs + 15));
-        });
-        handles.push(handle);
-
-        // Small stagger to avoid thundering herd
-        if i + 1 < count {
-            std::thread::sleep(Duration::from_millis(50));
-        }
-    }
-
-    // Wait for all bots
-    let deadline = Instant::now() + Duration::from_secs(duration_secs + 30);
-    for handle in handles {
-        let remaining = deadline.duration_since(Instant::now());
-        if remaining.is_zero() {
-            break;
-        }
-        let _ = handle.join();
-    }
-
-    collector
+    let batch_size = if count > 200 { 50 } else if count > 50 { 25 } else { count };
+    launch_bots_batched(
+        host, port, count, batch_size,
+        Duration::from_secs(duration_secs + 15),
+        false, true, duration_secs * 20, false, false,
+    )
 }
 
 /// Launch N bots for a movement scenario.
-///
-/// Each bot moves randomly in a 50-block radius, alternating walk/jump.
 pub fn launch_movement(
     host: &str,
     port: u16,
     count: usize,
     duration_secs: u64,
 ) -> Arc<BenchCollector> {
-    let collector = Arc::new(BenchCollector::new());
-    let mut handles = Vec::with_capacity(count);
-    let t0_millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-    let walk_ticks = duration_secs * 20;
-
-    for i in 0..count {
-        let state = BotState {
-            index: i,
-            t0_millis,
-            collector: Arc::clone(&collector),
-            disconnect_on_spawn: false,
-            walk_and_count_chunks: false,
-            walk_ticks,
-            spread_position: None,
-            movement_mode: true,
-        };
-
-        let host = host.to_string();
-        let handle = std::thread::spawn(move || {
-            run_bot_thread(&host, port, state, Duration::from_secs(duration_secs + 15));
-        });
-        handles.push(handle);
-
-        if i + 1 < count {
-            std::thread::sleep(Duration::from_millis(50));
-        }
-    }
-
-    let deadline = Instant::now() + Duration::from_secs(duration_secs + 30);
-    for handle in handles {
-        let remaining = deadline.duration_since(Instant::now());
-        if remaining.is_zero() {
-            break;
-        }
-        let _ = handle.join();
-    }
-
-    collector
+    let batch_size = if count > 200 { 50 } else if count > 50 { 25 } else { count };
+    launch_bots_batched(
+        host, port, count, batch_size,
+        Duration::from_secs(duration_secs + 15),
+        false, false, duration_secs * 20, false, true,
+    )
 }
 
 /// Launch N bots for a spread scenario.
-///
-/// Each bot teleports to a unique far-away position (>1000 blocks apart).
 pub fn launch_spread(
     host: &str,
     port: u16,
     count: usize,
 ) -> Arc<BenchCollector> {
-    let collector = Arc::new(BenchCollector::new());
-    let mut handles = Vec::with_capacity(count);
-    let t0_millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-
-    for i in 0..count {
-        // Each bot gets a unique position, 1001 blocks apart along X axis
-        let x = (i as f64) * 1001.0;
-        let state = BotState {
-            index: i,
-            t0_millis,
-            collector: Arc::clone(&collector),
-            disconnect_on_spawn: false,
-            walk_and_count_chunks: false,
-            walk_ticks: 0,
-            spread_position: Some((x, 65.0, 0.0)),
-            movement_mode: false,
-        };
-
-        let host = host.to_string();
-        let handle = std::thread::spawn(move || {
-            run_bot_thread(&host, port, state, Duration::from_secs(15));
-        });
-        handles.push(handle);
-
-        if i + 1 < count {
-            std::thread::sleep(Duration::from_millis(50));
-        }
-    }
-
-    let deadline = Instant::now() + Duration::from_secs(count as u64 + 20);
-    for handle in handles {
-        let remaining = deadline.duration_since(Instant::now());
-        if remaining.is_zero() {
-            break;
-        }
-        let _ = handle.join();
-    }
-
-    collector
+    let batch_size = if count > 200 { 50 } else if count > 50 { 25 } else { count };
+    launch_bots_batched(
+        host, port, count, batch_size,
+        Duration::from_secs(15),
+        false, false, 0, true, false,
+    )
 }
