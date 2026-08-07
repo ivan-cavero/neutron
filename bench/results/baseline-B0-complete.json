@@ -1,0 +1,80 @@
+{
+  "benchmark": "Neutron Baseline B0",
+  "date": "2026-08-07",
+  "hardware": {
+    "os": "Windows 11",
+    "cpu": "Unknown",
+    "ram_gb": 31.3,
+    "java": "OpenJDK 25.0.3+9-LTS (Eclipse Temurin)"
+  },
+  "servers": {
+    "vanilla": {
+      "version": "26.2",
+      "startup_ms": 1880,
+      "ram_idle_mb": 2287,
+      "ram_during_benchmark_mb": 2287,
+      "cpu_seconds": 199.6,
+      "join_latency": {
+        "p50_ms": 373,
+        "p95_ms": 406,
+        "p99_ms": 407,
+        "bots_connected": 10,
+        "bots_total": 10
+      },
+      "tps": "N/A (no spark)",
+      "cps": "10.6-14.2 (baseline C2ME, not measured locally)"
+    },
+    "paper": {
+      "version": "26.2-102",
+      "startup_ms": 6564,
+      "ram_idle_mb": 2373,
+      "ram_during_benchmark_mb": 2373,
+      "cpu_seconds": 89.8,
+      "join_latency": {
+        "p50_ms": 3332,
+        "p95_ms": 3383,
+        "p99_ms": 3384,
+        "bots_connected": 10,
+        "bots_total": 10
+      },
+      "tps": "20 (expected, spark available)",
+      "cps": "17.4-84.8 (baseline C2ME, not measured locally)"
+    },
+    "folia": {
+      "version": "26.2-1",
+      "startup_ms": 8915,
+      "ram_idle_mb": "N/A (not measured separately)",
+      "ram_during_benchmark_mb": "N/A",
+      "cpu_seconds": "N/A",
+      "join_latency": {
+        "p50_ms": 3277,
+        "p95_ms": 3678,
+        "p99_ms": 3678,
+        "bots_connected": 10,
+        "bots_total": 10
+      },
+      "tps": "20 (expected, spark available)",
+      "cps": "N/A (not measured)"
+    }
+  },
+  "bots": {
+    "tool": "azalea-join-bench (Rust)",
+    "version": "0.16.0+mc26.2",
+    "method": "azalea crate with AutoReconnectPlugin disabled",
+    "join_latency_method": "Event::Spawn timestamp - t0"
+  },
+  "notes": [
+    "Startup times are first-run (includes world generation)",
+    "RAM values are from Windows Task Manager (WorkingSet64)",
+    "CPU values are cumulative seconds, not percentage",
+    "CPS baselines are from C2ME gist (ishland), not measured locally",
+    "TPS is expected 20 for all servers under low load",
+    "Paper and Folia join latency includes world preparation overhead"
+  ],
+  "next_steps": [
+    "Measure CPS with Chunky or equivalent method",
+    "Measure TPS with spark endpoint during benchmark",
+    "Run multiple iterations for statistical significance",
+    "Add Pumpkin baseline (bots need azalea support)"
+  ]
+}
