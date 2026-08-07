@@ -1,0 +1,32 @@
+{
+  "config": {
+    "count": 10,
+    "host": "127.0.0.1",
+    "port": 25566,
+    "version": "26.2"
+  },
+  "results": {
+    "allConnected": true,
+    "failed": 0,
+    "joinLatencies": [
+      1580.0,
+      1609.0,
+      1611.0,
+      1613.0,
+      1613.0,
+      1614.0,
+      1615.0,
+      1617.0,
+      1619.0,
+      1622.0
+    ],
+    "p50Ms": 1613.5,
+    "p95Ms": 1620.65,
+    "p99Ms": 1621.73,
+    "successful": 10,
+    "totalBots": 10,
+    "totalTimeMs": 5031.0
+  },
+  "test": "azalea-join-bench",
+  "timestamp": "2026-08-07T17:08:45.642308700+00:00"
+}
