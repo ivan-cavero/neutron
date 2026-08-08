@@ -3,6 +3,8 @@ pub mod distributed;
 pub mod movement;
 pub mod spread;
 pub mod chunk_gen;
+pub mod sustained_load;
+pub mod stress_test;
 
 use std::time::Duration;
 

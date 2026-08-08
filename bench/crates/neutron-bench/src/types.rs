@@ -24,6 +24,8 @@ pub enum Scenario {
     Movement,
     Spread,
     ChunkGen,
+    SustainedLoad,
+    StressTest,
 }
 
 impl Size {
@@ -52,6 +54,8 @@ impl Scenario {
             Scenario::Movement => "movement",
             Scenario::Spread => "spread",
             Scenario::ChunkGen => "chunk-gen",
+            Scenario::SustainedLoad => "sustained-load",
+            Scenario::StressTest => "stress-test",
         }
     }
 
@@ -62,6 +66,8 @@ impl Scenario {
             Scenario::Movement,
             Scenario::Spread,
             Scenario::ChunkGen,
+            Scenario::SustainedLoad,
+            Scenario::StressTest,
         ]
     }
 }

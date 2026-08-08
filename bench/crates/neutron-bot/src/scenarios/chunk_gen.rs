@@ -1,24 +1,10 @@
-//! Chunk Generation: N bots walk in straight lines, generating new chunks.
-//!
-//! Each bot walks along the X axis at walking speed (4.3 blocks/s) for the
-//! test duration. Measures CPS (chunks per second) total and per-bot.
-
 use super::ScenarioConfig;
 use crate::client;
 use crate::output::ChunkGenResult;
 
-/// Run the chunk generation scenario.
-///
-/// 1. Launch all bots
-/// 2. Each bot walks along X axis at walking speed
-/// 3. Counts chunks received over the duration
-/// 4. Reports total CPS and per-bot CPS
 pub fn run(config: &ScenarioConfig) -> ChunkGenResult {
-    let collector = client::launch_cps(
-        &config.host,
-        config.port,
-        config.bot_count,
-        config.duration.as_secs(),
+    let collector = client::launch_chunk_gen(
+        &config.host, config.port, config.bot_count, config.duration.as_secs(),
     );
 
     let join_latencies = collector.get_latencies();
@@ -27,24 +13,11 @@ pub fn run(config: &ScenarioConfig) -> ChunkGenResult {
     let total_chunks = collector.chunks_received.load(std::sync::atomic::Ordering::SeqCst);
 
     let duration_secs = config.duration.as_secs_f64();
-    let cps_total = if duration_secs > 0.0 {
-        total_chunks as f64 / duration_secs
-    } else {
-        0.0
-    };
-    let cps_per_bot = if successful > 0 {
-        cps_total / successful as f64
-    } else {
-        0.0
-    };
-
-    // Distance each bot travels: 4.3 blocks/s * duration
+    let cps_total = if duration_secs > 0.0 { total_chunks as f64 / duration_secs } else { 0.0 };
+    let cps_per_bot = if successful > 0 { cps_total / successful as f64 } else { 0.0 };
     let distance_per_bot = 4.3 * duration_secs;
 
-    println!(
-        "  Chunk gen complete: {} bots, {} chunks, CPS={:.1} (total), {:.1} (per bot)",
-        successful, total_chunks, cps_total, cps_per_bot
-    );
+    println!("  Chunk gen: {} bots, {} chunks, CPS={:.1}", successful, total_chunks, cps_total);
 
     let per_bot = (0..successful)
         .map(|i| crate::output::BotChunkStats {

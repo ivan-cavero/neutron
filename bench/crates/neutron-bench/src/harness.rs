@@ -192,6 +192,22 @@ pub async fn run_scenario(
                 );
                 serde_json::to_value(&result)?
             }
+            Scenario::SustainedLoad => {
+                let result = scenarios::sustained_load::run(&scenario_config);
+                println!(
+                    "    Sustained load: {}/{} bots idle for {}s, {} ticks",
+                    result.successful, result.total_bots, result.duration_secs as u64, result.ticks_total
+                );
+                serde_json::to_value(&result)?
+            }
+            Scenario::StressTest => {
+                let result = scenarios::stress_test::run(&scenario_config);
+                println!(
+                    "    Stress test: {}/{} bots moving, CPS={:.1}, {} chunks, {} ticks",
+                    result.successful, result.total_bots, result.cps, result.total_chunks, result.ticks_total
+                );
+                serde_json::to_value(&result)?
+            }
         };
 
         let scenario_duration_ms = scenario_start.elapsed().as_secs_f64() * 1000.0;

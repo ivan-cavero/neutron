@@ -79,6 +79,34 @@ pub struct MovementResult {
     pub chunks_per_bot: Vec<ChunkCount>,
     /// Total chunks received by all bots during movement.
     pub chunks_total: usize,
+    /// Total ticks alive across all bots.
+    pub ticks_total: usize,
+    pub failure_details: Vec<(usize, String)>,
+}
+
+/// Result of the sustained load scenario.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SustainedLoadResult {
+    pub total_bots: usize,
+    pub successful: usize,
+    pub failed: usize,
+    pub join_latencies: Vec<f64>,
+    pub duration_secs: f64,
+    pub ticks_total: usize,
+    pub failure_details: Vec<(usize, String)>,
+}
+
+/// Result of the stress test scenario.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StressTestResult {
+    pub total_bots: usize,
+    pub successful: usize,
+    pub failed: usize,
+    pub join_latencies: Vec<f64>,
+    pub duration_secs: f64,
+    pub total_chunks: usize,
+    pub cps: f64,
+    pub ticks_total: usize,
     pub failure_details: Vec<(usize, String)>,
 }
 

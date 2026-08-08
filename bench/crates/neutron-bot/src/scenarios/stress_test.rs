@@ -1,9 +1,11 @@
 use super::ScenarioConfig;
 use crate::client;
-use crate::output::MovementResult;
+use crate::output::StressTestResult;
 
-pub fn run(config: &ScenarioConfig) -> MovementResult {
-    let collector = client::launch_movement(
+pub fn run(config: &ScenarioConfig) -> StressTestResult {
+    println!("  Stress test: {} bots moving for {}s...", config.bot_count, config.duration.as_secs());
+
+    let collector = client::launch_stress_test(
         &config.host, config.port, config.bot_count, config.duration.as_secs(),
     );
 
@@ -13,16 +15,22 @@ pub fn run(config: &ScenarioConfig) -> MovementResult {
     let chunks_total = collector.chunks_received.load(std::sync::atomic::Ordering::SeqCst);
     let ticks = collector.ticks_alive.load(std::sync::atomic::Ordering::SeqCst);
 
-    println!("  Movement: {} bots, {} chunks, {} ticks", successful, chunks_total, ticks);
+    let cps = if config.duration.as_secs_f64() > 0.0 {
+        chunks_total as f64 / config.duration.as_secs_f64()
+    } else {
+        0.0
+    };
 
-    MovementResult {
+    println!("  Stress test: {} bots, {} chunks, CPS={:.1}", successful, chunks_total, cps);
+
+    StressTestResult {
         total_bots: config.bot_count,
         successful,
         failed,
         join_latencies,
-        movement_duration_ms: config.duration.as_secs_f64() * 1000.0,
-        chunks_per_bot: Vec::new(),
-        chunks_total,
+        duration_secs: config.duration.as_secs_f64(),
+        total_chunks: chunks_total,
+        cps,
         ticks_total: ticks,
         failure_details: Vec::new(),
     }
