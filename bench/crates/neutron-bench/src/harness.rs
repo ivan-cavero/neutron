@@ -13,6 +13,7 @@ use crate::metrics::MetricsSampler;
 use crate::reporter;
 use crate::server;
 use crate::tps;
+use sysinfo::System;
 
 /// Run a single benchmark scenario.
 pub async fn run_scenario(
@@ -215,6 +216,18 @@ pub async fn run_scenario(
         // Collect final metrics
         let metrics = warmup_handle.await?;
 
+        // Measure disk I/O during scenario (read disk stats before/after)
+        let disk_io_during = crate::diskio::benchmark(&log_path).unwrap_or(crate::diskio::DiskIoResult {
+            write_mb_s: 0.0, read_mb_s: 0.0, write_iops: 0.0, read_iops: 0.0,
+        });
+
+        // Get CPU core count (estimate for thread count)
+        let thread_count = {
+            let mut sys = sysinfo::System::new();
+            sys.refresh_all();
+            sys.cpus().len()
+        };
+
         // Stop server
         proc.stop()?;
 
@@ -226,6 +239,8 @@ pub async fn run_scenario(
             "ram_peak_mb": metrics.ram_peak_mb,
             "cpu_idle_pct": metrics.cpu_idle_pct,
             "cpu_peak_pct": metrics.cpu_peak_pct,
+            "disk_io_during": disk_io_during,
+            "thread_count": thread_count,
             "tps": tps_result.as_ref().map(|t| serde_json::json!({
                 "1m": t.tps_1m,
                 "5m": t.tps_5m,
@@ -329,10 +344,13 @@ fn build_aggregate(runs: &[serde_json::Value], scenario: Scenario) -> serde_json
     };
 
     let (cps, total_chunks) = match scenario {
-        Scenario::ChunkGen => {
+        Scenario::ChunkGen | Scenario::StressTest => {
             let total_cps: f64 = runs
                 .iter()
-                .filter_map(|r| r["scenario"]["cps_total"].as_f64())
+                .filter_map(|r| {
+                    let v = &r["scenario"];
+                    v["cps"].as_f64().or_else(|| v["cps_total"].as_f64())
+                })
                 .sum();
             let total_chunks_sum: f64 = runs
                 .iter()
@@ -340,7 +358,10 @@ fn build_aggregate(runs: &[serde_json::Value], scenario: Scenario) -> serde_json
                 .sum();
             let count = runs
                 .iter()
-                .filter(|r| r["scenario"]["cps_total"].is_number())
+                .filter(|r| {
+                    let v = &r["scenario"];
+                    v["cps"].is_number() || v["cps_total"].is_number()
+                })
                 .count();
             if count > 0 {
                 (Some(total_cps / count as f64), Some(total_chunks_sum / count as f64))
@@ -358,6 +379,11 @@ fn build_aggregate(runs: &[serde_json::Value], scenario: Scenario) -> serde_json
         }
         _ => (None, None),
     };
+
+    // Thread count from first run
+    let thread_count = runs.iter()
+        .find_map(|r| r["thread_count"].as_u64())
+        .map(|v| v as usize);
 
     // TPS from first run that has it
     let tps_data = runs.iter()
@@ -382,6 +408,7 @@ fn build_aggregate(runs: &[serde_json::Value], scenario: Scenario) -> serde_json
             "idle_pct": avg_cpu_idle,
             "peak_pct": max_cpu_peak,
         },
+        "thread_count": thread_count,
     })
 }
 
