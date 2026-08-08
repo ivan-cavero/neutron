@@ -109,11 +109,11 @@ pub async fn run_scenario(
 
         tokio::time::sleep(Duration::from_secs(warmup_secs)).await;
 
-        // Measure TPS via spark HTTP (Paper/Folia only)
+        // Measure TPS via RCON (Paper/Folia only)
         let tps_result = match server_type {
             ServerType::Paper | ServerType::Folia => {
-                println!("    Measuring TPS via spark...");
-                match tps::query_tps_stable(8181, 3, 1000).await {
+                println!("    Measuring TPS via RCON...");
+                match tps::query_tps_stable("127.0.0.1", 25575, "neutronbench", 3, 1000) {
                     Ok(r) => {
                         println!(
                             "    TPS: 1m={:.1}, 5m={:.1}, 15m={:.1}, MSPT={:.1}ms",

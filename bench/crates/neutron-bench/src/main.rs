@@ -3,6 +3,7 @@ mod diskio;
 mod harness;
 mod hardware;
 mod metrics;
+mod rcon;
 mod reporter;
 mod server;
 mod tps;
