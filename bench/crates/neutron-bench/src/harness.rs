@@ -243,6 +243,7 @@ pub async fn run_scenario(
                 "5m": t.tps_5m,
                 "15m": t.tps_15m,
                 "mspt_avg": t.mspt_avg,
+                "method": t.method,
             })),
             "scenario": scenario_result,
         });
