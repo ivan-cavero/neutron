@@ -40,8 +40,13 @@ pub fn start(
 
     // Generate server config
     match server_type {
-        ServerType::Vanilla | ServerType::Paper | ServerType::Folia => {
+        ServerType::Vanilla => {
             crate::config::write_server_properties(&server_dir, max_players, seed, run_id)?;
+        }
+        ServerType::Paper | ServerType::Folia => {
+            crate::config::write_server_properties(&server_dir, max_players, seed, run_id)?;
+            // Enable spark HTTP for TPS measurement
+            crate::config::write_paper_global(&server_dir)?;
         }
         ServerType::Pumpkin => {
             crate::config::write_pumpkin_config(&server_dir, max_players, seed, run_id)?;
