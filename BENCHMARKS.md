@@ -1,6 +1,6 @@
 # Neutron — Benchmarks: metodología y harness
 
-> v0.2 · 7 ago 2026 · Regla del proyecto: **todo número publicado tiene metodología reproducible y datos crudos**.
+> v0.3 · 8 ago 2026 · Regla del proyecto: **todo número publicado tiene metodología reproducible y datos crudos**.
 
 ## 1. Filosofía
 
@@ -9,24 +9,34 @@
 3. Baselines verificados de la comunidad se citan con fuente y se REPRODUCEN en nuestra máquina antes de usarlos como referencia.
 4. El benchmark es un artefacto de CI: si una PR regresiona una métrica clave, la PR no entra.
 
-## 2. Arquitectura del harness
+## 2. Arquitectura del harness (v2 — Rust)
 
 El benchmark harness está escrito completamente en **Rust** (nightly, requerido por azalea).
 
 ```
 bench/
 ├── Cargo.toml                    # Workspace
+├── rust-toolchain.toml           # nightly
 ├── crates/
-│   ├── neutron-bot/              # Librería de bots
-│   │   └── src/scenarios/        # 5 escenarios
+│   ├── neutron-bot/              # Librería de bots (azalea real)
+│   │   └── src/
+│   │       ├── client.rs         # Conexión real + batched threads
+│   │       ├── scenarios/        # 5 escenarios
+│   │       ├── metrics.rs        # Percentiles
+│   │       └── output.rs         # Tipos JSON
 │   └── neutron-bench/            # CLI harness
 │       └── src/
 │           ├── main.rs           # CLI (clap)
 │           ├── types.rs          # ServerType, Size, Scenario
 │           ├── server.rs         # Lifecycle de servidor
-│           ├── harness.rs        # Orquestación
+│           ├── config.rs         # Generación config (server.properties, pumpkin.toml)
+│           ├── harness.rs        # Orquestación principal
 │           ├── metrics.rs        # RSS, CPU (sysinfo)
-│           └── reporter.rs       # JSON + Markdown
+│           ├── tps.rs            # TPS via RCON
+│           ├── rcon.rs           # Cliente RCON
+│           ├── diskio.rs         # Disk I/O benchmark
+│           ├── reporter.rs       # JSON + Markdown
+│           └── hardware.rs       # Detección de hardware
 ├── servers/                      # Binarios
 ├── results/                      # Output
 └── logs/                         # Logs
@@ -35,102 +45,93 @@ bench/
 **Uso:**
 ```bash
 cd bench && cargo build --release
+
+# Todos los escenarios para vanilla, 10 bots
 ./target/release/neutron-bench run --server vanilla --size small
+
+# Solo join-storm, paper, 100 bots
+./target/release/neutron-bench run --server paper --size medium --scenario join-storm
+
+# Comparar resultados
+./target/release/neutron-bench compare results/*.json
 ```
 
 ## 3. Métricas y definiciones EXACTAS
 
-| Métrica | Definición | Cómo se mide |
-|---|---|---|
-| **Startup** | Tiempo desde spawn del proceso hasta "Done (Xs)!" | Regex en log, 5 runs, mediana |
-| **Join** | Latencia percibida por el cliente | Bot: t(createBot) → spawn. p50/p95/p99 |
-| **CPS** | Chunks generados por segundo, sostenido | Bot camina 60s, cuenta chunks recibidos |
-| **TPS/MSPT** | Ticks por segundo / ms por tick | Paper/Folia: spark HTTP. Otros: estimado |
-| **RAM (RSS)** | Footprint real del proceso | sysinfo, muestreo 1 Hz, 60s idle + carga |
-| **CPU** | % de uso de la máquina | sysinfo, muestreo 1 Hz |
+| Métrica | Definición | Cómo se mide | Status |
+|---|---|---|---|
+| **Startup** | Tiempo desde spawn hasta "Done (Xs)!" | Regex en log, mediana | ✅ |
+| **Join** | Latencia percibida por el cliente | Bot: t(createBot) → spawn. p50/p95/p99 | ✅ |
+| **CPS** | Chunks generados por segundo | Bot camina 60s, cuenta chunks recibidos | ✅ |
+| **TPS/MSPT** | Ticks por segundo / ms por tick | RCON: `spark tps` (Paper/Folia) | ✅ |
+| **RAM (RSS)** | Footprint real del proceso | sysinfo, muestreo 1 Hz | ✅ |
+| **CPU** | % de uso de la máquina | sysinfo, normalizado 0-100% | ✅ |
+| **Disk I/O** | Velocidad de lectura/escritura | Bench local 64MB sequential + 4K IOPS | ✅ |
 
-## 4. Tamaños de servidor
+## 4. Escenarios de benchmark
+
+| # | Escenario | Qué hace | Métricas clave |
+|---|-----------|----------|----------------|
+| 1 | **join-storm** | N bots simultáneos (<200ms) | Join p50/p95/p99, startup |
+| 2 | **distributed** | 1 bot/segundo | Join por intervalo, TPS estable |
+| 3 | **movement** | N bots moviéndose + saltando en radio 50 bloques | TPS, chunks, RAM |
+| 4 | **spread** | N bots teletransportados >1000 bloques | Chunk loading spike, RAM peak |
+| 5 | **chunk-gen** | N bots caminando en línea recta 60s | CPS total, TPS, RAM |
+
+## 5. Tamaños de servidor
 
 | Tamaño | Bots | Caso de uso |
 |--------|------|-------------|
 | **small** | 10 | Server personal |
 | **medium** | 100 | Server comunitario |
-| **large** | 1000 | Server masivo (F4+) |
+| **large** | 1000 | Server masivo |
 
-## 5. Escenarios de benchmark
+## 6. Matriz de benchmarks (4 servers × 3 tamaños × 5 escenarios = 60)
 
-### Escenario 1: Join Storm
-- **Descripción:** N bots se conectan simultáneamente (<200ms total)
-- **Mide:** Join latency (t0 → spawn), p50/p95/p99
-- **Config:** max_players = N, view-distance = 10
+| Server | Small | Medium | Large |
+|--------|-------|--------|-------|
+| Vanilla 26.2 | ✅ | ✅ | ✅ |
+| Paper 26.2 | ✅ TPS | ✅ TPS | ✅ TPS |
+| Folia 26.2 | ✅ TPS | ✅ TPS | ✅ TPS |
+| Pumpkin | ⚠️ bug protocolo | ⚠️ | ⚠️ |
 
-### Escenario 2: Distributed Join
-- **Descripción:** 1 bot por segundo durante N segundos
-- **Mide:** Join latency por intervalo, comportamiento bajo carga sostenida
-- **Config:** max_players = N
+## 7. Baselines verificados (agosto 2026)
 
-### Escenario 3: Movement
-- **Descripción:** N bots spawned, se mueven y saltan en radio 50 bloques
-- **Acción:** Walk 2s → jump 1s → turn → repeat (60s)
-- **Mide:** TPS, chunks recibidos, RAM
+### Join Storm (10 bots, p50 ms)
+| Server | 10 bots | 100 bots | 1000 bots | TPS |
+|--------|---------|----------|-----------|-----|
+| Vanilla | 3,722 | 16,275 | 101,730 | N/A |
+| Paper | 2,757 | 16,184 | 101,853 | 20.0 |
+| Folia | 2,878 | 16,909 | 103,117 | 20.0 |
+| Pumpkin | N/A | N/A | N/A | N/A |
 
-### Escenario 4: Spread
-- **Descripción:** N bots spawned, cada uno teletransportado >1000 bloques
-- **Mide:** Chunk loading spike, RAM peak, TPS drop
+### Recursos (10 bots, idle)
+| Server | RAM idle (MB) | RAM peak (MB) | CPU peak (%) | Startup (ms) |
+|--------|---------------|---------------|--------------|--------------|
+| Vanilla | 2,362 | 2,382 | 1.5% | 8,223 |
+| Paper | 2,454 | 2,494 | 50.0% | 8,669 |
+| Folia | 2,413 | 2,429 | 6.2% | 8,659 |
+| Pumpkin | 20 | 20 | 12.0% | 516 |
 
-### Escenario 5: Chunk Generation
-- **Descripción:** N bots caminan en línea recta 60s
-- **Acción:** Walking speed (4.3 blocks/s) sin parar
-- **Mide:** CPS total, CPS per-bot, TPS p99, RAM peak
+### Disk I/O (misma máquina)
+| Métrica | Valor |
+|---------|-------|
+| Sequential Write | 3,600-3,800 MB/s |
+| Sequential Read | 3,100-3,700 MB/s |
+| Write IOPS (4K) | 120,000-150,000 |
+| Read IOPS (4K) | 70,000-82,000 |
 
-## 6. Matriz de benchmarks
+## 8. Limitaciones conocidas
 
-| Server | Small (10) | Medium (100) | Large (1000) |
-|--------|------------|--------------|--------------|
-| Vanilla 26.2 | 5 escenarios | 5 escenarios | 5 escenarios |
-| Paper | 5 escenarios | 5 escenarios | 5 escenarios |
-| Folia | 5 escenarios | 5 escenarios | 5 escenarios |
-| Pumpkin | 5 escenarios | 5 escenarios | 5 escenarios |
+1. **Pumpkin**: Bug upstream — dimension types incompatible con azalea (TAG_Long vs TAG_Int). Bots no pueden conectar.
+2. **Join latency alto**: Azalea tiene más overhead que mineflayer. Números reales pero no comparables 1:1 con baseline anterior (mineflayer).
+3. **1000 bots latencia**: Batched thread pool (50/batch) causa p50 ~100s. Es bottleneck del harness, no del server.
+4. **TPS solo Paper/Folia**: Vanilla no tiene spark. Pumpkin no acepta conexiones.
 
-**Total: 60 configuraciones × 5 runs = 300 runs por tanda completa**
+## 9. Cómo agregar un nuevo escenario
 
-## 7. Cómo levantar cada servidor
-
-| Servidor | Comando | Notas |
-|---|---|---|
-| Vanilla 26.2 | `java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui` | Java 25 obligatorio |
-| Paper | `java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui` | spark incluido, rate limit ~15/s |
-| Folia | `java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui` | Threaded regions |
-| Pumpkin | `./pumpkin` (nativo) | Sin JVM, config.toml |
-
-## 8. Metodología estándar (cada run)
-
-1. **Hardware fijo**: registrar CPU/RAM/SSD/SO
-2. **Seed fija**: `1234567890123456789`, `online-mode=false`, `view-distance=10`
-3. **Mundo limpio**: carpeta vacía en cada run
-4. **Warmup**: 60s idle antes de medir
-5. **N=5 runs** por escenario; reportar **mediana**
-6. **Output**: `bench/results/<ID>.json` + `<ID>.md`
-
-## 9. Baselines verificados (agosto 2026)
-
-| Métrica | Vanilla | Paper | Pumpkin (self-reported) | Neutron (target) |
-|---|---|---|---|---|
-| Startup | 7-15 s | 7-10 s | ~5-8 ms | < 2 s |
-| RAM idle | 0.9-1.8 GB | 1.1-2.2 GB | ~100 MB | < 150 MB |
-| CPU idle | ~24% | ~20% | ~1.5% | TBD |
-| CPS | 10.6-14.2 | 17.4-84.8 | no publicado | > 250 |
-| TPS | 20 | 20 | 20 | 20.0 |
-| Join p95 @100 | TBD | TBD | TBD | < 2 s |
-
-## 10. Targets de Neutron
-
-| Métrica | Target |
-|---|---|
-| Startup (mundo vacío → Done) | < 2 s |
-| CPS overworld @16 hilos | > 250 sostenidos |
-| RAM base idle | < 150 MB |
-| RAM/jugador idle | < 1 MB |
-| TPS @500 jugadores | 20.0, p99 tick < 25 ms |
-| Join p95 @100 bots | < 2 s |
-| Actualización de versión | main ≤ 7 días |
+1. Crear `bench/crates/neutron-bot/src/scenarios/mi_escenario.rs`
+2. Agregar variante a `Scenario` en `types.rs`
+3. Agregar función de lanzamiento en `client.rs`
+4. Agregar caso en `harness.rs` y `main.rs`
+5. Agregar parsing en `reporter.rs`
