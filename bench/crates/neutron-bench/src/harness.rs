@@ -110,25 +110,22 @@ pub async fn run_scenario(
 
         tokio::time::sleep(Duration::from_secs(warmup_secs)).await;
 
-        // Measure TPS via RCON (Paper/Folia only)
-        let tps_result = match server_type {
-            ServerType::Paper | ServerType::Folia => {
-                println!("    Measuring TPS via RCON...");
-                match tps::query_tps_stable("127.0.0.1", 25575, "neutronbench", 3, 1000) {
-                    Ok(r) => {
-                        println!(
-                            "    TPS: 1m={:.1}, 5m={:.1}, 15m={:.1}, MSPT={:.1}ms",
-                            r.tps_1m, r.tps_5m, r.tps_15m, r.mspt_avg
-                        );
-                        Some(r)
-                    }
-                    Err(e) => {
-                        println!("    TPS measurement failed: {}", e);
-                        None
-                    }
+        // Measure TPS via RCON (all Java servers have RCON enabled)
+        let tps_result = {
+            println!("    Measuring TPS via RCON...");
+            match tps::query_tps_stable("127.0.0.1", 25575, "neutronbench", 3, 1000) {
+                Ok(r) => {
+                    println!(
+                        "    TPS: 1m={:.1}, 5m={:.1}, 15m={:.1}, MSPT={:.1}ms",
+                        r.tps_1m, r.tps_5m, r.tps_15m, r.mspt_avg
+                    );
+                    Some(r)
+                }
+                Err(e) => {
+                    println!("    TPS measurement failed: {}", e);
+                    None
                 }
             }
-            _ => None,
         };
 
         // Run scenario (synchronous - threading is internal to neutron-bot)
