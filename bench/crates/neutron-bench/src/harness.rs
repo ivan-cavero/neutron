@@ -112,12 +112,14 @@ pub async fn run_scenario(
 
         // Measure TPS via RCON (all Java servers have RCON enabled)
         let tps_result = {
-            println!("    Measuring TPS via RCON...");
-            match tps::query_tps_stable("127.0.0.1", 25575, "neutronbench", 3, 1000) {
+            println!("    Measuring TPS via RCON (spark + time query)...");
+            match tps::query_tps_stable("127.0.0.1", 25575, "neutronbench", 1, 0) {
                 Ok(r) => {
+                    let spark_str = r.tps_spark.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "N/A".to_string());
+                    let tq_str = r.tps_time_query.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "N/A".to_string());
                     println!(
-                        "    TPS: 1m={:.1}, 5m={:.1}, 15m={:.1}, MSPT={:.1}ms",
-                        r.tps_1m, r.tps_5m, r.tps_15m, r.mspt_avg
+                        "    TPS: spark={}, time_query={}, effective={:.1}, MSPT={:.1}ms",
+                        spark_str, tq_str, r.tps_effective, r.mspt_avg
                     );
                     Some(r)
                 }
@@ -239,11 +241,10 @@ pub async fn run_scenario(
             "disk_io_during": disk_io_during,
             "thread_count": thread_count,
             "tps": tps_result.as_ref().map(|t| serde_json::json!({
-                "1m": t.tps_1m,
-                "5m": t.tps_5m,
-                "15m": t.tps_15m,
+                "spark": t.tps_spark,
+                "time_query": t.tps_time_query,
+                "effective": t.tps_effective,
                 "mspt_avg": t.mspt_avg,
-                "method": t.method,
             })),
             "scenario": scenario_result,
         });
