@@ -49,36 +49,41 @@ pub struct TpsResult {
 /// Query spark HTTP endpoint for TPS data.
 ///
 /// `port` is the spark HTTP port (default 8181).
+/// Tries multiple endpoints: /api/server, /api/poll, /tps
 pub async fn query_tps(port: u16) -> Result<TpsResult> {
-    let url = format!("http://127.0.0.1:{}/api/server", port);
+    // Try multiple spark API endpoints
+    let endpoints = [
+        format!("http://127.0.0.1:{}/api/server", port),
+        format!("http://127.0.0.1:{}/api/poll", port),
+        format!("http://127.0.0.1:{}/tps", port),
+    ];
 
-    let response = reqwest::get(&url).await?;
+    for url in &endpoints {
+        match reqwest::get(url).await {
+            Ok(response) if response.status().is_success() => {
+                if let Ok(data) = response.json::<SparkServerResponse>().await {
+                    let tps = data.tps_data.unwrap_or(TpsData {
+                        tps: vec![20.0, 20.0, 20.0],
+                        mspt: vec![0.0, 0.0, 0.0],
+                    });
 
-    if !response.status().is_success() {
-        eyre::bail!("Spark API returned status: {}", response.status());
+                    return Ok(TpsResult {
+                        tps_1m: tps.tps.first().copied().unwrap_or(20.0),
+                        tps_5m: tps.tps.get(1).copied().unwrap_or(20.0),
+                        tps_15m: tps.tps.get(2).copied().unwrap_or(20.0),
+                        mspt_avg: tps.mspt.first().copied().unwrap_or(0.0),
+                        mspt_p99: tps.mspt.first().copied().unwrap_or(0.0),
+                    });
+                }
+            }
+            _ => continue,
+        }
     }
 
-    let data: SparkServerResponse = response.json().await?;
-
-    let tps = data.tps_data.unwrap_or(TpsData {
-        tps: vec![20.0, 20.0, 20.0],
-        mspt: vec![0.0, 0.0, 0.0],
-    });
-
-    let tps_1m = tps.tps.first().copied().unwrap_or(20.0);
-    let tps_5m = tps.tps.get(1).copied().unwrap_or(20.0);
-    let tps_15m = tps.tps.get(2).copied().unwrap_or(20.0);
-
-    let mspt_avg = tps.mspt.first().copied().unwrap_or(0.0);
-    let mspt_p99 = tps.mspt.first().copied().unwrap_or(0.0); // spark doesn't separate p99 in simple API
-
-    Ok(TpsResult {
-        tps_1m,
-        tps_5m,
-        tps_15m,
-        mspt_avg,
-        mspt_p99,
-    })
+    eyre::bail!(
+        "Spark HTTP not available on port {}. Enable with: spark webserver start",
+        port
+    )
 }
 
 /// Query TPS multiple times and return the median.
