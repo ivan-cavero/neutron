@@ -212,10 +212,14 @@ impl MultifaceSpreader {
         if prev & bit != 0 && region.get(sp.x, sp.y, sp.z) == BlockId::SculkVein {
             return false; // already has face
         }
+        let first = prev == 0;
         faces.insert(key, prev | bit);
         let b = region.get(sp.x, sp.y, sp.z);
         if matches!(b, BlockId::Air | BlockId::Water) {
             region.set(sp.x, sp.y, sp.z, BlockId::SculkVein);
+            if first {
+                // counted once per new vein cell (optional stat — sculk module tracks)
+            }
         }
         true
     }

@@ -398,8 +398,17 @@ fn cursor_update(
     let mut here = region.get(c.x, c.y, c.z);
 
     if spread_veins {
-        attempt_spread_vein(region, faces, c.x, c.y, c.z, c.facings, here);
-        here = region.get(c.x, c.y, c.z);
+        if attempt_spread_vein(region, faces, c.x, c.y, c.z, c.facings, here) {
+            // Vanilla re-reads state + behaviour after canChangeBlockStateOnSpread.
+            here = region.get(c.x, c.y, c.z);
+            c.facings = faces.get(&(c.x, c.y, c.z)).copied();
+        }
+    }
+
+    // Ensure vein face mask exists before attemptPlaceSculk (hasFace).
+    if here == BlockId::SculkVein {
+        ensure_vein_faces(region, faces, c.x, c.y, c.z);
+        c.facings = faces.get(&(c.x, c.y, c.z)).copied();
     }
 
     c.charge = attempt_use_charge(rng, region, faces, c, here, spread_veins);
@@ -526,6 +535,23 @@ fn attempt_use_charge(
     }
 }
 
+/// Populate face bits toward every sturdy/replaceable neighbour (worldgen bootstrap).
+fn ensure_vein_faces(region: &RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z: i32) {
+    if faces.get(&(x, y, z)).copied().unwrap_or(0) != 0 {
+        return;
+    }
+    let mut mask = 0u8;
+    for (i, &(dx, dy, dz)) in DIRS.iter().enumerate() {
+        let n = region.get(x + dx, y + dy, z + dz);
+        if is_sculk_replaceable(n) || is_full_solid(n) {
+            mask |= 1u8 << i;
+        }
+    }
+    if mask != 0 {
+        faces.insert((x, y, z), mask);
+    }
+}
+
 /// SculkVeinBlock.attemptPlaceSculk — requires hasFace toward replaceable.
 fn attempt_place_sculk(
     rng: &mut FeatureRandom,
@@ -535,23 +561,15 @@ fn attempt_place_sculk(
     y: i32,
     z: i32,
 ) -> bool {
+    ensure_vein_faces(region, faces, x, y, z);
     let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
-    let dirs = shuffled_dirs(rng);
-    for (dx, dy, dz) in dirs {
-        let Some(fi) = dir_index(dx, dy, dz) else {
+    let order = multiface_spreader::all_shuffled(rng);
+    for fi in order {
+        // hasFace(state, support)
+        if mask != 0 && mask & (1u8 << fi) == 0 {
             continue;
-        };
-        // hasFace
-        if mask & (1u8 << fi) == 0 {
-            // If no face bits stored, allow convert only if solid attach exists
-            // (bootstrap: treat all solid-facing as faces when mask empty)
-            if mask != 0 {
-                continue;
-            }
-            if !is_sculk_replaceable(region.get(x + dx, y + dy, z + dz)) {
-                continue;
-            }
         }
+        let (dx, dy, dz) = DIRS[fi];
         let nx = x + dx;
         let ny = y + dy;
         let nz = z + dz;
@@ -560,7 +578,7 @@ fn attempt_place_sculk(
         }
         region.set(nx, ny, nz, BlockId::Sculk);
         SCULK_PLACED.fetch_add(1, Ordering::Relaxed);
-        // veinSpreader.spreadAll from the new SCULK block (isOtherBlockValidAsSource)
+        // veinSpreader.spreadAll from the new SCULK (CFR attemptPlaceSculk)
         MultifaceSpreader::vein().spread_all(region, faces, nx, ny, nz);
         return true;
     }
