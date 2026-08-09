@@ -1,20 +1,19 @@
 # AGENTS.md — Neutron: cómo trabajamos
 
-> v0.4 · 5 ago 2026 · **pi lee este archivo automáticamente** al trabajar en el repo. Trabajo 100% con pi por ahora.
+> v0.7 · 9 ago 2026 · **ZCode lee este archivo automáticamente** al trabajar en el repo.
 
 ## 0. DÓNDE SE ESCRIBE TODO (regla de carpeta — no negociable)
 
 **La única carpeta de trabajo es la raíz de este repositorio: el directorio de trabajo actual, donde vive este AGENTS.md.** Ahí se ejecuta todo y ahí vive el código, los documentos y los runs. No se asume ninguna ruta absoluta fija: la ruta concreta es la del equipo en el momento de ejecutar.
 
-- Prohibido crear, escribir o editar archivos fuera del directorio de trabajo actual: carpetas de herramientas externas (tipo `...\orca\workspaces\...`), carpetas temporales, otras unidades.
-- **EXCEPCIÓN**: los **worktrees de Git gestionados por Orca** (`orca worktree create`) están permitidos porque son clonaciones ligeras del mismo repositorio, gestionadas por Orca, y no contienen datos externos. Siempre que uses `orca worktree create`, estás dentro de la regla.
+- Prohibido crear, escribir o editar archivos fuera del directorio de trabajo actual: carpetas de herramientas externas, carpetas temporales, otras unidades.
 - Si encuentras trabajo en una ruta externa, se trae al proyecto y se borra lo externo.
 - Si algo no se puede hacer en el proyecto (por ejemplo, una herramienta exige otra ruta), se pregunta al humano antes de tocar nada.
 
 ## 1. Modelo de trabajo
 
-### Flujo normal (sin Orca)
-Un agente pi hace de **LEAD**: lee el estado, genera el run (con el prompt de §6), ejecuta las tareas y entrega evidencia. Todo el trabajo ocurre en la carpeta del proyecto (regla §0). La calidad la asegura un **Gauntlet Loop**: cada pieza se construye contra un **bar** y la juzga un **critic** lanzado como subagente con contexto limpio.
+### Flujo normal (ZCode)
+Un agente ZCode hace de **LEAD**: lee el estado, genera el run (con el prompt de §6), ejecuta las tareas y entrega evidencia. Todo el trabajo ocurre en la carpeta del proyecto (regla §0). La calidad la asegura un **Gauntlet Loop**: cada pieza se construye contra un **bar** y la juzga un **critic** lanzado como subagente con contexto limpio.
 
 ```
 LEAD (pi)
@@ -24,49 +23,34 @@ LEAD (pi)
        FAIL → el gap más grande → reconstruir → repetir
 ```
 
-### Flujo con Orca (multi-agente, worktrees, orchestration)
-Cuando se necesita más potencia, se usan **Orca CLI** y **Orca Orchestration** para distribuir el trabajo entre múltiples agentes y terminales:
+### Flujo multi-agente (ZCode)
+Cuando se necesita más potencia, ZCode distribuye el trabajo entre **subagentos** usando la herramienta `Agent`:
 
 ```
-LEAD (pi en worktree main)
-  ├── ORCA: create worktree + launch codex → worker harness
-  ├── ORCA: create worktree + launch codex → worker bots
-  ├── ORCA: create worktree + launch codex → worker benchmarks
-  └── ORCA: orchestration run + tasks + DAG
-        ├── check --wait worker_done
-        ├── gate-create (gate humano)
-        └── worker-release
+LEAD (pi)
+  ├── Agent(subagente "builder-harness") → construye harness
+  ├── Agent(subagente "builder-bots") → construye bots
+  ├── Agent(subagente "builder-bench") → construye benchmarks
+  └── TodoWrite → tracking de tareas + dependencias
+        ├── TaskOutput → esperar resultado de cada subagente
+        ├── AskUserQuestion → gates humanos
+        └── Actualizar STATE.md
 ```
 
-#### Orca CLI (gestión de worktrees y terminales)
-- **Worktrees**: cada builder tiene su propio worktree aislado
-  - `orca worktree create --name <task> --no-parent --agent codex --setup run`
-  - `orca worktree set --worktree active --comment "F0: <estado>"`
-- **Terminals**: cada worker tiene su terminal
-  - `orca terminal create --worktree active --command "codex"`
-  - `orca terminal send --text "<prompt>" --enter`
-  - `orca terminal read --terminal <handle>`
+#### Herramientas ZCode para multi-agente
+- **Subagentos** (tool `Agent`): cada builder/critic corre en contexto aislado
+  - `Agent(subagent_type="general-purpose", prompt="...")` — construye o critica
+  - `Agent(subagent_type="Explore", prompt="...") — solo lectura (búsqueda)`
+  - `run_in_background: true` — ejecuta async, notificación al terminar
+- **Tracking** (tool `TodoWrite`): cada tarea tiene estado (pending/in_progress/completed)
+- **Gates humanos** (tool `AskUserQuestion`): preguntas directas al humano
+- **Bash**: comandos directos (cargo build, java, etc.)
 
-#### Orca Orchestration (coordinación multi-agente)
-- **Runs**: namespace para la fase actual
-  - `orca orchestration run-create --objective "<objective>"`
-- **Tasks**: unidades de trabajo con dependencias
-  - `orca orchestration task-create --spec "<spec>" --deps '[]'`
-- **Workers**: agentes que ejecutan tasks
-  - `orca orchestration worker-start --task <id> --worktree new-child`
-  - `orca orchestration check --wait --types worker_done,escalation,question`
-- **Decision gates**: aprobaciones humanas
-  - `orca orchestration gate-create --task <id> --question "¿Aprobado?"`
-  - `orca orchestration gate-resolve --id <gate_id> --resolution "approved"`
-
-#### Prompt para lanzar un run con Orca
+#### Cómo lanzar un run con ZCode
 Copia el prompt completo de la fase desde **ROADMAP.md** (§2, Fases). Cada prompt incluye:
 1. El objetivo y el bar
-2. La secuencia de comandos Orca CLI para crear worktrees
-3. La secuencia de Orca Orchestration para tasks y workers
-4. Las reglas del Gauntlet Loop (builder + critic)
-
-> **Nota**: Los worktrees de Orca son worktrees de Git gestionados por Orca, no carpetas externas. Son parte del proyecto y están permitidos por la regla §0 porque Orca los gestiona de forma centralizada.
+2. Las tareas a distribuir entre subagentos
+3. Las reglas del Gauntlet Loop (builder + critic)
 
 ## 2. Gauntlet Loop (lo esencial)
 
@@ -111,17 +95,15 @@ Copia el prompt completo de la fase desde **ROADMAP.md** (§2, Fases). Cada prom
 1. Abre **ROADMAP.md** → §2 Fases
 2. Copia el bloque `=== PROMPT F<NNN> ===` de la fase que toca **COMPLETO**
 3. Pégalo en pi
-4. Pi automáticamente:
-   - Carga todas las skills necesarias (gauntlet-loop, loop-engineering, orca-cli, orchestration, mcp-scripting)
+4. ZCode automáticamente:
    - Lee STATE.md, workbench.md, runs/
    - Usa MCP tools para investigar referencias externas
-   - Crea worktrees aislados con `orca worktree create`
-   - Crea Run de Orquestación con DAG de tasks
-   - Lanza workers en paralelo
+   - Lanza subagentos (Agent tool) para cada pieza en paralelo
+   - Usa TodoWrite para tracking de tareas
    - Ejecuta el Gauntlet Loop (builder → critic → fix)
    - Actualiza workbench.md, STATE.md, runs/run-NNN.md
 
-### Método 2: Prompt mínimo (para runs simples sin Orca)
+### Método 2: Prompt mínimo (runs simples)
 
 ```text
 Eres el LEAD del proyecto Neutron. Prepara el siguiente run de trabajo.
@@ -145,33 +127,98 @@ PASO 3 — Registra:
 ### Método 3: Manual (tú controlas cada paso)
 
 1. Tú decides qué run toca y me lo dices
-2. Ejemplo: "Lanza F0. El bar es: baseline B0 reproducible, 10 bots p95 < 5 s, cps ±30%"
-3. Pi ejecuta el Gauntlet Loop (builder → critic → fix → repetir)
+2. Ejemplo: "Lanza F1. El bar es: protocolo 26.2 funcional, mundo Anvil, fuzz 1M inputs, E2E 10 min"
+3. ZCode ejecuta el Gauntlet Loop (builder → critic → fix → repetir)
 4. Tú supervisás los gates humanos (releases, credenciales, cambios de bar)
 
-### Referencia rápida de comandos Orca
+### Referencia rápida de herramientas ZCode
 
-| Acción | Comando |
-|--------|--------|
-| Ver estado | `orca status --json` |
-| Listar worktrees | `orca worktree ps --json` |
-| Crear worktree | `orca worktree create --name X --no-parent --agent codex --prompt "..." --setup run --json` |
-| Actualizar comentario | `orca worktree set --worktree active --comment "F0: estado" --json` |
-| Crear Run | `orca orchestration run-create --objective "..." --json` |
-| Crear Task | `orca orchestration task-create --spec "..." --deps '[]' --json` |
-| Lanzar worker | `orca orchestration worker-start --task <id> --worktree new-child --agent codex --json` |
-| Esperar worker | `orca orchestration check --wait --types worker_done,escalation,question --timeout-ms 900000 --json` |
-| Gate humano | `orca orchestration gate-create --task <id> --question "..." --json` |
-| Liberar worker | `orca orchestration worker-release --dispatch <id> --json` |
+| Acción | Herramienta |
+|--------|------------|
+| Subagente builder | `Agent(subagent_type="general-purpose", prompt="...")` |
+| Subagente lector | `Agent(subagent_type="Explore", prompt="...")` |
+| Tracking de tareas | `TodoWrite(todos=[...])` |
+| Gate humano | `AskUserQuestion(questions=[...])` |
+| Bash (build, test, run) | `Bash(command="...")` |
+| Leer archivos | `Read(file_path="...")` |
+| Escribir archivos | `Write(file_path="...", content="...")` |
+| Editar archivos | `Edit(file_path="...", old_string="...", new_string="...")` |
+| Esperar subagente async | `TaskOutput(task_id="...", block=true)` |
 
-## 7. Loops de automatización (corren solos en CI)
+### Ejemplos prácticos (de sesiones reales)
+
+#### Lanzar 2 tareas en paralelo
+```python
+# T1 y T2 son independientes → lanzar ambos async
+Agent(run_in_background=true, prompt="Implementa crate A: ...")
+Agent(run_in_background=true, prompt="Implementa crate B: ...")
+# ZCode notifica cuando cada uno termina
+```
+
+#### Lanzar 4+ tareas en paralelo (modo productivo)
+```python
+# Para fases grandes, lanzar todo lo independiente junto
+Agent(run_in_background=true, prompt="T1: noise calibration ...")
+Agent(run_in_background=true, prompt="T2: NBT format fix ...")
+Agent(run_in_background=true, prompt="T3: cave carving ...")
+Agent(run_in_background=true, prompt="T4: biome source ...")
+# Cada uno trabaja en archivos distintos (no se pisan)
+```
+
+#### Gate humano entre fases
+```python
+# Después de que terminan los subagentes, preguntar al humano
+AskUserQuestion(questions=[{
+  "question": "¿Aprobás T1 y T2 para continuar?",
+  "header": "Gate F1",
+  "options": [
+    {"label": "Aprobado", "description": "Continuar con Siguiente paso"},
+    {"label": "Requiere fixes", "description": "Hay problemas que corregir"}
+  ]
+}]
+```
+
+#### Tracking de tareas
+```python
+TodoWrite(todos=[
+  {"content": "T1 — Protocolo 26.2", "status": "completed", "priority": "high"},
+  {"content": "T2 — Mundo Anvil", "status": "in_progress", "priority": "high"},
+  {"content": "T3 — Fuzz decode", "status": "pending", "priority": "medium"},
+])
+```
+
+#### Patrón típico de un run completo
+```
+1. Leer STATE.md, ROADMAP.md, runs/
+2. Crear tracking con TodoWrite
+3. Lanzar tareas independientes en paralelo (Agent run_in_background)
+4. Esperar resultados (ZCode notifica automáticamente)
+5. Gate humano (AskUserQuestion)
+6. Lanzar siguientes tareas (con dependencias)
+7. Crític ciego: lanzar subagente con contexto limpio para verificar
+8. Actualizar STATE.md, crear runs/run-NNN.md
+9. Guardar memories
+```
+
+#### Crític ciego (Gauntlet Loop)
+```python
+# El critic NUNCA ve el código del builder — contexto limpio
+Agent(subagent_type="general-purpose",
+  prompt="Eres el CRITIC ciego. Inspecciona crates/neutron-worldgen/:
+  1. Ejecuta cargo test
+  2. Compara resultados contra el bar
+  3. Devuelve PASS o FAIL con el gap más grande
+  REJECT por defecto hasta tener evidencia.")
+```
+
+## 7. Loops de automatización (ZCode CronCreate)
 
 | Loop | Frecuencia | Gatillo |
 |---|---|---|
-| Smoke E2E (levantar, join, mover, romper, chat, TPS) | diario | cron |
-| Benchmarks de regresión (cps, TPS, RAM) | semanal | cron |
-| Pipeline de versiones D0-D4 (main = última de Mojang, ≤ 7 días) | cada release | webhook |
+| Smoke E2E (levantar, join, mover, romper, chat, TPS) | diario | `CronCreate` |
+| Benchmarks de regresión (cps, TPS, RAM) | semanal | `CronCreate` |
+| Pipeline de versiones D0-D4 (main = última de Mojang, ≤ 7 días) | cada release | manual |
 | Fuzzing del protocolo | continuo | cada merge a main |
 | Suite de parity (checksums + contraptions) | cada merge | PR |
 
-Los agentes construyen cada loop UNA vez (en su fase); después corre solo.
+Los agentes construyen cada loop UNA vez (en su fase); después corre solo via `CronCreate`.

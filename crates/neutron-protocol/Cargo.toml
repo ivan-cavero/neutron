@@ -1,0 +1,18 @@
+[package]
+name = "neutron-protocol"
+version = "0.1.0"
+edition = "2021"
+description = "Minecraft 26.2 protocol implementation for Neutron server"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+bytes = "1"
+thiserror = "2"
+tracing = "0.1"
+flate2 = "1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+tempfile = "3"
+neutron-world = { path = "../neutron-world" }

@@ -106,6 +106,32 @@ temp/
 *.bak
 *.old
 *.orig
+tmp_*.javap.txt
+tmp_*.rs
+nul
 
-# ZCode
+# Logs / session artifacts
+logs/
+*.log
+
+# Vanilla extract bulky intermediates (keep scripts + decompiled sources)
+tools/vanilla-extract/server-classes/
+tools/vanilla-extract/META-INF/
+tools/vanilla-extract/net/
+tools/vanilla-extract/lib/*.jar
+tools/vanilla-extract/javap/
+tools/nbt-ref/vanilla1/libraries/
+tools/nbt-ref/vanilla1/versions/
+tools/nbt-ref/vanilla1/logs/
+tools/nbt-ref/vanilla1/world/
+tools/nbt-ref/vanilla1/*.jar
+tools/nbt-ref/find-real/target/
+tools/java-probe/bin/
+tools/java-probe/libs/
+
+# Large datapack copies inside crate (prefer extract script; keep biome/feature subset committed)
+# crates/neutron-worldgen/src/data is committed for offline 1:1 ports
+
+# ZCode / agent
 .zcode/
+.grok/

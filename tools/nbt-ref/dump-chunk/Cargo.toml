@@ -1,0 +1,10 @@
+[package]
+name = "dump-chunk"
+version = "0.1.0"
+edition = "2021"
+description = "Dump vanilla chunk NBT structure from .mca region files for format reference"
+
+[dependencies]
+neutron-world = { path = "../../../crates/neutron-world" }
+ussr-nbt = "0.2"
+anyhow = "1"

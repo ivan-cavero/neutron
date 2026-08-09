@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/neutron-protocol",
+    "crates/neutron-protocol/fuzz",
+    "crates/neutron-world",
+    "crates/neutron-worldgen",
+    "crates/neutron-server",
+    "crates/neutron-bench-server",
+    "crates/neutron-sim",
+    "tools/golden-data",
+    "tools/parity-check",
+    "tools/nbt-ref/dump-chunk",
+]

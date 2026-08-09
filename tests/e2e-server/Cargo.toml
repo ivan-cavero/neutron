@@ -1,0 +1,16 @@
+[package]
+name = "e2e-server"
+version = "0.1.0"
+edition = "2021"
+description = "E2E test: connects a raw TCP client to the Neutron server"
+
+[workspace]
+
+[[bin]]
+name = "e2e-test"
+path = "main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+bytes = "1"
+uuid = { version = "1", features = ["v4"] }

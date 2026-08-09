@@ -1,0 +1,18 @@
+[package]
+name = "neutron-protocol-fuzz"
+version = "0.1.0"
+edition = "2021"
+description = "Fuzz testing and benchmarking harness for neutron-protocol decode paths"
+
+[[bin]]
+name = "fuzz_decode"
+path = "fuzz_decode.rs"
+
+[[bin]]
+name = "bench_decode"
+path = "bench_decode.rs"
+
+[dependencies]
+neutron-protocol = { path = ".." }
+bytes = "1"
+rand = "0.8"
