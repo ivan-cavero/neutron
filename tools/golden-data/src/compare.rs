@@ -39,7 +39,10 @@ pub struct GoldenData {
 #[derive(Debug)]
 pub enum ChunkComparison {
     Match,
-    Different { left_hash: String, right_hash: String },
+    Different {
+        left_hash: String,
+        right_hash: String,
+    },
 }
 
 /// Full comparison report.
@@ -63,8 +66,8 @@ pub struct ChunkComparisonDetail {
 
 /// Load golden data from a JSON file.
 pub fn load_golden_data(path: &Path) -> Result<GoldenData> {
-    let content = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read {}", path.display()))?;
+    let content =
+        fs::read_to_string(path).with_context(|| format!("Failed to read {}", path.display()))?;
     let data: GoldenData = serde_json::from_str(&content)
         .with_context(|| format!("Failed to parse {}", path.display()))?;
     Ok(data)
@@ -173,12 +176,18 @@ pub fn print_report(report: &ComparisonReport) {
         for detail in &report.details {
             match &detail.result {
                 ChunkComparison::Match => {}
-                ChunkComparison::Different { left_hash, right_hash } => {
+                ChunkComparison::Different {
+                    left_hash,
+                    right_hash,
+                } => {
                     println!(
                         "  region({}, {}) chunk({}, {}): left={} right={}",
-                        detail.region_x, detail.region_z,
-                        detail.chunk_x, detail.chunk_z,
-                        left_hash, right_hash,
+                        detail.region_x,
+                        detail.region_z,
+                        detail.chunk_x,
+                        detail.chunk_z,
+                        left_hash,
+                        right_hash,
                     );
                 }
             }

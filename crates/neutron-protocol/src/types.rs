@@ -203,10 +203,7 @@ pub struct SlotData {
 /// Read a Slot from the buffer.
 pub fn read_slot(buf: &mut Bytes) -> Result<Slot, DecodeError> {
     if !buf.has_remaining() {
-        return Err(DecodeError::InsufficientBytes {
-            need: 1,
-            have: 0,
-        });
+        return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
     }
     let present = buf.get_u8() != 0;
     if !present {
@@ -214,10 +211,7 @@ pub fn read_slot(buf: &mut Bytes) -> Result<Slot, DecodeError> {
     }
     let item_id = read_varint(buf)?;
     if !buf.has_remaining() {
-        return Err(DecodeError::InsufficientBytes {
-            need: 1,
-            have: 0,
-        });
+        return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
     }
     let item_count = buf.get_u8();
     // NBT is complex to parse fully; for now we read the raw bytes.
@@ -372,10 +366,7 @@ pub fn read_bytes(buf: &mut Bytes, n: usize) -> Result<Vec<u8>, DecodeError> {
 pub fn read_string(buf: &mut Bytes) -> Result<String, DecodeError> {
     let len = read_varint(buf)? as usize;
     if len > 32767 {
-        return Err(DecodeError::StringTooLong {
-            len,
-            max: 32767,
-        });
+        return Err(DecodeError::StringTooLong { len, max: 32767 });
     }
     let bytes = read_bytes(buf, len)?;
     Ok(String::from_utf8(bytes)?)
@@ -398,7 +389,9 @@ pub fn write_string(buf: &mut BytesMut, s: &str) -> Result<(), EncodeError> {
 /// Read a UUID (16 bytes, most-significant first).
 pub fn read_uuid(buf: &mut Bytes) -> Result<uuid::Uuid, DecodeError> {
     let bytes = read_bytes(buf, 16)?;
-    Ok(uuid::Uuid::from_bytes(bytes.try_into().unwrap_or([0u8; 16])))
+    Ok(uuid::Uuid::from_bytes(
+        bytes.try_into().unwrap_or([0u8; 16]),
+    ))
 }
 
 /// Write a UUID.

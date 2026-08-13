@@ -19,9 +19,9 @@ use std::time::{Duration, Instant};
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use clap::{Parser, Subcommand, ValueEnum};
-use neutron_world::nbt::{read_nbt, compound_get, write_nbt};
-use neutron_world::nbt::ussr_nbt::owned::{Compound, Nbt, Tag};
 use neutron_world::nbt::ussr_nbt::mutf8::MString;
+use neutron_world::nbt::ussr_nbt::owned::{Compound, Nbt, Tag};
+use neutron_world::nbt::{compound_get, read_nbt, write_nbt};
 use neutron_world::{parse_region_filename, Region};
 use xxhash_rust::xxh3::xxh3_64;
 
@@ -161,7 +161,17 @@ fn main() -> Result<()> {
             keep_tmp,
             tmp_dir,
             hash_mode,
-        }) => cmd_extract(seed, server, output, radius, servers_dir, startup_timeout, keep_tmp, tmp_dir, hash_mode),
+        }) => cmd_extract(
+            seed,
+            server,
+            output,
+            radius,
+            servers_dir,
+            startup_timeout,
+            keep_tmp,
+            tmp_dir,
+            hash_mode,
+        ),
         Some(Commands::Compare { left, right }) => cmd_compare(left, right),
         None => {
             // Default: show help
@@ -292,8 +302,7 @@ fn cmd_extract(
             .with_context(|| format!("Failed to create output dir {}", parent.display()))?;
     }
     let json = serde_json::to_string_pretty(&golden)?;
-    fs::write(&output, &json)
-        .with_context(|| format!("Failed to write {}", output.display()))?;
+    fs::write(&output, &json).with_context(|| format!("Failed to write {}", output.display()))?;
 
     tracing::info!(path = %output.display(), "saved golden data");
 
@@ -306,7 +315,11 @@ fn cmd_extract(
         tracing::info!(path = %tmp_dir.display(), "keeping tmp dir for debugging");
     }
 
-    println!("Extracted {} chunks to {}", golden.total_chunks, output.display());
+    println!(
+        "Extracted {} chunks to {}",
+        golden.total_chunks,
+        output.display()
+    );
     Ok(())
 }
 
@@ -315,8 +328,20 @@ fn cmd_compare(left: PathBuf, right: PathBuf) -> Result<()> {
     let left_data = compare::load_golden_data(&left)?;
     let right_data = compare::load_golden_data(&right)?;
 
-    println!("Left:  {} ({} chunks, seed={}, server={})", left.display(), left_data.total_chunks, left_data.seed, left_data.server);
-    println!("Right: {} ({} chunks, seed={}, server={})", right.display(), right_data.total_chunks, right_data.seed, right_data.server);
+    println!(
+        "Left:  {} ({} chunks, seed={}, server={})",
+        left.display(),
+        left_data.total_chunks,
+        left_data.seed,
+        left_data.server
+    );
+    println!(
+        "Right: {} ({} chunks, seed={}, server={})",
+        right.display(),
+        right_data.total_chunks,
+        right_data.seed,
+        right_data.server
+    );
     println!();
 
     let report = compare::compare(&left_data, &right_data);
@@ -345,15 +370,25 @@ fn find_repo_root() -> Result<PathBuf> {
 }
 
 /// Set up the server in the temp directory.
-fn setup_server(servers_dir: &Path, server_type: &ServerType, tmp_dir: &Path, seed: i64) -> Result<PathBuf> {
+fn setup_server(
+    servers_dir: &Path,
+    server_type: &ServerType,
+    tmp_dir: &Path,
+    seed: i64,
+) -> Result<PathBuf> {
     // Copy server jar
     let jar_source = servers_dir.join(server_type.to_string()).join("server.jar");
     if !jar_source.exists() {
         bail!("Server jar not found at {}", jar_source.display());
     }
     let jar_dest = tmp_dir.join("server.jar");
-    fs::copy(&jar_source, &jar_dest)
-        .with_context(|| format!("Failed to copy {} to {}", jar_source.display(), jar_dest.display()))?;
+    fs::copy(&jar_source, &jar_dest).with_context(|| {
+        format!(
+            "Failed to copy {} to {}",
+            jar_source.display(),
+            jar_dest.display()
+        )
+    })?;
     tracing::info!(source = %jar_source.display(), "copied server jar");
 
     // Accept EULA
@@ -402,10 +437,7 @@ fn start_server(jar_path: &Path, work_dir: &Path) -> Result<Child> {
 
 /// Wait for the server to finish starting by watching stdout for "Done (Xs)!".
 fn wait_for_startup(server: &mut Child, timeout_secs: u64) -> Result<()> {
-    let stdout = server
-        .stdout
-        .take()
-        .context("Server stdout not captured")?;
+    let stdout = server.stdout.take().context("Server stdout not captured")?;
 
     let reader = BufReader::new(stdout);
     let start = Instant::now();
@@ -461,21 +493,14 @@ fn read_and_hash_regions(region_dir: &Path, hash_mode: &HashMode) -> Result<Vec<
     let mut entries: Vec<_> = fs::read_dir(region_dir)
         .with_context(|| format!("Failed to read {}", region_dir.display()))?
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .map_or(false, |ext| ext == "mca")
-        })
+        .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
         .collect();
 
     entries.sort_by_key(|e| e.file_name());
 
     for entry in &entries {
         let path = entry.path();
-        let filename = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
         let (rx, rz) = match parse_region_filename(filename) {
             Some(coords) => coords,

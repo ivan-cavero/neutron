@@ -1,4 +1,4 @@
-use neutron_worldgen::density::{compute, DF, DFNode, DensityEnv, MarkerKind, MarkerState};
+use neutron_worldgen::density::{compute, DFNode, DensityEnv, MarkerKind, MarkerState, DF};
 use neutron_worldgen::ChunkGenerator;
 
 fn find_interp_opt(df: &DF) -> Option<DF> {

@@ -2,10 +2,10 @@
 //
 // Data-driven feature step / index resolution from vanilla biome JSON.
 //
-// Minecraft `WorldgenRandom.setFeatureSeed(decorationSeed, featureIndex, step)`
-// uses the **index within the biome's features[step] list**, not a global id.
-// When Mojang reorders features or adds a biome, re-run extract-worldgen.ps1
-// and this module picks up the new lists automatically.
+// Minecraft `WorldgenRandom.setFeatureSeed(decorationSeed, index, step)` uses
+// the **global FeatureSorter index** for that step (ChunkGenerator.applyBiomeDecoration),
+// not the index inside one biome's features[step] list.
+// Re-run extract-worldgen.ps1 after a Mojang drop; biome JSON drives the sorter.
 
 use crate::datapack_fs;
 use serde_json::Value;
@@ -25,6 +25,186 @@ pub mod step {
     pub const FLUID_SPRINGS: i32 = 8;
     pub const VEGETAL_DECORATION: i32 = 9;
     pub const TOP_LAYER_MODIFICATION: i32 = 10;
+}
+
+/// Overworld `BiomeSource.possibleBiomes()` first-seen order (26.2 probe).
+/// FeatureSorter iterates this set; order is part of the global index.
+const OVERWORLD_BIOME_ORDER: &[&str] = &[
+    "mushroom_fields",
+    "deep_frozen_ocean",
+    "frozen_ocean",
+    "deep_cold_ocean",
+    "cold_ocean",
+    "deep_ocean",
+    "ocean",
+    "deep_lukewarm_ocean",
+    "lukewarm_ocean",
+    "warm_ocean",
+    "stony_shore",
+    "swamp",
+    "mangrove_swamp",
+    "snowy_slopes",
+    "snowy_plains",
+    "snowy_beach",
+    "windswept_gravelly_hills",
+    "grove",
+    "windswept_hills",
+    "snowy_taiga",
+    "windswept_forest",
+    "taiga",
+    "plains",
+    "meadow",
+    "beach",
+    "forest",
+    "old_growth_spruce_taiga",
+    "flower_forest",
+    "birch_forest",
+    "dark_forest",
+    "pale_garden",
+    "savanna_plateau",
+    "savanna",
+    "jungle",
+    "badlands",
+    "desert",
+    "wooded_badlands",
+    "jagged_peaks",
+    "stony_peaks",
+    "frozen_river",
+    "river",
+    "ice_spikes",
+    "old_growth_pine_taiga",
+    "sunflower_plains",
+    "old_growth_birch_forest",
+    "sparse_jungle",
+    "bamboo_jungle",
+    "eroded_badlands",
+    "windswept_savanna",
+    "cherry_grove",
+    "frozen_peaks",
+    "dripstone_caves",
+    "lush_caves",
+    "sulfur_caves",
+    "deep_dark",
+];
+
+/// Global FeatureSorter index of `placed` in `step`, or None if absent.
+pub fn global_feature_index(step: i32, placed: &str) -> Option<i32> {
+    let want = strip_mc(placed);
+    features_per_step()
+        .get(step as usize)?
+        .iter()
+        .position(|f| f == want)
+        .map(|i| i as i32)
+}
+
+/// Global FeatureSorter list for a generation step.
+pub fn features_per_step_at(step: i32) -> &'static [String] {
+    features_per_step()
+        .get(step as usize)
+        .map(|v| v.as_slice())
+        .unwrap_or(&[])
+}
+
+fn features_per_step() -> &'static Vec<Vec<String>> {
+    static CACHE: OnceLock<Vec<Vec<String>>> = OnceLock::new();
+    CACHE.get_or_init(build_features_per_step)
+}
+
+/// Port of `FeatureSorter.buildFeaturesPerStep` over overworld biomes.
+fn build_features_per_step() -> Vec<Vec<String>> {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+    struct FeatureData {
+        step: i32,
+        feature_index: i32,
+    }
+
+    let mut name_of: HashMap<i32, String> = HashMap::new();
+    let mut index_of: HashMap<String, i32> = HashMap::new();
+    let mut next_index = 0i32;
+    let mut edges: BTreeMap<FeatureData, BTreeSet<FeatureData>> = BTreeMap::new();
+    let mut max_step = 0i32;
+
+    for biome in OVERWORLD_BIOME_ORDER {
+        let Some(steps) = biome_feature_steps(biome) else {
+            continue;
+        };
+        max_step = max_step.max(steps.len() as i32);
+        let mut flat: Vec<FeatureData> = Vec::new();
+        for (step_i, list) in steps.iter().enumerate() {
+            for feat in list {
+                let key = strip_mc(feat).to_string();
+                let idx = *index_of.entry(key.clone()).or_insert_with(|| {
+                    let i = next_index;
+                    next_index += 1;
+                    name_of.insert(i, key);
+                    i
+                });
+                flat.push(FeatureData {
+                    step: step_i as i32,
+                    feature_index: idx,
+                });
+            }
+        }
+        for i in 0..flat.len() {
+            edges.entry(flat[i]).or_default();
+            if i + 1 < flat.len() {
+                edges.entry(flat[i]).or_default().insert(flat[i + 1]);
+            }
+        }
+    }
+
+    // Graph.depthFirstSearch → post-order, then reverse.
+    let mut discovered: BTreeSet<FeatureData> = BTreeSet::new();
+    let mut visiting: BTreeSet<FeatureData> = BTreeSet::new();
+    let mut postorder: Vec<FeatureData> = Vec::new();
+
+    fn dfs(
+        node: FeatureData,
+        edges: &BTreeMap<FeatureData, BTreeSet<FeatureData>>,
+        discovered: &mut BTreeSet<FeatureData>,
+        visiting: &mut BTreeSet<FeatureData>,
+        postorder: &mut Vec<FeatureData>,
+    ) -> bool {
+        if discovered.contains(&node) {
+            return false;
+        }
+        if visiting.contains(&node) {
+            return true;
+        }
+        visiting.insert(node);
+        if let Some(nexts) = edges.get(&node) {
+            for &next in nexts {
+                if dfs(next, edges, discovered, visiting, postorder) {
+                    return true;
+                }
+            }
+        }
+        visiting.remove(&node);
+        discovered.insert(node);
+        postorder.push(node);
+        false
+    }
+
+    for &node in edges.keys() {
+        if discovered.contains(&node) {
+            continue;
+        }
+        let _cycle = dfs(node, &edges, &mut discovered, &mut visiting, &mut postorder);
+    }
+    postorder.reverse();
+
+    let mut out = vec![Vec::new(); max_step.max(0) as usize];
+    for fd in postorder {
+        if let Some(name) = name_of.get(&fd.feature_index) {
+            let bucket = &mut out[fd.step as usize];
+            if !bucket.iter().any(|s| s == name) {
+                bucket.push(name.clone());
+            }
+        }
+    }
+    out
 }
 
 /// Feature index of `placed` inside biome `biome`'s step list, or None.
@@ -140,6 +320,26 @@ mod tests {
         );
         assert_eq!(vein, Some(0), "sculk_vein should be index 0 in step 7");
         assert_eq!(patch, Some(1), "sculk_patch_deep_dark should be index 1");
+    }
+
+    #[test]
+    fn feature_sorter_matches_vanilla_probe() {
+        // Ground truth: tools/java-probe ProbeFeatureOrder (26.2 overworld).
+        assert_eq!(global_feature_index(7, "sculk_vein"), Some(0));
+        assert_eq!(global_feature_index(7, "sculk_patch_deep_dark"), Some(1));
+        assert_eq!(global_feature_index(7, "sulfur_spike_cluster"), Some(2));
+        assert_eq!(global_feature_index(7, "dripstone_cluster"), Some(4));
+        assert_eq!(global_feature_index(7, "ore_infested"), Some(6));
+        assert_eq!(global_feature_index(6, "ore_dirt"), Some(0));
+        assert_eq!(global_feature_index(6, "ore_emerald"), Some(33));
+        assert_eq!(global_feature_index(6, "ore_copper"), Some(25));
+        assert_eq!(global_feature_index(9, "glow_lichen"), Some(0));
+        assert_eq!(global_feature_index(9, "trees_plains"), Some(52));
+        assert_eq!(global_feature_index(9, "patch_leaf_litter"), Some(77));
+        assert_eq!(global_feature_index(10, "freeze_top_layer"), Some(0));
+        assert_eq!(features_per_step_at(7).len(), 7);
+        assert_eq!(features_per_step_at(6).len(), 34);
+        assert_eq!(features_per_step_at(9).len(), 106);
     }
 
     #[test]

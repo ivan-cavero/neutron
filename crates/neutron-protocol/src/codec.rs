@@ -173,8 +173,7 @@ impl MinecraftCodec {
 
             let compressed = encoder.finish()?;
 
-            let packet_length =
-                varint_size(uncompressed_size as i32) + compressed.len();
+            let packet_length = varint_size(uncompressed_size as i32) + compressed.len();
 
             write_varint(buf, packet_length as i32)?;
             write_varint(buf, uncompressed_size as i32)?; // data length (uncompressed size)

@@ -10,7 +10,9 @@ use std::path::{Path, PathBuf};
 
 /// Resolve `crates/neutron-worldgen/src/data/...`.
 fn data_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("data")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src")
+        .join("data")
 }
 
 /// Read `worldgen/<rel>` JSON (e.g. `biome/deep_dark.json`).

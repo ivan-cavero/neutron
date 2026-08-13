@@ -1,6 +1,6 @@
 //! Apply carvers only for the center target; report write Y histogram and hits.
 use neutron_worldgen::carvers::{
-    self, CARVE_CAN_REACH_FAIL, CARVE_ELLIPSOID_HIT, CARVE_ELLIPSOIDS, CARVE_ROOM_CALLS,
+    self, CARVE_CAN_REACH_FAIL, CARVE_ELLIPSOIDS, CARVE_ELLIPSOID_HIT, CARVE_ROOM_CALLS,
     CARVE_STARTS, CARVE_TUNNEL_STEPS, CARVE_WRITES,
 };
 use neutron_worldgen::region_buf::RegionBuf;
@@ -16,38 +16,38 @@ fn main() {
     // Build 1-chunk region (only center) via full gen noise path: generate neighbors
     // but apply carvers only on center by hand.
     let mut region = RegionBuf::new(cx, cz, 0); // single chunk
-    // Use generate_chunk internals: generate noise+surface for center only via full chunk
-    // hack: generate_chunk includes carvers; instead put pre-carve by...
-    // Easiest: generate with CARVERS off temporarily — can't.
-    // Use generate_chunk of neighbors? Region radius 0 = 1 chunk.
-    // We'll call generate_noise by generating chunk then undoing? No.
-    //
-    // Approach: generate full chunk (with carvers), but separately count by
-    // re-running apply on a fresh noise-only buffer.
-    //
-    // Public API lacks noise-only. Reconstruct: generate_chunk with carvers,
-    // then compare air before/after by regenerating region manually.
-    //
-    // Actually: use FeatureRadius region like generator, fill via generate_chunk
-    // of each cell WITHOUT double carvers by extracting from a side channel.
-    //
-    // Simplest path: temporarily rely on generate_chunk's 3x3 and just print
-    // Y histogram of air cells that are "likely carved" — deep air surrounded
-    // by solid.
-    //
-    // Better: export apply for one target. For now, put noise chunks by
-    // generating each chunk and stripping — can't strip carves.
-    //
-    // HACK: set CARVERS_ENABLED is const true. Use region radius 0 by
-    // calling the same public apply after filling with a generator helper.
-    //
-    // Fill region by taking blocks from generate_chunk of surrounding — those
-    // already include carvers. Not clean.
-    //
-    // Direct: duplicate generate path from example using ChunkGenerator fields.
-    // ChunkGenerator::generate_chunk is all we have.
-    //
-    // Measure: air count in deep Y bands after full generate.
+                                                // Use generate_chunk internals: generate noise+surface for center only via full chunk
+                                                // hack: generate_chunk includes carvers; instead put pre-carve by...
+                                                // Easiest: generate with CARVERS off temporarily — can't.
+                                                // Use generate_chunk of neighbors? Region radius 0 = 1 chunk.
+                                                // We'll call generate_noise by generating chunk then undoing? No.
+                                                //
+                                                // Approach: generate full chunk (with carvers), but separately count by
+                                                // re-running apply on a fresh noise-only buffer.
+                                                //
+                                                // Public API lacks noise-only. Reconstruct: generate_chunk with carvers,
+                                                // then compare air before/after by regenerating region manually.
+                                                //
+                                                // Actually: use FeatureRadius region like generator, fill via generate_chunk
+                                                // of each cell WITHOUT double carvers by extracting from a side channel.
+                                                //
+                                                // Simplest path: temporarily rely on generate_chunk's 3x3 and just print
+                                                // Y histogram of air cells that are "likely carved" — deep air surrounded
+                                                // by solid.
+                                                //
+                                                // Better: export apply for one target. For now, put noise chunks by
+                                                // generating each chunk and stripping — can't strip carves.
+                                                //
+                                                // HACK: set CARVERS_ENABLED is const true. Use region radius 0 by
+                                                // calling the same public apply after filling with a generator helper.
+                                                //
+                                                // Fill region by taking blocks from generate_chunk of surrounding — those
+                                                // already include carvers. Not clean.
+                                                //
+                                                // Direct: duplicate generate path from example using ChunkGenerator fields.
+                                                // ChunkGenerator::generate_chunk is all we have.
+                                                //
+                                                // Measure: air count in deep Y bands after full generate.
     let ch = gen.generate_chunk(cx, cz);
     let mut y_hist = [0u32; 24]; // 16-high bands from -64
     let mut deep_air = 0u32;
@@ -113,7 +113,10 @@ fn main() {
     for y in WORLD_BOTTOM..320 {
         for z in 0..16 {
             for x in 0..16 {
-                if matches!(region.get(cx * 16 + x, y, cz * 16 + z), BlockId::Air | BlockId::Lava) {
+                if matches!(
+                    region.get(cx * 16 + x, y, cz * 16 + z),
+                    BlockId::Air | BlockId::Lava
+                ) {
                     air += 1;
                 }
             }

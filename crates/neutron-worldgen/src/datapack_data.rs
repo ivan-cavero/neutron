@@ -212,6 +212,6 @@ pub fn all_paths() -> &'static [&'static str] {
         "noise/temperature_large.json",
         "noise/vegetation.json",
         "noise/vegetation_large.json",
-        "noise_settings_overworld.json"
+        "noise_settings_overworld.json",
     ]
 }

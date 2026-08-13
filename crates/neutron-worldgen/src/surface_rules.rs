@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 use serde_json::Value;
 
-use crate::biome_source::{self, biome_id};
+use crate::biome_source::biome_id;
 use crate::density::DensityEnv;
 use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
 use crate::noise::NormalNoise;
@@ -46,8 +46,7 @@ pub fn apply_surface_rules(
                 .map(|n| n.get_value(world_x as f64, 0.0, world_z as f64))
                 .unwrap_or(0.0);
             let mut depth_rng = main_rng.at(world_x, 0, world_z);
-            let surface_depth =
-                (surface_noise * 2.75 + 3.0 + depth_rng.next_f64() * 0.25) as i32;
+            let surface_depth = (surface_noise * 2.75 + 3.0 + depth_rng.next_f64() * 0.25) as i32;
 
             let surface_secondary = st
                 .noises
@@ -179,17 +178,8 @@ fn is_stone_like(b: BlockId) -> bool {
 }
 
 fn sample_biome(st: &WorldgenState, x: i32, y: i32, z: i32) -> u8 {
-    let mut env = DensityEnv::new(x, y, z, st.noises.noises());
-    let c = biome_source::climate_at_block(
-        &mut env,
-        &st.router.temperature,
-        &st.router.vegetation,
-        &st.router.continents,
-        &st.router.erosion,
-        &st.router.depth,
-        &st.router.ridges,
-    );
-    biome_source::find_biome(&c)
+    // SurfaceSystem.buildSurface uses `biomeManager::getBiome` (4-block voronoi).
+    crate::biome_manager::biome_id_at_block(st, x, y, z)
 }
 
 #[inline]
@@ -477,7 +467,9 @@ fn parse_rule(v: &Value) -> Rule {
             then: Box::new(parse_rule(&v["then_run"])),
         },
         "block" => {
-            let name = v["result_state"]["Name"].as_str().unwrap_or("minecraft:stone");
+            let name = v["result_state"]["Name"]
+                .as_str()
+                .unwrap_or("minecraft:stone");
             Rule::Block(BlockId::from_name(name).unwrap_or(BlockId::Stone))
         }
         "bandlands" => Rule::Bandlands,

@@ -4,11 +4,18 @@ use neutron_worldgen::noise::NormalNoise;
 use neutron_worldgen::rng::Xoroshiro128;
 
 fn main() {
-    let seed: i64 = std::env::args().nth(1).unwrap_or("42".into()).parse().unwrap();
+    let seed: i64 = std::env::args()
+        .nth(1)
+        .unwrap_or("42".into())
+        .parse()
+        .unwrap();
 
     let mut rng = Xoroshiro128::new(seed);
     let (lo, hi) = rng.fork_positional();
-    println!("seed={} mainPosLo={} mainPosHi={}", seed, lo as i64, hi as i64);
+    println!(
+        "seed={} mainPosLo={} mainPosHi={}",
+        seed, lo as i64, hi as i64
+    );
 
     let params: &[(&str, i32, &[f64])] = &[
         ("clay_bands_offset", -8, &[1.0]),
@@ -27,10 +34,20 @@ fn main() {
         ("offset", -3, &[1.0, 1.0, 1.0, 0.0]),
         ("temperature", -10, &[1.5, 0.0, 1.0, 0.0, 0.0, 0.0]),
         ("vegetation", -8, &[1.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
-        ("continentalness", -9, &[1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0]),
+        (
+            "continentalness",
+            -9,
+            &[1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0],
+        ),
         ("erosion", -9, &[1.0, 1.0, 0.0, 1.0, 1.0]),
         ("ridge", -7, &[1.0, 2.0, 1.0, 0.0, 0.0, 0.0]),
-        ("jagged", -16, &[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        (
+            "jagged",
+            -16,
+            &[
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            ],
+        ),
         ("cave_entrance", -7, &[0.4, 0.5, 1.0]),
         ("spaghetti_roughness_modulator", -8, &[1.0]),
         ("spaghetti_roughness", -5, &[1.0]),
@@ -39,7 +56,11 @@ fn main() {
         ("spaghetti_3d_2", -7, &[1.0]),
         ("spaghetti_3d_thickness", -8, &[1.0]),
         ("cave_layer", -8, &[1.0]),
-        ("cave_cheese", -8, &[0.5, 1.0, 2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 0.0]),
+        (
+            "cave_cheese",
+            -8,
+            &[0.5, 1.0, 2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 0.0],
+        ),
         ("spaghetti_2d_modulator", -11, &[1.0]),
         ("spaghetti_2d", -7, &[1.0]),
         ("spaghetti_2d_thickness", -11, &[1.0]),

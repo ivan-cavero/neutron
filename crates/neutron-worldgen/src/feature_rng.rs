@@ -31,17 +31,22 @@ impl FeatureRandom {
         self.set_seed(level_seed);
         let a = self.next_long() | 1;
         let b = self.next_long() | 1;
-        let decoration =
-            (block_x as i64).wrapping_mul(a).wrapping_add((block_z as i64).wrapping_mul(b)) ^ level_seed;
+        let decoration = (block_x as i64)
+            .wrapping_mul(a)
+            .wrapping_add((block_z as i64).wrapping_mul(b))
+            ^ level_seed;
         self.set_seed(decoration);
         decoration
     }
 
-    /// `WorldgenRandom.setFeatureSeed(decorationSeed, featureIndex, step)`.
+    /// `WorldgenRandom.setFeatureSeed(decorationSeed, index, step)`.
+    ///
+    /// Vanilla 26.2 (CFR): `seed + (long)index + (long)(10000 * step)`.
+    /// The `10000 * step` multiply is 32-bit, then widened — same as Java.
     pub fn set_feature_seed(&mut self, decoration_seed: i64, feature_index: i32, step: i32) {
         let seed = decoration_seed
-            .wrapping_add(step as i64)
-            .wrapping_add(10_000i64.wrapping_mul(feature_index as i64));
+            .wrapping_add(feature_index as i64)
+            .wrapping_add((10_000i32.wrapping_mul(step)) as i64);
         self.set_seed(seed);
     }
 
@@ -99,5 +104,24 @@ mod tests {
         for _ in 0..100 {
             assert_eq!(a.next_int(16), b.next_int(16));
         }
+    }
+
+    #[test]
+    fn feature_seed_formula_matches_vanilla() {
+        // WorldgenRandom.setFeatureSeed(dec, index, step) = dec + index + 10000*step
+        // NOT dec + step + 10000*index (the previous swapped formula).
+        let dec = 0x1111_2222_3333_4444u64 as i64;
+        let mut rng = FeatureRandom::new(0);
+        rng.set_feature_seed(dec, 52, 9);
+        let expected = dec.wrapping_add(52).wrapping_add(90_000);
+        let mut check = FeatureRandom::new(0);
+        check.set_seed(expected);
+        for _ in 0..16 {
+            assert_eq!(rng.next_int(16), check.next_int(16));
+        }
+        // Distinct from the swapped formula.
+        let mut swapped = FeatureRandom::new(0);
+        swapped.set_seed(dec.wrapping_add(9).wrapping_add(10_000 * 52));
+        assert_ne!(rng.next_int(16), swapped.next_int(16));
     }
 }

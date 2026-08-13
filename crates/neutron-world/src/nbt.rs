@@ -334,10 +334,7 @@ mod tests {
 
         let compressed = write_gzip_nbt(&nbt).unwrap();
         let restored = read_gzip_nbt(&compressed).unwrap();
-        assert_eq!(
-            get_string(&restored.compound, "test").unwrap(),
-            "gzip data"
-        );
+        assert_eq!(get_string(&restored.compound, "test").unwrap(), "gzip data");
     }
 
     #[test]

@@ -85,20 +85,14 @@ impl World {
         let region_dir = path.join("region");
         if !region_dir.exists() {
             return Err(WorldError::InvalidWorld {
-                reason: format!(
-                    "missing region/ directory in {}",
-                    path.display()
-                ),
+                reason: format!("missing region/ directory in {}", path.display()),
             });
         }
 
         let level_dat_path = path.join("level.dat");
         if !level_dat_path.exists() {
             return Err(WorldError::InvalidWorld {
-                reason: format!(
-                    "missing level.dat in {}",
-                    path.display()
-                ),
+                reason: format!("missing level.dat in {}", path.display()),
             });
         }
 

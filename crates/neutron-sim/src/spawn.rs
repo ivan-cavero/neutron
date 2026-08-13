@@ -170,10 +170,9 @@ impl MobType {
 
             Self::Squid | Self::Dolphin => MobCategory::WaterCreature,
 
-            Self::Cod
-            | Self::Salmon
-            | Self::TropicalFish
-            | Self::Pufferfish => MobCategory::WaterAmbient,
+            Self::Cod | Self::Salmon | Self::TropicalFish | Self::Pufferfish => {
+                MobCategory::WaterAmbient
+            }
 
             Self::GlowSquid => MobCategory::UndergroundCreature,
 
@@ -329,9 +328,7 @@ impl SpawnEngine {
             // Ambient: sky_light <= 7 AND block_light == 0
             MobCategory::Ambient => sky_light <= 7 && block_light == 0,
             // Water mobs: no strict light requirement
-            MobCategory::WaterCreature
-            | MobCategory::WaterAmbient
-            | MobCategory::Axolotl => true,
+            MobCategory::WaterCreature | MobCategory::WaterAmbient | MobCategory::Axolotl => true,
             // Underground creature: sky_light <= 7 AND block_light == 0
             MobCategory::UndergroundCreature => sky_light <= 7 && block_light == 0,
         }
@@ -436,12 +433,7 @@ impl SpawnEngine {
                 mobs
             }
             MobCategory::Creature => {
-                let mut mobs = vec![
-                    MobType::Cow,
-                    MobType::Pig,
-                    MobType::Sheep,
-                    MobType::Chicken,
-                ];
+                let mut mobs = vec![MobType::Cow, MobType::Pig, MobType::Sheep, MobType::Chicken];
                 match biome {
                     BiomeId::Forest
                     | BiomeId::BirchForest
@@ -694,13 +686,7 @@ fn pseudo_random_index(a: i32, cycle: u32, len: usize) -> usize {
 }
 
 /// Pick a pack size in [min, max].
-fn pseudo_random_pack_size(
-    x: i32,
-    z: i32,
-    cycle: u32,
-    min: u32,
-    max: u32,
-) -> u32 {
+fn pseudo_random_pack_size(x: i32, z: i32, cycle: u32, min: u32, max: u32) -> u32 {
     let hash = (x as u64)
         .wrapping_mul(6364136223846793005)
         .wrapping_add(z as u64)
@@ -754,7 +740,11 @@ mod tests {
         }
 
         fn get_sky_light(&self, _x: i32, y: i32, _z: i32) -> u8 {
-            if y >= self.surface_y { 15 } else { 0 }
+            if y >= self.surface_y {
+                15
+            } else {
+                0
+            }
         }
 
         fn get_block_light(&self, x: i32, y: i32, z: i32) -> u8 {
@@ -793,11 +783,7 @@ mod tests {
         ));
         // y=64 is at/above surface, sky_light=15 -> NOT OK for Monster.
         let world_high = FlatWorld::new(BiomeId::Plains);
-        assert!(!engine.meets_light_requirements(
-            (10, 64, 10),
-            MobCategory::Monster,
-            &world_high,
-        ));
+        assert!(!engine.meets_light_requirements((10, 64, 10), MobCategory::Monster, &world_high,));
     }
 
     // -----------------------------------------------------------------------
@@ -807,28 +793,14 @@ mod tests {
     fn hostile_spawn_rejected_with_block_light() {
         let engine = SpawnEngine::new();
         // Underground: sky_light=0 but block_light=3 -> should NOT spawn.
-        let world = FlatWorld::new(BiomeId::Plains)
-            .with_block_light((10, 63, 10), 3);
-        assert!(!engine.meets_light_requirements(
-            (10, 63, 10),
-            MobCategory::Monster,
-            &world,
-        ));
+        let world = FlatWorld::new(BiomeId::Plains).with_block_light((10, 63, 10), 3);
+        assert!(!engine.meets_light_requirements((10, 63, 10), MobCategory::Monster, &world,));
         // Same with block_light=1 -> still rejected.
-        let world2 = FlatWorld::new(BiomeId::Plains)
-            .with_block_light((10, 63, 10), 1);
-        assert!(!engine.meets_light_requirements(
-            (10, 63, 10),
-            MobCategory::Monster,
-            &world2,
-        ));
+        let world2 = FlatWorld::new(BiomeId::Plains).with_block_light((10, 63, 10), 1);
+        assert!(!engine.meets_light_requirements((10, 63, 10), MobCategory::Monster, &world2,));
         // block_light=0 -> accepted.
         let world3 = FlatWorld::new(BiomeId::Plains);
-        assert!(engine.meets_light_requirements(
-            (10, 63, 10),
-            MobCategory::Monster,
-            &world3,
-        ));
+        assert!(engine.meets_light_requirements((10, 63, 10), MobCategory::Monster, &world3,));
     }
 
     // -----------------------------------------------------------------------
@@ -839,11 +811,7 @@ mod tests {
         let engine = SpawnEngine::new();
         let world = FlatWorld::new(BiomeId::Plains);
         // sky_light=15 > 7 -> OK for Creature.
-        assert!(engine.meets_light_requirements(
-            (10, 64, 10),
-            MobCategory::Creature,
-            &world,
-        ));
+        assert!(engine.meets_light_requirements((10, 64, 10), MobCategory::Creature, &world,));
         // Low light -> NOT OK.
         assert!(!engine.meets_light_requirements(
             (10, 30, 10),
@@ -859,13 +827,8 @@ mod tests {
     fn passive_spawn_ignores_block_light() {
         let engine = SpawnEngine::new();
         // sky_light=15, block_light=10 -> should STILL spawn (sky light only).
-        let world = FlatWorld::new(BiomeId::Plains)
-            .with_block_light((10, 64, 10), 10);
-        assert!(engine.meets_light_requirements(
-            (10, 64, 10),
-            MobCategory::Creature,
-            &world,
-        ));
+        let world = FlatWorld::new(BiomeId::Plains).with_block_light((10, 64, 10), 10);
+        assert!(engine.meets_light_requirements((10, 64, 10), MobCategory::Creature, &world,));
     }
 
     // -----------------------------------------------------------------------
@@ -907,7 +870,10 @@ mod tests {
 
         // UndergroundCreature cap is 5 per player (vanilla parity).
         assert_eq!(engine.effective_cap(MobCategory::UndergroundCreature, 1), 5);
-        assert_eq!(engine.effective_cap(MobCategory::UndergroundCreature, 4), 20);
+        assert_eq!(
+            engine.effective_cap(MobCategory::UndergroundCreature, 4),
+            20
+        );
 
         // Simulate filling the cap.
         engine.spawned_counts.insert(MobCategory::Monster, 70);
@@ -1030,7 +996,10 @@ mod tests {
         assert_eq!(MobType::Bat.category(), MobCategory::Ambient);
         assert_eq!(MobType::Squid.category(), MobCategory::WaterCreature);
         assert_eq!(MobType::Cod.category(), MobCategory::WaterAmbient);
-        assert_eq!(MobType::GlowSquid.category(), MobCategory::UndergroundCreature);
+        assert_eq!(
+            MobType::GlowSquid.category(),
+            MobCategory::UndergroundCreature
+        );
         assert_eq!(MobType::Axolotl.category(), MobCategory::Axolotl);
     }
 
@@ -1072,11 +1041,16 @@ mod tests {
                 }
             }
         }
-        assert!(!saw_creature, "Creature spawns should not happen before tick 400");
+        assert!(
+            !saw_creature,
+            "Creature spawns should not happen before tick 400"
+        );
 
         // Tick 400 -- may produce Creature spawns.
         let candidates = engine.tick(&players, &world);
-        let has_creature = candidates.iter().any(|c| c.category == MobCategory::Creature);
+        let has_creature = candidates
+            .iter()
+            .any(|c| c.category == MobCategory::Creature);
         // The deterministic offset might not land on a valid position, but
         // the engine attempted it. Just verify no panic and count updated.
         if has_creature {

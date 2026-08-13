@@ -85,7 +85,9 @@ struct PacketEntry {
 impl PacketRegistry {
     /// Create a new empty registry.
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        Self {
+            entries: Vec::new(),
+        }
     }
 
     /// Register a packet type.
@@ -106,7 +108,12 @@ impl PacketRegistry {
     }
 
     /// Look up a packet name by state, direction, and ID.
-    pub fn name(&self, state: ProtocolState, direction: Direction, id: u32) -> Option<&'static str> {
+    pub fn name(
+        &self,
+        state: ProtocolState,
+        direction: Direction,
+        id: u32,
+    ) -> Option<&'static str> {
         self.entries
             .iter()
             .find(|e| e.state == state && e.direction == direction && e.id == id)
@@ -208,7 +215,7 @@ pub fn write_raw_packet(buf: &mut BytesMut, id: u32, payload: &[u8]) -> Result<(
     Ok(())
 }
 
-use crate::types::{write_varint, varint_size};
+use crate::types::{varint_size, write_varint};
 
 #[cfg(test)]
 mod tests {
@@ -250,6 +257,8 @@ mod tests {
     fn test_registry() {
         // Just test that the registry compiles and basic operations work
         let reg = PacketRegistry::new();
-        assert!(reg.name(ProtocolState::Play, Direction::Clientbound, 0x26).is_none());
+        assert!(reg
+            .name(ProtocolState::Play, Direction::Clientbound, 0x26)
+            .is_none());
     }
 }

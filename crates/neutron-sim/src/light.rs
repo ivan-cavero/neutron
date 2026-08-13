@@ -214,7 +214,8 @@ impl LightEngine {
             return;
         }
 
-        let mut light_map: std::collections::HashMap<(i32, i32, i32), u8> = std::collections::HashMap::new();
+        let mut light_map: std::collections::HashMap<(i32, i32, i32), u8> =
+            std::collections::HashMap::new();
         let mut queue: VecDeque<(i32, i32, i32, u8)> = VecDeque::new();
 
         light_map.insert((x, y, z), level);
@@ -228,7 +229,14 @@ impl LightEngine {
             let next = current - 1;
 
             // Propagate in all 6 directions
-            for (dx, dy, dz) in [(1i32,0i32,0i32),(-1,0,0),(0,1,0),(0,-1,0),(0,0,1),(0,0,-1)] {
+            for (dx, dy, dz) in [
+                (1i32, 0i32, 0i32),
+                (-1, 0, 0),
+                (0, 1, 0),
+                (0, -1, 0),
+                (0, 0, 1),
+                (0, 0, -1),
+            ] {
                 let nx = cx + dx;
                 let ny = cy + dy;
                 let nz = cz + dz;
@@ -262,7 +270,10 @@ impl LightEngine {
                     queue.push_back((nx, ny, nz, next));
                     // Debug: trace propagation to x=3
                     if nx == 3 && ny == 0 && nz == 0 {
-                        eprintln!("BFS SET (3,0,0)={} from ({},{},{}) cur={}", next, cx, cy, cz, current);
+                        eprintln!(
+                            "BFS SET (3,0,0)={} from ({},{},{}) cur={}",
+                            next, cx, cy, cz, current
+                        );
                     }
                 }
             }
@@ -397,7 +408,8 @@ impl LightEngine {
 
     /// Get the maximum light level at a position (sky or block, whichever is higher).
     pub fn get_light_level(&self, x: i32, y: i32, z: i32) -> u8 {
-        self.get_sky_light(x, y, z).max(self.get_block_light(x, y, z))
+        self.get_sky_light(x, y, z)
+            .max(self.get_block_light(x, y, z))
     }
 
     /// Get sky light data for a section (for sending to clients).
@@ -663,7 +675,10 @@ mod tests {
 
         // Light at the water should be 12 (14 - 2 for distance).
         let at_water = engine.get_block_light(2, 0, 0);
-        assert_eq!(at_water, 12, "light through transparent should be distance - 1");
+        assert_eq!(
+            at_water, 12,
+            "light through transparent should be distance - 1"
+        );
 
         // Light beyond water should be 11.
         let beyond = engine.get_block_light(3, 0, 0);
@@ -681,10 +696,16 @@ mod tests {
         assert!(!engine.is_dirty(section_y), "section should start clean");
 
         engine.dirty[section_idx] = true;
-        assert!(engine.is_dirty(section_y), "section should be dirty after marking");
+        assert!(
+            engine.is_dirty(section_y),
+            "section should be dirty after marking"
+        );
 
         engine.clear_dirty(section_y);
-        assert!(!engine.is_dirty(section_y), "section should be clean after clearing");
+        assert!(
+            !engine.is_dirty(section_y),
+            "section should be clean after clearing"
+        );
     }
 
     #[test]

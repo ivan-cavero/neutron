@@ -13,9 +13,7 @@ use neutron_protocol::play::{
     ServerData, SetDefaultSpawnPosition, SetPlayerAbilities, SynchronizePlayerPosition,
     SystemChatMessage,
 };
-use neutron_protocol::types::{
-    Angle, BlockPos, Chat, GameMode, Slot, SlotData, Vec3d, Vec3f,
-};
+use neutron_protocol::types::{Angle, BlockPos, Chat, GameMode, Slot, SlotData, Vec3d, Vec3f};
 use neutron_protocol::{Direction, ProtocolState};
 use neutron_world::{Dimension, Region, World};
 
@@ -215,10 +213,7 @@ fn test_packet_roundtrip_all_types() {
         LoginStart::decode
     );
 
-    roundtrip!(
-        SetCompression { threshold: 512 },
-        SetCompression::decode
-    );
+    roundtrip!(SetCompression { threshold: 512 }, SetCompression::decode);
 
     roundtrip!(
         LoginSuccess {
@@ -295,10 +290,7 @@ fn test_packet_roundtrip_all_types() {
 
     // --- Play packets (Serverbound) ---
 
-    roundtrip!(
-        KeepAliveResponse { id: 42 },
-        KeepAliveResponse::decode
-    );
+    roundtrip!(KeepAliveResponse { id: 42 }, KeepAliveResponse::decode);
 
     roundtrip!(
         PlayerPosition {
@@ -476,7 +468,11 @@ fn test_world_directory_structure() {
         .filter_map(|e| e.ok())
         .map(|e| e.file_name().to_string_lossy().to_string())
         .collect();
-    assert_eq!(entries.len(), 3, "expected exactly 3 dirs: my_world, my_world_nether, my_world_the_end");
+    assert_eq!(
+        entries.len(),
+        3,
+        "expected exactly 3 dirs: my_world, my_world_nether, my_world_the_end"
+    );
 
     // Verify level.dat is readable.
     let level = neutron_world::LevelDat::read(&world_path.join("level.dat")).unwrap();
@@ -484,18 +480,9 @@ fn test_world_directory_structure() {
 
     // Verify dimension directory helpers agree with the filesystem.
     let world = World::open(&world_path).unwrap();
-    assert_eq!(
-        world.dimension_dir(Dimension::Overworld),
-        world_path
-    );
-    assert_eq!(
-        world.dimension_dir(Dimension::Nether),
-        nether_dir
-    );
-    assert_eq!(
-        world.dimension_dir(Dimension::TheEnd),
-        the_end_dir
-    );
+    assert_eq!(world.dimension_dir(Dimension::Overworld), world_path);
+    assert_eq!(world.dimension_dir(Dimension::Nether), nether_dir);
+    assert_eq!(world.dimension_dir(Dimension::TheEnd), the_end_dir);
 
     // Verify region directories are empty initially.
     let regions = world.list_regions(Dimension::Overworld).unwrap();

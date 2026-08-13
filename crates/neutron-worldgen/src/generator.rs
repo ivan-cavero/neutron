@@ -9,11 +9,11 @@
 // - Aquifer.computeSubstance decides stone/fluid/air from final density.
 
 use crate::aquifer::{GlobalFluidPicker, NoiseBasedAquifer};
+use crate::carvers;
 use crate::density::{
     collect_interpolated, compute, interpolated_wrapped, CellInterpRuntime, DensityEnv,
     MarkerState, DF,
 };
-use crate::carvers;
 use crate::features;
 use crate::ore_vein;
 use crate::positional::PositionalRandomFactory;
@@ -264,32 +264,20 @@ impl ChunkGenerator {
         }
 
         // --- Biomes (4x4 horizontal per 16-block section; one Y sample at section mid) ---
-        // Vanilla stores 4×4×4 quarts per section (Y step 4). We store one Y per
-        // section for now, sampled at section midpoint so depth-dependent cave
-        // biomes and surface biomes are at the correct altitude.
+        // Vanilla `fillBiomesFromNoise` stores 4×4×4 quarts per section via
+        // `getNoiseBiome(quart)` (no voronoi). We keep one Y quart per section
+        // at the section midpoint quart. Sample climate at `QuartPos.toBlock`.
         let mut biomes = vec![0u8; CHUNK_BIOME_VOLUME];
         let st = &self.state;
         for section in 0..24 {
             for bz4 in 0..4 {
                 for bx4 in 0..4 {
-                    let block_x = cx * 16 + bx4 * 4 + 2;
-                    let block_z = cz * 16 + bz4 * 4 + 2;
-                    // Section index 0 starts at WORLD_BOTTOM (-64). Midpoint of
-                    // the 16-block section: -64 + section*16 + 8.
-                    let block_y = WORLD_BOTTOM + section * 16 + 8;
-                    let mut env = DensityEnv::new(block_x, block_y, block_z, st.noises.noises());
-                    let biome = crate::biome_source::climate_at_block(
-                        &mut env,
-                        &st.router.temperature,
-                        &st.router.vegetation,
-                        &st.router.continents,
-                        &st.router.erosion,
-                        &st.router.depth,
-                        &st.router.ridges,
-                    );
-                    let biome_id = crate::biome_source::find_biome(&biome);
+                    let quart_x = cx * 4 + bx4;
+                    let quart_z = cz * 4 + bz4;
+                    let quart_y = (WORLD_BOTTOM + section * 16 + 8) >> 2;
                     let idx = section * 16 + bz4 * 4 + bx4;
-                    biomes[idx as usize] = biome_id;
+                    biomes[idx as usize] =
+                        crate::biome_manager::noise_biome_at_quart(st, quart_x, quart_y, quart_z);
                 }
             }
         }

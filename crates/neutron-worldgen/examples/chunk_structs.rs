@@ -4,15 +4,17 @@ use neutron_world::Region;
 use std::path::PathBuf;
 
 fn show(tag: &Tag, indent: usize, max_depth: usize) {
-    if indent > max_depth { return; }
+    if indent > max_depth {
+        return;
+    }
     let pad = "  ".repeat(indent);
     match tag {
         Tag::Compound(c) => {
-            for (k,v) in c.iter() {
+            for (k, v) in c.iter() {
                 match v {
                     Tag::Compound(_) | Tag::List(_) => {
                         println!("{}{}:", pad, k);
-                        show(v, indent+1, max_depth);
+                        show(v, indent + 1, max_depth);
                     }
                     Tag::String(s) => println!("{}{} = \"{}\"", pad, k, s),
                     Tag::Int(i) => println!("{}{} = {}", pad, k, i),
@@ -24,9 +26,9 @@ fn show(tag: &Tag, indent: usize, max_depth: usize) {
         }
         Tag::List(List::Compound(l)) => {
             println!("{}[{} compounds]", pad, l.len());
-            for (i,c) in l.iter().take(5).enumerate() {
+            for (i, c) in l.iter().take(5).enumerate() {
                 println!("{}[{}]:", pad, i);
-                show(&Tag::Compound(c.clone()), indent+1, max_depth);
+                show(&Tag::Compound(c.clone()), indent + 1, max_depth);
             }
         }
         Tag::List(List::String(l)) => println!("{}{:?}", pad, l),
@@ -35,12 +37,14 @@ fn show(tag: &Tag, indent: usize, max_depth: usize) {
 }
 
 fn main() {
-    let path = PathBuf::from("tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.0.-1.mca");
+    let path = PathBuf::from(
+        "tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.0.-1.mca",
+    );
     let region = Region::open(&path).unwrap().with_coords(0, -1);
     let data = region.get_chunk(6, 30).unwrap().unwrap();
     let nbt = read_nbt(&data).unwrap();
     // top-level keys
-    for (k,_) in nbt.compound.iter() {
+    for (k, _) in nbt.compound.iter() {
         println!("key: {k}");
     }
     if let Some(s) = compound_get(&nbt.compound, "structures") {

@@ -1,4 +1,4 @@
-use neutron_worldgen::{ChunkGenerator, surface::BlockId};
+use neutron_worldgen::{surface::BlockId, ChunkGenerator};
 fn main() {
     let gen = ChunkGenerator::new(12345);
     let chunk = gen.generate_chunk(6, -2);
@@ -17,10 +17,18 @@ fn main() {
                     BlockId::Water | BlockId::Lava => water += 1,
                     BlockId::Stone => {
                         stone += 1;
-                        if y < 0 { solid_below0 += 1; } else { solid_above0 += 1; }
+                        if y < 0 {
+                            solid_below0 += 1;
+                        } else {
+                            solid_above0 += 1;
+                        }
                     }
                     _ => {
-                        if y < 0 { solid_below0 += 1; } else { solid_above0 += 1; }
+                        if y < 0 {
+                            solid_below0 += 1;
+                        } else {
+                            solid_above0 += 1;
+                        }
                     }
                 }
             }
@@ -31,14 +39,14 @@ fn main() {
     print!("HEIGHTS:");
     for z in 0..16 {
         for x in 0..16 {
-            print!(" {}", chunk.heightmap[z*16+x]);
+            print!(" {}", chunk.heightmap[z * 16 + x]);
         }
     }
     println!();
     // dump whether solid at (x,y,z) for y in 100..140 as bitstring per column - sample agreement
     // print block at surface and 5 below for a few columns
-    for (x,z) in [(0u32,0u32),(5,5),(15,15),(10,3),(8,8)] {
-        let h = chunk.heightmap[(z as usize)*16+(x as usize)];
+    for (x, z) in [(0u32, 0u32), (5, 5), (15, 15), (10, 3), (8, 8)] {
+        let h = chunk.heightmap[(z as usize) * 16 + (x as usize)];
         print!("col ({x},{z}) h={h}: ");
         for dy in 0..6 {
             let y = h as i32 - dy;

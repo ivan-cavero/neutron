@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 use serde_json::Value;
 
-use crate::density::{DF, DensityEnv, DensityRegistry, MarkerState};
+use crate::density::{DensityEnv, DensityRegistry, MarkerState, DF};
 use crate::noise::{BlendedNoise, NormalNoise};
 use crate::rng::Xoroshiro128;
 

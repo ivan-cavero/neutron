@@ -114,7 +114,8 @@ impl ServerState {
 
     /// Allocate a new entity ID.
     pub fn next_entity_id(&self) -> i32 {
-        self.next_entity_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        self.next_entity_id
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Get the current tick count.
@@ -123,11 +124,7 @@ impl ServerState {
     }
 
     /// Register a player. Returns the entity ID.
-    pub async fn register_player(
-        &self,
-        uuid: uuid::Uuid,
-        username: String,
-    ) -> i32 {
+    pub async fn register_player(&self, uuid: uuid::Uuid, username: String) -> i32 {
         let entity_id = self.next_entity_id();
         let player = PlayerState {
             entity_id,
@@ -174,13 +171,7 @@ impl ServerState {
     }
 
     /// Update a player's position.
-    pub async fn update_player_position(
-        &self,
-        uuid: &uuid::Uuid,
-        x: f64,
-        y: f64,
-        z: f64,
-    ) {
+    pub async fn update_player_position(&self, uuid: &uuid::Uuid, x: f64, y: f64, z: f64) {
         if let Some(player) = self.players.write().await.get_mut(uuid) {
             player.x = x;
             player.y = y;
@@ -191,12 +182,7 @@ impl ServerState {
     }
 
     /// Update a player's rotation.
-    pub async fn update_player_rotation(
-        &self,
-        uuid: &uuid::Uuid,
-        _yaw: f32,
-        _pitch: f32,
-    ) {
+    pub async fn update_player_rotation(&self, uuid: &uuid::Uuid, _yaw: f32, _pitch: f32) {
         // Rotation is tracked but not stored separately for now.
         let _ = (uuid, _yaw, _pitch);
     }
@@ -207,10 +193,7 @@ impl ServerState {
     }
 
     /// Get player info (username, entity_id) for chat broadcast.
-    pub async fn get_player_info(
-        &self,
-        uuid: &uuid::Uuid,
-    ) -> Option<(String, i32)> {
+    pub async fn get_player_info(&self, uuid: &uuid::Uuid) -> Option<(String, i32)> {
         self.players
             .read()
             .await

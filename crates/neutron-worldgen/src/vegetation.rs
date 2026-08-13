@@ -5,10 +5,10 @@
 // - leaf_litter (patch_leaf_litter + tree ground decorators)
 // - simple oak / dark_oak trees (trees_plains / dark_forest_vegetation approx)
 //
-// Biome-gated via ClimateSampler + multi-noise lookup. Uses FeatureRandom
+// Biome-gated via BiomeManager voronoi + multi-noise. Uses FeatureRandom
 // set_decoration_seed / set_feature_seed for deterministic placement.
 
-use crate::biome_source::{biome_id, climate_at_block, find_biome};
+use crate::biome_source::{biome_id, biome_id_at_block};
 use crate::feature_rng::FeatureRandom;
 use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
 use crate::region_buf::RegionBuf;
@@ -223,17 +223,7 @@ pub fn apply_vegetation_region(region: &mut RegionBuf, state: &WorldgenState) {
 }
 
 fn veg_biome_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> VegBiome {
-    let mut env = crate::density::DensityEnv::new(x, y, z, state.noises.noises());
-    let climate = climate_at_block(
-        &mut env,
-        &state.router.temperature,
-        &state.router.vegetation,
-        &state.router.continents,
-        &state.router.erosion,
-        &state.router.depth,
-        &state.router.ridges,
-    );
-    match find_biome(&climate) {
+    match biome_id_at_block(state, x, y, z) {
         biome_id::DARK_FOREST => VegBiome::DarkForest,
         biome_id::FOREST
         | biome_id::BIRCH_FOREST

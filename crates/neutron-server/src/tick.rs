@@ -39,7 +39,10 @@ pub async fn run_tick_loop(
     loop {
         tokio::time::sleep(tick_duration).await;
 
-        let tick = server.tick_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+        let tick = server
+            .tick_count
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            + 1;
 
         // Send KeepAlive every 600 ticks.
         if tick % KEEPALIVE_INTERVAL == 0 {
@@ -135,10 +138,7 @@ async fn check_timeouts(server: &SharedServer, tick: u64) {
 // Chunk sending for players who need more chunks
 // ---------------------------------------------------------------------------
 
-async fn send_pending_chunks(
-    server: &SharedServer,
-    writer_tx: &mpsc::Sender<OutgoingPacket>,
-) {
+async fn send_pending_chunks(server: &SharedServer, writer_tx: &mpsc::Sender<OutgoingPacket>) {
     let codec = neutron_protocol::codec::MinecraftCodec::new();
     let seed = server.config.seed;
 

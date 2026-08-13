@@ -8,9 +8,8 @@ use crate::rng::Xoroshiro128;
 /// Vanilla `Mth.getSeed(x, y, z)`.
 #[inline]
 pub fn block_seed(x: i32, y: i32, z: i32) -> i64 {
-    let mut i = (x.wrapping_mul(3129871) as i64)
-        ^ ((z as i64).wrapping_mul(116129781))
-        ^ (y as i64);
+    let mut i =
+        (x.wrapping_mul(3129871) as i64) ^ ((z as i64).wrapping_mul(116129781)) ^ (y as i64);
     i = i
         .wrapping_mul(i)
         .wrapping_mul(42317861)

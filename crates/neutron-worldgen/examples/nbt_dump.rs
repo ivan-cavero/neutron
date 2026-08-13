@@ -1,4 +1,10 @@
-use neutron_world::{Region, nbt::{read_nbt, compound_get}, nbt::ussr_nbt::owned::{Tag as T, List as L, Compound as C};
+use neutron_world::{
+    Region,
+    nbt::{
+        compound_get, read_nbt,
+        ussr_nbt::owned::{Compound as C, List as L, Tag as T},
+    },
+};
 use std::path::Path;
 
 fn main() {

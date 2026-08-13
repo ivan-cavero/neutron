@@ -1,4 +1,4 @@
-use neutron_worldgen::density::{compute, DF, DFNode, DensityEnv, MarkerKind, MarkerState};
+use neutron_worldgen::density::{compute, DFNode, DensityEnv, MarkerKind, MarkerState, DF};
 use neutron_worldgen::generator::lerp;
 use neutron_worldgen::surface::BlockId;
 use neutron_worldgen::ChunkGenerator;
@@ -8,7 +8,9 @@ fn find_interp(df: &DF) -> DF {
         DFNode::Marker(MarkerKind::Interpolated, inner) => inner.clone(),
         _ => {
             for c in df.children() {
-                if let Some(x) = find_interp_opt(c) { return x; }
+                if let Some(x) = find_interp_opt(c) {
+                    return x;
+                }
             }
             panic!("no interp");
         }
@@ -19,7 +21,9 @@ fn find_interp_opt(df: &DF) -> Option<DF> {
         DFNode::Marker(MarkerKind::Interpolated, inner) => Some(inner.clone()),
         _ => {
             for c in df.children() {
-                if let Some(x) = find_interp_opt(c) { return Some(x); }
+                if let Some(x) = find_interp_opt(c) {
+                    return Some(x);
+                }
             }
             None
         }
@@ -34,7 +38,8 @@ fn main() {
     let gen = ChunkGenerator::new(12345);
     let st = &gen.state;
     let chunk = gen.generate_chunk(6, -2);
-    let cx = 6i32; let cz = -2i32;
+    let cx = 6i32;
+    let cz = -2i32;
     let (a_part, noodle_part) = match &*st.router.final_density {
         DFNode::Min(a, b) => (a.clone(), b.clone()),
         _ => panic!(),
@@ -65,8 +70,12 @@ fn main() {
 
     // Vanilla base OPEN coords
     let pts = [
-        (102, -41, -26), (96, -41, -24), (103, -40, -25), (103, -39, -28),
-        (108, -38, -30), (98, -38, -24),
+        (102, -41, -26),
+        (96, -41, -24),
+        (103, -40, -25),
+        (103, -39, -28),
+        (108, -38, -30),
+        (98, -38, -24),
     ];
     for (pos_x, y, pos_z) in pts {
         let lx = pos_x - cx * 16;

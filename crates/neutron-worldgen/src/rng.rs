@@ -168,7 +168,10 @@ mod tests {
                 break;
             }
         }
-        assert!(any_diff, "different seeds should produce different sequences");
+        assert!(
+            any_diff,
+            "different seeds should produce different sequences"
+        );
     }
 
     #[test]
@@ -198,7 +201,10 @@ mod tests {
     fn from_hash_of_deterministic() {
         let a = Xoroshiro128::new(42);
         let b = Xoroshiro128::new(42);
-        let (s1, s2) = (a.from_hash_of("minecraft:temperature"), b.from_hash_of("minecraft:temperature"));
+        let (s1, s2) = (
+            a.from_hash_of("minecraft:temperature"),
+            b.from_hash_of("minecraft:temperature"),
+        );
         assert_eq!(s1.seed(), s2.seed());
     }
 

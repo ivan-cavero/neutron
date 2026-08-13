@@ -1,5 +1,5 @@
 // Dump neutron INTERPOLATED final density (same path as generator) at coords.
-use neutron_worldgen::density::{compute, DF, DFNode, DensityEnv, MarkerKind, MarkerState};
+use neutron_worldgen::density::{compute, DFNode, DensityEnv, MarkerKind, MarkerState, DF};
 use neutron_worldgen::generator::lerp;
 use neutron_worldgen::worldgen::WorldgenState;
 use neutron_worldgen::ChunkGenerator;
@@ -37,7 +37,14 @@ fn find_interp_opt(df: &DF) -> Option<DF> {
     }
 }
 
-fn density_at(st: &WorldgenState, cx: i32, cz: i32, pos_x: i32, pos_y: i32, pos_z: i32) -> (f64, f64, f64) {
+fn density_at(
+    st: &WorldgenState,
+    cx: i32,
+    cz: i32,
+    pos_x: i32,
+    pos_y: i32,
+    pos_z: i32,
+) -> (f64, f64, f64) {
     let (a_part, noodle_part) = match &*st.router.final_density {
         DFNode::Min(a, b) => (a.clone(), b.clone()),
         _ => panic!(),
@@ -105,9 +112,6 @@ fn main() {
     println!("wx,y,wz  squeezed  final  solid?");
     for &(wx, y, wz) in &pts {
         let (_i, a, f) = density_at(st, cx, cz, wx, y, wz);
-        println!(
-            "{wx:4},{y:4},{wz:4}  {a:.8}  {f:.8}  {}",
-            f > 0.0
-        );
+        println!("{wx:4},{y:4},{wz:4}  {a:.8}  {f:.8}  {}", f > 0.0);
     }
 }

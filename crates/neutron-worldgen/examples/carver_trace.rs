@@ -1,9 +1,9 @@
 //! Trace carves from source (6,-1) into target (6,-2).
+use neutron_worldgen::carvers::{self, CARVE_STARTS, CARVE_WRITES};
+use neutron_worldgen::generator::WORLD_BOTTOM;
 use neutron_worldgen::legacy_rng::LegacyRandom;
 use neutron_worldgen::region_buf::RegionBuf;
 use neutron_worldgen::surface::BlockId;
-use neutron_worldgen::generator::WORLD_BOTTOM;
-use neutron_worldgen::carvers::{self, CARVE_WRITES, CARVE_STARTS};
 use std::sync::atomic::Ordering;
 
 // We need to call into carvers more deeply. For now, solid region + apply
@@ -16,8 +16,12 @@ fn mth_sin_d(v: f64) -> f32 {
 fn mth_cos_d(v: f64) -> f32 {
     v.cos() as f32
 }
-fn mth_sin_f(v: f32) -> f32 { mth_sin_d(v as f64) }
-fn mth_cos_f(v: f32) -> f32 { mth_cos_d(v as f64) }
+fn mth_sin_f(v: f32) -> f32 {
+    mth_sin_d(v as f64)
+}
+fn mth_cos_f(v: f32) -> f32 {
+    mth_cos_d(v as f64)
+}
 
 fn can_reach(tcx: i32, tcz: i32, x: f64, z: f64, i: i32, bc: i32, th: f32) -> bool {
     let mid_x = (tcx * 16 + 8) as f64;
@@ -26,7 +30,7 @@ fn can_reach(tcx: i32, tcz: i32, x: f64, z: f64, i: i32, bc: i32, th: f32) -> bo
     let dz = z - mid_z;
     let rem = (bc - i) as f64;
     let max_r = (th + 2.0 + 16.0) as f64;
-    dx*dx + dz*dz - rem*rem <= max_r*max_r
+    dx * dx + dz * dz - rem * rem <= max_r * max_r
 }
 
 fn main() {
@@ -39,7 +43,9 @@ fn main() {
     rng.set_large_feature_seed(12345i64.wrapping_add(index), source_cx, source_cz);
     let f = rng.next_f32();
     println!("isStart f={f} start={}", f <= 0.15);
-    if f > 0.15 { return; }
+    if f > 0.15 {
+        return;
+    }
 
     let range_blocks = 112;
     let a = rng.next_int(15) + 1;
@@ -121,7 +127,9 @@ fn main() {
                 let mid_x = (target_cx * 16 + 8) as f64;
                 let mid_z = (target_cz * 16 + 8) as f64;
                 let dist = ((x - mid_x).powi(2) + (z - mid_z).powi(2)).sqrt();
-                if dist < min_dist { min_dist = dist; }
+                if dist < min_dist {
+                    min_dist = dist;
+                }
 
                 if i == steeper && thickness > 1.0 {
                     println!("      fork at i={i} pos=({x:.1},{y:.1},{z:.1}) dist={dist:.1}");
@@ -138,7 +146,9 @@ fn main() {
                 }
                 if !can_reach(target_cx, target_cz, x, z, i, branch_count, thickness) {
                     reach_fail += 1;
-                    println!("      can_reach FAIL i={i} pos=({x:.1},{y:.1},{z:.1}) dist={dist:.1}");
+                    println!(
+                        "      can_reach FAIL i={i} pos=({x:.1},{y:.1},{z:.1}) dist={dist:.1}"
+                    );
                     break;
                 }
                 // early out check
@@ -160,12 +170,16 @@ fn main() {
     for y in WORLD_BOTTOM..320 {
         for z in 0..16 {
             for x in 0..16 {
-                region.set(target_cx*16+x, y, target_cz*16+z, BlockId::Stone);
+                region.set(target_cx * 16 + x, y, target_cz * 16 + z, BlockId::Stone);
             }
         }
     }
     CARVE_WRITES.store(0, Ordering::Relaxed);
     CARVE_STARTS.store(0, Ordering::Relaxed);
     carvers::apply_carvers_region(&mut region, 12345);
-    println!("real apply writes={} starts={}", CARVE_WRITES.load(Ordering::Relaxed), CARVE_STARTS.load(Ordering::Relaxed));
+    println!(
+        "real apply writes={} starts={}",
+        CARVE_WRITES.load(Ordering::Relaxed),
+        CARVE_STARTS.load(Ordering::Relaxed)
+    );
 }

@@ -136,7 +136,7 @@ impl Default for LevelDat {
     fn default() -> Self {
         Self {
             data_version: 3955, // 26.2 data version (approximate)
-            version: 19133,    // Anvil format
+            version: 19133,     // Anvil format
             level_name: "world".to_string(),
             seed: 0,
             game_type: GameMode::Survival,
@@ -257,17 +257,9 @@ impl LevelDat {
 
         nbt::compound_insert(&mut data, "DataVersion", nbt::tag_int(self.data_version));
         nbt::compound_insert(&mut data, "version", nbt::tag_int(self.version));
-        nbt::compound_insert(
-            &mut data,
-            "LevelName",
-            nbt::tag_string(&self.level_name),
-        );
+        nbt::compound_insert(&mut data, "LevelName", nbt::tag_string(&self.level_name));
         nbt::compound_insert(&mut data, "seed", nbt::tag_long(self.seed));
-        nbt::compound_insert(
-            &mut data,
-            "GameType",
-            nbt::tag_int(self.game_type as i32),
-        );
+        nbt::compound_insert(&mut data, "GameType", nbt::tag_int(self.game_type as i32));
         nbt::compound_insert(
             &mut data,
             "Difficulty",
@@ -283,11 +275,7 @@ impl LevelDat {
         nbt::compound_insert(&mut data, "SpawnZ", nbt::tag_int(self.spawn_z));
         nbt::compound_insert(&mut data, "DayTime", nbt::tag_long(self.day_time));
         nbt::compound_insert(&mut data, "Time", nbt::tag_long(self.time));
-        nbt::compound_insert(
-            &mut data,
-            "hardcore",
-            nbt::tag_byte(self.hardcore as u8),
-        );
+        nbt::compound_insert(&mut data, "hardcore", nbt::tag_byte(self.hardcore as u8));
         nbt::compound_insert(
             &mut data,
             "allowCommands",
@@ -308,22 +296,14 @@ impl LevelDat {
             "showDeathMessages",
             nbt::tag_byte(self.show_death_screen as u8),
         );
-        nbt::compound_insert(
-            &mut data,
-            "raining",
-            nbt::tag_byte(self.rain_enabled as u8),
-        );
+        nbt::compound_insert(&mut data, "raining", nbt::tag_byte(self.rain_enabled as u8));
         nbt::compound_insert(&mut data, "rainTime", nbt::tag_int(self.rain_time));
         nbt::compound_insert(
             &mut data,
             "thundering",
             nbt::tag_byte(self.thunder_enabled as u8),
         );
-        nbt::compound_insert(
-            &mut data,
-            "thunderTime",
-            nbt::tag_int(self.thunder_time),
-        );
+        nbt::compound_insert(&mut data, "thunderTime", nbt::tag_int(self.thunder_time));
         nbt::compound_insert(
             &mut data,
             "GameRules",
@@ -331,11 +311,7 @@ impl LevelDat {
         );
 
         if let Some(ref vi) = self.version_info {
-            nbt::compound_insert(
-                &mut data,
-                "Version",
-                nbt::tag_compound(vi.clone()),
-            );
+            nbt::compound_insert(&mut data, "Version", nbt::tag_compound(vi.clone()));
         }
 
         let mut root = nbt::new_compound();

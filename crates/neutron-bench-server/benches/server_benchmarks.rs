@@ -6,8 +6,8 @@
 //! - World generation (chunk generation, noise, RNG)
 //! - Integration (startup time, chunk throughput)
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use bytes::{Bytes, BytesMut};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 
 // ============================================================
 // Protocol benchmarks
@@ -79,7 +79,7 @@ fn bench_encode_chunk_data(c: &mut Criterion) {
 
     // Simulate a realistic chunk data payload (~200KB for a full chunk section)
     let chunk_data = vec![0x01u8; 196_608]; // ~192KB
-    let light_data = vec![0x02u8; 2048];    // ~2KB
+    let light_data = vec![0x02u8; 2048]; // ~2KB
 
     let packet = neutron_protocol::play::ChunkDataAndUpdateLight {
         chunk_x: 5,
@@ -111,7 +111,9 @@ fn bench_codec_roundtrip(c: &mut Criterion) {
     group.bench_function("roundtrip_uncompressed_small", |b| {
         b.iter(|| {
             let mut wire = BytesMut::new();
-            codec_no_compress.encode(0x26, &small_payload, &mut wire).unwrap();
+            codec_no_compress
+                .encode(0x26, &small_payload, &mut wire)
+                .unwrap();
             let mut data = wire.freeze();
             black_box(codec_no_compress.decode(&mut data)).unwrap();
         });
@@ -120,7 +122,9 @@ fn bench_codec_roundtrip(c: &mut Criterion) {
     group.bench_function("roundtrip_compressed_large", |b| {
         b.iter(|| {
             let mut wire = BytesMut::new();
-            codec_compress.encode(0x27, &large_payload, &mut wire).unwrap();
+            codec_compress
+                .encode(0x27, &large_payload, &mut wire)
+                .unwrap();
             let mut data = wire.freeze();
             black_box(codec_compress.decode(&mut data)).unwrap();
         });
@@ -218,9 +222,21 @@ fn bench_nbt_parse(c: &mut Criterion) {
         neutron_world::nbt::compound_insert(&mut compound, &key, neutron_world::nbt::tag_int(i));
         let nested_key = format!("nested_{}", i);
         let mut inner = neutron_world::nbt::new_compound();
-        neutron_world::nbt::compound_insert(&mut inner, "value", neutron_world::nbt::tag_long((i as i64) * 100));
-        neutron_world::nbt::compound_insert(&mut inner, "name", neutron_world::nbt::tag_string(&format!("item_{}", i)));
-        neutron_world::nbt::compound_insert(&mut compound, &nested_key, neutron_world::nbt::tag_compound(inner));
+        neutron_world::nbt::compound_insert(
+            &mut inner,
+            "value",
+            neutron_world::nbt::tag_long((i as i64) * 100),
+        );
+        neutron_world::nbt::compound_insert(
+            &mut inner,
+            "name",
+            neutron_world::nbt::tag_string(&format!("item_{}", i)),
+        );
+        neutron_world::nbt::compound_insert(
+            &mut compound,
+            &nested_key,
+            neutron_world::nbt::tag_compound(inner),
+        );
     }
     let nbt = neutron_world::nbt::root_nbt(compound);
     let raw_bytes = neutron_world::nbt::write_nbt(&nbt);
@@ -354,7 +370,8 @@ fn bench_chunk_throughput(c: &mut Criterion) {
             let chunk = generator.generate_chunk(0, 0);
 
             // Encode blocks as a simple payload (in real code this would be the full chunk encoding)
-            let chunk_payload: Vec<u8> = chunk.blocks.iter().flat_map(|b| b.to_le_bytes()).collect();
+            let chunk_payload: Vec<u8> =
+                chunk.blocks.iter().flat_map(|b| b.to_le_bytes()).collect();
             let light_payload = vec![0xFFu8; 2048]; // All light set
 
             let packet = neutron_protocol::play::ChunkDataAndUpdateLight {
@@ -369,7 +386,10 @@ fn bench_chunk_throughput(c: &mut Criterion) {
 
             // Decode it back
             let mut data = wire.freeze();
-            black_box(neutron_protocol::play::ChunkDataAndUpdateLight::decode(&mut data)).unwrap();
+            black_box(neutron_protocol::play::ChunkDataAndUpdateLight::decode(
+                &mut data,
+            ))
+            .unwrap();
         });
     });
 
@@ -379,7 +399,8 @@ fn bench_chunk_throughput(c: &mut Criterion) {
         b.iter(|| {
             for i in 0..16i32 {
                 let chunk = generator.generate_chunk(i, 0);
-                let chunk_payload: Vec<u8> = chunk.blocks.iter().flat_map(|b| b.to_le_bytes()).collect();
+                let chunk_payload: Vec<u8> =
+                    chunk.blocks.iter().flat_map(|b| b.to_le_bytes()).collect();
                 let light_payload = vec![0xFFu8; 2048];
 
                 let packet = neutron_protocol::play::ChunkDataAndUpdateLight {

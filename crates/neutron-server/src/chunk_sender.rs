@@ -633,7 +633,7 @@ mod tests {
         let indices = vec![0, 1, 2, 3, 0];
         let longs = pack_to_longs(&indices, 4);
         assert_eq!(longs.len(), 1); // 5 entries fit in 1 long (16 per long)
-        // Entry 0 = 0, Entry 1 = 1 << 4, Entry 2 = 2 << 8, Entry 3 = 3 << 12, Entry 4 = 0 << 16
+                                    // Entry 0 = 0, Entry 1 = 1 << 4, Entry 2 = 2 << 8, Entry 3 = 3 << 12, Entry 4 = 0 << 16
         assert_eq!(longs[0], (1 << 4) | (2 << 8) | (3 << 12));
     }
 
@@ -642,7 +642,7 @@ mod tests {
         let indices = vec![0, 1, 0, 1];
         let longs = pack_to_longs(&indices, 1);
         assert_eq!(longs.len(), 1); // 64 entries per long
-        // Entry 0 = 0, Entry 1 = 1 << 1, Entry 2 = 0 << 2, Entry 3 = 1 << 3
+                                    // Entry 0 = 0, Entry 1 = 1 << 1, Entry 2 = 0 << 2, Entry 3 = 1 << 3
         assert_eq!(longs[0], (1 << 1) | (1 << 3));
     }
 
@@ -706,7 +706,10 @@ mod tests {
     fn test_build_worldgen_chunk_deterministic() {
         let data1 = build_worldgen_chunk(5, 5, 12345);
         let data2 = build_worldgen_chunk(5, 5, 12345);
-        assert_eq!(data1, data2, "same seed+coords should produce identical output");
+        assert_eq!(
+            data1, data2,
+            "same seed+coords should produce identical output"
+        );
     }
 
     #[test]

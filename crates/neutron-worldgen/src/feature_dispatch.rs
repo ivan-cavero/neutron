@@ -18,7 +18,7 @@
 //   sculk_patch, multiface_growth, tree, simple_block, random_selector,
 //   ore (delegates to existing OreFeature path when called from ores step)
 
-use crate::biome_source::{climate_at_block, find_biome, biome_id};
+use crate::biome_source::{biome_id, biome_id_at_block};
 use crate::feature_catalog::{self, step};
 use crate::feature_rng::FeatureRandom;
 use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
@@ -77,8 +77,14 @@ fn place_feature_list(
 ) {
     let mut rng = FeatureRandom::new(level_seed);
     let decoration_seed = rng.set_decoration_seed(level_seed, ox0, oz0);
-    for (feature_index, placed_id) in list.iter().enumerate() {
-        rng.set_feature_seed(decoration_seed, feature_index as i32, gen_step);
+    // Vanilla places in increasing FeatureSorter global index.
+    let mut indexed: Vec<(i32, &String)> = list
+        .iter()
+        .filter_map(|id| feature_catalog::global_feature_index(gen_step, id).map(|i| (i, id)))
+        .collect();
+    indexed.sort_by_key(|(i, _)| *i);
+    for (global_index, placed_id) in indexed {
+        rng.set_feature_seed(decoration_seed, global_index, gen_step);
         place_placed_feature(&mut rng, region, state, ox0, oz0, placed_id);
     }
 }
@@ -136,8 +142,8 @@ pub fn place_placed_feature(
                         }
                         if let Some(sy) = surface_y(region, x, z) {
                             y = sy + 1; // plant on top of surface
-                            // ocean_floor / world_surface: top solid, place at sy+1 for plants
-                            // trees place at surface block top → origin is dirt+1
+                                        // ocean_floor / world_surface: top solid, place at sy+1 for plants
+                                        // trees place at surface block top → origin is dirt+1
                             y = sy + 1;
                             has_y = true;
                         } else {
@@ -153,17 +159,12 @@ pub fn place_placed_feature(
                         y += oy;
                     }
                     "minecraft:biome" => {
-                        if !is_deep_dark_or_any(state, x, y, z) {
-                            // always check climate biome — for non-deep features use match
-                            // Placement biome filter: position must match generation biome
-                            // We accept if multi-noise returns a biome that lists this feature
-                            let bname = biome_name_at(state, x, y, z);
-                            let step_list = feature_catalog::features_at_step(&bname, step_for_id(placed_id));
-                            let id = strip(placed_id);
-                            if !step_list.iter().any(|f| strip(f) == id) {
-                                // soft: still allow if same family
-                                ok = ok && true; // don't reject hard — index path already biome-scoped
-                            }
+                        let bname = biome_name_at(state, x, y, z);
+                        let step_list =
+                            feature_catalog::features_at_step(&bname, step_for_id(placed_id));
+                        let id = strip(placed_id);
+                        if !step_list.iter().any(|f| strip(f) == id) {
+                            ok = false;
                         }
                     }
                     "minecraft:block_predicate_filter" => {
@@ -590,18 +591,7 @@ fn surface_y(region: &RegionBuf, x: i32, z: i32) -> Option<i32> {
 }
 
 fn biome_name_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> String {
-    let mut env = crate::density::DensityEnv::new(x, y, z, state.noises.noises());
-    let climate = climate_at_block(
-        &mut env,
-        &state.router.temperature,
-        &state.router.vegetation,
-        &state.router.continents,
-        &state.router.erosion,
-        &state.router.depth,
-        &state.router.ridges,
-    );
-    let id = find_biome(&climate);
-    biome_id_to_name(id).to_string()
+    biome_id_to_name(biome_id_at_block(state, x, y, z)).to_string()
 }
 
 fn biome_id_to_name(id: u8) -> &'static str {
@@ -618,15 +608,22 @@ fn biome_id_to_name(id: u8) -> &'static str {
         x if x == biome_id::JUNGLE => "jungle",
         x if x == biome_id::SAVANNA => "savanna",
         x if x == biome_id::MEADOW => "meadow",
-        x if x == biome_id::OLD_GROWTH_PINE_FOREST => "old_growth_pine_forest",
+        x if x == biome_id::OLD_GROWTH_PINE_FOREST => "old_growth_pine_taiga",
         x if x == biome_id::OLD_GROWTH_BIRCH_FOREST => "old_growth_birch_forest",
+        x if x == biome_id::DRIPSTONE_CAVES => "dripstone_caves",
+        x if x == biome_id::MANGROVE_SWAMP => "mangrove_swamp",
+        x if x == biome_id::CHERRY_GROVE => "cherry_grove",
+        x if x == biome_id::BADLANDS => "badlands",
+        x if x == biome_id::ERODED_BADLANDS => "eroded_badlands",
+        x if x == biome_id::WOODED_BADLANDS => "wooded_badlands",
+        x if x == biome_id::GROVE => "grove",
+        x if x == biome_id::JAGGED_PEAKS => "jagged_peaks",
+        x if x == biome_id::STONY_PEAKS => "stony_peaks",
+        x if x == biome_id::FROZEN_PEAKS => "frozen_peaks",
+        x if x == biome_id::SNOWY_SLOPES => "snowy_slopes",
+        x if x == biome_id::WINDSWEPT_HILLS => "windswept_hills",
         _ => "plains",
     }
-}
-
-fn is_deep_dark_or_any(state: &WorldgenState, x: i32, y: i32, z: i32) -> bool {
-    let _ = (state, x, y, z);
-    true
 }
 
 fn strip(s: &str) -> &str {

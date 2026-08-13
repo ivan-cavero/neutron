@@ -34,11 +34,24 @@ fn main() -> Result<()> {
             .unwrap_or("unknown"),
     )
     .context("bad region filename")?;
-    println!("Region file: {} (region {}, {})", mca_path.display(), rx, rz);
-    println!("Chunk local coords: ({}, {}) -> global ({}, {})", cx, cz, rx * 32 + cx, rz * 32 + cz);
+    println!(
+        "Region file: {} (region {}, {})",
+        mca_path.display(),
+        rx,
+        rz
+    );
+    println!(
+        "Chunk local coords: ({}, {}) -> global ({}, {})",
+        cx,
+        cz,
+        rx * 32 + cx,
+        rz * 32 + cz
+    );
 
     let region = Region::open(&mca_path)?.with_coords(rx, rz);
-    let data = region.get_chunk(cx, cz)?.context("chunk not present in region")?;
+    let data = region
+        .get_chunk(cx, cz)?
+        .context("chunk not present in region")?;
     println!("Decompressed chunk size: {} bytes", data.len());
 
     let nbt = neutron_world::nbt::read_nbt(&data)?;
@@ -48,7 +61,11 @@ fn main() -> Result<()> {
 }
 
 fn dump_nbt(nbt: &Nbt, indent: usize, dump_longs: bool, verbose: bool) {
-    println!("{}root: {}", "  ".repeat(indent), tag_type(nbt.compound.tags.len()));
+    println!(
+        "{}root: {}",
+        "  ".repeat(indent),
+        tag_type(nbt.compound.tags.len())
+    );
     for (name, tag) in &nbt.compound.tags {
         dump_tag(name, tag, indent + 1, dump_longs, verbose);
     }
@@ -89,7 +106,13 @@ fn dump_tag(name: &MString, tag: &Tag, indent: usize, dump_longs: bool, verbose:
             }
         }
         Tag::List(list) => {
-            println!("{}{}: list<{}> len={}", pad, name, list_elem_type(list), list_len(list));
+            println!(
+                "{}{}: list<{}> len={}",
+                pad,
+                name,
+                list_elem_type(list),
+                list_len(list)
+            );
             dump_list(list, indent, dump_longs, verbose);
         }
         Tag::Compound(c) => {

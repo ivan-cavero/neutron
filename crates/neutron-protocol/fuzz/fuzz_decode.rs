@@ -22,9 +22,7 @@ use neutron_protocol::play::{
     ServerData, SetDefaultSpawnPosition, SetPlayerAbilities, SynchronizePlayerPosition,
     SystemChatMessage,
 };
-use neutron_protocol::types::{
-    read_slot, read_string, read_uuid, read_varint, read_varlong, Chat,
-};
+use neutron_protocol::types::{read_slot, read_string, read_uuid, read_varint, read_varlong, Chat};
 
 /// Count panics detected across all fuzz iterations.
 struct PanicCounter {
@@ -190,12 +188,18 @@ fn main() {
         fuzz_packet!("ChatMessage::decode", ChatMessage);
         fuzz_packet!("SystemChatMessage::decode", SystemChatMessage);
         fuzz_packet!("SetDefaultSpawnPosition::decode", SetDefaultSpawnPosition);
-        fuzz_packet!("SynchronizePlayerPosition::decode", SynchronizePlayerPosition);
+        fuzz_packet!(
+            "SynchronizePlayerPosition::decode",
+            SynchronizePlayerPosition
+        );
         fuzz_packet!("ChunkDataAndUpdateLight::decode", ChunkDataAndUpdateLight);
         fuzz_packet!("BlockUpdate::decode", BlockUpdate);
         fuzz_packet!("KeepAliveResponse::decode", KeepAliveResponse);
         fuzz_packet!("PlayerPosition::decode", PlayerPosition);
-        fuzz_packet!("PlayerPositionAndRotation::decode", PlayerPositionAndRotation);
+        fuzz_packet!(
+            "PlayerPositionAndRotation::decode",
+            PlayerPositionAndRotation
+        );
         fuzz_packet!("PlayerRotation::decode", PlayerRotation);
         fuzz_packet!("SetPlayerAbilities::decode", SetPlayerAbilities);
         fuzz_packet!("ChatCommand::decode", ChatCommand);

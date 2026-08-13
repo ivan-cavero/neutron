@@ -101,12 +101,8 @@ impl Region {
         let mut offsets = Vec::with_capacity(CHUNKS_PER_REGION);
         for i in 0..CHUNKS_PER_REGION {
             let base = i * 4;
-            let sector_offset = u32::from_be_bytes([
-                0,
-                bytes[base],
-                bytes[base + 1],
-                bytes[base + 2],
-            ]);
+            let sector_offset =
+                u32::from_be_bytes([0, bytes[base], bytes[base + 1], bytes[base + 2]]);
             let sector_count = bytes[base + 3] as usize;
             offsets.push((sector_offset, sector_count));
         }
@@ -269,7 +265,9 @@ impl Region {
 
     /// Returns true if the region has any dirty (modified) chunks.
     pub fn is_dirty(&self) -> bool {
-        self.chunks.iter().any(|c| c.as_ref().is_some_and(|e| e.dirty))
+        self.chunks
+            .iter()
+            .any(|c| c.as_ref().is_some_and(|e| e.dirty))
     }
 
     /// Clear all dirty flags.
@@ -360,8 +358,7 @@ impl Region {
                 let len_bytes = (data_len as u32).to_be_bytes();
                 buf[byte_offset..byte_offset + 4].copy_from_slice(&len_bytes);
                 // Write chunk data (includes compression type byte + compressed payload).
-                buf[byte_offset + 4..byte_offset + 4 + data_len]
-                    .copy_from_slice(&entry.data);
+                buf[byte_offset + 4..byte_offset + 4 + data_len].copy_from_slice(&entry.data);
             }
         }
 
@@ -511,8 +508,14 @@ mod tests {
         let bytes = region.to_bytes().unwrap();
         let restored = Region::from_bytes(&bytes).unwrap();
 
-        assert_eq!(restored.get_chunk(0, 0).unwrap().as_deref(), Some(data.as_slice()));
-        assert_eq!(restored.get_chunk(31, 31).unwrap().as_deref(), Some(data.as_slice()));
+        assert_eq!(
+            restored.get_chunk(0, 0).unwrap().as_deref(),
+            Some(data.as_slice())
+        );
+        assert_eq!(
+            restored.get_chunk(31, 31).unwrap().as_deref(),
+            Some(data.as_slice())
+        );
         assert!(restored.get_chunk(1, 1).unwrap().is_none());
     }
 

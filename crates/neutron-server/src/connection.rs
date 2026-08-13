@@ -188,16 +188,9 @@ async fn process_packet(
             handle_handshake(server, tx, codec, packet_id, payload, addr).await
         }
         ConnectionState::Login => {
-            let result = handle_login_packet(
-                server,
-                tx,
-                codec,
-                packet_id,
-                payload,
-                addr,
-                player_uuid,
-            )
-            .await?;
+            let result =
+                handle_login_packet(server, tx, codec, packet_id, payload, addr, player_uuid)
+                    .await?;
             if result {
                 Ok(Some(ConnectionState::Play))
             } else {
@@ -206,8 +199,7 @@ async fn process_packet(
         }
         ConnectionState::Play => {
             if let Some(uuid) = player_uuid {
-                handle_play_packet(server, tx, uuid, packet_id, payload, addr)
-                    .await?;
+                handle_play_packet(server, tx, uuid, packet_id, payload, addr).await?;
             }
             Ok(None)
         }

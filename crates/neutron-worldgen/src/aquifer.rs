@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use crate::density::{DF, DensityEnv};
+use crate::density::{DensityEnv, DF};
 use crate::rng::Xoroshiro128;
 use crate::surface::BlockId;
 
@@ -18,7 +18,10 @@ pub const WAY_BELOW_MIN_Y: i32 = -32512;
 /// `Mth.getSeed(x, y, z)`.
 pub fn get_seed(x: i32, y: i32, z: i32) -> i64 {
     let mut s = (x as i64 * 3129871) ^ (z as i64 * 116_129_781) ^ y as i64;
-    s = s.wrapping_mul(s).wrapping_mul(42317861).wrapping_add(s.wrapping_mul(11));
+    s = s
+        .wrapping_mul(s)
+        .wrapping_mul(42317861)
+        .wrapping_add(s.wrapping_mul(11));
     s >> 16
 }
 
@@ -309,7 +312,8 @@ impl<'a> NoiseBasedAquifer<'a> {
         }
         let mut barrier_noise = f64::NAN;
         let status2 = self.get_aquifer_status(closest[1]);
-        let barrier12 = similarity12 * self.calculate_pressure(&mut barrier_noise, status1, status2, x, y, z);
+        let barrier12 =
+            similarity12 * self.calculate_pressure(&mut barrier_noise, status1, status2, x, y, z);
         if density + barrier12 > 0.0 {
             self.should_schedule_fluid_update = false;
             return None;
@@ -317,7 +321,9 @@ impl<'a> NoiseBasedAquifer<'a> {
         let status3 = self.get_aquifer_status(closest[2]);
         let similarity13 = similarity(dist[0], dist[2]);
         if similarity13 > 0.0 {
-            let barrier13 = similarity12 * similarity13 * self.calculate_pressure(&mut barrier_noise, status1, status3, x, y, z);
+            let barrier13 = similarity12
+                * similarity13
+                * self.calculate_pressure(&mut barrier_noise, status1, status3, x, y, z);
             if density + barrier13 > 0.0 {
                 self.should_schedule_fluid_update = false;
                 return None;
@@ -325,7 +331,9 @@ impl<'a> NoiseBasedAquifer<'a> {
         }
         let similarity23 = similarity(dist[1], dist[2]);
         if similarity23 > 0.0 {
-            let barrier23 = similarity12 * similarity23 * self.calculate_pressure(&mut barrier_noise, status2, status3, x, y, z);
+            let barrier23 = similarity12
+                * similarity23
+                * self.calculate_pressure(&mut barrier_noise, status2, status3, x, y, z);
             if density + barrier23 > 0.0 {
                 self.should_schedule_fluid_update = false;
                 return None;
@@ -386,17 +394,34 @@ impl<'a> NoiseBasedAquifer<'a> {
                 return global_fluid;
             }
             let pokes_above = top_of_aquifer_cell > adjusted_surface_level;
-            if (pokes_above || start) && !self.global_fluid_picker.compute_fluid(sample_x, adjusted_surface_level, sample_z).at(adjusted_surface_level).is_air() {
+            if (pokes_above || start)
+                && !self
+                    .global_fluid_picker
+                    .compute_fluid(sample_x, adjusted_surface_level, sample_z)
+                    .at(adjusted_surface_level)
+                    .is_air()
+            {
                 if start {
                     surface_at_center_is_under_global_fluid_level = true;
                 }
                 if pokes_above {
-                    return self.global_fluid_picker.compute_fluid(sample_x, adjusted_surface_level, sample_z);
+                    return self.global_fluid_picker.compute_fluid(
+                        sample_x,
+                        adjusted_surface_level,
+                        sample_z,
+                    );
                 }
             }
             lowest_preliminary_surface = lowest_preliminary_surface.min(preliminary_surface_level);
         }
-        let fluid_surface_level = self.compute_surface_level(x, y, z, global_fluid, lowest_preliminary_surface, surface_at_center_is_under_global_fluid_level);
+        let fluid_surface_level = self.compute_surface_level(
+            x,
+            y,
+            z,
+            global_fluid,
+            lowest_preliminary_surface,
+            surface_at_center_is_under_global_fluid_level,
+        );
         FluidStatus {
             fluid_level: fluid_surface_level,
             fluid_type: self.compute_fluid_type(x, y, z, global_fluid, fluid_surface_level),
@@ -417,7 +442,15 @@ impl<'a> NoiseBasedAquifer<'a> {
     }
 
     /// `computeSurfaceLevel`.
-    fn compute_surface_level(&mut self, x: i32, y: i32, z: i32, global_fluid: FluidStatus, lowest_preliminary_surface: i32, surface_at_center_is_under_global_fluid_level: bool) -> i32 {
+    fn compute_surface_level(
+        &mut self,
+        x: i32,
+        y: i32,
+        z: i32,
+        global_fluid: FluidStatus,
+        lowest_preliminary_surface: i32,
+        surface_at_center_is_under_global_fluid_level: bool,
+    ) -> i32 {
         let (partially_floodedness, fully_floodedness) = {
             let mut env = DensityEnv::new(x, y, z, self.env_noises);
             let erosion_v = crate::density::compute(&self.erosion, &mut env);
@@ -431,7 +464,9 @@ impl<'a> NoiseBasedAquifer<'a> {
                 } else {
                     0.0
                 };
-                let floodedness_noise_value = crate::density::compute(&self.fluid_level_floodedness_noise, &mut env).clamp(-1.0, 1.0);
+                let floodedness_noise_value =
+                    crate::density::compute(&self.fluid_level_floodedness_noise, &mut env)
+                        .clamp(-1.0, 1.0);
                 let fully_flooded_threshold = map(floodedness_factor, 1.0, 0.0, -0.3, 0.8);
                 let partially_flooded_threshold = map(floodedness_factor, 1.0, 0.0, -0.8, 0.4);
                 (
@@ -450,20 +485,39 @@ impl<'a> NoiseBasedAquifer<'a> {
     }
 
     /// `computeRandomizedFluidSurfaceLevel`.
-    fn compute_randomized_fluid_surface_level(&mut self, x: i32, y: i32, z: i32, lowest_preliminary_surface: i32) -> i32 {
+    fn compute_randomized_fluid_surface_level(
+        &mut self,
+        x: i32,
+        y: i32,
+        z: i32,
+        lowest_preliminary_surface: i32,
+    ) -> i32 {
         let fluid_level_cell_x = x.div_euclid(16);
         let fluid_level_cell_y = y.div_euclid(40);
         let fluid_level_cell_z = z.div_euclid(16);
         let fluid_cell_middle_y = fluid_level_cell_y * 40 + 20;
-        let mut env = DensityEnv::new(fluid_level_cell_x, fluid_level_cell_y, fluid_level_cell_z, self.env_noises);
-        let fluid_level_spread = crate::density::compute(&self.fluid_level_spread_noise, &mut env) * 10.0;
+        let mut env = DensityEnv::new(
+            fluid_level_cell_x,
+            fluid_level_cell_y,
+            fluid_level_cell_z,
+            self.env_noises,
+        );
+        let fluid_level_spread =
+            crate::density::compute(&self.fluid_level_spread_noise, &mut env) * 10.0;
         let fluid_level_spread_quantized = quantize(fluid_level_spread, 3);
         let target = fluid_cell_middle_y + fluid_level_spread_quantized;
         lowest_preliminary_surface.min(target)
     }
 
     /// `computeFluidType`.
-    fn compute_fluid_type(&self, x: i32, y: i32, z: i32, global_fluid: FluidStatus, fluid_surface_level: i32) -> BlockId {
+    fn compute_fluid_type(
+        &self,
+        x: i32,
+        y: i32,
+        z: i32,
+        global_fluid: FluidStatus,
+        fluid_surface_level: i32,
+    ) -> BlockId {
         let mut fluid_type = global_fluid.fluid_type;
         if fluid_surface_level <= -10
             && fluid_surface_level != WAY_BELOW_MIN_Y
@@ -482,7 +536,15 @@ impl<'a> NoiseBasedAquifer<'a> {
     }
 
     /// `calculatePressure`.
-    fn calculate_pressure(&mut self, barrier_noise_value: &mut f64, status1: FluidStatus, status2: FluidStatus, x: i32, y: i32, z: i32) -> f64 {
+    fn calculate_pressure(
+        &mut self,
+        barrier_noise_value: &mut f64,
+        status1: FluidStatus,
+        status2: FluidStatus,
+        x: i32,
+        y: i32,
+        z: i32,
+    ) -> f64 {
         let type1 = status1.at(y);
         let type2 = status2.at(y);
         if (type1 == BlockId::Lava && type2 == BlockId::Water)

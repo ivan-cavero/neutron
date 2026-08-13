@@ -18,9 +18,7 @@ use neutron_protocol::play::{
     ServerData, SetDefaultSpawnPosition, SetPlayerAbilities, SynchronizePlayerPosition,
     SystemChatMessage,
 };
-use neutron_protocol::types::{
-    read_slot, read_string, read_uuid, read_varint, read_varlong, Chat,
-};
+use neutron_protocol::types::{read_slot, read_string, read_uuid, read_varint, read_varlong, Chat};
 
 const ITERS: usize = 1_000_000;
 
@@ -123,12 +121,18 @@ fn main() {
     bench_packet!("ChatMessage::decode", ChatMessage);
     bench_packet!("SystemChatMessage::decode", SystemChatMessage);
     bench_packet!("SetDefaultSpawnPosition::decode", SetDefaultSpawnPosition);
-    bench_packet!("SynchronizePlayerPosition::decode", SynchronizePlayerPosition);
+    bench_packet!(
+        "SynchronizePlayerPosition::decode",
+        SynchronizePlayerPosition
+    );
     bench_packet!("ChunkDataAndUpdateLight::decode", ChunkDataAndUpdateLight);
     bench_packet!("BlockUpdate::decode", BlockUpdate);
     bench_packet!("KeepAliveResponse::decode", KeepAliveResponse);
     bench_packet!("PlayerPosition::decode", PlayerPosition);
-    bench_packet!("PlayerPositionAndRotation::decode", PlayerPositionAndRotation);
+    bench_packet!(
+        "PlayerPositionAndRotation::decode",
+        PlayerPositionAndRotation
+    );
     bench_packet!("PlayerRotation::decode", PlayerRotation);
     bench_packet!("SetPlayerAbilities::decode", SetPlayerAbilities);
     bench_packet!("ChatCommand::decode", ChatCommand);

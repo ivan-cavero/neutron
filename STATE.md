@@ -6,6 +6,8 @@
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
+**F2d R24 — 4 builders: ChargeCursor + voronoi + TreeFeature + disks; dens 99.67% sculk overlap 332/565**  
+**F2d R23 — setFeatureSeed vanilla + FeatureSorter; dens 99.68% sculk 326/565 overlap 292**  
 **F2d R21 — 1:1 tools (extract-worldgen + feature_catalog + CFR sculk, no heuristics)**  
 **F2d R14 — Sculk flood+expand + veg; dens 99.71% sculk~425/565**  
 **F2d R13 — Sculk vein+patch; dens 99.43% pure_air=0 residual=563 sculk**  
@@ -135,17 +137,31 @@ neutron/
 
 **Bar 1:1**: 100% block match. Aún no se cumple.
 
-### Pendiente F2d R13+ (camino a 100%)
+### F2d R24 (13 ago 2026) — 4 builders en paralelo
 
 | Componente | Estado | Detalle |
 |------------|--------|---------|
-| SculkSpreader bit-exact | 🔴 | cierra feat_extra deep_dark |
-| Trees / full vegetation | 🔴 | |
-| OreFeature bit-exact | 🔴 | |
+| ChargeCursor CFR | 🟡 | overlap sculk **332/565** · vol 417 · ~232 paredes |
+| BiomeManager voronoi | ✅ | `obfuscateSeed` SHA-256 + 8-corner fiddle; tests Java |
+| TreeFeature | 🟡 | fancy/dark_oak/blob CFR; extra leaves 385→207 |
+| Disks + step 6 index | 🟡 | DiskFeature 30–32; ore_clay Off (lush id=0) |
+| dens_shape (6,-2) | 🟡 | **99.6704%** · feat_extra=238 |
+| block name match | 🟡 | **85.09%** (ores posicionales dominan) |
+
+**1:1 no alcanzado.** Tests: worldgen 38, protocol 47, world 39, sim 65 — todos PASS.
+
+### Pendiente F2d R25+
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| ChargeCursor RNG | 🔴 | catalyst 0 vs 2; 232 paredes |
+| lush_caves id único | 🔴 | desbloquea ore_clay 1:1 |
+| Ore positions | 🔴 | stone↔andesite/tuff/gravel |
 | Canyon widthFactors exact | 🟡 | port inicial OK |
-| Disks / surface extras | ⏸️ | |
 
 ## Ver
+- `runs/run-024.md` — F2d R24: 4 builders paralelo
+- `runs/run-023.md` — F2d R23: setFeatureSeed + FeatureSorter
 - `runs/run-018.md` — F2d R12: pregen + canyon/veg + multi
 - `runs/run-017.md` — F2d R11: multi-chunk + sculk gate
 - `runs/run-016.md` — F2d R10: full Interpolated / noodle fix

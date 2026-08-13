@@ -1,7 +1,7 @@
+use neutron_worldgen::generator::WORLD_BOTTOM;
 use neutron_worldgen::sculk::{
     SCULK_BIOME_OK, SCULK_PLACED, SCULK_SPREAD_OK, SCULK_TRIES, SCULK_VEIN_PLACED,
 };
-use neutron_worldgen::generator::WORLD_BOTTOM;
 use neutron_worldgen::{surface::BlockId, ChunkGenerator};
 use std::sync::atomic::Ordering;
 fn main() {

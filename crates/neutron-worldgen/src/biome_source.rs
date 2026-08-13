@@ -102,9 +102,29 @@ pub struct ClimateTarget {
 }
 
 impl ClimateTarget {
-    pub fn from_quantized(temperature: i64, humidity: i64, continentalness: i64, erosion: i64, depth: i64, weirdness: i64) -> Self {
-        Self { temperature, humidity, continentalness, erosion, depth, weirdness }
+    pub fn from_quantized(
+        temperature: i64,
+        humidity: i64,
+        continentalness: i64,
+        erosion: i64,
+        depth: i64,
+        weirdness: i64,
+    ) -> Self {
+        Self {
+            temperature,
+            humidity,
+            continentalness,
+            erosion,
+            depth,
+            weirdness,
+        }
     }
+}
+
+/// `BiomeManager.getBiome(BlockPos)`: voronoi quart, then multi-noise at `quart << 2`.
+#[inline]
+pub fn biome_id_at_block(state: &crate::worldgen::WorldgenState, x: i32, y: i32, z: i32) -> u8 {
+    crate::biome_manager::biome_id_at_block(state, x, y, z)
 }
 
 /// Find the biome ID for a climate target by brute-force nearest-point search.

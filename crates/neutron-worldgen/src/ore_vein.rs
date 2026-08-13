@@ -2,7 +2,7 @@
 //
 // OreVeinifier matching Minecraft 26.2 `OreVeinifier.create`.
 
-use crate::density::{DF, DensityEnv};
+use crate::density::{DensityEnv, DF};
 use crate::positional::PositionalRandomFactory;
 use crate::surface::BlockId;
 
@@ -24,7 +24,13 @@ pub fn try_place_vein(
     // toggle > 0 → COPPER, else IRON
     let (ore, raw, filler, min_y, max_y) = if toggle > 0.0 {
         // COPPER: copper_ore, raw_copper, granite, 0..50
-        (BlockId::CopperOre, BlockId::RawCopperBlock, BlockId::Granite, 0, 50)
+        (
+            BlockId::CopperOre,
+            BlockId::RawCopperBlock,
+            BlockId::Granite,
+            0,
+            50,
+        )
     } else {
         // IRON: deepslate_iron_ore, raw_iron, tuff, -60..-8
         (

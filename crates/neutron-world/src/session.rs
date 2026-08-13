@@ -54,10 +54,7 @@ impl SessionLock {
                     }
 
                     if is_pid_alive(pid) {
-                        return Err(WorldError::SessionLockHeld {
-                            pid,
-                            path,
-                        });
+                        return Err(WorldError::SessionLockHeld { pid, path });
                     }
 
                     // Stale lock — PID is dead. Take over.
@@ -153,9 +150,11 @@ impl SessionLock {
             return Ok(None);
         }
 
-        let pid: u32 = contents.parse().map_err(|_| WorldError::SessionLockCorrupted {
-            path: path.to_path_buf(),
-        })?;
+        let pid: u32 = contents
+            .parse()
+            .map_err(|_| WorldError::SessionLockCorrupted {
+                path: path.to_path_buf(),
+            })?;
 
         Ok(Some(pid))
     }

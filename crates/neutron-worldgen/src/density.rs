@@ -222,11 +222,21 @@ impl DFNode {
     /// Direct child density functions (for tree traversal).
     pub fn children(&self) -> Vec<&DF> {
         match self {
-            DFNode::Mul(a, b) | DFNode::Add(a, b) | DFNode::Min(a, b) | DFNode::Max(a, b) => vec![a, b],
-            DFNode::Abs(a) | DFNode::Square(a) | DFNode::Cube(a) | DFNode::HalfNegative(a)
-            | DFNode::QuarterNegative(a) | DFNode::Invert(a) | DFNode::Squeeze(a) | DFNode::Clamp(a, _, _)
+            DFNode::Mul(a, b) | DFNode::Add(a, b) | DFNode::Min(a, b) | DFNode::Max(a, b) => {
+                vec![a, b]
+            }
+            DFNode::Abs(a)
+            | DFNode::Square(a)
+            | DFNode::Cube(a)
+            | DFNode::HalfNegative(a)
+            | DFNode::QuarterNegative(a)
+            | DFNode::Invert(a)
+            | DFNode::Squeeze(a)
+            | DFNode::Clamp(a, _, _)
             | DFNode::Marker(_, a) => vec![a],
-            DFNode::RangeChoice(input, _, _, in_range, out_of_range) => vec![input, in_range, out_of_range],
+            DFNode::RangeChoice(input, _, _, in_range, out_of_range) => {
+                vec![input, in_range, out_of_range]
+            }
             DFNode::IntervalSelect(input, _, functions) => {
                 let mut v: Vec<&DF> = vec![input];
                 v.extend(functions.iter());
@@ -279,7 +289,13 @@ impl<'a> DensityEnv<'a> {
     }
 
     /// Create a new DensityEnv with marker caching enabled.
-    pub fn with_markers(x: i32, y: i32, z: i32, noises: &'a HashMap<String, NormalNoise>, state: &'a mut MarkerState) -> Self {
+    pub fn with_markers(
+        x: i32,
+        y: i32,
+        z: i32,
+        noises: &'a HashMap<String, NormalNoise>,
+        state: &'a mut MarkerState,
+    ) -> Self {
         Self {
             x,
             y,
@@ -291,7 +307,7 @@ impl<'a> DensityEnv<'a> {
         }
     }
 
-// sub() removed: use env.y = Y; compute(...); env.y = old_y inline
+    // sub() removed: use env.y = Y; compute(...); env.y = old_y inline
 }
 
 /// `Mth.floor(double)`.
@@ -412,7 +428,11 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
         }
         DFNode::Noise(key, xz_scale, y_scale) => {
             let noise = &env.noises[key];
-            noise.get_value(env.x as f64 * xz_scale, env.y as f64 * y_scale, env.z as f64 * xz_scale)
+            noise.get_value(
+                env.x as f64 * xz_scale,
+                env.y as f64 * y_scale,
+                env.z as f64 * xz_scale,
+            )
         }
         DFNode::ShiftedNoise(sx, sy, sz, xz_scale, y_scale, key) => {
             let noise = &env.noises[key];
@@ -452,15 +472,23 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             // If we have marker state in the env, use it. Otherwise evaluate directly.
             // Strategy: check cache with immutable borrow, call compute with mutable borrow,
             // then store in cache with mutable borrow. This avoids borrow conflicts.
-            let cache_hit_value: Option<f64> = env.marker_state.as_ref().map(|state| {
-                match kind {
+            let cache_hit_value: Option<f64> = env
+                .marker_state
+                .as_ref()
+                .map(|state| match kind {
                     MarkerKind::Cache2D => {
                         let pos2d = MarkerState::pack_pos_2d(env.x, env.z);
-                        state.last_pos_2d.filter(|p| *p == pos2d).map(|_| state.last_value)
+                        state
+                            .last_pos_2d
+                            .filter(|p| *p == pos2d)
+                            .map(|_| state.last_value)
                     }
                     MarkerKind::CacheOnce => {
                         let counter = state.interpolation_counter;
-                        state.last_pos_2d.filter(|p| *p == counter).map(|_| state.last_value)
+                        state
+                            .last_pos_2d
+                            .filter(|p| *p == counter)
+                            .map(|_| state.last_value)
                     }
                     MarkerKind::FlatCache => {
                         let qx = MarkerState::quart_from_block(env.x);
@@ -471,18 +499,33 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
                         let x = env.x % (state.cell_width as i32);
                         let y = env.y % (state.cell_height as i32);
                         let z = env.z % (state.cell_width as i32);
-                        let x = if x < 0 { x + state.cell_width as i32 } else { x };
-                        let y = if y < 0 { y + state.cell_height as i32 } else { y };
-                        let z = if z < 0 { z + state.cell_width as i32 } else { z };
+                        let x = if x < 0 {
+                            x + state.cell_width as i32
+                        } else {
+                            x
+                        };
+                        let y = if y < 0 {
+                            y + state.cell_height as i32
+                        } else {
+                            y
+                        };
+                        let z = if z < 0 {
+                            z + state.cell_width as i32
+                        } else {
+                            z
+                        };
                         let key = format!("{},{},{}", x, y, z);
                         state.cell_cache.get(&key).map(|cell_data| {
-                            let idx = ((state.cell_height as i32 - 1 - y) * state.cell_width as i32 + x) * state.cell_width as i32 + z;
+                            let idx =
+                                ((state.cell_height as i32 - 1 - y) * state.cell_width as i32 + x)
+                                    * state.cell_width as i32
+                                    + z;
                             cell_data[idx as usize]
                         })
                     }
                     MarkerKind::Interpolated | MarkerKind::BlendDensity => None,
-                }
-            }).flatten();
+                })
+                .flatten();
 
             if let Some(v) = cache_hit_value {
                 return v;
@@ -512,9 +555,21 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
                         let x = env.x % state.cell_width as i32;
                         let y = env.y % state.cell_height as i32;
                         let z = env.z % state.cell_width as i32;
-                        let x = if x < 0 { x + state.cell_width as i32 } else { x };
-                        let y = if y < 0 { y + state.cell_height as i32 } else { y };
-                        let z = if z < 0 { z + state.cell_width as i32 } else { z };
+                        let x = if x < 0 {
+                            x + state.cell_width as i32
+                        } else {
+                            x
+                        };
+                        let y = if y < 0 {
+                            y + state.cell_height as i32
+                        } else {
+                            y
+                        };
+                        let z = if z < 0 {
+                            z + state.cell_width as i32
+                        } else {
+                            z
+                        };
                         let key = format!("{},{},{}", x, y, z);
                         state.cell_cache.insert(key, vec![v]);
                     }
@@ -560,10 +615,20 @@ fn spline_sample(spline: &SplineDef, env: &mut DensityEnv) -> f32 {
     let last = spline.locations.len() - 1;
     let start = find_interval_start(&spline.locations, input);
     if start < 0 {
-        return linear_extend(input, &spline.locations, sample_spline_value(&spline.values[0], env), spline.derivatives[0]);
+        return linear_extend(
+            input,
+            &spline.locations,
+            sample_spline_value(&spline.values[0], env),
+            spline.derivatives[0],
+        );
     }
     if start as usize == last {
-        return linear_extend(input, &spline.locations, sample_spline_value(&spline.values[last], env), spline.derivatives[last]);
+        return linear_extend(
+            input,
+            &spline.locations,
+            sample_spline_value(&spline.values[last], env),
+            spline.derivatives[last],
+        );
     }
     let x1 = spline.locations[start as usize];
     let x2 = spline.locations[start as usize + 1];
@@ -633,7 +698,10 @@ impl DensityRegistry {
         };
         // Load all noise params.
         for path in crate::datapack_data::all_paths() {
-            if let Some(key) = path.strip_prefix("noise/").and_then(|k| k.strip_suffix(".json")) {
+            if let Some(key) = path
+                .strip_prefix("noise/")
+                .and_then(|k| k.strip_suffix(".json"))
+            {
                 if let Some(json) = crate::datapack_data::datapack_json(path) {
                     if let Some(params) = parse_noise_json(json) {
                         reg.noise_params.insert(key.to_string(), params);
@@ -729,7 +797,11 @@ impl DensityRegistry {
                         Rc::new(DFNode::IntervalSelect(input, thresholds, functions))
                     }
                     "noise" => {
-                        let key = obj["noise"].as_str().unwrap().trim_start_matches("minecraft:").to_string();
+                        let key = obj["noise"]
+                            .as_str()
+                            .unwrap()
+                            .trim_start_matches("minecraft:")
+                            .to_string();
                         let xz_scale = obj.get("xz_scale").and_then(|v| v.as_f64()).unwrap_or(1.0);
                         let y_scale = obj.get("y_scale").and_then(|v| v.as_f64()).unwrap_or(0.5);
                         Rc::new(DFNode::Noise(key, xz_scale, y_scale))
@@ -740,15 +812,27 @@ impl DensityRegistry {
                         let sz = self.parse(&obj["shift_z"]);
                         let xz_scale = obj["xz_scale"].as_f64().unwrap();
                         let y_scale = obj.get("y_scale").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let key = obj["noise"].as_str().unwrap().trim_start_matches("minecraft:").to_string();
+                        let key = obj["noise"]
+                            .as_str()
+                            .unwrap()
+                            .trim_start_matches("minecraft:")
+                            .to_string();
                         Rc::new(DFNode::ShiftedNoise(sx, sy, sz, xz_scale, y_scale, key))
                     }
                     "shift_a" => {
-                        let key = obj["argument"].as_str().unwrap().trim_start_matches("minecraft:").to_string();
+                        let key = obj["argument"]
+                            .as_str()
+                            .unwrap()
+                            .trim_start_matches("minecraft:")
+                            .to_string();
                         Rc::new(DFNode::ShiftA(key))
                     }
                     "shift_b" => {
-                        let key = obj["argument"].as_str().unwrap().trim_start_matches("minecraft:").to_string();
+                        let key = obj["argument"]
+                            .as_str()
+                            .unwrap()
+                            .trim_start_matches("minecraft:")
+                            .to_string();
                         Rc::new(DFNode::ShiftB(key))
                     }
                     "y_clamped_gradient" => Rc::new(DFNode::YClampedGradient(
@@ -792,7 +876,12 @@ impl DensityRegistry {
                         let upper_bound = self.parse(&obj["upper_bound"]);
                         let lower_bound = obj["lower_bound"].as_i64().unwrap() as i32;
                         let cell_height = obj["cell_height"].as_i64().unwrap() as i32;
-                        Rc::new(DFNode::FindTopSurface(density, upper_bound, lower_bound, cell_height))
+                        Rc::new(DFNode::FindTopSurface(
+                            density,
+                            upper_bound,
+                            lower_bound,
+                            cell_height,
+                        ))
                     }
                     "beardifier" => Rc::new(DFNode::Beardifier),
                     "old_blended_noise" => {
@@ -803,9 +892,9 @@ impl DensityRegistry {
                             crate::noise::BlendedNoise::with_random(
                                 crate::rng::Xoroshiro128::from_raw(tlo, thi),
                                 obj["xz_scale"].as_f64().unwrap(),
-                            obj["y_scale"].as_f64().unwrap(),
-                            obj["xz_factor"].as_f64().unwrap(),
-                            obj["y_factor"].as_f64().unwrap(),
+                                obj["y_scale"].as_f64().unwrap(),
+                                obj["xz_factor"].as_f64().unwrap(),
+                                obj["y_factor"].as_f64().unwrap(),
                                 obj["smear_scale_multiplier"].as_f64().unwrap(),
                             ),
                         )))

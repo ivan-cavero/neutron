@@ -11,8 +11,8 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::error::{DecodeError, EncodeError};
 use crate::packet::{Direction, PacketId, ProtocolState};
 use crate::types::{
-    read_string, read_uuid, read_varint, write_string, write_uuid, write_varint, BlockPos,
-    Chat, GameMode,
+    read_string, read_uuid, read_varint, write_string, write_uuid, write_varint, BlockPos, Chat,
+    GameMode,
 };
 
 // ===========================================================================
@@ -114,10 +114,7 @@ impl JoinGame {
 
         // u8 (1 byte)
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let is_hardcore = payload.get_u8() != 0;
 
@@ -222,10 +219,7 @@ impl PacketId for ServerData {
 impl ServerData {
     pub fn decode(payload: &mut Bytes) -> Result<Self, DecodeError> {
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let has_icon = payload.get_u8() != 0;
         let icon = if has_icon {
@@ -234,10 +228,7 @@ impl ServerData {
             None
         };
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let enforces_secure_chat = payload.get_u8() != 0;
         // For now, read the description as a raw string
@@ -289,10 +280,7 @@ impl ChatMessage {
     pub fn decode(payload: &mut Bytes) -> Result<Self, DecodeError> {
         let message = Chat::read_from(payload)?;
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let position = payload.get_u8();
         let sender = read_uuid(payload)?;
@@ -334,10 +322,7 @@ impl SystemChatMessage {
     pub fn decode(payload: &mut Bytes) -> Result<Self, DecodeError> {
         let content = Chat::read_from(payload)?;
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let overlay = payload.get_u8() != 0;
         Ok(Self { content, overlay })
@@ -438,10 +423,7 @@ impl SynchronizePlayerPosition {
         let flags = payload.get_u8();
         let teleport_id = read_varint(payload)?;
         if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes {
-                need: 1,
-                have: 0,
-            });
+            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
         }
         let dismount = payload.get_u8() != 0;
         Ok(Self {
@@ -943,7 +925,11 @@ mod tests {
             pitch: -45.0,
             on_ground: false,
         };
-        roundtrip(&packet, |p, b| p.encode(b), PlayerPositionAndRotation::decode);
+        roundtrip(
+            &packet,
+            |p, b| p.encode(b),
+            PlayerPositionAndRotation::decode,
+        );
     }
 
     #[test]
@@ -986,7 +972,11 @@ mod tests {
             teleport_id: 1,
             dismount: false,
         };
-        roundtrip(&packet, |p, b| p.encode(b), SynchronizePlayerPosition::decode);
+        roundtrip(
+            &packet,
+            |p, b| p.encode(b),
+            SynchronizePlayerPosition::decode,
+        );
     }
 
     #[test]

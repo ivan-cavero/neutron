@@ -1,8 +1,17 @@
-use neutron_worldgen::{WorldgenState, density::{compute, DensityEnv}};
+use neutron_worldgen::{
+    density::{compute, DensityEnv},
+    WorldgenState,
+};
 fn main() {
     let st = WorldgenState::overworld(42);
-    let coords = [(100,40,200), (-57,63,31), (12,-40,300), (511,100,-200), (0,0,0)];
-    for (x,y,z) in coords {
+    let coords = [
+        (100, 40, 200),
+        (-57, 63, 31),
+        (12, -40, 300),
+        (511, 100, -200),
+        (0, 0, 0),
+    ];
+    for (x, y, z) in coords {
         let mut env = DensityEnv::new(x, y, z, st.noises.noises());
         let t = compute(&st.router.temperature, &mut env);
         let c = compute(&st.router.continents, &mut env);

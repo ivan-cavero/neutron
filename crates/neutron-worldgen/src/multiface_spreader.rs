@@ -150,7 +150,15 @@ impl MultifaceSpreader {
         mask & (1u8 << face) != 0
     }
 
-    fn can_spread_from(&self, region: &RegionBuf, faces: &FaceMap, x: i32, y: i32, z: i32, face: usize) -> bool {
+    fn can_spread_from(
+        &self,
+        region: &RegionBuf,
+        faces: &FaceMap,
+        x: i32,
+        y: i32,
+        z: i32,
+        face: usize,
+    ) -> bool {
         let b = region.get(x, y, z);
         if self.config.other_block_valid_as_source && b != BlockId::SculkVein {
             return true;
@@ -166,60 +174,96 @@ impl MultifaceSpreader {
         is_sturdy_attach(n)
     }
 
-    fn state_can_be_replaced(&self, region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
-        let b = region.get(x, y, z);
-        matches!(b, BlockId::Air | BlockId::Water | BlockId::SculkVein)
-            // SculkVeinSpreaderConfig rejects sculk/catalyst at attach target side —
-            // handled in can_spread_into via against-state checks for wrap types
-            || b == BlockId::SculkVein
-    }
-
+    /// SculkVeinSpreaderConfig.stateCanBeReplaced + DefaultSpreaderConfig.canSpreadInto.
     fn can_spread_into(
         &self,
         region: &RegionBuf,
-        _sx: i32,
-        _sy: i32,
-        _sz: i32,
+        faces: &FaceMap,
+        sx: i32,
+        sy: i32,
+        sz: i32,
         sp: SpreadPos,
     ) -> bool {
-        if !self.state_can_be_replaced(region, sp.x, sp.y, sp.z) {
+        if !self.state_can_be_replaced(region, sx, sy, sz, sp) {
             return false;
         }
-        // Against block must not be sculk/catalyst (SculkVeinSpreaderConfig)
-        let (dx, dy, dz) = DIRS[sp.face];
-        let against = region.get(sp.x + dx, sp.y + dy, sp.z + dz);
-        if matches!(
-            against,
-            BlockId::Sculk | BlockId::SculkCatalyst
-        ) {
+        // MultifaceBlock.isValidStateForPlacement: already-has-face is checked here so
+        // getSpreadFromFaceTowardDirection can fall through to the next SpreadType.
+        let existing = region.get(sp.x, sp.y, sp.z);
+        let bit = 1u8 << sp.face;
+        if existing == BlockId::SculkVein
+            && faces.get(&(sp.x, sp.y, sp.z)).copied().unwrap_or(0) & bit != 0
+        {
             return false;
         }
         Self::is_valid_placement_face(region, sp.x, sp.y, sp.z, sp.face)
+    }
+
+    /// SculkVeinSpreaderConfig.stateCanBeReplaced (CFR).
+    fn state_can_be_replaced(
+        &self,
+        region: &RegionBuf,
+        sx: i32,
+        sy: i32,
+        sz: i32,
+        sp: SpreadPos,
+    ) -> bool {
+        let (fdx, fdy, fdz) = DIRS[sp.face];
+        let against = region.get(sp.x + fdx, sp.y + fdy, sp.z + fdz);
+        if matches!(against, BlockId::Sculk | BlockId::SculkCatalyst) {
+            return false;
+        }
+        // wrap-around: manhattan==2 + opposite-face sturdy at source.relative(face.opposite)
+        let manh = (sp.x - sx).abs() + (sp.y - sy).abs() + (sp.z - sz).abs();
+        if manh == 2 {
+            let opp = opposite(sp.face);
+            let (odx, ody, odz) = DIRS[opp];
+            if is_face_sturdy_full(region.get(sx + odx, sy + ody, sz + odz)) {
+                return false;
+            }
+        }
+        let existing = region.get(sp.x, sp.y, sp.z);
+        if existing == BlockId::Lava {
+            return false;
+        }
+        // canBeReplaced() || super (air / this / water source)
+        matches!(
+            existing,
+            BlockId::Air
+                | BlockId::Water
+                | BlockId::SculkVein
+                | BlockId::ShortGrass
+                | BlockId::Snow
+                | BlockId::LeafLitter
+        )
     }
 
     fn place_block(
         &self,
         region: &mut RegionBuf,
         faces: &mut FaceMap,
+        sx: i32,
+        sy: i32,
+        sz: i32,
         sp: SpreadPos,
     ) -> bool {
-        if !self.can_spread_into(region, 0, 0, 0, sp) {
+        if !self.can_spread_into(region, faces, sx, sy, sz, sp) {
             return false;
         }
         let key = (sp.x, sp.y, sp.z);
         let prev = faces.get(&key).copied().unwrap_or(0);
         let bit = 1u8 << sp.face;
-        if prev & bit != 0 && region.get(sp.x, sp.y, sp.z) == BlockId::SculkVein {
-            return false; // already has face
-        }
-        let first = prev == 0;
         faces.insert(key, prev | bit);
         let b = region.get(sp.x, sp.y, sp.z);
-        if matches!(b, BlockId::Air | BlockId::Water) {
+        if matches!(
+            b,
+            BlockId::Air
+                | BlockId::Water
+                | BlockId::ShortGrass
+                | BlockId::Snow
+                | BlockId::LeafLitter
+        ) {
             region.set(sp.x, sp.y, sp.z, BlockId::SculkVein);
-            if first {
-                // counted once per new vein cell (optional stat — sculk module tracks)
-            }
         }
         true
     }
@@ -248,7 +292,7 @@ impl MultifaceSpreader {
         }
         for &ty in self.config.spread_types {
             let sp = ty.get_spread_pos(x, y, z, spread_dir, starting_face);
-            if self.can_spread_into(region, x, y, z, sp) {
+            if self.can_spread_into(region, faces, x, y, z, sp) {
                 return Some(sp);
             }
         }
@@ -270,10 +314,10 @@ impl MultifaceSpreader {
                 continue;
             }
             for spread_dir in 0..6 {
-                if let Some(sp) =
-                    self.get_spread_from_face_toward_direction(region, faces, x, y, z, start_face, spread_dir)
-                {
-                    if self.place_block(region, faces, sp) {
+                if let Some(sp) = self.get_spread_from_face_toward_direction(
+                    region, faces, x, y, z, start_face, spread_dir,
+                ) {
+                    if self.place_block(region, faces, x, y, z, sp) {
                         count += 1;
                     }
                 }
@@ -301,10 +345,16 @@ impl MultifaceSpreader {
             i -= 1;
         }
         for spread_dir in order {
-            if let Some(sp) =
-                self.get_spread_from_face_toward_direction(region, faces, x, y, z, starting_face, spread_dir)
-            {
-                if self.place_block(region, faces, sp) {
+            if let Some(sp) = self.get_spread_from_face_toward_direction(
+                region,
+                faces,
+                x,
+                y,
+                z,
+                starting_face,
+                spread_dir,
+            ) {
+                if self.place_block(region, faces, x, y, z, sp) {
                     return true;
                 }
             }
@@ -370,6 +420,25 @@ fn is_sturdy_attach(b: BlockId) -> bool {
     )
 }
 
+/// isFaceSturdy for a full cube (wrap-around reject). Sculk/catalyst are sturdy.
+fn is_face_sturdy_full(b: BlockId) -> bool {
+    !matches!(
+        b,
+        BlockId::Air
+            | BlockId::Water
+            | BlockId::Lava
+            | BlockId::SculkVein
+            | BlockId::SculkSensor
+            | BlockId::SculkShrieker
+            | BlockId::OakLeaves
+            | BlockId::DarkOakLeaves
+            | BlockId::ShortGrass
+            | BlockId::LeafLitter
+            | BlockId::Snow
+            | BlockId::PowderSnow
+    )
+}
+
 /// Shuffle Direction.allShuffled
 pub fn all_shuffled(rng: &mut FeatureRandom) -> Vec<usize> {
     let mut order: Vec<usize> = (0..6).collect();
@@ -398,5 +467,27 @@ mod tests {
         assert_eq!(region.get(0, 10, 0), BlockId::SculkVein);
         let m = faces.get(&(0, 10, 0)).copied().unwrap_or(0);
         assert!(m & (1 << 0) != 0, "should have DOWN face, mask={m}");
+    }
+
+    #[test]
+    fn wrap_around_rejected_when_intermediate_is_sturdy() {
+        // source (0,10,0), WRAP_AROUND toward EAST (5) from DOWN (0):
+        // placement = (1, 9, 0), face = WEST (4). manhattan==2.
+        // neighbour = source.relative(face.opposite=EAST) = (1,10,0).
+        // If (1,10,0) is sturdy, stateCanBeReplaced is false.
+        let mut region = RegionBuf::new(0, 0, 0);
+        region.set(0, 10, 0, BlockId::SculkVein);
+        region.set(1, 10, 0, BlockId::Deepslate);
+        region.set(1, 9, 0, BlockId::Air);
+        region.set(0, 9, 0, BlockId::Deepslate);
+        let mut faces = FaceMap::new();
+        faces.insert((0, 10, 0), 1u8 << 0); // DOWN
+        let spreader = MultifaceSpreader::vein();
+        let sp = SpreadType::WrapAround.get_spread_pos(0, 10, 0, 5, 0);
+        assert_eq!((sp.x, sp.y, sp.z, sp.face), (1, 9, 0, 4));
+        assert!(
+            !spreader.can_spread_into(&region, &faces, 0, 10, 0, sp),
+            "wrap around a sturdy corner must be rejected"
+        );
     }
 }

@@ -68,8 +68,9 @@ fn dens_class_neu(b: BlockId) -> u8 {
 }
 
 fn main() {
-    let path =
-        PathBuf::from("tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.0.-1.mca");
+    let path = PathBuf::from(
+        "tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.0.-1.mca",
+    );
     let region = Region::open(&path).unwrap().with_coords(0, -1);
     let data = region.get_chunk(6, 30).unwrap().unwrap();
     let nbt = read_nbt(&data).unwrap();

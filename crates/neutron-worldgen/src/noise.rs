@@ -149,7 +149,11 @@ impl ImprovedNoise {
         let yr = y - yf as f64;
         let zr = z - zf as f64;
         let yr_fudge = if y_scale != 0.0 {
-            let fudge_limit = if y_fudge >= 0.0 && y_fudge < yr { y_fudge } else { yr };
+            let fudge_limit = if y_fudge >= 0.0 && y_fudge < yr {
+                y_fudge
+            } else {
+                yr
+            };
             (fudge_limit / y_scale + 1.0e-7f32 as f64).floor() * y_scale
         } else {
             0.0
@@ -163,7 +167,16 @@ impl ImprovedNoise {
         self.p[(x & 0xFF) as usize] as usize
     }
 
-    fn sample_and_lerp(&self, x: i32, y: i32, z: i32, xr: f64, yr: f64, zr: f64, yr_original: f64) -> f64 {
+    fn sample_and_lerp(
+        &self,
+        x: i32,
+        y: i32,
+        z: i32,
+        xr: f64,
+        yr: f64,
+        zr: f64,
+        yr_original: f64,
+    ) -> f64 {
         let x0 = self.p(x);
         let x1 = self.p(x + 1);
         let xy00 = self.p((x0 as i32 + y) as i32);
@@ -173,15 +186,42 @@ impl ImprovedNoise {
         let d000 = grad_dot(self.p((xy00 as i32 + z) as i32) as i32, xr, yr, zr);
         let d100 = grad_dot(self.p((xy10 as i32 + z) as i32) as i32, xr - 1.0, yr, zr);
         let d010 = grad_dot(self.p((xy01 as i32 + z) as i32) as i32, xr, yr - 1.0, zr);
-        let d110 = grad_dot(self.p((xy11 as i32 + z) as i32) as i32, xr - 1.0, yr - 1.0, zr);
-        let d001 = grad_dot(self.p((xy00 as i32 + z + 1) as i32) as i32, xr, yr, zr - 1.0);
-        let d101 = grad_dot(self.p((xy10 as i32 + z + 1) as i32) as i32, xr - 1.0, yr, zr - 1.0);
-        let d011 = grad_dot(self.p((xy01 as i32 + z + 1) as i32) as i32, xr, yr - 1.0, zr - 1.0);
-        let d111 = grad_dot(self.p((xy11 as i32 + z + 1) as i32) as i32, xr - 1.0, yr - 1.0, zr - 1.0);
+        let d110 = grad_dot(
+            self.p((xy11 as i32 + z) as i32) as i32,
+            xr - 1.0,
+            yr - 1.0,
+            zr,
+        );
+        let d001 = grad_dot(
+            self.p((xy00 as i32 + z + 1) as i32) as i32,
+            xr,
+            yr,
+            zr - 1.0,
+        );
+        let d101 = grad_dot(
+            self.p((xy10 as i32 + z + 1) as i32) as i32,
+            xr - 1.0,
+            yr,
+            zr - 1.0,
+        );
+        let d011 = grad_dot(
+            self.p((xy01 as i32 + z + 1) as i32) as i32,
+            xr,
+            yr - 1.0,
+            zr - 1.0,
+        );
+        let d111 = grad_dot(
+            self.p((xy11 as i32 + z + 1) as i32) as i32,
+            xr - 1.0,
+            yr - 1.0,
+            zr - 1.0,
+        );
         let x_alpha = smoothstep(xr);
         let y_alpha = smoothstep(yr_original);
         let z_alpha = smoothstep(zr);
-        lerp3(x_alpha, y_alpha, z_alpha, d000, d100, d010, d110, d001, d101, d011, d111)
+        lerp3(
+            x_alpha, y_alpha, z_alpha, d000, d100, d010, d110, d001, d101, d011, d111,
+        )
     }
 }
 
@@ -220,10 +260,19 @@ impl PerlinNoise {
         let lowest_freq_input_factor = 2f64.powi(-zero_octave_index);
         let lowest_freq_value_factor =
             2f64.powi((octaves - 1) as i32) / (2f64.powi(octaves as i32) - 1.0);
-        (lowest_freq_input_factor, lowest_freq_value_factor, zero_octave_index)
+        (
+            lowest_freq_input_factor,
+            lowest_freq_value_factor,
+            zero_octave_index,
+        )
     }
 
-    fn edge_value(noise_levels: &[Option<ImprovedNoise>], amplitudes: &[f64], value_factor0: f64, noise_value: f64) -> f64 {
+    fn edge_value(
+        noise_levels: &[Option<ImprovedNoise>],
+        amplitudes: &[f64],
+        value_factor0: f64,
+        noise_value: f64,
+    ) -> f64 {
         let mut value = 0.0;
         let mut value_factor = value_factor0;
         for (i, level) in noise_levels.iter().enumerate() {
@@ -237,7 +286,12 @@ impl PerlinNoise {
 
     /// Positional construction (`useNewInitialization=true`): each octave gets
     /// `MD5("octave_N")` XOR the given positional factory seeds.
-    pub fn create_positional(first_octave: i32, amplitudes: &[f64], pos_lo: u64, pos_hi: u64) -> Self {
+    pub fn create_positional(
+        first_octave: i32,
+        amplitudes: &[f64],
+        pos_lo: u64,
+        pos_hi: u64,
+    ) -> Self {
         let octaves = amplitudes.len();
         let mut noise_levels: Vec<Option<ImprovedNoise>> = (0..octaves).map(|_| None).collect();
         for i in 0..octaves {
@@ -245,7 +299,8 @@ impl PerlinNoise {
                 continue;
             }
             let octave = first_octave + i as i32;
-            let mut octave_rng = Xoroshiro128::from_raw(pos_lo, pos_hi).from_hash_of(&format!("octave_{octave}"));
+            let mut octave_rng =
+                Xoroshiro128::from_raw(pos_lo, pos_hi).from_hash_of(&format!("octave_{octave}"));
             noise_levels[i] = Some(ImprovedNoise::new(&mut octave_rng));
         }
         let (lowest_freq_input_factor, lowest_freq_value_factor, _) =
@@ -332,7 +387,12 @@ impl PerlinNoise {
 
     /// `maxBrokenValue(yScale)`.
     pub fn max_broken_value(&self, y_scale: f64) -> f64 {
-        Self::edge_value(&self.noise_levels, &self.amplitudes, self.lowest_freq_value_factor, y_scale + 2.0)
+        Self::edge_value(
+            &self.noise_levels,
+            &self.amplitudes,
+            self.lowest_freq_value_factor,
+            y_scale + 2.0,
+        )
     }
 
     pub fn max_value(&self) -> f64 {
@@ -343,7 +403,14 @@ impl PerlinNoise {
     pub fn dump_octaves(&self) {
         for (i, level) in self.noise_levels.iter().enumerate() {
             match level {
-                Some(n) => println!("  [{}] octave={} xo={:.17e} yo={:.17e} zo={:.17e}", i, self.first_octave + i as i32, n.xo, n.yo, n.zo),
+                Some(n) => println!(
+                    "  [{}] octave={} xo={:.17e} yo={:.17e} zo={:.17e}",
+                    i,
+                    self.first_octave + i as i32,
+                    n.xo,
+                    n.yo,
+                    n.zo
+                ),
                 None => println!("  [{}] octave={} null", i, self.first_octave + i as i32),
             }
         }
@@ -468,7 +535,8 @@ impl NormalNoise {
                 max_octave = max_octave.max(i as i32);
             }
         }
-        let value_factor = (1.0 / 6.0) / (0.1 * (1.0 + 1.0 / ((max_octave - min_octave + 1) as f64)));
+        let value_factor =
+            (1.0 / 6.0) / (0.1 * (1.0 + 1.0 / ((max_octave - min_octave + 1) as f64)));
         let max_value = (first.max_value() + second.max_value()) * value_factor;
         Self {
             first,

@@ -80,11 +80,10 @@ impl RegionBuf {
                     let src = ((y - WORLD_BOTTOM) as usize) * 256 + (z as usize) * 16 + x as usize;
                     let dx = lx0 + x;
                     let dz = lz0 + z;
-                    let dst = ((y - WORLD_BOTTOM) as usize)
-                        * (self.side as usize)
-                        * (self.side as usize)
-                        + (dz as usize) * (self.side as usize)
-                        + (dx as usize);
+                    let dst =
+                        ((y - WORLD_BOTTOM) as usize) * (self.side as usize) * (self.side as usize)
+                            + (dz as usize) * (self.side as usize)
+                            + (dx as usize);
                     self.blocks[dst] = blocks[src];
                 }
             }

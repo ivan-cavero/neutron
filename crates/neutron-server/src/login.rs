@@ -340,21 +340,47 @@ fn build_overworld_dimension_nbt() -> Vec<u8> {
     let mut compound = Compound { tags: Vec::new() };
 
     // Required fields for dimension type
-    compound.tags.push((MString::from("piglin_safe"), Tag::Byte(0)));
-    compound.tags.push((MString::from("has_skylight"), Tag::Byte(1)));
-    compound.tags.push((MString::from("has_ceiling"), Tag::Byte(0)));
-    compound.tags.push((MString::from("ultrawarm"), Tag::Byte(0)));
+    compound
+        .tags
+        .push((MString::from("piglin_safe"), Tag::Byte(0)));
+    compound
+        .tags
+        .push((MString::from("has_skylight"), Tag::Byte(1)));
+    compound
+        .tags
+        .push((MString::from("has_ceiling"), Tag::Byte(0)));
+    compound
+        .tags
+        .push((MString::from("ultrawarm"), Tag::Byte(0)));
     compound.tags.push((MString::from("natural"), Tag::Byte(1)));
-    compound.tags.push((MString::from("coordinate_scale"), Tag::Double(1.0)));
-    compound.tags.push((MString::from("bed_works"), Tag::Byte(1)));
-    compound.tags.push((MString::from("respawn_anchor_works"), Tag::Byte(0)));
-    compound.tags.push((MString::from("has_raids"), Tag::Byte(1)));
+    compound
+        .tags
+        .push((MString::from("coordinate_scale"), Tag::Double(1.0)));
+    compound
+        .tags
+        .push((MString::from("bed_works"), Tag::Byte(1)));
+    compound
+        .tags
+        .push((MString::from("respawn_anchor_works"), Tag::Byte(0)));
+    compound
+        .tags
+        .push((MString::from("has_raids"), Tag::Byte(1)));
     compound.tags.push((MString::from("min_y"), Tag::Int(-64)));
     compound.tags.push((MString::from("height"), Tag::Int(384)));
-    compound.tags.push((MString::from("logical_height"), Tag::Int(384)));
-    compound.tags.push((MString::from("infiniburn"), Tag::String(MString::from("#minecraft:infiniburn_overworld"))));
-    compound.tags.push((MString::from("effects"), Tag::String(MString::from("minecraft:overworld"))));
-    compound.tags.push((MString::from("ambient_light"), Tag::Float(0.0)));
+    compound
+        .tags
+        .push((MString::from("logical_height"), Tag::Int(384)));
+    compound.tags.push((
+        MString::from("infiniburn"),
+        Tag::String(MString::from("#minecraft:infiniburn_overworld")),
+    ));
+    compound.tags.push((
+        MString::from("effects"),
+        Tag::String(MString::from("minecraft:overworld")),
+    ));
+    compound
+        .tags
+        .push((MString::from("ambient_light"), Tag::Float(0.0)));
 
     let nbt = Nbt {
         name: MString::new(),
@@ -368,18 +394,36 @@ fn build_overworld_dimension_nbt() -> Vec<u8> {
 fn build_plains_biome_nbt() -> Vec<u8> {
     let mut compound = Compound { tags: Vec::new() };
 
-    compound.tags.push((MString::from("has_precipitation"), Tag::Byte(1)));
-    compound.tags.push((MString::from("temperature"), Tag::Float(0.8)));
-    compound.tags.push((MString::from("downfall"), Tag::Float(0.4)));
+    compound
+        .tags
+        .push((MString::from("has_precipitation"), Tag::Byte(1)));
+    compound
+        .tags
+        .push((MString::from("temperature"), Tag::Float(0.8)));
+    compound
+        .tags
+        .push((MString::from("downfall"), Tag::Float(0.4)));
 
     // effects compound
     let mut effects = Compound { tags: Vec::new() };
-    effects.tags.push((MString::from("sky_color"), Tag::Int(7907327)));
-    effects.tags.push((MString::from("water_fog_color"), Tag::Int(329011)));
-    effects.tags.push((MString::from("fog_color"), Tag::Int(12638463)));
-    effects.tags.push((MString::from("water_color"), Tag::Int(4159204)));
-    effects.tags.push((MString::from("grass_color"), Tag::Int(9286496)));
-    compound.tags.push((MString::from("effects"), Tag::Compound(effects)));
+    effects
+        .tags
+        .push((MString::from("sky_color"), Tag::Int(7907327)));
+    effects
+        .tags
+        .push((MString::from("water_fog_color"), Tag::Int(329011)));
+    effects
+        .tags
+        .push((MString::from("fog_color"), Tag::Int(12638463)));
+    effects
+        .tags
+        .push((MString::from("water_color"), Tag::Int(4159204)));
+    effects
+        .tags
+        .push((MString::from("grass_color"), Tag::Int(9286496)));
+    compound
+        .tags
+        .push((MString::from("effects"), Tag::Compound(effects)));
 
     let nbt = Nbt {
         name: MString::new(),

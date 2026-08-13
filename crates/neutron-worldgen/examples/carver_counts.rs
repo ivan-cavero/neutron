@@ -6,5 +6,9 @@ fn main() {
     CARVE_WRITES.store(0, Ordering::Relaxed);
     let gen = ChunkGenerator::new(12345);
     let _ = gen.generate_chunk(6, -2);
-    println!("starts={} writes={}", CARVE_STARTS.load(Ordering::Relaxed), CARVE_WRITES.load(Ordering::Relaxed));
+    println!(
+        "starts={} writes={}",
+        CARVE_STARTS.load(Ordering::Relaxed),
+        CARVE_WRITES.load(Ordering::Relaxed)
+    );
 }

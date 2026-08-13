@@ -187,7 +187,8 @@ fn main() -> Result<()> {
     }
 
     println!("\n--- Heightmap Statistics ---");
-    let avg_height: f64 = all_stats.iter().map(|s| s.heightmap_avg).sum::<f64>() / all_stats.len() as f64;
+    let avg_height: f64 =
+        all_stats.iter().map(|s| s.heightmap_avg).sum::<f64>() / all_stats.len() as f64;
     let min_height = all_stats.iter().map(|s| s.heightmap_min).min().unwrap_or(0);
     let max_height = all_stats.iter().map(|s| s.heightmap_max).max().unwrap_or(0);
     println!("  Average surface height: {:.1}", avg_height);
@@ -200,8 +201,14 @@ fn main() -> Result<()> {
         println!("  Chunk ({}, {}):", s.chunk_x, s.chunk_z);
         println!("    Raw hash:  {}", s.raw_hash);
         println!("    NBT hash:  {}", s.nbt_hash);
-        println!("    Blocks:    {} total, {} non-air", s.total_blocks, s.non_air_blocks);
-        println!("    Heightmap: avg={:.1} min={} max={}", s.heightmap_avg, s.heightmap_min, s.heightmap_max);
+        println!(
+            "    Blocks:    {} total, {} non-air",
+            s.total_blocks, s.non_air_blocks
+        );
+        println!(
+            "    Heightmap: avg={:.1} min={} max={}",
+            s.heightmap_avg, s.heightmap_min, s.heightmap_max
+        );
         println!("    Surface:   {}", s.surface_block);
         // Show top 5 block types
         let mut top_blocks: Vec<_> = s.block_counts.iter().collect();
@@ -235,7 +242,11 @@ fn main() -> Result<()> {
             .with_context(|| format!("Failed to write {}", output_path.display()))?;
         println!("\nNeutron golden data saved to {}", output_path.display());
         if let Some(ref golden_path) = cli.golden {
-            println!("Compare with: cargo run -p golden-data -- compare --left {} --right {}", golden_path.display(), output_path.display());
+            println!(
+                "Compare with: cargo run -p golden-data -- compare --left {} --right {}",
+                golden_path.display(),
+                output_path.display()
+            );
         }
     }
 
@@ -257,7 +268,10 @@ fn compare_with_golden(golden_path: &PathBuf, neutron_chunks: &[NeutronChunkInfo
     let golden: GoldenData = serde_json::from_str(&content)?;
 
     println!("\n=== Comparison with Golden Data ===");
-    println!("Golden: {} chunks from {} (seed={})", golden.total_chunks, golden.server, golden.seed);
+    println!(
+        "Golden: {} chunks from {} (seed={})",
+        golden.total_chunks, golden.server, golden.seed
+    );
 
     // Build lookup map for golden data
     let golden_map: HashMap<(i32, i32), &GoldenChunk> = golden
@@ -289,7 +303,10 @@ fn compare_with_golden(golden_path: &PathBuf, neutron_chunks: &[NeutronChunkInfo
 
     // Check for golden chunks not in neutron
     for gc in &golden.chunks {
-        if !neutron_chunks.iter().any(|nc| nc.chunk_x == gc.chunk_x && nc.chunk_z == gc.chunk_z) {
+        if !neutron_chunks
+            .iter()
+            .any(|nc| nc.chunk_x == gc.chunk_x && nc.chunk_z == gc.chunk_z)
+        {
             only_in_golden += 1;
         }
     }
@@ -461,31 +478,27 @@ fn serialize_chunk_to_sections_nbt(chunk: &neutron_worldgen::GeneratedChunk) -> 
 
         // Block states
         let mut block_states = Compound { tags: Vec::new() };
-        block_states.tags.push((
-            MString::from("palette"),
-            Tag::List(block_palette),
-        ));
+        block_states
+            .tags
+            .push((MString::from("palette"), Tag::List(block_palette)));
         // Omit "data" array when palette has only 1 entry (single-value optimization).
         if !block_data.is_empty() {
-            block_states.tags.push((
-                MString::from("data"),
-                Tag::LongArray(block_data.into()),
-            ));
+            block_states
+                .tags
+                .push((MString::from("data"), Tag::LongArray(block_data.into())));
         }
         compound_insert(&mut section, "block_states", Tag::Compound(block_states));
 
         // Biomes (vanilla uses LongArray, not IntArray)
         let mut biomes_compound = Compound { tags: Vec::new() };
-        biomes_compound.tags.push((
-            MString::from("palette"),
-            Tag::List(biome_palette),
-        ));
+        biomes_compound
+            .tags
+            .push((MString::from("palette"), Tag::List(biome_palette)));
         // Omit "data" array when palette has only 1 entry (single-value optimization).
         if !biome_data.is_empty() {
-            biomes_compound.tags.push((
-                MString::from("data"),
-                Tag::LongArray(biome_data.into()),
-            ));
+            biomes_compound
+                .tags
+                .push((MString::from("data"), Tag::LongArray(biome_data.into())));
         }
         compound_insert(&mut section, "biomes", Tag::Compound(biomes_compound));
 
@@ -515,7 +528,11 @@ fn build_block_palette(blocks: &[u16]) -> (List, HashMap<u16, usize>) {
         .map(|&id| {
             let mut compound = Compound { tags: Vec::new() };
             let block_name = block_id_to_name(id);
-            compound_insert(&mut compound, "Name", Tag::String(MString::from(block_name)));
+            compound_insert(
+                &mut compound,
+                "Name",
+                Tag::String(MString::from(block_name)),
+            );
             // Add Properties if this block has state properties.
             if let Some(props) = block_id_to_properties(id) {
                 let mut properties = Compound { tags: Vec::new() };
@@ -720,22 +737,41 @@ fn block_id_to_name(id: u16) -> &'static str {
 /// Convert a BiomeId to its Minecraft resource location.
 fn biome_id_to_name(id: u8) -> &'static str {
     match id {
-        0 => "minecraft:ocean", 1 => "minecraft:plains", 2 => "minecraft:desert",
-        3 => "minecraft:forest", 4 => "minecraft:taiga", 5 => "minecraft:swamp",
-        6 => "minecraft:river", 7 => "minecraft:beach", 8 => "minecraft:deep_ocean",
-        9 => "minecraft:snowy_plains", 10 => "minecraft:jungle",
-        11 => "minecraft:savanna", 12 => "minecraft:dark_forest",
-        13 => "minecraft:stony_shore", 14 => "minecraft:meadow",
-        15 => "minecraft:frozen_ocean", 16 => "minecraft:frozen_river",
-        17 => "minecraft:ice_spikes", 18 => "minecraft:old_growth_birch_forest",
-        19 => "minecraft:old_growth_pine_forest", 20 => "minecraft:windswept_hills",
-        21 => "minecraft:grove", 22 => "minecraft:snowy_slopes",
-        23 => "minecraft:jagged_peaks", 24 => "minecraft:frozen_peaks",
-        25 => "minecraft:stony_peaks", 26 => "minecraft:badlands",
-        27 => "minecraft:eroded_badlands", 28 => "minecraft:wooded_badlands",
-        29 => "minecraft:mushroom_fields", 30 => "minecraft:cherry_grove",
-        31 => "minecraft:deep_dark", 32 => "minecraft:mangrove_swamp",
-        33 => "minecraft:birch_forest", 34 => "minecraft:lush_caves",
+        0 => "minecraft:ocean",
+        1 => "minecraft:plains",
+        2 => "minecraft:desert",
+        3 => "minecraft:forest",
+        4 => "minecraft:taiga",
+        5 => "minecraft:swamp",
+        6 => "minecraft:river",
+        7 => "minecraft:beach",
+        8 => "minecraft:deep_ocean",
+        9 => "minecraft:snowy_plains",
+        10 => "minecraft:jungle",
+        11 => "minecraft:savanna",
+        12 => "minecraft:dark_forest",
+        13 => "minecraft:stony_shore",
+        14 => "minecraft:meadow",
+        15 => "minecraft:frozen_ocean",
+        16 => "minecraft:frozen_river",
+        17 => "minecraft:ice_spikes",
+        18 => "minecraft:old_growth_birch_forest",
+        19 => "minecraft:old_growth_pine_forest",
+        20 => "minecraft:windswept_hills",
+        21 => "minecraft:grove",
+        22 => "minecraft:snowy_slopes",
+        23 => "minecraft:jagged_peaks",
+        24 => "minecraft:frozen_peaks",
+        25 => "minecraft:stony_peaks",
+        26 => "minecraft:badlands",
+        27 => "minecraft:eroded_badlands",
+        28 => "minecraft:wooded_badlands",
+        29 => "minecraft:mushroom_fields",
+        30 => "minecraft:cherry_grove",
+        31 => "minecraft:deep_dark",
+        32 => "minecraft:mangrove_swamp",
+        33 => "minecraft:birch_forest",
+        34 => "minecraft:lush_caves",
         35 => "minecraft:dripstone_caves",
         _ => "minecraft:unknown",
     }

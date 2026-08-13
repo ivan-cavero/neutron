@@ -245,12 +245,7 @@ impl FluidEngine {
         }
 
         // Check horizontal neighbours and pick the steepest descent.
-        let neighbours = [
-            (1, 0, 0),
-            (-1, 0, 0),
-            (0, 0, 1),
-            (0, 0, -1),
-        ];
+        let neighbours = [(1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)];
 
         let mut best_level = current_level;
         for &(nx, ny, nz) in &neighbours {
@@ -310,8 +305,8 @@ impl FluidEngine {
         }
 
         match below_block {
-            BLOCK_SOUL_SAND => Some(1),  // upward
-            BLOCK_MAGMA => Some(-1),     // downward
+            BLOCK_SOUL_SAND => Some(1), // upward
+            BLOCK_MAGMA => Some(-1),    // downward
             _ => None,
         }
     }
@@ -320,15 +315,9 @@ impl FluidEngine {
     ///
     /// Returns the Y velocity applied to entities inside the bubble column.
     /// Soul sand pushes up (`+0.7`), magma pulls down (`-0.25`).
-    pub fn bubble_column_velocity(
-        &self,
-        x: i32,
-        y: i32,
-        z: i32,
-        world: &dyn BlockAccess,
-    ) -> f64 {
+    pub fn bubble_column_velocity(&self, x: i32, y: i32, z: i32, world: &dyn BlockAccess) -> f64 {
         match self.detect_bubble_column(x, y, z, world) {
-            Some(1) => 0.7,   // soul sand – upward
+            Some(1) => 0.7,    // soul sand – upward
             Some(-1) => -0.25, // magma – downward
             _ => 0.0,
         }
@@ -401,11 +390,11 @@ impl FluidEngine {
         world: &mut dyn BlockAccess,
     ) {
         let neighbours = [
-            (0, -1, 0),  // down
-            (1, 0, 0),   // north
-            (-1, 0, 0),  // south
-            (0, 0, 1),   // east
-            (0, 0, -1),  // west
+            (0, -1, 0), // down
+            (1, 0, 0),  // north
+            (-1, 0, 0), // south
+            (0, 0, 1),  // east
+            (0, 0, -1), // west
         ];
 
         for &(nx, ny, nz) in &neighbours {
@@ -452,11 +441,11 @@ impl FluidEngine {
         world: &mut dyn BlockAccess,
     ) {
         let neighbours = [
-            (0, -1, 0),  // down
-            (1, 0, 0),   // north
-            (-1, 0, 0),  // south
-            (0, 0, 1),   // east
-            (0, 0, -1),  // west
+            (0, -1, 0), // down
+            (1, 0, 0),  // north
+            (-1, 0, 0), // south
+            (0, 0, 1),  // east
+            (0, 0, -1), // west
         ];
 
         for &(nx, ny, nz) in &neighbours {
@@ -594,16 +583,7 @@ mod tests {
         }
 
         /// Fill a region with a specific block.
-        fn fill_block(
-            &mut self,
-            x1: i32,
-            y1: i32,
-            z1: i32,
-            x2: i32,
-            y2: i32,
-            z2: i32,
-            block: u16,
-        ) {
+        fn fill_block(&mut self, x1: i32, y1: i32, z1: i32, x2: i32, y2: i32, z2: i32, block: u16) {
             for x in x1..=x2 {
                 for y in y1..=y2 {
                     for z in z1..=z2 {
@@ -688,10 +668,7 @@ mod tests {
 
         // The block directly below the source should be level 8 (waterfall).
         let below = engine.get_fluid(0, -1, 0);
-        assert!(
-            below.is_some(),
-            "Block below source should have water"
-        );
+        assert!(below.is_some(), "Block below source should have water");
 
         // A horizontal neighbour one block away from source should be level 7.
         // Check one axis to verify the level decreases.
@@ -761,7 +738,7 @@ mod tests {
     fn test_waterlogging() {
         let mut world = TestWorld::new();
         world.set_block(0, 0, 0, 126); // oak_slab (waterloggable)
-        world.set_block(1, 0, 0, 1);   // stone (not waterloggable)
+        world.set_block(1, 0, 0, 1); // stone (not waterloggable)
 
         let mut engine = FluidEngine::new();
 
@@ -860,10 +837,7 @@ mod tests {
         assert_eq!(col2, Some(-1), "Magma should create downward bubble column");
 
         let velocity2 = engine.bubble_column_velocity(0, 1, 0, &world);
-        assert!(
-            velocity2 < 0.0,
-            "Magma should pull entities downward"
-        );
+        assert!(velocity2 < 0.0, "Magma should pull entities downward");
 
         // No bubble column when below block is stone.
         world.set_block(0, 0, 0, 1); // stone
@@ -888,10 +862,7 @@ mod tests {
         }
 
         let below = engine.get_fluid(0, -1, 0);
-        assert!(
-            below.is_some(),
-            "Water should flow downward from source"
-        );
+        assert!(below.is_some(), "Water should flow downward from source");
 
         // Downward flow should keep level 8 (waterfall).
         if let Some(state) = below {
@@ -958,13 +929,13 @@ mod tests {
         world.set_block(0, 0, 0, 126); // oak_slab
         world.set_block(1, 0, 0, 127); // stone_slab
         world.set_block(2, 0, 0, 128); // oak_stairs
-        world.set_block(3, 0, 0, 85);  // oak_fence
+        world.set_block(3, 0, 0, 85); // oak_fence
         world.set_block(4, 0, 0, 139); // cobblestone_wall
-        world.set_block(5, 0, 0, 77);  // stone_button
+        world.set_block(5, 0, 0, 77); // stone_button
         world.set_block(6, 0, 0, 143); // oak_button
-        world.set_block(7, 0, 0, 63);  // standing_sign
-        world.set_block(8, 0, 0, 68);  // wall_sign
-        world.set_block(9, 0, 0, 1);   // stone (not waterloggable)
+        world.set_block(7, 0, 0, 63); // standing_sign
+        world.set_block(8, 0, 0, 68); // wall_sign
+        world.set_block(9, 0, 0, 1); // stone (not waterloggable)
 
         let mut engine = FluidEngine::new();
 

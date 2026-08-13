@@ -12,7 +12,7 @@
 // Rules: no wall-paint, no expand rings, no vertical seed rescue.
 // Vein face bits are tracked; attemptPlaceSculk requires hasFace.
 
-use crate::biome_source::{climate_at_block, find_biome};
+use crate::biome_source::biome_id_at_block;
 use crate::feature_catalog::{self, step};
 use crate::feature_rng::FeatureRandom;
 use crate::generator::WORLD_BOTTOM;
@@ -134,14 +134,10 @@ pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
     }
     let patch_cfg = PatchConfig::load();
     let vein_cfg = VeinConfig::load();
-    let idx_vein = feature_catalog::feature_index_in_biome(
-        "deep_dark",
-        step::UNDERGROUND_DECORATION,
-        "sculk_vein",
-    )
-    .unwrap_or(0);
-    let idx_patch = feature_catalog::feature_index_in_biome(
-        "deep_dark",
+    let idx_vein =
+        feature_catalog::global_feature_index(step::UNDERGROUND_DECORATION, "sculk_vein")
+            .unwrap_or(0);
+    let idx_patch = feature_catalog::global_feature_index(
         step::UNDERGROUND_DECORATION,
         "sculk_patch_deep_dark",
     )
@@ -170,6 +166,37 @@ pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
 
 // ===================== MultifaceGrowthFeature (sculk_vein) =====================
 
+/// validDirections order from MultifaceGrowthConfiguration:
+/// ceiling UP, floor DOWN, then HORIZONTAL (N S W E) — then shuffled.
+fn valid_growth_dirs(can_floor: bool, can_ceiling: bool, can_wall: bool) -> Vec<(i32, i32, i32)> {
+    let mut v = Vec::with_capacity(6);
+    // CFR adds UP first if ceiling, DOWN if floor, then HORIZONTAL
+    if can_ceiling {
+        v.push(DIRS[1]); // UP
+    }
+    if can_floor {
+        v.push(DIRS[0]); // DOWN
+    }
+    if can_wall {
+        v.push(DIRS[2]); // NORTH
+        v.push(DIRS[3]); // SOUTH
+        v.push(DIRS[4]); // WEST
+        v.push(DIRS[5]); // EAST
+    }
+    v
+}
+
+fn shuffle_dirs_list(rng: &mut FeatureRandom, dirs: &[(i32, i32, i32)]) -> Vec<(i32, i32, i32)> {
+    let mut d = dirs.to_vec();
+    let mut i = d.len();
+    while i > 1 {
+        let j = rng.next_int(i as i32) as usize;
+        d.swap(i - 1, j);
+        i -= 1;
+    }
+    d
+}
+
 fn place_sculk_vein(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
@@ -179,6 +206,8 @@ fn place_sculk_vein(
     oz0: i32,
     cfg: &VeinConfig,
 ) {
+    // sculk_vein config: floor+ceiling+wall all true
+    let base_dirs = valid_growth_dirs(true, true, true);
     let count = cfg.count_min + rng.next_int(cfg.count_max - cfg.count_min + 1);
     for _ in 0..count {
         let x = ox0 + rng.next_int(16);
@@ -187,26 +216,56 @@ fn place_sculk_vein(
         if !is_deep_dark_at(state, x, y, z) {
             continue;
         }
+        // MultifaceGrowthFeature.place: origin must be air/water
         if !is_air_or_water(region.get(x, y, z)) {
             continue;
         }
-        let dirs = shuffled_dirs(rng);
-        if place_growth(rng, region, faces, x, y, z, &dirs, cfg.chance_of_spreading) {
+        let search_dirs = shuffle_dirs_list(rng, &base_dirs);
+        if place_growth(
+            rng,
+            region,
+            faces,
+            x,
+            y,
+            z,
+            &search_dirs,
+            cfg.chance_of_spreading,
+        ) {
             continue;
         }
-        for &(dx, dy, dz) in &dirs {
+        // MultifaceGrowthFeature.place (bytecode 26.2): for each searchDirection,
+        // loop search_range times with setWithOffset(origin, searchDirection) —
+        // always origin±1, NOT multi-step accumulation (CFR matches javap).
+        'search: for &(dx, dy, dz) in &search_dirs {
             let opp = (-dx, -dy, -dz);
-            let rem: Vec<_> = dirs.iter().copied().filter(|d| *d != opp).collect();
-            for step_i in 1..=cfg.search_range {
-                let nx = x + dx * step_i;
-                let ny = y + dy * step_i;
-                let nz = z + dz * step_i;
+            let placement_dirs = shuffle_dirs_list(
+                rng,
+                &base_dirs
+                    .iter()
+                    .copied()
+                    .filter(|d| *d != opp)
+                    .collect::<Vec<_>>(),
+            );
+            for _ in 0..cfg.search_range {
+                let nx = x + dx;
+                let ny = y + dy;
+                let nz = z + dz;
                 let b = region.get(nx, ny, nz);
+                // solid (not vein) ends this search direction
                 if !is_air_or_water(b) && b != BlockId::SculkVein {
                     break;
                 }
-                if place_growth(rng, region, faces, nx, ny, nz, &rem, cfg.chance_of_spreading) {
-                    break;
+                if place_growth(
+                    rng,
+                    region,
+                    faces,
+                    nx,
+                    ny,
+                    nz,
+                    &placement_dirs,
+                    cfg.chance_of_spreading,
+                ) {
+                    break 'search;
                 }
             }
         }
@@ -234,17 +293,20 @@ fn place_growth(
         let Some(fi) = dir_index(dx, dy, dz) else {
             continue;
         };
+        // getStateForPlacement == null → return false (do not try the next dir)
         let bit = 1u8 << fi;
         let prev = faces.get(&(x, y, z)).copied().unwrap_or(0);
+        if b == BlockId::SculkVein && prev & bit != 0 {
+            return false;
+        }
         faces.insert((x, y, z), prev | bit);
         if is_air_or_water(b) {
             region.set(x, y, z, BlockId::SculkVein);
             SCULK_VEIN_PLACED.fetch_add(1, Ordering::Relaxed);
         }
         if rng.next_f32() < chance {
-            MultifaceSpreader::vein().spread_from_face_toward_random_direction(
-                rng, region, faces, x, y, z, fi,
-            );
+            MultifaceSpreader::vein()
+                .spread_from_face_toward_random_direction(rng, region, faces, x, y, z, fi);
         }
         return true;
     }
@@ -284,11 +346,13 @@ fn can_spread_from(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
     if is_sculk_behaviour(b) {
         return true;
     }
+    // Vanilla: air OR water source; any neighbour with full collision shape.
+    // SCULK is a full cube — must count (cascade after earlier patches).
     if !matches!(b, BlockId::Air | BlockId::Water) {
         return false;
     }
     DIRS.iter()
-        .any(|&(dx, dy, dz)| is_full_solid(region.get(x + dx, y + dy, z + dz)))
+        .any(|&(dx, dy, dz)| is_collision_full_block(region.get(x + dx, y + dy, z + dz)))
 }
 
 struct Cursor {
@@ -339,7 +403,8 @@ fn run_patch(
     }
 
     if rng.next_f32() <= cfg.catalyst_chance {
-        if is_full_solid(region.get(ox, oy - 1, oz)) {
+        // isCollisionShapeFullBlock below
+        if is_collision_full_block(region.get(ox, oy - 1, oz)) {
             region.set(ox, oy, oz, BlockId::SculkCatalyst);
             faces.remove(&(ox, oy, oz));
         }
@@ -358,14 +423,11 @@ fn update_cursors(
 ) {
     let mut next: Vec<Cursor> = Vec::new();
     for mut c in cursors.drain(..) {
-        let chess = (c.x - ox)
-            .abs()
-            .max((c.y - oy).abs())
-            .max((c.z - oz).abs());
+        let chess = (c.x - ox).abs().max((c.y - oy).abs()).max((c.z - oz).abs());
         if chess > 1024 {
             continue;
         }
-        cursor_update(rng, region, faces, ox, oz, &mut c, spread_veins);
+        cursor_update(rng, region, faces, ox, oy, oz, &mut c, spread_veins);
         if c.charge > 0 {
             next.push(c);
         }
@@ -383,6 +445,7 @@ fn cursor_update(
     region: &mut RegionBuf,
     faces: &mut FaceMap,
     ox: i32,
+    oy: i32,
     oz: i32,
     c: &mut Cursor,
     spread_veins: bool,
@@ -396,22 +459,21 @@ fn cursor_update(
     }
 
     let mut here = region.get(c.x, c.y, c.z);
+    // updateDecayDelay uses the behaviour from *before* the move
+    // (and after attemptSpreadVein re-read if canChangeBlockStateOnSpread).
+    let mut behaviour_is_sculk = is_sculk_behaviour(here);
 
     if spread_veins {
         if attempt_spread_vein(region, faces, c.x, c.y, c.z, c.facings, here) {
-            // Vanilla re-reads state + behaviour after canChangeBlockStateOnSpread.
-            here = region.get(c.x, c.y, c.z);
-            c.facings = faces.get(&(c.x, c.y, c.z)).copied();
+            // SculkBlock.canChangeBlockStateOnSpread == false; default is true.
+            if here != BlockId::Sculk {
+                here = region.get(c.x, c.y, c.z);
+                behaviour_is_sculk = is_sculk_behaviour(here);
+            }
         }
     }
 
-    // Ensure vein face mask exists before attemptPlaceSculk (hasFace).
-    if here == BlockId::SculkVein {
-        ensure_vein_faces(region, faces, c.x, c.y, c.z);
-        c.facings = faces.get(&(c.x, c.y, c.z)).copied();
-    }
-
-    c.charge = attempt_use_charge(rng, region, faces, c, here, spread_veins);
+    c.charge = attempt_use_charge(rng, region, faces, c, here, spread_veins, ox, oy, oz);
     if c.charge <= 0 {
         on_discharged(region, faces, c.x, c.y, c.z);
         return;
@@ -422,26 +484,33 @@ fn cursor_update(
         c.x = nx;
         c.y = ny;
         c.z = nz;
+        // closerThan(Vec3i(originX, cursorY, originZ), 15) → distSqr < 225
         let dx = (c.x - ox) as f64;
         let dz = (c.z - oz) as f64;
-        if (dx * dx + dz * dz).sqrt() > WORLDGEN_MAX_DIST {
+        if dx * dx + dz * dz >= WORLDGEN_MAX_DIST * WORLDGEN_MAX_DIST {
             c.charge = 0;
             return;
         }
         here = region.get(c.x, c.y, c.z);
     }
 
-    if is_sculk_behaviour(here) {
-        c.facings = faces.get(&(c.x, c.y, c.z)).copied();
-        c.decay_delay = 1; // SculkBehaviour default updateDecayDelay → 1
+    // MultifaceBlock.availableFaces: empty set on non-multiface SculkBehaviour (sculk).
+    // Catalyst/sensor/shrieker are not SculkBehaviour — facings left unchanged.
+    if here == BlockId::SculkVein {
+        c.facings = Some(faces.get(&(c.x, c.y, c.z)).copied().unwrap_or(0));
+    } else if here == BlockId::Sculk {
+        c.facings = Some(0);
+    }
+    if behaviour_is_sculk {
+        c.decay_delay = 1;
     } else {
-        // DEFAULT: max(decay-1, 0)
         c.decay_delay = (c.decay_delay - 1).max(0);
     }
     c.update_delay = 1; // getSculkSpreadDelay
 }
 
-/// SculkBehaviour.DEFAULT.attemptSpreadVein (CFR SculkBehaviour.java).
+/// SculkBlock/SculkVeinBlock use the interface default (veinSpreader.spreadAll).
+/// Only DEFAULT (non-SculkBehaviour) branches on facings.
 fn attempt_spread_vein(
     region: &mut RegionBuf,
     faces: &mut FaceMap,
@@ -451,14 +520,14 @@ fn attempt_spread_vein(
     facings: Option<u8>,
     here: BlockId,
 ) -> bool {
-    // DEFAULT:
-    //   facings == null → sameSpaceSpreader.spreadAll(...)
-    //   facings non-empty + air/water → SculkVeinBlock.regrow
-    //   facings empty → super = veinSpreader.spreadAll
+    if is_sculk_behaviour(here) {
+        return MultifaceSpreader::vein().spread_all(region, faces, x, y, z) > 0;
+    }
+    // SculkBehaviour.DEFAULT.attemptSpreadVein
     match facings {
         None => MultifaceSpreader::same_space().spread_all(region, faces, x, y, z) > 0,
         Some(bits) if bits != 0 => {
-            if is_air_or_water(here) || here == BlockId::SculkVein {
+            if is_air_or_water(here) {
                 MultifaceSpreader::regrow(region, faces, x, y, z, bits)
             } else {
                 false
@@ -475,6 +544,9 @@ fn attempt_use_charge(
     c: &Cursor,
     here: BlockId,
     spread_veins: bool,
+    ox: i32,
+    oy: i32,
+    oz: i32,
 ) -> i32 {
     let charge = c.charge;
     match here {
@@ -488,44 +560,9 @@ fn attempt_use_charge(
             }
             charge
         }
-        BlockId::Sculk => {
-            // SculkBlock.attemptUseCharge (simplified growth/decay)
-            if charge == 0 || rng.next_int(CHARGE_DECAY_RATE) != 0 {
-                return charge;
-            }
-            // noGrowthRadius check vs origin not available here — use additional decay
-            if rng.next_int(ADDITIONAL_DECAY_RATE) != 0 {
-                return charge;
-            }
-            // growth path if open above
-            if region.get(c.x, c.y + 1, c.z) == BlockId::Air {
-                if rng.next_int(GROWTH_SPAWN_COST) < charge {
-                    // sensor/shrieker rare — place sensor mostly
-                    if rng.next_int(11) == 0 {
-                        region.set(c.x, c.y + 1, c.z, BlockId::SculkShrieker);
-                    } else {
-                        region.set(c.x, c.y + 1, c.z, BlockId::SculkSensor);
-                    }
-                    return (charge - GROWTH_SPAWN_COST).max(0);
-                }
-            }
-            (charge - 1).max(0)
-        }
-        BlockId::SculkCatalyst | BlockId::SculkSensor | BlockId::SculkShrieker => {
-            if rng.next_int(CHARGE_DECAY_RATE) == 0 {
-                return ((charge as f32) * 0.5).floor() as i32;
-            }
-            charge
-        }
+        BlockId::Sculk => sculk_block_attempt_use_charge(rng, region, c, charge, ox, oy, oz),
+        // Catalyst/sensor/shrieker do not implement SculkBehaviour → DEFAULT
         _ => {
-            // DEFAULT: if decay_delay > 0 keep charge else 0
-            // After vein place this tick, re-check as vein
-            let now = region.get(c.x, c.y, c.z);
-            if now == BlockId::SculkVein && spread_veins {
-                if attempt_place_sculk(rng, region, faces, c.x, c.y, c.z) {
-                    return charge - 1;
-                }
-            }
             if c.decay_delay > 0 {
                 charge
             } else {
@@ -535,21 +572,87 @@ fn attempt_use_charge(
     }
 }
 
-/// Populate face bits toward every sturdy/replaceable neighbour (worldgen bootstrap).
-fn ensure_vein_faces(region: &RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z: i32) {
-    if faces.get(&(x, y, z)).copied().unwrap_or(0) != 0 {
-        return;
+/// SculkBlock.attemptUseCharge (CFR). Worldgen: noGrowthRadius=1, additionalDecay=10,
+/// growthSpawnCost=50. extra_rare_growths is a separate patch path (config = 0).
+fn sculk_block_attempt_use_charge(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    c: &Cursor,
+    charge: i32,
+    ox: i32,
+    oy: i32,
+    oz: i32,
+) -> i32 {
+    if charge == 0 || rng.next_int(CHARGE_DECAY_RATE) != 0 {
+        return charge;
     }
-    let mut mask = 0u8;
-    for (i, &(dx, dy, dz)) in DIRS.iter().enumerate() {
-        let n = region.get(x + dx, y + dy, z + dz);
-        if is_sculk_replaceable(n) || is_full_solid(n) {
-            mask |= 1u8 << i;
+    // closerThan(origin, noGrowthRadius=1) → distSqr < 1 → only the origin cell
+    let dx = (c.x - ox) as f64;
+    let dy = (c.y - oy) as f64;
+    let dz = (c.z - oz) as f64;
+    let is_close = dx * dx + dy * dy + dz * dz < 1.0;
+    if is_close || !can_place_growth(region, c.x, c.y, c.z) {
+        if rng.next_int(ADDITIONAL_DECAY_RATE) != 0 {
+            return charge;
+        }
+        let dec = if is_close {
+            1
+        } else {
+            get_decay_penalty(c.x, c.y, c.z, ox, oy, oz, charge)
+        };
+        return charge - dec;
+    }
+    if rng.next_int(GROWTH_SPAWN_COST) < charge {
+        // getRandomGrowthState: nextInt(11)==0 → shrieker, else sensor
+        if rng.next_int(11) == 0 {
+            region.set(c.x, c.y + 1, c.z, BlockId::SculkShrieker);
+        } else {
+            region.set(c.x, c.y + 1, c.z, BlockId::SculkSensor);
         }
     }
-    if mask != 0 {
-        faces.insert((x, y, z), mask);
+    (charge - GROWTH_SPAWN_COST).max(0)
+}
+
+fn get_decay_penalty(x: i32, y: i32, z: i32, ox: i32, oy: i32, oz: i32, charge: i32) -> i32 {
+    // noGrowthRadius = 1; MAX_GROWTH_RATE_RADIUS = 24
+    let no_growth_radius = 1i32;
+    let dist_sqr = {
+        let dx = (x - ox) as f64;
+        let dy = (y - oy) as f64;
+        let dz = (z - oz) as f64;
+        dx * dx + dy * dy + dz * dz
+    };
+    let outer = (dist_sqr.sqrt() as f32) - (no_growth_radius as f32);
+    let outer_sq = outer * outer;
+    let max_reach_sq = {
+        let r = 24 - no_growth_radius;
+        r * r
+    };
+    let distance_factor = (outer_sq / (max_reach_sq as f32)).min(1.0);
+    // Java (int)(float) truncates toward zero
+    1.max((charge as f32 * distance_factor * 0.5) as i32)
+}
+
+/// SculkBlock.canPlaceGrowth: air/water above; at most 2 sensors/shriekers in ±4 x/z, y+0..2.
+fn can_place_growth(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
+    if !is_air_or_water(region.get(x, y + 1, z)) {
+        return false;
     }
+    let mut growth = 0i32;
+    for dy in 0..=2 {
+        for dz in -4..=4 {
+            for dx in -4..=4 {
+                let b = region.get(x + dx, y + dy, z + dz);
+                if matches!(b, BlockId::SculkSensor | BlockId::SculkShrieker) {
+                    growth += 1;
+                    if growth > 2 {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    true
 }
 
 /// SculkVeinBlock.attemptPlaceSculk — requires hasFace toward replaceable.
@@ -561,28 +664,52 @@ fn attempt_place_sculk(
     y: i32,
     z: i32,
 ) -> bool {
-    ensure_vein_faces(region, faces, x, y, z);
     let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
     let order = multiface_spreader::all_shuffled(rng);
     for fi in order {
-        // hasFace(state, support)
-        if mask != 0 && mask & (1u8 << fi) == 0 {
+        // SculkVeinBlock.hasFace — no face bit means skip (mask 0 places nothing)
+        if mask & (1u8 << fi) == 0 {
             continue;
         }
         let (dx, dy, dz) = DIRS[fi];
         let nx = x + dx;
         let ny = y + dy;
         let nz = z + dz;
-        if !is_sculk_replaceable(region.get(nx, ny, nz)) {
+        if !is_sculk_replaceable_world_gen(region.get(nx, ny, nz)) {
             continue;
         }
         region.set(nx, ny, nz, BlockId::Sculk);
         SCULK_PLACED.fetch_add(1, Ordering::Relaxed);
         // veinSpreader.spreadAll from the new SCULK (CFR attemptPlaceSculk)
         MultifaceSpreader::vein().spread_all(region, faces, nx, ny, nz);
+        // Discharge adjacent veins (skip face toward support opposite = back to vein pos)
+        let skip = opposite_dir(fi);
+        for (vi, &(vx, vy, vz)) in DIRS.iter().enumerate() {
+            if vi == skip {
+                continue;
+            }
+            let px = nx + vx;
+            let py = ny + vy;
+            let pz = nz + vz;
+            if region.get(px, py, pz) == BlockId::SculkVein {
+                on_discharged(region, faces, px, py, pz);
+            }
+        }
         return true;
     }
     false
+}
+
+fn opposite_dir(fi: usize) -> usize {
+    match fi {
+        0 => 1,
+        1 => 0,
+        2 => 3,
+        3 => 2,
+        4 => 5,
+        5 => 4,
+        _ => fi,
+    }
 }
 
 fn on_discharged(region: &mut RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z: i32) {
@@ -607,7 +734,9 @@ fn on_discharged(region: &mut RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z:
     }
 }
 
-/// getValidMovementPos — only onto SculkBehaviour cells (vanilla).
+/// ChargeCursor.getValidMovementPos (CFR): single pass over shuffled non-corner
+/// neighbours. Only SculkBehaviour cells; prefers hasSubstrateAccess (break),
+/// else last SculkBehaviour found. No open-air walk (that is non-vanilla).
 fn get_valid_movement(
     rng: &mut FeatureRandom,
     region: &RegionBuf,
@@ -617,32 +746,30 @@ fn get_valid_movement(
     z: i32,
 ) -> Option<(i32, i32, i32)> {
     let mut offs = non_corner_neighbours();
-    // shuffle
     let mut i = offs.len();
     while i > 1 {
         let j = rng.next_int(i as i32) as usize;
         offs.swap(i - 1, j);
         i -= 1;
     }
-    let mut chosen: Option<(i32, i32, i32)> = None;
-    for (dx, dy, dz) in offs {
+
+    let mut found: Option<(i32, i32, i32)> = None;
+    for &(dx, dy, dz) in &offs {
         let nx = x + dx;
         let ny = y + dy;
         let nz = z + dz;
-        let b = region.get(nx, ny, nz);
-        if !is_sculk_behaviour(b) {
+        if !is_sculk_behaviour(region.get(nx, ny, nz)) {
             continue;
         }
         if !is_movement_unobstructed(region, x, y, z, nx, ny, nz) {
             continue;
         }
-        chosen = Some((nx, ny, nz));
-        // Prefer vein with substrate access
-        if b == BlockId::SculkVein && has_substrate_access(region, faces, nx, ny, nz) {
-            return Some((nx, ny, nz));
+        found = Some((nx, ny, nz));
+        if has_substrate_access(region, faces, nx, ny, nz) {
+            break;
         }
     }
-    chosen
+    found
 }
 
 fn has_substrate_access(region: &RegionBuf, faces: &FaceMap, x: i32, y: i32, z: i32) -> bool {
@@ -689,21 +816,23 @@ fn is_movement_unobstructed(
 }
 
 fn is_face_sturdy(b: BlockId) -> bool {
-    is_full_solid(b) || b == BlockId::Sculk
+    is_collision_full_block(b)
 }
 
+/// BlockPos.betweenClosed(-1,-1,-1)..(1,1,1): X fastest, Y mid, Z slowest;
+/// drop corners (all nonzero) and origin. Matches ChargeCursor.NON_CORNER_NEIGHBOURS.
 fn non_corner_neighbours() -> Vec<(i32, i32, i32)> {
     let mut v = Vec::with_capacity(18);
-    for dy in -1..=1 {
-        for dz in -1..=1 {
-            for dx in -1..=1 {
-                if dx == 0 && dy == 0 && dz == 0 {
+    for z in -1..=1 {
+        for y in -1..=1 {
+            for x in -1..=1 {
+                if x == 0 && y == 0 && z == 0 {
                     continue;
                 }
-                if dx != 0 && dy != 0 && dz != 0 {
+                if x != 0 && y != 0 && z != 0 {
                     continue;
                 }
-                v.push((dx, dy, dz));
+                v.push((x, y, z));
             }
         }
     }
@@ -713,55 +842,23 @@ fn non_corner_neighbours() -> Vec<(i32, i32, i32)> {
 // ===================== helpers =====================
 
 fn is_deep_dark_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> bool {
-    let mut env = crate::density::DensityEnv::new(x, y, z, state.noises.noises());
-    let climate = climate_at_block(
-        &mut env,
-        &state.router.temperature,
-        &state.router.vegetation,
-        &state.router.continents,
-        &state.router.erosion,
-        &state.router.depth,
-        &state.router.ridges,
-    );
-    find_biome(&climate) == crate::biome_source::biome_id::DEEP_DARK
+    biome_id_at_block(state, x, y, z) == crate::biome_source::biome_id::DEEP_DARK
 }
 
+/// Only SculkBlock and SculkVeinBlock implement SculkBehaviour.
+/// Catalyst / sensor / shrieker do not (javap 26.2).
 fn is_sculk_behaviour(b: BlockId) -> bool {
+    matches!(b, BlockId::Sculk | BlockId::SculkVein)
+}
+
+/// Full collision cube (vanilla isCollisionShapeFullBlock). SCULK is solid;
+/// veins/sensors/etc. are not.
+fn is_collision_full_block(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Sculk
-            | BlockId::SculkVein
             | BlockId::SculkCatalyst
-            | BlockId::SculkSensor
-            | BlockId::SculkShrieker
-    )
-}
-
-fn is_full_solid(b: BlockId) -> bool {
-    !matches!(
-        b,
-        BlockId::Air
-            | BlockId::Water
-            | BlockId::Lava
-            | BlockId::Sculk
-            | BlockId::SculkVein
-            | BlockId::SculkCatalyst
-            | BlockId::SculkSensor
-            | BlockId::SculkShrieker
-            | BlockId::OakLeaves
-            | BlockId::DarkOakLeaves
-            | BlockId::ShortGrass
-            | BlockId::LeafLitter
-            | BlockId::Snow
-            | BlockId::PowderSnow
-    )
-}
-
-fn is_sculk_replaceable(b: BlockId) -> bool {
-    // tags/block/sculk_replaceable_world_gen includes base stone + more
-    matches!(
-        b,
-        BlockId::Stone
+            | BlockId::Stone
             | BlockId::Granite
             | BlockId::Diorite
             | BlockId::Andesite
@@ -790,6 +887,8 @@ fn is_sculk_replaceable(b: BlockId) -> bool {
             | BlockId::Mud
             | BlockId::Sulfur
             | BlockId::Cinnabar
+            | BlockId::Bedrock
+            | BlockId::Cobblestone
             | BlockId::CoalOre
             | BlockId::IronOre
             | BlockId::CopperOre
@@ -804,7 +903,60 @@ fn is_sculk_replaceable(b: BlockId) -> bool {
             | BlockId::DeepslateRedstoneOre
             | BlockId::DeepslateLapisOre
             | BlockId::DeepslateDiamondOre
+            | BlockId::RawIronBlock
+            | BlockId::RawCopperBlock
+            | BlockId::OakLog
+            | BlockId::DarkOakLog
+            | BlockId::MossBlock
+            | BlockId::PackedIce
+            | BlockId::BlueIce
+            | BlockId::Ice
     )
+}
+
+/// tags/block/sculk_replaceable — NOT world_gen. Used by hasSubstrateAccess.
+/// Ores are not in this tag (vanilla).
+fn is_sculk_replaceable(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::Stone
+            | BlockId::Granite
+            | BlockId::Diorite
+            | BlockId::Andesite
+            | BlockId::Dirt
+            | BlockId::CoarseDirt
+            | BlockId::GrassBlock
+            | BlockId::Podzol
+            | BlockId::Mycelium
+            | BlockId::MossBlock
+            | BlockId::Gravel
+            | BlockId::Sand
+            | BlockId::RedSand
+            | BlockId::Clay
+            | BlockId::Calcite
+            | BlockId::Tuff
+            | BlockId::Deepslate
+            | BlockId::Sandstone
+            | BlockId::RedSandstone
+            | BlockId::Terracotta
+            | BlockId::WhiteTerracotta
+            | BlockId::OrangeTerracotta
+            | BlockId::BrownTerracotta
+            | BlockId::BlackTerracotta
+            | BlockId::YellowTerracotta
+            | BlockId::RedTerracotta
+            | BlockId::LightGrayTerracotta
+            | BlockId::Mud
+            | BlockId::Sulfur
+            | BlockId::Cinnabar
+    )
+}
+
+/// tags/block/sculk_replaceable_world_gen = sculk_replaceable + deepslate bricks/tiles.
+/// Those brick variants are not in BlockId; same set as the base tag here.
+/// Used by worldgen SculkSpreader.replaceableBlocks() in attemptPlaceSculk.
+fn is_sculk_replaceable_world_gen(b: BlockId) -> bool {
+    is_sculk_replaceable(b)
 }
 
 fn is_air_or_water(b: BlockId) -> bool {
@@ -826,11 +978,4 @@ fn is_vein_placeable_on(b: BlockId) -> bool {
 
 fn dir_index(dx: i32, dy: i32, dz: i32) -> Option<usize> {
     DIRS.iter().position(|&d| d == (dx, dy, dz))
-}
-
-fn shuffled_dirs(rng: &mut FeatureRandom) -> Vec<(i32, i32, i32)> {
-    multiface_spreader::all_shuffled(rng)
-        .into_iter()
-        .map(|i| DIRS[i])
-        .collect()
 }

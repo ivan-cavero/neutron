@@ -148,13 +148,7 @@ fn apply_carvers_for_target(
                 }
                 CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
                 carve_from_chunk(
-                    &mut rng,
-                    region,
-                    source_cx,
-                    source_cz,
-                    target_cx,
-                    target_cz,
-                    cfg,
+                    &mut rng, region, source_cx, source_cz, target_cx, target_cz, cfg,
                 );
             }
             // Index 2: canyon (probability 0.01)
@@ -163,14 +157,7 @@ fn apply_carvers_for_target(
                 rng.set_large_feature_seed(level_seed.wrapping_add(2), source_cx, source_cz);
                 if rng.next_f32() <= 0.01 {
                     CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
-                    canyon_from_chunk(
-                        &mut rng,
-                        region,
-                        source_cx,
-                        source_cz,
-                        target_cx,
-                        target_cz,
-                    );
+                    canyon_from_chunk(&mut rng, region, source_cx, source_cz, target_cx, target_cz);
                 }
             }
         }
@@ -866,5 +853,3 @@ mod tests {
         assert!(!can_reach(0, 0, 500.0, 500.0, 99, 100, 2.0));
     }
 }
-
-

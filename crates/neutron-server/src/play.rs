@@ -45,21 +45,11 @@ pub async fn handle_play_packet(
         SB_KEEPALIVE_RESPONSE => {
             handle_keepalive_response(server, player_uuid, payload, addr).await
         }
-        SB_PLAYER_POSITION => {
-            handle_player_position(server, player_uuid, payload, addr).await
-        }
-        SB_PLAYER_ROTATION => {
-            handle_player_rotation(server, player_uuid, payload, addr).await
-        }
-        SB_CHAT_COMMAND => {
-            handle_chat_command(server, tx, player_uuid, payload, addr).await
-        }
-        SB_CLIENT_STATUS => {
-            handle_client_status(server, tx, player_uuid, payload, addr).await
-        }
-        SB_SET_PLAYER_ABILITIES => {
-            handle_set_player_abilities(player_uuid, payload, addr).await
-        }
+        SB_PLAYER_POSITION => handle_player_position(server, player_uuid, payload, addr).await,
+        SB_PLAYER_ROTATION => handle_player_rotation(server, player_uuid, payload, addr).await,
+        SB_CHAT_COMMAND => handle_chat_command(server, tx, player_uuid, payload, addr).await,
+        SB_CLIENT_STATUS => handle_client_status(server, tx, player_uuid, payload, addr).await,
+        SB_SET_PLAYER_ABILITIES => handle_set_player_abilities(player_uuid, payload, addr).await,
         SB_TELEPORT_CONFIRM => {
             // TeleportConfirm — acknowledge a teleport. Just ignore for now.
             Ok(())
