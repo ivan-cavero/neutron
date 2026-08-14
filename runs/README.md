@@ -40,6 +40,19 @@ PASS / FAIL (parcial) / BLOCKED
 
 | Run | Fase | Resultado | Fecha |
 |---|---|---|---|
+| run-037 | F2d R37 | FAIL (bar 1:1) · 98.48%; roll 0.996→0.30 si se abre la mineshaft vecina | 14 ago 2026 |
+| run-036 | F2d R36 | FAIL (bar 1:1) · **98.48%**; ChargeCursor 1:1 cueva; cat 2=2 | 14 ago 2026 |
+| run-035 | F2d R35 | FAIL (bar 1:1) · 98.35%; plano 1:1; sculk 643/518; Y=-32 213 | 14 ago 2026 |
+| run-034 | F2d R34 | FAIL (bar 1:1) · 98.40%; sculk 330→382; tick 3 mata cursores | 14 ago 2026 |
+| run-033 | F2d R33 | FAIL (bar 1:1) · 98.41%; i=0 pos 1:1, catalyst_roll 0.701 | 14 ago 2026 |
+| run-032 | F2d R32 | FAIL (bar 1:1) · 98.41%; shuffle 1:1; capa Y=-32 | 14 ago 2026 |
+| run-031 | F2d R31 | FAIL (bar 1:1) · 98.41%; sculk 187→330 | 14 ago 2026 |
+| run-030 | F2d R30 | FAIL (bar 1:1) · 98.33% / BASE 99.69%; OCEAN_FLOOR + stream | 14 ago 2026 |
+| run-029 | F2d R29 | FAIL (bar 1:1) · 97.65% / BASE 99.65%; andesite 1:1 | 14 ago 2026 |
+| run-028 | F2d R28 | FAIL (bar 1:1) · 97.02%; BiomeFilter; van upper en 28 chunks | 14 ago 2026 |
+| run-027 | F2d R27 | FAIL (bar 1:1) · 97.02%; andesite_upper diag | 14 ago 2026 |
+| run-026 | F2d R26 | FAIL (bar 1:1) · block 94→97%, BASE 99% | 14 ago 2026 |
+| run-025 | F2d R25 | FAIL (bar 1:1) · block match 85→94% | 14 ago 2026 |
 | run-000 | Fundación | TERMINADO | 5 ago 2026 |
 | run-001 | F0 | | |
 | run-002 | F0 | | |

@@ -239,6 +239,7 @@ fn size_at_height(size: &FeatureSizeCfg, tree_height: i32, yo: i32) -> i32 {
 }
 
 fn valid_tree_pos(b: BlockId) -> bool {
+    // TreeFeature.validTreePos: isAir || REPLACEABLE_BY_TREES (not fluids).
     matches!(
         b,
         BlockId::Air
@@ -246,7 +247,6 @@ fn valid_tree_pos(b: BlockId) -> bool {
             | BlockId::DarkOakLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
-            | BlockId::Water
     )
 }
 
@@ -1076,7 +1076,7 @@ mod tests {
         assert!(valid_tree_pos(BlockId::DarkOakLeaves));
         assert!(valid_tree_pos(BlockId::ShortGrass));
         assert!(valid_tree_pos(BlockId::LeafLitter));
-        assert!(valid_tree_pos(BlockId::Water));
+        assert!(!valid_tree_pos(BlockId::Water));
         assert!(!valid_tree_pos(BlockId::Snow));
         assert!(!valid_tree_pos(BlockId::GrassBlock));
         assert!(!valid_tree_pos(BlockId::OakLog));

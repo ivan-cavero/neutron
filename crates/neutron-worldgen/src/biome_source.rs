@@ -88,6 +88,10 @@ pub mod biome_id {
     pub const DRIPSTONE_CAVES: u8 = 35;
     pub const MANGROVE_SWAMP: u8 = 32;
     pub const DEEP_DARK: u8 = 31;
+    /// Unique id — must not collide with OCEAN (0). Point 7591 in BIOME-SPEC.
+    pub const LUSH_CAVES: u8 = 34;
+    /// Unique id — point 7592 in BIOME-SPEC.
+    pub const SULFUR_CAVES: u8 = 36;
 }
 
 /// Climate target: quantized values for the 6 climate dimensions.

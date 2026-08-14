@@ -49,6 +49,7 @@ pub enum BiomeId {
     BirchForest = 33,
     LushCaves = 34,
     DripstoneCaves = 35,
+    SulfurCaves = 36,
 }
 
 impl BiomeId {
@@ -94,6 +95,7 @@ impl BiomeId {
             33 => Some(Self::BirchForest),
             34 => Some(Self::LushCaves),
             35 => Some(Self::DripstoneCaves),
+            36 => Some(Self::SulfurCaves),
             _ => None,
         }
     }
@@ -871,7 +873,7 @@ mod tests {
 
     #[test]
     fn biome_id_roundtrip() {
-        for i in 0..=35 {
+        for i in 0..=36 {
             let id = BiomeId::from_u8(i);
             assert!(id.is_some(), "from_u8({i}) returned None");
             assert_eq!(id.unwrap().as_u8(), i);

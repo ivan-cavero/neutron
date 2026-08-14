@@ -336,6 +336,11 @@ mod tests {
         assert_eq!(global_feature_index(9, "glow_lichen"), Some(0));
         assert_eq!(global_feature_index(9, "trees_plains"), Some(52));
         assert_eq!(global_feature_index(9, "patch_leaf_litter"), Some(77));
+        // dark_forest_vegetation must keep the FeatureSorter slot (setFeatureSeed).
+        assert!(
+            global_feature_index(9, "dark_forest_vegetation").is_some(),
+            "dark_forest_vegetation missing from step 9 sorter"
+        );
         assert_eq!(global_feature_index(10, "freeze_top_layer"), Some(0));
         assert_eq!(features_per_step_at(7).len(), 7);
         assert_eq!(features_per_step_at(6).len(), 34);

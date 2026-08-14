@@ -160,10 +160,14 @@ impl MultifaceSpreader {
         face: usize,
     ) -> bool {
         let b = region.get(x, y, z);
+        let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
+        self.can_spread_from_snap(b, mask, face)
+    }
+
+    fn can_spread_from_snap(&self, b: BlockId, mask: u8, face: usize) -> bool {
         if self.config.other_block_valid_as_source && b != BlockId::SculkVein {
             return true;
         }
-        let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
         Self::has_face_mask(mask, face)
     }
 
@@ -253,6 +257,16 @@ impl MultifaceSpreader {
         let key = (sp.x, sp.y, sp.z);
         let prev = faces.get(&key).copied().unwrap_or(0);
         let bit = 1u8 << sp.face;
+        if std::env::var_os("NEUTRON_SCULK_STEPS").is_some()
+            && sp.x == 97
+            && sp.y == -44
+            && sp.z == -21
+        {
+            eprintln!(
+                "place_vein (97,-44,-21) face={} from ({sx},{sy},{sz}) prev={prev}",
+                sp.face
+            );
+        }
         faces.insert(key, prev | bit);
         let b = region.get(sp.x, sp.y, sp.z);
         if matches!(
@@ -277,16 +291,16 @@ impl MultifaceSpreader {
         z: i32,
         starting_face: usize,
         spread_dir: usize,
+        src_block: BlockId,
+        src_mask: u8,
     ) -> Option<SpreadPos> {
         // same axis → empty
         if axis(starting_face) == axis(spread_dir) {
             return None;
         }
-        let b = region.get(x, y, z);
-        let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
-        let other_ok = self.config.other_block_valid_as_source && b != BlockId::SculkVein;
-        let has_start = Self::has_face_mask(mask, starting_face);
-        let has_spread = Self::has_face_mask(mask, spread_dir);
+        let other_ok = self.config.other_block_valid_as_source && src_block != BlockId::SculkVein;
+        let has_start = Self::has_face_mask(src_mask, starting_face);
+        let has_spread = Self::has_face_mask(src_mask, spread_dir);
         if !(other_ok || (has_start && !has_spread)) {
             return None;
         }
@@ -300,6 +314,9 @@ impl MultifaceSpreader {
     }
 
     /// spreadAll — returns number of successful face placements.
+    ///
+    /// Vanilla passes the source BlockState into canSpreadFrom / hasFace; faces
+    /// added mid-call must not unlock extra start/spread directions.
     pub fn spread_all(
         &self,
         region: &mut RegionBuf,
@@ -308,14 +325,16 @@ impl MultifaceSpreader {
         y: i32,
         z: i32,
     ) -> u64 {
+        let src_block = region.get(x, y, z);
+        let src_mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
         let mut count = 0u64;
         for start_face in 0..6 {
-            if !self.can_spread_from(region, faces, x, y, z, start_face) {
+            if !self.can_spread_from_snap(src_block, src_mask, start_face) {
                 continue;
             }
             for spread_dir in 0..6 {
                 if let Some(sp) = self.get_spread_from_face_toward_direction(
-                    region, faces, x, y, z, start_face, spread_dir,
+                    region, faces, x, y, z, start_face, spread_dir, src_block, src_mask,
                 ) {
                     if self.place_block(region, faces, x, y, z, sp) {
                         count += 1;
@@ -344,6 +363,8 @@ impl MultifaceSpreader {
             order.swap(i - 1, j);
             i -= 1;
         }
+        let src_block = region.get(x, y, z);
+        let src_mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
         for spread_dir in order {
             if let Some(sp) = self.get_spread_from_face_toward_direction(
                 region,
@@ -353,6 +374,8 @@ impl MultifaceSpreader {
                 z,
                 starting_face,
                 spread_dir,
+                src_block,
+                src_mask,
             ) {
                 if self.place_block(region, faces, x, y, z, sp) {
                     return true;
@@ -400,6 +423,9 @@ fn axis(dir: usize) -> u8 {
     }
 }
 
+/// MultifaceBlock.canAttachTo: full support or collision face.
+/// SCULK / catalyst are full cubes — regrow uses this (not stateCanBeReplaced,
+/// which separately rejects attaching *toward* sculk in spreadAll).
 fn is_sturdy_attach(b: BlockId) -> bool {
     !matches!(
         b,
@@ -407,8 +433,6 @@ fn is_sturdy_attach(b: BlockId) -> bool {
             | BlockId::Water
             | BlockId::Lava
             | BlockId::SculkVein
-            | BlockId::Sculk
-            | BlockId::SculkCatalyst
             | BlockId::SculkSensor
             | BlockId::SculkShrieker
             | BlockId::OakLeaves

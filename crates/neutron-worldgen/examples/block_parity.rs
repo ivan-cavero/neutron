@@ -27,9 +27,10 @@ fn main() {
     let rz = cz.div_euclid(32);
     let lcx = cx.rem_euclid(32);
     let lcz = cz.rem_euclid(32);
-    let path = PathBuf::from(format!(
-        "tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.{rx}.{rz}.mca"
-    ));
+    let region_dir = std::env::args().nth(4).unwrap_or_else(|| {
+        "tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region".to_string()
+    });
+    let path = PathBuf::from(format!("{region_dir}/r.{rx}.{rz}.mca"));
     let region = Region::open(&path)
         .expect("open region")
         .with_coords(rx, rz);

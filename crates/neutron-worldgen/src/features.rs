@@ -608,12 +608,10 @@ const OVERWORLD_ORES: &[FeatureDef] = &[
             radius: 1,
         },
     },
-    // 27 ore_clay — lush_caves only. Off until lush has a unique biome id
-    // (biome_params stores that point as id 0 / ocean; a climate-box gate
-    // overpainted this chunk 1476 clay vs vanilla 703).
+    // 27 ore_clay — lush_caves only
     FeatureDef {
         feature_index: 27,
-        gate: BiomeGate::Off,
+        gate: BiomeGate::Ids(&[biome_id::LUSH_CAVES]),
         count: CountSpec::Fixed(46),
         y: range_y(HeightSpec::Uniform {
             min: HeightAnchor::AboveBottom(0),
@@ -749,7 +747,9 @@ fn place_feature(
             }
         }
         CountSpec::Rarity(chance) => {
-            if rng.next_int(chance) == 0 {
+            // 26.2 RarityFilter.shouldPlace: nextFloat() < 1.0f / chance
+            // (not nextInt(chance) == 0 — that desyncs the rest of the chain).
+            if chance > 0 && rng.next_f32() < 1.0 / chance as f32 {
                 1
             } else {
                 0
@@ -802,7 +802,7 @@ fn place_feature(
                 y
             }
         };
-        if !biome_gate_ok(state, def.gate, x, y, z) {
+        if !biome_gate_ok(state, def.gate, def.feature_index, x, y, z) {
             continue;
         }
         match def.kind {
@@ -826,11 +826,36 @@ fn place_feature(
     }
 }
 
-fn biome_gate_ok(state: &WorldgenState, gate: BiomeGate, x: i32, y: i32, z: i32) -> bool {
+/// `BiomeFilter.shouldPlace` + optional id allow-list.
+fn biome_gate_ok(
+    state: &WorldgenState,
+    gate: BiomeGate,
+    feature_index: i32,
+    x: i32,
+    y: i32,
+    z: i32,
+) -> bool {
     match gate {
-        BiomeGate::Any => true,
         BiomeGate::Off => false,
-        BiomeGate::Ids(ids) => ids.contains(&biome_id_at_block(state, x, y, z)),
+        BiomeGate::Any | BiomeGate::Ids(_) => {
+            if let BiomeGate::Ids(ids) = gate {
+                if !ids.contains(&biome_id_at_block(state, x, y, z)) {
+                    return false;
+                }
+            }
+            let id = biome_id_at_block(state, x, y, z);
+            let bname = crate::feature_dispatch::biome_id_to_name(id);
+            let Some(placed) = crate::feature_catalog::features_per_step_at(STEP_UNDERGROUND_ORES)
+                .get(feature_index as usize)
+            else {
+                return true;
+            };
+            crate::feature_catalog::features_at_step(bname, STEP_UNDERGROUND_ORES)
+                .iter()
+                .any(|f| {
+                    f.strip_prefix("minecraft:").unwrap_or(f.as_str()) == placed.as_str()
+                })
+        }
     }
 }
 
@@ -1091,16 +1116,32 @@ fn place_ore_blob(
     let start_y = (oy + rng.next_int(3) - 2) as f64;
     let end_y = (oy + rng.next_int(3) - 2) as f64;
 
-    // Sphere path samples
+    // Bounding box is computed in `place` *before* doPlace. If no column in the
+    // box has OCEAN_FLOOR_WG >= minY, vanilla returns false without consuming
+    // the per-sphere nextDouble stream.
+    let cell = ((size as f32 / 16.0 * 2.0 + 1.0) / 2.0).ceil() as i32;
+    let f_ceil = f.ceil() as i32;
+    let start_block_x = ox - f_ceil - cell;
+    let start_block_y = oy - 2 - cell;
+    let start_block_z = oz - f_ceil - cell;
+    let size_xz = 2 * (f_ceil + cell);
+    let size_y = 2 * (2 + cell);
+    if !ocean_floor_wg_allows_ore(region, start_block_x, start_block_y, start_block_z, size_xz) {
+        return;
+    }
+
+    // Sphere path samples (`doPlace`)
     let mut spheres = vec![0f64; (size as usize) * 4];
     for i in 0..size {
-        let t = i as f64 / size as f64;
-        let sx = lerp(t, start_x, end_x);
-        let sy = lerp(t, start_y, end_y);
-        let sz = lerp(t, start_z, end_z);
+        // Vanilla: float t = (float)i / (float)size; then (double)t into lerp.
+        let t = i as f32 / size as f32;
+        let td = t as f64;
+        let sx = lerp(td, start_x, end_x);
+        let sy = lerp(td, start_y, end_y);
+        let sz = lerp(td, start_z, end_z);
         let blip = rng.next_f64() * size as f64 / 16.0;
-        // Java: ((Mth.sin(PI * t) + 1.0f) * blip + 1.0) / 2.0  — sin is float
-        let sin_part = ((PI * t as f32).sin() + 1.0) as f64;
+        // Java: ((Mth.sin((double)(PI * t)) + 1.0f) * blip + 1.0) / 2.0
+        let sin_part = (crate::carvers::mth_sin_d((PI * t) as f64) + 1.0) as f64;
         let radius = (sin_part * blip + 1.0) / 2.0;
         let base = (i as usize) * 4;
         spheres[base] = sx;
@@ -1133,14 +1174,6 @@ fn place_ore_blob(
             }
         }
     }
-
-    let cell = (size as f32 / 16.0 * 2.0 + 1.0) / 2.0;
-    let cell = cell.ceil() as i32;
-    let start_block_x = ox - f.ceil() as i32 - cell;
-    let start_block_y = oy - 2 - cell;
-    let start_block_z = oz - f.ceil() as i32 - cell;
-    let size_xz = 2 * (f.ceil() as i32 + cell);
-    let size_y = 2 * (2 + cell);
 
     let mut bitset = vec![false; (size_xz * size_y * size_xz).max(1) as usize];
 
@@ -1191,11 +1224,11 @@ fn place_ore_blob(
                         continue;
                     }
                     let existing = region.get(x, y, z);
-                    let replacement = match target_match(existing, def) {
-                        Some(b) => b,
-                        None => continue,
+                    let Some(replacement) = target_match(existing, def) else {
+                        continue;
                     };
-                    if should_skip_air_exposure(region, x, y, z, def.discard_chance, rng) {
+                    // OreFeature.canPlaceOre: shouldSkipAirCheck *then* isAdjacentToAir.
+                    if !can_place_ore(region, x, y, z, def.discard_chance, rng) {
                         continue;
                     }
                     region.set(x, y, z, replacement);
@@ -1256,7 +1289,32 @@ fn is_base_stone(b: BlockId) -> bool {
     )
 }
 
-fn should_skip_air_exposure(
+/// `OreFeature.place` heightmap gate: first column with
+/// `minY <= getHeight(OCEAN_FLOOR_WG, x, z)` → allow `doPlace`.
+fn ocean_floor_wg_allows_ore(
+    region: &RegionBuf,
+    start_x: i32,
+    start_y: i32,
+    start_z: i32,
+    size_xz: i32,
+) -> bool {
+    for x in start_x..=start_x + size_xz {
+        for z in start_z..=start_z + size_xz {
+            if let Some(h) = ocean_floor_wg_first_available(region, x, z) {
+                if start_y <= h {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// `OreFeature.canPlaceOre` after the RuleTest already matched.
+///
+/// `shouldSkipAirCheck` runs (and may consume `nextFloat`) *before*
+/// `isAdjacentToAir`. Fluids are not air (`BlockState.isAir()`).
+fn can_place_ore(
     region: &RegionBuf,
     x: i32,
     y: i32,
@@ -1264,22 +1322,31 @@ fn should_skip_air_exposure(
     chance: f32,
     rng: &mut FeatureRandom,
 ) -> bool {
+    if should_skip_air_check(rng, chance) {
+        return true;
+    }
+    !is_adjacent_to_air(region, x, y, z)
+}
+
+/// `OreFeature.shouldSkipAirCheck`.
+fn should_skip_air_check(rng: &mut FeatureRandom, chance: f32) -> bool {
     if chance <= 0.0 {
+        return true;
+    }
+    if chance >= 1.0 {
         return false;
     }
-    let exposed = neighbor_is_air(region, x + 1, y, z)
+    rng.next_f32() >= chance
+}
+
+/// `Feature.isAdjacentToAir` — `BlockState.isAir()` on all 6 faces.
+fn is_adjacent_to_air(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
+    neighbor_is_air(region, x + 1, y, z)
         || neighbor_is_air(region, x - 1, y, z)
         || neighbor_is_air(region, x, y + 1, z)
         || neighbor_is_air(region, x, y - 1, z)
         || neighbor_is_air(region, x, y, z + 1)
-        || neighbor_is_air(region, x, y, z - 1);
-    if !exposed {
-        return false;
-    }
-    if chance >= 1.0 {
-        return true;
-    }
-    rng.next_f32() < chance
+        || neighbor_is_air(region, x, y, z - 1)
 }
 
 fn neighbor_is_air(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
@@ -1289,8 +1356,7 @@ fn neighbor_is_air(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
     if region.index(x, y, z).is_none() {
         return false;
     }
-    let b = region.get(x, y, z);
-    b.is_air() || b.is_fluid()
+    region.get(x, y, z).is_air()
 }
 
 #[inline]
@@ -1314,7 +1380,7 @@ mod tests {
         assert!(matches!(OVERWORLD_ORES[24].gate, BiomeGate::Ids(_)));
         assert!(matches!(OVERWORLD_ORES[25].gate, BiomeGate::Any));
         assert!(matches!(OVERWORLD_ORES[26].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[27].gate, BiomeGate::Off));
+        assert!(matches!(OVERWORLD_ORES[27].gate, BiomeGate::Ids(_)));
         assert!(matches!(OVERWORLD_ORES[28].gate, BiomeGate::Ids(_)));
         assert!(matches!(OVERWORLD_ORES[29].gate, BiomeGate::Ids(_)));
         assert!(matches!(OVERWORLD_ORES[30].gate, BiomeGate::Any));
@@ -1328,5 +1394,36 @@ mod tests {
             OVERWORLD_ORES[26].kind,
             FeatureKind::UnderwaterMagma { .. }
         ));
+    }
+
+    #[test]
+    fn should_skip_air_check_matches_vanilla_consumption() {
+        // chance <= 0 → true, no draw; chance >= 1 → false, no draw.
+        let mut rng = FeatureRandom::new(1);
+        let before = rng.next_int(16);
+        let mut rng = FeatureRandom::new(1);
+        assert!(should_skip_air_check(&mut rng, 0.0));
+        assert!(!should_skip_air_check(&mut rng, 1.0));
+        assert_eq!(rng.next_int(16), before);
+
+        // 0 < chance < 1 consumes nextFloat; skip iff nextFloat >= chance.
+        let mut a = FeatureRandom::new(99);
+        let mut b = FeatureRandom::new(99);
+        let skip = should_skip_air_check(&mut a, 0.5);
+        let drawn = b.next_f32();
+        assert_eq!(skip, drawn >= 0.5);
+        assert_eq!(a.next_int(8), b.next_int(8));
+    }
+
+    #[test]
+    fn rarity_filter_uses_next_float_not_next_int() {
+        // ProbeRarity vs 26.2: setFeatureSeed(dec(12345,96,-32), 6, 6)
+        // nextFloat = 0.42050785 >= 1/6 → do not place.
+        let mut rng = FeatureRandom::new(12345);
+        let dec = rng.set_decoration_seed(12345, 96, -32);
+        rng.set_feature_seed(dec, 6, 6);
+        let f = rng.next_f32();
+        assert!((f - 0.42050785).abs() < 1e-6, "got {f}");
+        assert!(f >= 1.0 / 6.0);
     }
 }

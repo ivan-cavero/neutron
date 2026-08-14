@@ -61,7 +61,7 @@ fn sin_table() -> &'static [f32; 65536] {
 
 /// `Mth.sin(double)` → float via lookup table.
 #[inline]
-fn mth_sin_d(v: f64) -> f32 {
+pub(crate) fn mth_sin_d(v: f64) -> f32 {
     let idx = ((v * SIN_SCALE) as i64 as u64 & 0xFFFF) as usize;
     sin_table()[idx]
 }

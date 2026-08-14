@@ -6,6 +6,19 @@
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
+**F2d R37 — HORIZONTAL N,E,S,W; primer parche roll 0.996 por mineshaft en (5,-2)/(5,-1); ALL 98.48%**  
+**F2d R36 — spreadAll snapshot; ChargeCursor 1:1 cueva+plano; sculk 446/518 cat 2=2; ALL 98.48%**  
+**F2d R35 — ChargeCursor 1:1 suelo plano (166/174/roll 0.821); sculk 382→643/518; Y=-32 213/278; 98.35%**  
+**F2d R34 — ProbeSculkPatch: ChargeCursor 1:1 tick 1–2; DEFAULT facings; sculk 330→382; 98.40%**  
+**F2d R33 — Primer parche sculk i=0=(98,-43,-23) 1:1; catalyst_roll 0.701 (van sí); (103,-26,-31) no sale; 98.41%**  
+**F2d R32 — ChargeCursor shuffle/NON_CORNER 1:1; sculk 330/518 capa Y=-32; block 98.41%**  
+**F2d R31 — Sculk origen centro primero; sculk 187→330; block 98.41% / BASE 99.69%**  
+**F2d R30 — OCEAN_FLOOR blocksMotion + PlacedFeature stream lazy; block 98.33% / BASE 99.69%**  
+**F2d R29 — RarityFilter nextFloat; andesite 1424=1424; block 97.65% / BASE 99.65%**  
+**F2d R28 — BiomeFilter ores + validTreePos; 97.02%/99.00%; van sí tiene andesite_upper en 28 chunks, no en (6,-2)**  
+**F2d R27 — would_survive on RandomSelector; block 97.02%; andesite_upper blob localizado (RNG=vanilla, van no escribe)**  
+**F2d R26 — OreFeature gate + canPlaceOre + Mth.sin; block match 93.89% → 96.96%, BASE 99.00%**  
+**F2d R25 — WorldgenRandom nextLong/nextDouble + lush_caves id; block match 85.09% → 93.89%**  
 **F2d R24 — 4 builders: ChargeCursor + voronoi + TreeFeature + disks; dens 99.67% sculk overlap 332/565**  
 **F2d R23 — setFeatureSeed vanilla + FeatureSorter; dens 99.68% sculk 326/565 overlap 292**  
 **F2d R21 — 1:1 tools (extract-worldgen + feature_catalog + CFR sculk, no heuristics)**  
@@ -137,6 +150,63 @@ neutron/
 
 **Bar 1:1**: 100% block match. Aún no se cumple.
 
+### F2d R29 (14 ago 2026) — RarityFilter 26.2
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| RarityFilter | ✅ | `nextFloat < 1/chance` (javap + probe 26.2) |
+| andesite | ✅ | **1424 = vanilla**, extra=0 miss=0 |
+| **block name match** | 🟡 | **97.65%** |
+| **BASE no veg** | 🟡 | **99.65%** |
+| Mundo fresco | ✅ | `world-r29/` confirma el skip (no golden viejo) |
+
+### F2d R28 (14 ago 2026) — BiomeFilter step 6
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| BiomeFilter ores | ✅ | `hasFeature` vía lista datapack del bioma |
+| validTreePos | ✅ | sin water (CFR REPLACEABLE_BY_TREES) |
+| andesite_upper | 🔴 | van región 28 chunks Y≥64; **(6,-2)=0**; índice 6 confirmado jar |
+| block match | 🟡 | **97.02% / BASE 99.00%** (sin cambio) |
+
+### F2d R27 (14 ago 2026) — selector placed + andesite_upper
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| RandomSelector → placed | ✅ | `would_survive` ya corre (`dark_oak_leaf_litter`) |
+| **block name match** | 🟡 | **97.02%** |
+| BASE no veg | 🟡 | **99.00%** |
+| andesite_upper | 🔴 | extra 545 @ Y92–100; RNG jar-exact; van Y solo ≤63 |
+
+### F2d R26 (14 ago 2026) — OreFeature vanilla gate
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| OCEAN_FLOOR_WG gate | ✅ | skip `doPlace` si bbox sobre terreno |
+| canPlaceOre RNG | ✅ | `shouldSkipAirCheck` antes de `isAir` |
+| isAdjacentToAir | ✅ | solo `isAir()`, no fluidos |
+| blob Mth.sin | ✅ | tabla 65536 + `t` f32 |
+| **block name match** | 🟡 | **96.96%** (era 93.89%) |
+| **BASE no veg** | 🟡 | **99.00%** |
+| diorite | ✅ | 1046 = vanilla |
+
+**1:1 no alcanzado.** Tests: worldgen 40 PASS.
+
+### F2d R25 (14 ago 2026) — WorldgenRandom BitRandomSource + lush_caves
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| FeatureRandom nextLong | ✅ | dos `next(32)` — golden vs 26.2 jar |
+| FeatureRandom nextDouble | ✅ | `next(26)<<27 + next(27)` |
+| lush_caves / sulfur_caves | ✅ | ids 34 / 36 (ya no ocean=0) |
+| ore_clay | ✅ | gate `LUSH_CAVES`; clay 745 vs van 703 |
+| dens_shape (6,-2) | 🟡 | **99.5534%** · feat_extra=389 · miss=50 |
+| **block name match** | 🟡 | **93.89%** (era 85.09%) |
+| BASE no veg | 🟡 | **95.85%** |
+| sculk overlap | 🟡 | 137/565 · catalyst 1 (RNG correcto, algo incompleto) |
+
+**1:1 no alcanzado.** Tests: worldgen 39 PASS (golden WorldgenRandom).
+
 ### F2d R24 (13 ago 2026) — 4 builders en paralelo
 
 | Componente | Estado | Detalle |
@@ -150,16 +220,55 @@ neutron/
 
 **1:1 no alcanzado.** Tests: worldgen 38, protocol 47, world 39, sim 65 — todos PASS.
 
-### Pendiente F2d R25+
+### F2d R30 (14 ago 2026) — OCEAN_FLOOR blocksMotion
 
 | Componente | Estado | Detalle |
 |------------|--------|---------|
-| ChargeCursor RNG | 🔴 | catalyst 0 vs 2; 232 paredes |
-| lush_caves id único | 🔴 | desbloquea ore_clay 1:1 |
-| Ore positions | 🔴 | stone↔andesite/tuff/gravel |
+| Heightmap OCEAN_FLOOR | ✅ | `blocksMotion` incl. hojas (javap + ProbeBlocksMotion) |
+| PlacedFeature stream | ✅ | place entre cada InSquare (lazy 26.2) |
+| WORLD_SURFACE / NO_LEAVES | ✅ | predicados 26.2 |
+| **block name match** | 🟡 | **98.33%** (era 97.65%) |
+| BASE no veg | 🟡 | **99.69%** |
+| extra dark oak | 🟡 | leaves 725→514 · logs 466→202 · air→leaves 469→240 |
+
+### F2d R31 (14 ago 2026) — sculk centro primero
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| FEATURES origin order | ✅ | sculk: centro luego vecinos (veg revertido: regresaba árboles) |
+| **block name match** | 🟡 | **98.41%** (era 98.33%) |
+| sculk volume | 🟡 | **330** vs van 518 (era 187) |
+| sculk→deepslate | 🟡 | **221** (era 311) |
+
+### F2d R32 (14 ago 2026) — ChargeCursor probes
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| Util.shuffle / allShuffled | ✅ | ProbeShuffle bit-exact |
+| NON_CORNER order | ✅ | betweenClosed = rust |
+| extra_rare_growths | ✅ | JSON 0 + bucle javap |
+| **block name match** | 🟡 | **98.41%** (sin cambio de volumen) |
+| sculk Y=-32..-17 | 🔴 | 135 vs 278; 15-radius del único parche no cubre |
+
+### Pendiente F2d R33+
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| Extra andesite | ✅ | cerrado R29 |
+| TreeFeature extra+miss | 🔴 | air→dark_oak_leaves 240 |
+| ChargeCursor residual | 🔴 | 330/518; capa Y=-32; catalyst 0 vs 2 |
+| ore_emerald / magma | 🟡 | falta BlockId |
 | Canyon widthFactors exact | 🟡 | port inicial OK |
 
 ## Ver
+- `runs/run-032.md` — F2d R32: ChargeCursor shuffle 1:1 + capa Y=-32
+- `runs/run-031.md` — F2d R31: sculk centro primero
+- `runs/run-030.md` — F2d R30: OCEAN_FLOOR blocksMotion
+- `runs/run-029.md` — F2d R29: RarityFilter nextFloat; andesite 1:1
+- `runs/run-028.md` — F2d R28: BiomeFilter ores; van andesite_upper en región
+- `runs/run-027.md` — F2d R27: would_survive + andesite_upper diag
+- `runs/run-026.md` — F2d R26: OreFeature gate + canPlaceOre
+- `runs/run-025.md` — F2d R25: WorldgenRandom nextLong/nextDouble
 - `runs/run-024.md` — F2d R24: 4 builders paralelo
 - `runs/run-023.md` — F2d R23: setFeatureSeed + FeatureSorter
 - `runs/run-018.md` — F2d R12: pregen + canyon/veg + multi

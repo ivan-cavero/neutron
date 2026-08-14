@@ -593,9 +593,10 @@ fn biome_name_to_id(name: &str) -> u8 {
         "eroded_badlands" => biome_id::ERODED_BADLANDS,
         "wooded_badlands" => biome_id::WOODED_BADLANDS,
         "dripstone_caves" => biome_id::DRIPSTONE_CAVES,
+        "lush_caves" => biome_id::LUSH_CAVES,
         "deep_dark" => biome_id::DEEP_DARK,
         "mushroom_fields" => biome_id::MUSHROOM_FIELDS,
-        "sulfur_caves" => biome_id::DRIPSTONE_CAVES, // fallback until dedicated id
+        "sulfur_caves" => biome_id::SULFUR_CAVES,
         _ => biome_id::PLAINS,
     }
 }

@@ -2,26 +2,40 @@
 //
 // WorldgenRandom-compatible RNG for feature placement.
 //
-// Wraps Xoroshiro128 but uses Legacy-style `nextInt(bound)` over
-// `next(31)` bits, matching `WorldgenRandom` when the underlying source is
-// Xoroshiro (26.2 overworld default).
+// WorldgenRandom wrapping Xoroshiro128 (26.2 overworld default).
+// `next(bits)` = xoroshiro.nextLong() >>> (64-bits).
+// `nextInt`/`nextLong`/`nextFloat`/`nextDouble` follow BitRandomSource
+// (Legacy-style): nextLong and nextDouble each consume two `next(bits)`.
 
 use crate::rng::Xoroshiro128;
 
 /// Feature decoration RNG.
 pub struct FeatureRandom {
     rng: Xoroshiro128,
+    /// `next(bits)` calls since last `reset_draw_count` (debug / probes).
+    draw_count: u32,
 }
 
 impl FeatureRandom {
     pub fn new(seed: i64) -> Self {
         Self {
             rng: Xoroshiro128::new(seed),
+            draw_count: 0,
         }
     }
 
     pub fn set_seed(&mut self, seed: i64) {
         self.rng = Xoroshiro128::new(seed);
+    }
+
+    /// Reset the `next(bits)` counter used by sculk attempt dumps.
+    pub fn reset_draw_count(&mut self) {
+        self.draw_count = 0;
+    }
+
+    /// `WorldgenRandom.next(bits)` invocations since the last reset.
+    pub fn draw_count(&self) -> u32 {
+        self.draw_count
     }
 
     /// `WorldgenRandom.setDecorationSeed(levelSeed, blockX, blockZ)`.
@@ -50,20 +64,32 @@ impl FeatureRandom {
         self.set_seed(seed);
     }
 
+    /// `BitRandomSource.nextLong()` via `WorldgenRandom.next(32)` twice.
+    ///
+    /// Each `next(bits)` on a Xoroshiro wrapper is `(int)(xoroshiro.nextLong() >>> (64-bits))`.
+    /// This is **not** a single xoroshiro `nextLong()`.
     pub fn next_long(&mut self) -> i64 {
-        self.rng.next_long()
+        let hi = self.next_bits(32) as i64;
+        let lo = self.next_bits(32) as i64;
+        (hi << 32).wrapping_add(lo)
     }
 
+    /// `WorldgenRandom.next(bits)` wrapping Xoroshiro: `xoroshiro.nextLong() >>> (64-bits)`.
     pub fn next_bits(&mut self, bits: u32) -> i32 {
+        self.draw_count = self.draw_count.wrapping_add(1);
         (self.rng.next_u64() >> (64 - bits)) as u32 as i32
     }
 
+    /// `BitRandomSource.nextFloat()` = `next(24) * 2^-24`.
     pub fn next_f32(&mut self) -> f32 {
         (self.next_bits(24) as f32) * (1.0 / (1u32 << 24) as f32)
     }
 
+    /// `BitRandomSource.nextDouble()` = `(next(26) << 27) + next(27)` × `2^-53`.
     pub fn next_f64(&mut self) -> f64 {
-        ((self.rng.next_u64() >> 11) as f64) * (1.0 / ((1u64 << 53) as f64))
+        let a = self.next_bits(26) as i64;
+        let b = self.next_bits(27) as i64;
+        ((a << 27).wrapping_add(b) as f64) * (1.0 / ((1u64 << 53) as f64))
     }
 
     /// Legacy-style `nextInt(bound)` using `next(31)`.
@@ -123,5 +149,44 @@ mod tests {
         let mut swapped = FeatureRandom::new(0);
         swapped.set_seed(dec.wrapping_add(9).wrapping_add(10_000 * 52));
         assert_ne!(rng.next_int(16), swapped.next_int(16));
+    }
+
+    /// Ground truth: `tools/java-probe/src/ProbeWorldgenRandom.java` vs 26.2 jar.
+    /// WorldgenRandom wraps Xoroshiro; nextLong/nextDouble use BitRandomSource
+    /// (two `next(bits)`), not a raw xoroshiro nextLong.
+    #[test]
+    fn worldgen_random_matches_vanilla_xoroshiro_wrapper() {
+        let seed = 12345i64;
+        let mut rng = FeatureRandom::new(seed);
+        rng.set_seed(seed);
+        assert_eq!(rng.next_long(), -8118485272768813798);
+        assert_eq!(rng.next_long(), 4143755031235356457);
+
+        let mut rng = FeatureRandom::new(seed);
+        let dec = rng.set_decoration_seed(seed, 96, -32);
+        assert_eq!(dec, -8084287573569489607);
+
+        rng.set_feature_seed(dec, 0, 6);
+        assert_eq!(rng.next_int(16), 12);
+        assert_eq!(rng.next_int(16), 7);
+        assert_eq!(rng.next_int(161), 56);
+        assert_eq!(rng.next_f32().to_bits(), 0.14968139f32.to_bits());
+        assert_eq!(rng.next_f64().to_bits(), 0.16489983713749623f64.to_bits());
+        assert_eq!(rng.next_long(), -2797163788994301519);
+
+        let mut rng = FeatureRandom::new(seed);
+        let dec = rng.set_decoration_seed(seed, 96, -32);
+        rng.set_feature_seed(dec, 52, 9);
+        let ints: Vec<i32> = (0..8).map(|_| rng.next_int(16)).collect();
+        assert_eq!(ints, vec![0, 11, 11, 1, 10, 15, 3, 12]);
+
+        let seed = 0x1111_2222_3333_4444u64 as i64;
+        let mut rng = FeatureRandom::new(seed);
+        rng.set_seed(seed);
+        let ints: Vec<i32> = (0..8).map(|_| rng.next_int(16)).collect();
+        assert_eq!(ints, vec![14, 4, 12, 2, 3, 7, 8, 1]);
+        assert_eq!(rng.next_f32().to_bits(), 0.3558504f32.to_bits());
+        assert_eq!(rng.next_f64().to_bits(), 0.9180557537010783f64.to_bits());
+        assert_eq!(rng.next_long(), -5824706931741106560);
     }
 }

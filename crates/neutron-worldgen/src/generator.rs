@@ -109,6 +109,21 @@ impl ChunkGenerator {
         }
     }
 
+    /// 3×3 noise+surface+carvers+ores (no sculk / no vegetation).
+    pub fn generate_ores_region(&self, cx: i32, cz: i32) -> crate::region_buf::RegionBuf {
+        const FEATURE_RADIUS: i32 = 1;
+        let mut region = crate::region_buf::RegionBuf::new(cx, cz, FEATURE_RADIUS);
+        for dz in -FEATURE_RADIUS..=FEATURE_RADIUS {
+            for dx in -FEATURE_RADIUS..=FEATURE_RADIUS {
+                let (blocks, heightmap, _) = self.generate_noise_and_surface(cx + dx, cz + dz);
+                region.put_chunk(cx + dx, cz + dz, &blocks, &heightmap);
+            }
+        }
+        crate::carvers::apply_carvers_region(&mut region, self.state.seed);
+        crate::features::apply_underground_ores_region(&mut region, self.state.seed);
+        region
+    }
+
     /// Density fill + aquifer + surface rules for one chunk (no features).
     fn generate_noise_and_surface(&self, cx: i32, cz: i32) -> (Vec<u16>, Vec<i16>, Vec<u8>) {
         let st = &self.state;
