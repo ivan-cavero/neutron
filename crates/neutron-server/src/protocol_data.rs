@@ -7,6 +7,17 @@ pub const KNOWN_PACK_ID: &str = "core";
 pub const KNOWN_PACK_VERSION: &str = "26.2";
 pub const PROTOCOL_VERSION: i32 = 776;
 
+/// `minecraft:water[level=0]` (source). Levels 1–7 follow, then 8–15 falling.
+pub const WATER_SOURCE: i32 = 86;
+/// `minecraft:water[level=8]` (falling).
+pub const WATER_FALLING: i32 = 94;
+/// `minecraft:water[level=1]` (almost-full flow, used at air edges).
+pub const WATER_FLOW: i32 = 87;
+/// `minecraft:lava[level=0]`.
+pub const LAVA_SOURCE: i32 = 102;
+/// `minecraft:lava[level=8]` (falling).
+pub const LAVA_FALLING: i32 = 110;
+
 /// Internal BlockId (u16) -> 26.2 block-state protocol id.
 pub fn block_state_id(internal: u16) -> i32 {
     match internal {
@@ -43,8 +54,8 @@ pub fn block_state_id(internal: u16) -> i32 {
         43 => 5307,
         44 => 6882,
         45 => 563,
-        50 => 86,
-        51 => 102,
+        50 => WATER_SOURCE,
+        51 => LAVA_SOURCE,
         52 => 578,
         53 => 13247,
         54 => 6927,
@@ -894,6 +905,10 @@ pub static TAGS: &[(&str, &str, &[i32])] = &[
     ("minecraft:damage_type", "sulfur_cube_with_block_immune_to", &[0,2,7,10,11,12,13,17,26,20,28,29,30,34,37,38,39,41,42,43,45,46,48,15,9,35,1]),
     ("minecraft:damage_type", "witch_resistant_to", &[27,23,36,44]),
     ("minecraft:damage_type", "wither_immune_to", &[6]),
+    // Vanilla 26.2 datapack tags (empty). The client dialogs custom_options /
+    // quick_actions reference these; omitting them crashes Registry Loading.
+    ("minecraft:dialog", "pause_screen_additions", &[]),
+    ("minecraft:dialog", "quick_actions", &[]),
     ("minecraft:enchantment", "curse", &[2,41]),
     ("minecraft:enchantment", "double_trade_price", &[2,41,38,36,14,23,42]),
     ("minecraft:enchantment", "exclusive_set/armor", &[28,3,11,27]),

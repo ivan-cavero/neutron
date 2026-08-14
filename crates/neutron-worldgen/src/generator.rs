@@ -36,6 +36,11 @@ pub const HEIGHTMAP_SIZE: usize = 16 * 16;
 pub const WORLD_BOTTOM: i32 = -64;
 pub const WORLD_TOP: i32 = 320;
 
+/// Pre-feature column: blocks + heightmap + biomes.
+pub type NoiseColumn = (Vec<u16>, Vec<i16>, Vec<u8>);
+/// Cache of [`NoiseColumn`] keyed by chunk XZ.
+pub type NoiseCache = std::collections::HashMap<(i32, i32), NoiseColumn>;
+
 /// A generated chunk column.
 pub struct GeneratedChunk {
     /// Index = `(y - WORLD_BOTTOM) * 256 + z * 16 + x`.
@@ -73,16 +78,35 @@ impl ChunkGenerator {
     /// features for every origin in that region (so ore blobs that cross chunk
     /// borders match vanilla `WorldGenRegion` decoration).
     pub fn generate_chunk(&self, cx: i32, cz: i32) -> GeneratedChunk {
+        let mut unused = NoiseCache::new();
+        self.generate_chunk_cached(cx, cz, &mut unused)
+    }
+
+    /// Same as [`generate_chunk`] but reuses pre-feature noise+surface columns.
+    ///
+    /// Each decorated chunk still needs a clean 3×3 of noise (features must
+    /// not see a neighbour that already had ores/trees). Caching that first
+    /// stage is what makes the live server able to stream view-distance.
+    pub fn generate_chunk_cached(
+        &self,
+        cx: i32,
+        cz: i32,
+        noise_cache: &mut NoiseCache,
+    ) -> GeneratedChunk {
         const FEATURE_RADIUS: i32 = 1;
         let mut region = RegionBuf::new(cx, cz, FEATURE_RADIUS);
         let mut center_biomes = vec![0u8; CHUNK_BIOME_VOLUME];
 
         for dz in -FEATURE_RADIUS..=FEATURE_RADIUS {
             for dx in -FEATURE_RADIUS..=FEATURE_RADIUS {
-                let (blocks, heightmap, biomes) = self.generate_noise_and_surface(cx + dx, cz + dz);
-                region.put_chunk(cx + dx, cz + dz, &blocks, &heightmap);
+                let ncx = cx + dx;
+                let ncz = cz + dz;
+                let (blocks, heightmap, biomes) = noise_cache
+                    .entry((ncx, ncz))
+                    .or_insert_with(|| self.generate_noise_and_surface(ncx, ncz));
+                region.put_chunk(ncx, ncz, blocks, heightmap);
                 if dx == 0 && dz == 0 {
-                    center_biomes = biomes;
+                    center_biomes = biomes.clone();
                 }
             }
         }

@@ -306,7 +306,7 @@ async fn handle_status(
                 .replace('\\', "\\\\")
                 .replace('"', "\\\"");
             let json = format!(
-                r#"{{"version":{{"name":"26.2","protocol":{}}},"players":{{"max":{},"online":{}}},"description":{{"text":"{}"}}}}"#,
+                r#"{{"version":{{"name":"26.2","protocol":{}}},"players":{{"max":{},"online":{}}},"description":{{"text":"{}"}},"enforcesSecureChat":false}}"#,
                 protocol_data::PROTOCOL_VERSION,
                 server.config.max_players,
                 online,

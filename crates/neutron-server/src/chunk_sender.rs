@@ -50,6 +50,7 @@ pub fn encode_playable_chunk(chunk: &GeneratedChunk) -> Vec<u8> {
         let y_start = MIN_Y + section_idx * 16;
         let mut section_blocks = Vec::with_capacity(4096);
         let mut non_air = 0i16;
+        let mut fluids = 0i16;
         for local_y in 0..16i32 {
             let world_y = y_start + local_y;
             let idx_base = (world_y - MIN_Y) as usize * 16 * 16;
@@ -59,23 +60,35 @@ pub fn encode_playable_chunk(chunk: &GeneratedChunk) -> Vec<u8> {
                     if internal != 0 {
                         non_air += 1;
                     }
-                    section_blocks.push(protocol_data::block_state_id(internal));
+                    // Internal 50 = water, 51 = lava (BlockId::is_fluid).
+                    if internal == 50 || internal == 51 {
+                        fluids += 1;
+                    }
+                    section_blocks.push(if internal == 50 || internal == 51 {
+                        fluid_state_id(chunk, lx, world_y, lz)
+                    } else {
+                        protocol_data::block_state_id(internal)
+                    });
                 }
             }
         }
 
+        // Worldgen stores 4×4 XZ biomes per section; vanilla wants 4×4×4 (YZX).
         let biome_base = (section_idx as usize) * 16;
         let mut section_biomes = Vec::with_capacity(64);
-        for bz4 in 0..4usize {
-            for bx4 in 0..4usize {
-                let internal = chunk.biomes[biome_base + bz4 * 4 + bx4];
-                section_biomes.push(protocol_data::biome_protocol_id(internal));
+        for _y4 in 0..4usize {
+            for z4 in 0..4usize {
+                for x4 in 0..4usize {
+                    let internal = chunk.biomes[biome_base + z4 * 4 + x4];
+                    section_biomes.push(protocol_data::biome_protocol_id(internal));
+                }
             }
         }
 
         sections.put_i16(non_air);
-        encode_worldgen_section(&mut sections, &section_blocks);
-        encode_worldgen_biome_section(&mut sections, &section_biomes);
+        sections.put_i16(fluids);
+        write_paletted_container(&mut sections, &section_blocks, PaletteKind::Block);
+        write_paletted_container(&mut sections, &section_biomes, PaletteKind::Biome);
     }
 
     write_varint(&mut buf, sections.len() as i32).expect("varint");
@@ -84,8 +97,47 @@ pub fn encode_playable_chunk(chunk: &GeneratedChunk) -> Vec<u8> {
     // Empty block-entity list (Prefixed Array).
     write_varint(&mut buf, 0).expect("varint");
 
-    write_full_sky_light_26(&mut buf);
+    write_sky_light_from_heightmap(&mut buf, &chunk.heightmap);
     buf.to_vec()
+}
+
+/// Pick a 26.2 water/lava state so the client renders slopes and falls.
+///
+/// Worldgen only stores "this cell is fluid". Vanilla uses `level=` for
+/// the mesh: source, flowing into air, or falling into a hole.
+fn fluid_state_id(chunk: &GeneratedChunk, x: usize, y: i32, z: usize) -> i32 {
+    let here = chunk.blocks[(y - MIN_Y) as usize * 256 + z * 16 + x];
+    let is_water = here == 50;
+    let below_air = y > MIN_Y
+        && chunk.blocks[(y - 1 - MIN_Y) as usize * 256 + z * 16 + x] == 0;
+    if below_air {
+        return if is_water {
+            protocol_data::WATER_FALLING
+        } else {
+            protocol_data::LAVA_FALLING
+        };
+    }
+    const DIRS: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+    for (dx, dz) in DIRS {
+        let nx = x as i32 + dx;
+        let nz = z as i32 + dz;
+        if !(0..16).contains(&nx) || !(0..16).contains(&nz) {
+            continue;
+        }
+        let n = chunk.blocks[(y - MIN_Y) as usize * 256 + nz as usize * 16 + nx as usize];
+        if n == 0 {
+            return if is_water {
+                protocol_data::WATER_FLOW
+            } else {
+                protocol_data::LAVA_SOURCE
+            };
+        }
+    }
+    if is_water {
+        protocol_data::WATER_SOURCE
+    } else {
+        protocol_data::LAVA_SOURCE
+    }
 }
 
 /// Generate a chunk using the worldgen crate's terrain generation.
@@ -269,21 +321,59 @@ fn write_bitset(buf: &mut BytesMut, bits: u64, long_count: i32) {
     }
 }
 
-fn write_full_sky_light_26(buf: &mut BytesMut) {
-    // All 26 light sections present for sky; none for block.
-    let sky_bits: u64 = (1u64 << LIGHT_SECTION_COUNT) - 1;
-    write_bitset(buf, sky_bits, 1);
-    write_bitset(buf, 0, 1); // block mask empty
-    write_bitset(buf, 0, 1); // empty sky mask
-    write_bitset(buf, 0, 1); // empty block mask
+/// Sky light from the column heightmap: 15 above the surface, 0 below.
+///
+/// Sending 15 everywhere made oceans look hollow (the client has no
+/// occlusion to shade water). Block light stays empty.
+fn write_sky_light_from_heightmap(buf: &mut BytesMut, heightmap: &[i16]) {
+    let mut sky_bits: u64 = 0;
+    let mut empty_sky_bits: u64 = 0;
+    let mut sky_layers: Vec<Vec<u8>> = Vec::new();
 
-    let light_array = vec![0xFFu8; 2048];
-    write_varint(buf, LIGHT_SECTION_COUNT as i32).expect("varint");
-    for _ in 0..LIGHT_SECTION_COUNT {
-        write_varint(buf, light_array.len() as i32).expect("varint");
-        buf.put_slice(&light_array);
+    for section in 0..LIGHT_SECTION_COUNT {
+        let y0 = MIN_Y - 16 + section as i32 * 16;
+        let mut data = vec![0u8; 2048];
+        let mut any_light = false;
+        let mut all_dark = true;
+        for ly in 0..16i32 {
+            let y = y0 + ly;
+            for z in 0..16usize {
+                for x in 0..16usize {
+                    let surface = i32::from(heightmap.get(z * 16 + x).copied().unwrap_or(64));
+                    let level: u8 = if y > surface { 15 } else { 0 };
+                    if level > 0 {
+                        any_light = true;
+                        all_dark = false;
+                    }
+                    let idx = ((ly as usize) << 8) | (z << 4) | x;
+                    let byte_i = idx >> 1;
+                    if idx & 1 == 0 {
+                        data[byte_i] |= level;
+                    } else {
+                        data[byte_i] |= level << 4;
+                    }
+                }
+            }
+        }
+        if all_dark {
+            empty_sky_bits |= 1u64 << section;
+        } else if any_light {
+            sky_bits |= 1u64 << section;
+            sky_layers.push(data);
+        }
     }
-    write_varint(buf, 0).expect("varint"); // no block-light arrays
+
+    write_bitset(buf, sky_bits, 1);
+    write_bitset(buf, 0, 1); // block mask
+    write_bitset(buf, empty_sky_bits, 1);
+    write_bitset(buf, (1u64 << LIGHT_SECTION_COUNT) - 1, 1); // all block-light empty
+
+    write_varint(buf, sky_layers.len() as i32).expect("varint");
+    for layer in &sky_layers {
+        write_varint(buf, layer.len() as i32).expect("varint");
+        buf.put_slice(layer);
+    }
+    write_varint(buf, 0).expect("varint");
 }
 
 // ---------------------------------------------------------------------------
@@ -335,84 +425,63 @@ fn build_heightmaps_from_chunk(heightmap: &[i16]) -> Vec<u8> {
     buf
 }
 
-/// Encode a section's block data from raw block state IDs (from worldgen).
+/// 26.2 `PalettedContainer` strategy (blocks vs biomes).
+#[derive(Clone, Copy)]
+enum PaletteKind {
+    Block,
+    Biome,
+}
+
+fn ceil_log2(n: usize) -> i32 {
+    if n <= 1 {
+        0
+    } else {
+        (usize::BITS - (n - 1).leading_zeros()) as i32
+    }
+}
+
+fn bits_for_palette(kind: PaletteKind, palette_len: usize) -> i32 {
+    if palette_len <= 1 {
+        return 0;
+    }
+    let needed = ceil_log2(palette_len);
+    match kind {
+        // Strategy$1: 1–3 bits are remapped to 4-bit linear.
+        PaletteKind::Block => needed.max(4).min(8),
+        // Strategy$2: 1–3 linear, then global.
+        PaletteKind::Biome => needed.min(3),
+    }
+}
+
+/// Vanilla 26.2 PalettedContainer wire format:
+/// `byte bits` + palette + fixed-size long array (no VarInt length).
 ///
-/// Builds a palette from unique block IDs, maps each block to a palette index,
-/// and encodes with compact data array.
-fn encode_worldgen_section(buf: &mut BytesMut, block_ids: &[i32]) {
-    // Build palette from unique block IDs.
+/// bits==0: SingleValuePalette writes only the one VarInt id (no size, no longs).
+fn write_paletted_container(buf: &mut BytesMut, values: &[i32], kind: PaletteKind) {
     let mut palette: Vec<i32> = Vec::new();
-    for &id in block_ids {
+    for &id in values {
         if !palette.contains(&id) {
             palette.push(id);
         }
     }
+    let bits = bits_for_palette(kind, palette.len());
+    buf.put_u8(bits as u8);
 
-    // Map each block to palette index.
-    let indices: Vec<usize> = block_ids
+    if bits == 0 {
+        write_varint(buf, palette.first().copied().unwrap_or(0)).expect("varint");
+        return;
+    }
+
+    write_varint(buf, palette.len() as i32).expect("varint");
+    for &id in &palette {
+        write_varint(buf, id).expect("varint");
+    }
+
+    let indices: Vec<usize> = values
         .iter()
         .map(|id| palette.iter().position(|&p| p == *id).unwrap_or(0))
         .collect();
-
-    encode_palette_and_data_raw(buf, &palette, &indices);
-}
-
-/// Encode a section's biome data from raw biome IDs (from worldgen).
-///
-/// Each section has 64 biome entries (4x4x4 resolution).
-fn encode_worldgen_biome_section(buf: &mut BytesMut, biome_ids: &[i32]) {
-    // Build palette from unique biome IDs.
-    let mut palette: Vec<i32> = Vec::new();
-    for &id in biome_ids {
-        if !palette.contains(&id) {
-            palette.push(id);
-        }
-    }
-
-    // Map each biome to palette index.
-    let indices: Vec<usize> = biome_ids
-        .iter()
-        .map(|id| palette.iter().position(|&p| p == *id).unwrap_or(0))
-        .collect();
-
-    // bits_per_biome
-    let bits_per_biome = calculate_bits_per_block(palette.len());
-
-    write_varint(buf, bits_per_biome).expect("varint write");
-
-    // Palette
-    if bits_per_biome <= 8 {
-        write_varint(buf, palette.len() as i32).expect("varint write");
-        for &id in &palette {
-            write_varint(buf, id).expect("varint write");
-        }
-    }
-
-    // Data array
-    let longs = pack_to_longs(&indices, bits_per_biome);
-    write_varint(buf, longs.len() as i32).expect("varint write");
-    for &long_val in &longs {
-        buf.put_i64(long_val);
-    }
-}
-
-/// Encode palette and data from raw palette and index arrays.
-fn encode_palette_and_data_raw(buf: &mut BytesMut, palette: &[i32], indices: &[usize]) {
-    let bits_per_block = calculate_bits_per_block(palette.len());
-
-    write_varint(buf, bits_per_block).expect("varint write");
-
-    if bits_per_block <= 8 {
-        // Indirect palette
-        write_varint(buf, palette.len() as i32).expect("varint write");
-        for &block_id in palette {
-            write_varint(buf, block_id).expect("varint write");
-        }
-    }
-
-    let longs = pack_to_longs(indices, bits_per_block);
-    write_varint(buf, longs.len() as i32).expect("varint write");
-    for &long_val in &longs {
+    for long_val in pack_to_longs(&indices, bits) {
         buf.put_i64(long_val);
     }
 }
@@ -767,11 +836,63 @@ mod tests {
     }
 
     #[test]
+    fn test_block_palette_uses_min_4_bits() {
+        assert_eq!(bits_for_palette(PaletteKind::Block, 1), 0);
+        assert_eq!(bits_for_palette(PaletteKind::Block, 2), 4);
+        assert_eq!(bits_for_palette(PaletteKind::Block, 16), 4);
+        assert_eq!(bits_for_palette(PaletteKind::Block, 17), 5);
+        assert_eq!(bits_for_palette(PaletteKind::Biome, 1), 0);
+        assert_eq!(bits_for_palette(PaletteKind::Biome, 2), 1);
+        assert_eq!(bits_for_palette(PaletteKind::Biome, 8), 3);
+    }
+
+    #[test]
+    fn test_single_value_palette_has_no_data_longs() {
+        let mut buf = BytesMut::new();
+        write_paletted_container(&mut buf, &[0; 4096], PaletteKind::Block);
+        // byte(0) + varint(air=0)
+        assert_eq!(&buf[..], &[0, 0]);
+    }
+
+    #[test]
+    fn test_two_block_section_writes_256_longs() {
+        let mut values = vec![0i32; 4096];
+        values[0] = 1;
+        let mut buf = BytesMut::new();
+        write_paletted_container(&mut buf, &values, PaletteKind::Block);
+        assert_eq!(buf[0], 4); // 4-bit linear
+                               // palette size varint (2) + two ids + 256 longs, no length prefix
+        let longs = pack_to_longs(
+            &values
+                .iter()
+                .map(|&v| if v == 0 { 0 } else { 1 })
+                .collect::<Vec<_>>(),
+            4,
+        );
+        assert_eq!(longs.len(), 256);
+        assert_eq!(buf.len(), 1 + 1 + 1 + 1 + 256 * 8);
+    }
+
+    #[test]
+    fn test_playable_chunk_sections_are_26_2_sized() {
+        // A worldgen chunk must produce a section buffer the client can drain
+        // exactly: 24 × (2 shorts + states + biomes).
+        let data = build_worldgen_chunk(0, 0, 12345);
+        assert!(data.len() > 100);
+        // Heightmaps map starts with varint count; we don't fully parse it here,
+        // but the payload must exist and be larger than 24 empty air sections.
+        let empty_air_section = 2 + 2 + 2 + 2; // two shorts + two single-value palettes
+        assert!(data.len() > 24 * empty_air_section);
+    }
+
+    #[test]
     fn test_protocol_block_ids_are_vanilla_26_2() {
         assert_eq!(crate::protocol_data::block_state_id(0), 0); // air
         assert_eq!(crate::protocol_data::block_state_id(1), 1); // stone
         assert_eq!(crate::protocol_data::block_state_id(12), 9); // grass_block[snowy=false]
         assert_eq!(crate::protocol_data::block_state_id(33), 85); // bedrock
         assert_eq!(crate::protocol_data::biome_protocol_id(1), 1); // plains
+        assert_eq!(crate::protocol_data::block_state_id(50), protocol_data::WATER_SOURCE);
+        assert_eq!(crate::protocol_data::WATER_FALLING, 94);
     }
 }

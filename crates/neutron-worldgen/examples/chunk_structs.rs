@@ -10,11 +10,11 @@ fn show(tag: &Tag, indent: usize, max_depth: usize) {
     let pad = "  ".repeat(indent);
     match tag {
         Tag::Compound(c) => {
-            for (k, v) in c.iter() {
+            for (k, v) in c.tags.iter() {
                 match v {
                     Tag::Compound(_) | Tag::List(_) => {
                         println!("{}{}:", pad, k);
-                        show(v, indent + 1, max_depth);
+                        show(&v, indent + 1, max_depth);
                     }
                     Tag::String(s) => println!("{}{} = \"{}\"", pad, k, s),
                     Tag::Int(i) => println!("{}{} = {}", pad, k, i),
@@ -44,7 +44,7 @@ fn main() {
     let data = region.get_chunk(6, 30).unwrap().unwrap();
     let nbt = read_nbt(&data).unwrap();
     // top-level keys
-    for (k, _) in nbt.compound.iter() {
+    for (k, _) in nbt.compound.tags.iter() {
         println!("key: {k}");
     }
     if let Some(s) = compound_get(&nbt.compound, "structures") {

@@ -38,7 +38,7 @@ pub mod worldgen;
 
 pub use biome_source::{find_biome, quantize_coord, ClimateTarget};
 pub use density::{DensityEnv, DensityRegistry};
-pub use generator::{ChunkGenerator, GeneratedChunk};
+pub use generator::{ChunkGenerator, GeneratedChunk, NoiseCache, NoiseColumn};
 pub use noise::{BlendedNoise, ImprovedNoise, NormalNoise, PerlinNoise};
 pub use rng::Xoroshiro128;
 pub use surface::BlockId;

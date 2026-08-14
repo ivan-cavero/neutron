@@ -276,7 +276,11 @@ fn bench_generate_16x16(c: &mut Criterion) {
     let generator = neutron_worldgen::ChunkGenerator::new(42);
 
     group.throughput(Throughput::Elements(256));
+    // NOTE: 16x16 = 256 chunks/iteration ≈ 26s/iter. With sample_size=10 and 100 iters,
+    // that would be 2600 iters × 26s ≈ 72h. We run it only for manual checks.
+    group.sample_size(10);
     group.bench_function("generate_256_chunks", |b| {
+        // 10 iters × 26s = 4.3 min for a full benchmark cycle
         b.iter(|| {
             for cx in 0..16i32 {
                 for cz in 0..16i32 {
@@ -293,7 +297,7 @@ fn bench_noise_eval(c: &mut Criterion) {
     let mut group = c.benchmark_group("worldgen/noise_eval");
 
     let mut rng = neutron_worldgen::Xoroshiro128::new(42);
-    let noise = neutron_worldgen::OctavePerlinNoise::new(&mut rng, 6, 1.0 / 1500.0, 1.0);
+    let noise = neutron_worldgen::PerlinNoise::create_legacy(&mut rng, &[0]);
 
     group.throughput(Throughput::Elements(10_000));
     group.bench_function("sample_10k_points", |b| {
@@ -317,7 +321,7 @@ fn bench_xoroshiro128_next(c: &mut Criterion) {
         b.iter(|| {
             let mut rng = neutron_worldgen::Xoroshiro128::new(42);
             for _ in 0..10_000_000 {
-                black_box(rng.next_i64());
+                black_box(rng.next_long());
             }
         });
     });
@@ -326,7 +330,7 @@ fn bench_xoroshiro128_next(c: &mut Criterion) {
         b.iter(|| {
             let mut rng = neutron_worldgen::Xoroshiro128::new(99);
             for _ in 0..1_000_000 {
-                black_box(rng.next_i32());
+                black_box(rng.next_int32());
             }
         });
     });

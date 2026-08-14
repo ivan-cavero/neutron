@@ -49,9 +49,9 @@ pub async fn handle_play_packet(
         SB_KEEPALIVE_RESPONSE => {
             handle_keepalive_response(server, player_uuid, payload, addr).await
         }
-        SB_PLAYER_POSITION => handle_player_position(server, player_uuid, payload, addr).await,
+        SB_PLAYER_POSITION => handle_player_position(server, tx, player_uuid, payload, addr).await,
         SB_PLAYER_POS_ROT => {
-            handle_player_pos_and_rotation(server, player_uuid, payload, addr).await
+            handle_player_pos_and_rotation(server, tx, player_uuid, payload, addr).await
         }
         SB_PLAYER_ROTATION => handle_player_rotation(server, player_uuid, payload, addr).await,
         SB_CHUNK_BATCH => Ok(()),
@@ -117,9 +117,10 @@ async fn handle_keepalive_response(
 
 async fn handle_player_position(
     server: &SharedServer,
+    tx: &mpsc::Sender<crate::connection::OutgoingPacket>,
     player_uuid: &uuid::Uuid,
     payload: &mut Bytes,
-    _addr: SocketAddr,
+    addr: SocketAddr,
 ) -> anyhow::Result<()> {
     if payload.remaining() < 25 {
         return Ok(());
@@ -129,8 +130,7 @@ async fn handle_player_position(
     let z = payload.get_f64();
     let _on_ground = payload.get_u8() != 0;
 
-    server.update_player_position(player_uuid, x, y, z).await;
-
+    maybe_recenter(server, tx, player_uuid, x, y, z, addr).await;
     Ok(())
 }
 
@@ -140,9 +140,10 @@ async fn handle_player_position(
 
 async fn handle_player_pos_and_rotation(
     server: &SharedServer,
+    tx: &mpsc::Sender<crate::connection::OutgoingPacket>,
     player_uuid: &uuid::Uuid,
     payload: &mut Bytes,
-    _addr: SocketAddr,
+    addr: SocketAddr,
 ) -> anyhow::Result<()> {
     if payload.remaining() < 33 {
         return Ok(());
@@ -154,10 +155,43 @@ async fn handle_player_pos_and_rotation(
     let pitch = payload.get_f32();
     let _on_ground = payload.get_u8() != 0;
 
-    server.update_player_position(player_uuid, x, y, z).await;
+    maybe_recenter(server, tx, player_uuid, x, y, z, addr).await;
     server.update_player_rotation(player_uuid, yaw, pitch).await;
 
     Ok(())
+}
+
+async fn maybe_recenter(
+    server: &SharedServer,
+    tx: &mpsc::Sender<crate::connection::OutgoingPacket>,
+    player_uuid: &uuid::Uuid,
+    x: f64,
+    y: f64,
+    z: f64,
+    addr: SocketAddr,
+) {
+    let (old_cx, old_cz) = server
+        .players
+        .read()
+        .await
+        .get(player_uuid)
+        .map(|p| (p.chunk_x, p.chunk_z))
+        .unwrap_or((0, 0));
+    server.update_player_position(player_uuid, x, y, z).await;
+    let (new_cx, new_cz) = ((x.floor() as i32) >> 4, (z.floor() as i32) >> 4);
+    if (new_cx, new_cz) == (old_cx, old_cz) {
+        return;
+    }
+    let codec = neutron_protocol::codec::MinecraftCodec::new();
+    let mut buf = bytes::BytesMut::with_capacity(8);
+    let _ = write_varint(&mut buf, new_cx);
+    let _ = write_varint(&mut buf, new_cz);
+    let _ = send_packet(tx, &codec, pid::PLAY_CENTER_CHUNK, &buf).await;
+    let view = server.config.view_distance;
+    for (cx, cz) in crate::chunk_sender::spiral_chunks(new_cx, new_cz, view) {
+        server.world.prefetch(cx, cz);
+    }
+    tracing::debug!(addr = %addr, new_cx, new_cz, "player entered new chunk");
 }
 
 // ---------------------------------------------------------------------------

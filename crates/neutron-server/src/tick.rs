@@ -21,8 +21,8 @@ const KEEPALIVE_INTERVAL: u64 = 600;
 /// How many ticks before a player is considered timed out (no response).
 const KEEPALIVE_TIMEOUT: u64 = 600;
 
-/// Maximum chunks to send per tick per player.
-const CHUNKS_PER_TICK: usize = 5;
+/// Maximum already-ready chunks to send per tick per player.
+const CHUNKS_PER_TICK: usize = 8;
 
 // ---------------------------------------------------------------------------
 // Tick loop
@@ -71,9 +71,19 @@ async fn send_keepalives(
     let codec = neutron_protocol::codec::MinecraftCodec::new();
 
     for uuid in &player_uuids {
+        let playing = server
+            .players
+            .read()
+            .await
+            .get(uuid)
+            .map(|p| p.is_playing)
+            .unwrap_or(false);
+        if !playing {
+            continue;
+        }
+
         let keepalive_id: i64 = tick as i64;
 
-        // Build KeepAlive packet (0x26).
         let mut buf = bytes::BytesMut::with_capacity(8);
         buf.put_i64(keepalive_id);
 
@@ -85,16 +95,13 @@ async fn send_keepalives(
             continue;
         }
 
-        // Update player state.
         if let Some(player) = server.players.write().await.get_mut(uuid) {
             if player.keepalive_pending {
-                // Previous keepalive was not acknowledged — player timed out.
                 tracing::warn!(
                     uuid = %uuid,
                     username = %player.username,
                     "player timed out (keepalive not responded)"
                 );
-                // We'll let the connection handle disconnection via the writer channel.
             }
             player.last_keepalive_id = Some(keepalive_id);
             player.last_keepalive_tick = tick;
@@ -113,7 +120,8 @@ async fn check_timeouts(server: &SharedServer, tick: u64) {
     for uuid in &player_uuids {
         let should_kick = {
             if let Some(player) = server.players.read().await.get(uuid) {
-                player.keepalive_pending
+                player.is_playing
+                    && player.keepalive_pending
                     && tick.saturating_sub(player.last_keepalive_tick) > KEEPALIVE_TIMEOUT
             } else {
                 false
@@ -162,13 +170,10 @@ async fn send_pending_chunks(server: &SharedServer, _writer_tx: &mpsc::Sender<Ou
         let needed_chunks = chunk_sender::spiral_chunks(chunk_x, chunk_z, view_dist);
 
         let mut sent_this_tick = 0;
+        let mut prefetch_budget = 16;
         let mut marked = Vec::new();
 
         for &(cx, cz) in &needed_chunks {
-            if sent_this_tick >= CHUNKS_PER_TICK {
-                break;
-            }
-
             let already_sent = {
                 let players = server.players.read().await;
                 players
@@ -180,7 +185,17 @@ async fn send_pending_chunks(server: &SharedServer, _writer_tx: &mpsc::Sender<Ou
                 continue;
             }
 
-            let encoded = server.world.chunk_async(cx, cz).await;
+            let Some(encoded) = server.world.try_chunk(cx, cz) else {
+                if prefetch_budget > 0 {
+                    server.world.prefetch(cx, cz);
+                    prefetch_budget -= 1;
+                }
+                continue;
+            };
+            if sent_this_tick >= CHUNKS_PER_TICK {
+                continue;
+            }
+
             let mut packet_buf = bytes::BytesMut::with_capacity(encoded.body.len() + 8);
             packet_buf.put_i32(cx);
             packet_buf.put_i32(cz);

@@ -260,22 +260,26 @@ fn test_packet_roundtrip_all_types() {
 
     roundtrip!(
         SetDefaultSpawnPosition {
+            dimension: "minecraft:overworld".into(),
             location: BlockPos::new(0, 64, 0),
-            angle: 90.0,
+            yaw: 90.0,
+            pitch: 0.0,
         },
         SetDefaultSpawnPosition::decode
     );
 
     roundtrip!(
         SynchronizePlayerPosition {
+            teleport_id: 7,
             x: 100.5,
             y: 65.0,
             z: -200.3,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 0.0,
             yaw: 45.0,
             pitch: -30.0,
-            flags: 0,
-            teleport_id: 7,
-            dismount: false,
+            relatives: 0,
         },
         SynchronizePlayerPosition::decode
     );

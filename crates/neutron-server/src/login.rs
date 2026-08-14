@@ -19,7 +19,11 @@ use crate::protocol_ids as pid;
 use crate::server::SharedServer;
 
 /// How many chunks to send before the client is allowed to move (rest stream).
-const INITIAL_CHUNK_RADIUS: i32 = 2;
+///
+/// Radius 2 is 25 columns and blocks the login reader for a minute (keepalive
+/// then fires and the client looks frozen). Send only the spawn column; the
+/// tick loop streams the rest as the worker finishes them.
+const INITIAL_CHUNK_RADIUS: i32 = 0;
 
 // ---------------------------------------------------------------------------
 // Login
@@ -226,8 +230,8 @@ async fn send_play_sequence(
             p.x = sx;
             p.y = sy;
             p.z = sz;
-            p.chunk_x = 0;
-            p.chunk_z = 0;
+            p.chunk_x = sx.floor() as i32 >> 4;
+            p.chunk_z = sz.floor() as i32 >> 4;
         }
     }
 
@@ -239,13 +243,25 @@ async fn send_play_sequence(
         .map(|p| p.entity_id)
         .unwrap_or(1);
 
+    let spawn_x_block = sx.floor() as i32;
+    let spawn_z_block = sz.floor() as i32;
+    let spawn_chunk_x = spawn_x_block >> 4;
+    let spawn_chunk_z = spawn_z_block >> 4;
+
+    // Start the view-distance ring now so the worker is busy while we
+    // emit login packets (spawn column is already cached).
+    let view = server.config.view_distance;
+    for (cx, cz) in crate::chunk_sender::spiral_chunks(spawn_chunk_x, spawn_chunk_z, view) {
+        server.world.prefetch(cx, cz);
+    }
+
     send_play_login(tx, codec, entity_id, &config, addr).await?;
     send_game_event(tx, codec, pid::GAME_EVENT_CHUNKS_LOAD_START, 0.0).await?;
     send_player_abilities(tx, codec, addr).await?;
-    send_center_chunk(tx, codec, 0, 0, addr).await?;
-    send_default_spawn(tx, codec, spawn_y_block, addr).await?;
+    send_center_chunk(tx, codec, spawn_chunk_x, spawn_chunk_z, addr).await?;
+    send_default_spawn(tx, codec, spawn_x_block, spawn_y_block, spawn_z_block, addr).await?;
     send_sync_position(tx, codec, sx, sy, sz, addr).await?;
-    send_initial_chunks(server, tx, codec, uuid, addr).await?;
+    send_initial_chunks(server, tx, codec, uuid, spawn_chunk_x, spawn_chunk_z, addr).await?;
 
     send_system_chat(tx, codec, "Welcome to Neutron — live worldgen (not 1:1 yet).", addr)
         .await?;
@@ -347,15 +363,23 @@ async fn send_center_chunk(
 async fn send_default_spawn(
     tx: &mpsc::Sender<OutgoingPacket>,
     codec: &MinecraftCodec,
+    x: i32,
     y: i32,
+    z: i32,
     addr: SocketAddr,
 ) -> anyhow::Result<()> {
-    let mut buf = BytesMut::with_capacity(16);
-    let spawn = neutron_protocol::types::BlockPos::new(0, y, 0);
-    buf.put_i64(spawn.to_packed());
-    buf.put_f32(0.0);
+    // 26.2: LevelData.RespawnData = GlobalPos + yaw + pitch.
+    // GlobalPos = Identifier (dimension) + packed BlockPos.
+    let mut buf = BytesMut::with_capacity(48);
+    let packet = neutron_protocol::play::SetDefaultSpawnPosition {
+        dimension: "minecraft:overworld".into(),
+        location: neutron_protocol::types::BlockPos::new(x, y, z),
+        yaw: 0.0,
+        pitch: 0.0,
+    };
+    packet.encode(&mut buf)?;
     send_packet(tx, codec, pid::PLAY_DEFAULT_SPAWN, &buf).await?;
-    tracing::debug!(addr = %addr, y, "sent default spawn");
+    tracing::debug!(addr = %addr, x, y, z, "sent default spawn");
     Ok(())
 }
 
@@ -367,17 +391,20 @@ async fn send_sync_position(
     z: f64,
     addr: SocketAddr,
 ) -> anyhow::Result<()> {
+    let packet = neutron_protocol::play::SynchronizePlayerPosition {
+        teleport_id: 1,
+        x,
+        y,
+        z,
+        dx: 0.0,
+        dy: 0.0,
+        dz: 0.0,
+        yaw: 0.0,
+        pitch: 0.0,
+        relatives: 0,
+    };
     let mut buf = BytesMut::with_capacity(64);
-    write_varint(&mut buf, 1)?; // teleport id
-    buf.put_f64(x);
-    buf.put_f64(y);
-    buf.put_f64(z);
-    buf.put_f64(0.0);
-    buf.put_f64(0.0);
-    buf.put_f64(0.0);
-    buf.put_f32(0.0);
-    buf.put_f32(0.0);
-    write_varint(&mut buf, 0)?; // no relative flags
+    packet.encode(&mut buf)?;
     send_packet(tx, codec, pid::PLAY_POSITION, &buf).await?;
     tracing::debug!(addr = %addr, x, y, z, "sent sync player position");
     Ok(())
@@ -406,9 +433,11 @@ async fn send_initial_chunks(
     tx: &mpsc::Sender<OutgoingPacket>,
     codec: &MinecraftCodec,
     uuid: uuid::Uuid,
+    chunk_x: i32,
+    chunk_z: i32,
     addr: SocketAddr,
 ) -> anyhow::Result<()> {
-    let chunks = crate::chunk_sender::spiral_chunks(0, 0, INITIAL_CHUNK_RADIUS);
+    let chunks = crate::chunk_sender::spiral_chunks(chunk_x, chunk_z, INITIAL_CHUNK_RADIUS);
     send_packet(tx, codec, pid::PLAY_CHUNK_BATCH_START, &[]).await?;
 
     for (cx, cz) in &chunks {
@@ -446,4 +475,100 @@ fn write_string(buf: &mut BytesMut, s: &str) -> anyhow::Result<()> {
     write_varint(buf, bytes.len() as i32)?;
     buf.put_slice(bytes);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use neutron_protocol::packet::PacketId;
+
+    #[test]
+    fn dialog_registry_matches_vanilla_26_2() {
+        let dialogs = protocol_data::SYNC_REGISTRIES
+            .iter()
+            .find(|(name, _)| *name == "minecraft:dialog")
+            .map(|(_, entries)| *entries)
+            .expect("minecraft:dialog registry");
+        assert_eq!(
+            dialogs,
+            &[
+                "minecraft:custom_options",
+                "minecraft:quick_actions",
+                "minecraft:server_links",
+            ]
+        );
+    }
+
+    #[test]
+    fn status_pong_uses_vanilla_status_protocol_id() {
+        assert_eq!(pid::STATUS_RESPONSE, 0x00);
+        assert_eq!(pid::STATUS_PONG, 0x01);
+        assert_ne!(
+            pid::STATUS_PONG, pid::STATUS_RESPONSE,
+            "pong must not reuse the status-response id (infinite client ping)"
+        );
+    }
+
+    #[test]
+    fn player_position_packet_is_26_2_layout() {
+        let packet = neutron_protocol::play::SynchronizePlayerPosition {
+            teleport_id: 1,
+            x: 0.5,
+            y: 49.0,
+            z: 0.5,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 0.0,
+            yaw: 0.0,
+            pitch: 0.0,
+            relatives: 0,
+        };
+        let mut buf = BytesMut::new();
+        packet.encode(&mut buf).expect("encode");
+        // VarInt(1) + 6*f64 + 2*f32 + i32
+        assert_eq!(buf.len(), 1 + 48 + 8 + 4);
+        assert_eq!(
+            neutron_protocol::play::SynchronizePlayerPosition::ID,
+            pid::PLAY_POSITION
+        );
+    }
+
+    #[test]
+    fn default_spawn_packet_is_26_2_respawn_data() {
+        let packet = neutron_protocol::play::SetDefaultSpawnPosition {
+            dimension: "minecraft:overworld".into(),
+            location: neutron_protocol::types::BlockPos::new(0, 49, 0),
+            yaw: 0.0,
+            pitch: 0.0,
+        };
+        let mut buf = BytesMut::new();
+        packet.encode(&mut buf).expect("encode");
+        // identifier "minecraft:overworld" (1+19) + BlockPos (8) + yaw (4) + pitch (4)
+        assert_eq!(buf.len(), 36);
+        let mut payload = bytes::Bytes::from(buf.to_vec());
+        let decoded = neutron_protocol::play::SetDefaultSpawnPosition::decode(&mut payload)
+            .expect("decode");
+        assert_eq!(decoded.dimension, "minecraft:overworld");
+        assert_eq!(decoded.location.x, 0);
+        assert_eq!(decoded.location.y, 49);
+        assert_eq!(decoded.location.z, 0);
+        assert_eq!(payload.remaining(), 0);
+    }
+
+    #[test]
+    fn update_tags_binds_vanilla_dialog_tags() {
+        let dialog_tags: Vec<&str> = protocol_data::TAGS
+            .iter()
+            .filter(|(registry, _, _)| *registry == "minecraft:dialog")
+            .map(|(_, tag, _)| *tag)
+            .collect();
+        assert!(
+            dialog_tags.contains(&"pause_screen_additions"),
+            "missing #minecraft:pause_screen_additions"
+        );
+        assert!(
+            dialog_tags.contains(&"quick_actions"),
+            "missing #minecraft:quick_actions"
+        );
+    }
 }

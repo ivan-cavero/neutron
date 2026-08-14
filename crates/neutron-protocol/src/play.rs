@@ -339,38 +339,51 @@ impl SystemChatMessage {
 // SetDefaultSpawnPosition
 // ---------------------------------------------------------------------------
 
-/// Sets the world spawn point shown on the compass.
+/// Sets the world spawn / respawn point (26.2 `RespawnData`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetDefaultSpawnPosition {
-    /// Spawn position.
+    /// Dimension identifier, e.g. `minecraft:overworld`.
+    pub dimension: String,
+    /// Spawn block position.
     pub location: BlockPos,
-    /// Angle in compass degrees.
-    pub angle: f32,
+    /// Yaw in degrees.
+    pub yaw: f32,
+    /// Pitch in degrees.
+    pub pitch: f32,
 }
 
 impl PacketId for SetDefaultSpawnPosition {
     const STATE: ProtocolState = ProtocolState::Play;
     const DIRECTION: Direction = Direction::Clientbound;
-    const ID: u32 = 0x54;
+    const ID: u32 = 0x61;
 }
 
 impl SetDefaultSpawnPosition {
     pub fn decode(payload: &mut Bytes) -> Result<Self, DecodeError> {
-        if payload.remaining() < 12 {
+        let dimension = read_string(payload)?;
+        if payload.remaining() < 16 {
             return Err(DecodeError::InsufficientBytes {
-                need: 12,
+                need: 16,
                 have: payload.remaining(),
             });
         }
         let packed = payload.get_i64();
         let location = BlockPos::from_packed(packed)?;
-        let angle = payload.get_f32();
-        Ok(Self { location, angle })
+        let yaw = payload.get_f32();
+        let pitch = payload.get_f32();
+        Ok(Self {
+            dimension,
+            location,
+            yaw,
+            pitch,
+        })
     }
 
     pub fn encode(&self, buf: &mut BytesMut) -> Result<(), EncodeError> {
+        write_string(buf, &self.dimension)?;
         buf.put_i64(self.location.to_packed());
-        buf.put_f32(self.angle);
+        buf.put_f32(self.yaw);
+        buf.put_f32(self.pitch);
         Ok(())
     }
 }
@@ -379,74 +392,72 @@ impl SetDefaultSpawnPosition {
 // SynchronizePlayerPosition
 // ---------------------------------------------------------------------------
 
-/// Teleports the player to a new position.
+/// Teleports the player (`ClientboundPlayerPositionPacket` in 26.2).
 #[derive(Debug, Clone, PartialEq)]
 pub struct SynchronizePlayerPosition {
-    /// X coordinate.
+    /// Teleport ID (client echoes this in Accept Teleportation).
+    pub teleport_id: i32,
+    /// Absolute X.
     pub x: f64,
-    /// Y coordinate.
+    /// Absolute Y (feet).
     pub y: f64,
-    /// Z coordinate.
+    /// Absolute Z.
     pub z: f64,
+    /// Delta movement X.
+    pub dx: f64,
+    /// Delta movement Y.
+    pub dy: f64,
+    /// Delta movement Z.
+    pub dz: f64,
     /// Yaw in degrees.
     pub yaw: f32,
     /// Pitch in degrees.
     pub pitch: f32,
-    /// Flags indicating which fields are relative (bitmask).
-    pub flags: u8,
-    /// Teleport ID (for acknowledgment).
-    pub teleport_id: i32,
-    /// Whether the player should dismount their vehicle.
-    pub dismount: bool,
+    /// Packed `Relative` bitmask (`ByteBufCodecs.INT`, not a VarInt).
+    pub relatives: i32,
 }
 
 impl PacketId for SynchronizePlayerPosition {
     const STATE: ProtocolState = ProtocolState::Play;
     const DIRECTION: Direction = Direction::Clientbound;
-    const ID: u32 = 0x40;
+    const ID: u32 = 0x48;
 }
 
 impl SynchronizePlayerPosition {
     pub fn decode(payload: &mut Bytes) -> Result<Self, DecodeError> {
-        // 3*f64 + 2*f32 + u8 + u8 = 24+8+1+1 = 34 bytes before VarInt
-        if payload.remaining() < 34 {
+        let teleport_id = read_varint(payload)?;
+        // 6*f64 + 2*f32 + i32 = 48+8+4 = 60
+        if payload.remaining() < 60 {
             return Err(DecodeError::InsufficientBytes {
-                need: 34,
+                need: 60,
                 have: payload.remaining(),
             });
         }
-        let x = payload.get_f64();
-        let y = payload.get_f64();
-        let z = payload.get_f64();
-        let yaw = payload.get_f32();
-        let pitch = payload.get_f32();
-        let flags = payload.get_u8();
-        let teleport_id = read_varint(payload)?;
-        if !payload.has_remaining() {
-            return Err(DecodeError::InsufficientBytes { need: 1, have: 0 });
-        }
-        let dismount = payload.get_u8() != 0;
         Ok(Self {
-            x,
-            y,
-            z,
-            yaw,
-            pitch,
-            flags,
             teleport_id,
-            dismount,
+            x: payload.get_f64(),
+            y: payload.get_f64(),
+            z: payload.get_f64(),
+            dx: payload.get_f64(),
+            dy: payload.get_f64(),
+            dz: payload.get_f64(),
+            yaw: payload.get_f32(),
+            pitch: payload.get_f32(),
+            relatives: payload.get_i32(),
         })
     }
 
     pub fn encode(&self, buf: &mut BytesMut) -> Result<(), EncodeError> {
+        write_varint(buf, self.teleport_id)?;
         buf.put_f64(self.x);
         buf.put_f64(self.y);
         buf.put_f64(self.z);
+        buf.put_f64(self.dx);
+        buf.put_f64(self.dy);
+        buf.put_f64(self.dz);
         buf.put_f32(self.yaw);
         buf.put_f32(self.pitch);
-        buf.put_u8(self.flags);
-        write_varint(buf, self.teleport_id)?;
-        buf.put_u8(if self.dismount { 1 } else { 0 });
+        buf.put_i32(self.relatives);
         Ok(())
     }
 }
@@ -954,8 +965,10 @@ mod tests {
     #[test]
     fn test_set_default_spawn_position_roundtrip() {
         let packet = SetDefaultSpawnPosition {
+            dimension: "minecraft:overworld".into(),
             location: BlockPos::new(0, 64, 0),
-            angle: 90.0,
+            yaw: 90.0,
+            pitch: 0.0,
         };
         roundtrip(&packet, |p, b| p.encode(b), SetDefaultSpawnPosition::decode);
     }
@@ -963,14 +976,16 @@ mod tests {
     #[test]
     fn test_synchronize_player_position_roundtrip() {
         let packet = SynchronizePlayerPosition {
+            teleport_id: 1,
             x: 0.0,
             y: 64.0,
             z: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 0.0,
             yaw: 0.0,
             pitch: 0.0,
-            flags: 0,
-            teleport_id: 1,
-            dismount: false,
+            relatives: 0,
         };
         roundtrip(
             &packet,

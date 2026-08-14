@@ -10,7 +10,7 @@
 pub const HANDSHAKE: u32 = 0x00;
 
 pub const STATUS_RESPONSE: u32 = 0x00;
-pub const STATUS_PONG: u32 = 0x00;
+pub const STATUS_PONG: u32 = 0x01;
 pub const STATUS_REQUEST: u32 = 0x00;
 pub const STATUS_PING: u32 = 0x01;
 
