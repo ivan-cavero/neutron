@@ -6,6 +6,7 @@
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
+**F2d R42 — freeze worldgen + servidor jugable (login 26.2 + chunks reales)**  
 **F2d R41 — EAST maxX-3; 121/121 BB 1:1; roll 0.467; ALL 97.84%**  
 **F2d R40 — generateBox+placeSupport; roll 0.029 (catalyst sí); 116/121 BB; ALL 97.28%**  
 **F2d R39 — Crossing N/S/E; 116/121 BB 1:1 Y=-44; catalyst_roll 0.112; ALL 97.27%**  
@@ -254,15 +255,29 @@ neutron/
 | **block name match** | 🟡 | **98.41%** (sin cambio de volumen) |
 | sculk Y=-32..-17 | 🔴 | 135 vs 278; 15-radius del único parche no cubre |
 
-### Pendiente F2d R33+
+### F2d R42 (14 ago 2026) — freeze + join
+
+Worldgen **congelado** en R41. Documentado en `crates/neutron-worldgen/WORLDGEN.md`.
+El servidor habla protocolo 26.2 (Configuration + known packs) y sirve
+chunks de `ChunkGenerator` con IDs de bloque vanilla.
+
+| Pieza | Estado |
+|---|---|
+| Login 26.2 (config + registries + tags) | ✅ |
+| BlockId → block-state 26.2 | ✅ (reports del jar) |
+| Cache + hilo worldgen | ✅ |
+| Spawn = heightmap (0,0) | ✅ |
+| Cliente vanilla entra y ve el terreno | 🟡 verificar al levantar |
+
+### Pendiente F2d (parity 1:1 — no se toca en este freeze)
 
 | Componente | Estado | Detalle |
 |------------|--------|---------|
-| Extra andesite | ✅ | cerrado R29 |
-| TreeFeature extra+miss | 🔴 | air→dark_oak_leaves 240 |
-| ChargeCursor residual | 🔴 | 330/518; capa Y=-32; catalyst 0 vs 2 |
-| ore_emerald / magma | 🟡 | falta BlockId |
-| Canyon widthFactors exact | 🟡 | port inicial OK |
+| Mineshaft postProcess | 🔴 | raíles, cobweb, maybeBox, half-sphere |
+| TreeFeature extra+miss | 🔴 | air→dark_oak_leaves ~240 |
+| Sculk volume | 🔴 | 917 vs 518 (air mineshaft residual) |
+| BASE residual | 🟡 | ores posicionales |
+| Otras estructuras | 🔴 | villages, stronghold, … |
 
 ## Ver
 - `runs/run-032.md` — F2d R32: ChargeCursor shuffle 1:1 + capa Y=-32

@@ -1,18 +1,20 @@
-//! Neutron: Minimal functional Minecraft 26.2 server binary.
+//! Neutron: Minecraft 26.2 server that serves live worldgen chunks.
 //!
-//! This server accepts TCP connections from vanilla 26.2 clients (online-mode=false)
-//! and handles the full login/play handshake. Players join a flat creative world
-//! and can walk around, receive chunk data, and stay connected.
+//! Vanilla 26.2 client, online-mode=false. Terrain comes from
+//! `neutron-worldgen` (F2d, not 1:1). Creative + flight.
 //!
 //! Usage:
-//!   cargo run -p neutron-server -- [--port 25565] [--seed 0] [--view-distance 10]
+//!   cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
 
 mod chunk_sender;
 mod connection;
 mod login;
 mod play;
+mod protocol_data;
+mod protocol_ids;
 mod server;
 mod tick;
+mod world;
 
 use clap::Parser;
 use std::sync::Arc;
@@ -33,20 +35,20 @@ struct Args {
     #[arg(long, default_value_t = 25565)]
     port: u16,
 
-    /// World seed.
-    #[arg(long, default_value_t = 0)]
+    /// World seed (12345 = F2d bar world).
+    #[arg(long, default_value_t = 12345)]
     seed: i64,
 
     /// Server MOTD (message of the day).
-    #[arg(long, default_value = "A Neutron Server")]
+    #[arg(long, default_value = "Neutron — live worldgen")]
     motd: String,
 
     /// Maximum number of players.
     #[arg(long, default_value_t = 20)]
     max_players: i32,
 
-    /// View distance in chunks.
-    #[arg(long, default_value_t = 10)]
+    /// View distance in chunks (login sends radius 2 first; the rest streams).
+    #[arg(long, default_value_t = 8)]
     view_distance: i32,
 
     /// Whether to enforce online-mode (Mojang authentication).

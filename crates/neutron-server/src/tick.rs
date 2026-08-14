@@ -12,6 +12,7 @@ use tokio::sync::mpsc;
 
 use crate::chunk_sender;
 use crate::connection::{send_packet, OutgoingPacket};
+use crate::protocol_ids as pid;
 use crate::server::SharedServer;
 
 /// How many ticks between KeepAlive sends (30 seconds at 20 TPS).
@@ -63,7 +64,7 @@ pub async fn run_tick_loop(
 
 async fn send_keepalives(
     server: &SharedServer,
-    writer_tx: &mpsc::Sender<OutgoingPacket>,
+    _writer_tx: &mpsc::Sender<OutgoingPacket>,
     tick: u64,
 ) {
     let player_uuids: Vec<uuid::Uuid> = server.player_uuids().await;
@@ -76,7 +77,10 @@ async fn send_keepalives(
         let mut buf = bytes::BytesMut::with_capacity(8);
         buf.put_i64(keepalive_id);
 
-        if let Err(e) = send_packet(writer_tx, &codec, 0x26, &buf).await {
+        let Some(player_tx) = server.writer(uuid).await else {
+            continue;
+        };
+        if let Err(e) = send_packet(&player_tx, &codec, pid::PLAY_KEEP_ALIVE, &buf).await {
             tracing::warn!(uuid = %uuid, error = %e, "failed to send keepalive");
             continue;
         }
@@ -138,33 +142,33 @@ async fn check_timeouts(server: &SharedServer, tick: u64) {
 // Chunk sending for players who need more chunks
 // ---------------------------------------------------------------------------
 
-async fn send_pending_chunks(server: &SharedServer, writer_tx: &mpsc::Sender<OutgoingPacket>) {
+async fn send_pending_chunks(server: &SharedServer, _writer_tx: &mpsc::Sender<OutgoingPacket>) {
     let codec = neutron_protocol::codec::MinecraftCodec::new();
-    let seed = server.config.seed;
 
-    // Collect player info under read lock.
-    let player_info: Vec<(uuid::Uuid, i32, i32, i32, i32)> = {
+    let player_info: Vec<(uuid::Uuid, i32, i32)> = {
         let players = server.players.read().await;
         players
             .iter()
             .filter(|(_, p)| p.is_playing)
-            .map(|(&uuid, p)| (uuid, p.chunk_x, p.chunk_z, p.entity_id, 0))
+            .map(|(&uuid, p)| (uuid, p.chunk_x, p.chunk_z))
             .collect()
     };
 
-    for (uuid, chunk_x, chunk_z, _entity_id, _) in player_info {
+    for (uuid, chunk_x, chunk_z) in player_info {
+        let Some(player_tx) = server.writer(&uuid).await else {
+            continue;
+        };
         let view_dist = server.config.view_distance;
         let needed_chunks = chunk_sender::spiral_chunks(chunk_x, chunk_z, view_dist);
 
         let mut sent_this_tick = 0;
-        let mut chunks_to_remove = Vec::new();
+        let mut marked = Vec::new();
 
         for &(cx, cz) in &needed_chunks {
             if sent_this_tick >= CHUNKS_PER_TICK {
                 break;
             }
 
-            // Check if this chunk was already sent.
             let already_sent = {
                 let players = server.players.read().await;
                 players
@@ -172,42 +176,31 @@ async fn send_pending_chunks(server: &SharedServer, writer_tx: &mpsc::Sender<Out
                     .map(|p| p.sent_chunks.contains(&(cx, cz)))
                     .unwrap_or(true)
             };
-
             if already_sent {
                 continue;
             }
 
-            // Generate and send the chunk.
-            let chunk_data = chunk_sender::build_worldgen_chunk(cx, cz, seed);
-            let light_data = chunk_sender::build_full_light();
-
-            let mut packet_buf =
-                bytes::BytesMut::with_capacity(chunk_data.len() + light_data.len() + 64);
+            let encoded = server.world.chunk_async(cx, cz).await;
+            let mut packet_buf = bytes::BytesMut::with_capacity(encoded.body.len() + 8);
             packet_buf.put_i32(cx);
             packet_buf.put_i32(cz);
-            neutron_protocol::types::write_varint(&mut packet_buf, chunk_data.len() as i32)
-                .expect("varint write");
-            packet_buf.put_slice(&chunk_data);
-            neutron_protocol::types::write_varint(&mut packet_buf, light_data.len() as i32)
-                .expect("varint write");
-            packet_buf.put_slice(&light_data);
+            packet_buf.put_slice(&encoded.body);
 
-            if send_packet(writer_tx, &codec, 0x27, &packet_buf)
+            if send_packet(&player_tx, &codec, pid::PLAY_LEVEL_CHUNK, &packet_buf)
                 .await
                 .is_err()
             {
                 break;
             }
 
-            chunks_to_remove.push((cx, cz));
+            marked.push((cx, cz));
             sent_this_tick += 1;
         }
 
-        // Mark chunks as sent.
-        if !chunks_to_remove.is_empty() {
+        if !marked.is_empty() {
             if let Some(player) = server.players.write().await.get_mut(&uuid) {
-                for (cx, cz) in chunks_to_remove {
-                    player.sent_chunks.insert((cx, cz));
+                for pos in marked {
+                    player.sent_chunks.insert(pos);
                 }
             }
         }

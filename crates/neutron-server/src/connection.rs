@@ -5,15 +5,17 @@
 //! The writer task receives packet bytes from a channel and writes them
 //! to the TCP stream.
 
-use bytes::{Buf, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use neutron_protocol::codec::MinecraftCodec;
-use neutron_protocol::types::read_varint;
+use neutron_protocol::types::{read_varint, write_varint};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 
-use crate::login::handle_login_packet;
+use crate::login::{handle_config_packet, handle_login_packet};
 use crate::play::handle_play_packet;
+use crate::protocol_data;
+use crate::protocol_ids as pid;
 use crate::server::SharedServer;
 
 // ---------------------------------------------------------------------------
@@ -25,8 +27,12 @@ use crate::server::SharedServer;
 pub enum ConnectionState {
     /// Waiting for the Handshake packet.
     Handshake,
-    /// Login sequence (online-mode=false: Handshake -> LoginStart -> LoginSuccess).
+    /// Server-list ping.
+    Status,
+    /// Login sequence (LoginStart → LoginFinished → Login Acknowledged).
     Login,
+    /// 26.2 configuration (known packs, registries, tags).
+    Configuration,
     /// Main gameplay.
     Play,
 }
@@ -187,11 +193,29 @@ async fn process_packet(
         ConnectionState::Handshake => {
             handle_handshake(server, tx, codec, packet_id, payload, addr).await
         }
+        ConnectionState::Status => handle_status(server, tx, codec, packet_id, payload, addr).await,
         ConnectionState::Login => {
-            let result =
+            let to_config =
                 handle_login_packet(server, tx, codec, packet_id, payload, addr, player_uuid)
                     .await?;
-            if result {
+            if to_config {
+                Ok(Some(ConnectionState::Configuration))
+            } else {
+                Ok(None)
+            }
+        }
+        ConnectionState::Configuration => {
+            let to_play = handle_config_packet(
+                server,
+                tx,
+                codec,
+                packet_id,
+                payload,
+                addr,
+                *player_uuid,
+            )
+            .await?;
+            if to_play {
                 Ok(Some(ConnectionState::Play))
             } else {
                 Ok(None)
@@ -252,15 +276,8 @@ async fn handle_handshake(
     );
 
     match next_state {
-        1 => {
-            // Status (server list ping) — respond with basic info.
-            tracing::debug!(addr = %addr, "status request");
-            Ok(None)
-        }
-        2 => {
-            // Login — transition to Login state.
-            Ok(Some(ConnectionState::Login))
-        }
+        1 => Ok(Some(ConnectionState::Status)),
+        2 => Ok(Some(ConnectionState::Login)),
         _ => {
             tracing::warn!(
                 addr = %addr,
@@ -269,6 +286,51 @@ async fn handle_handshake(
             );
             Ok(None)
         }
+    }
+}
+
+async fn handle_status(
+    server: &SharedServer,
+    tx: &mpsc::Sender<OutgoingPacket>,
+    codec: &mut MinecraftCodec,
+    packet_id: u32,
+    payload: &mut Bytes,
+    addr: std::net::SocketAddr,
+) -> anyhow::Result<Option<ConnectionState>> {
+    match packet_id {
+        pid::STATUS_REQUEST => {
+            let online = server.player_count().await as i32;
+            let motd = server
+                .config
+                .motd
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"");
+            let json = format!(
+                r#"{{"version":{{"name":"26.2","protocol":{}}},"players":{{"max":{},"online":{}}},"description":{{"text":"{}"}}}}"#,
+                protocol_data::PROTOCOL_VERSION,
+                server.config.max_players,
+                online,
+                motd,
+            );
+            let mut buf = BytesMut::new();
+            let bytes = json.as_bytes();
+            write_varint(&mut buf, bytes.len() as i32)?;
+            buf.put_slice(bytes);
+            send_packet(tx, codec, pid::STATUS_RESPONSE, &buf).await?;
+            tracing::debug!(addr = %addr, "sent status response");
+            Ok(None)
+        }
+        pid::STATUS_PING => {
+            let mut buf = BytesMut::new();
+            if payload.remaining() >= 8 {
+                buf.put_i64(payload.get_i64());
+            } else {
+                buf.put_i64(0);
+            }
+            send_packet(tx, codec, pid::STATUS_PONG, &buf).await?;
+            Ok(None)
+        }
+        _ => Ok(None),
     }
 }
 

@@ -16,18 +16,22 @@ use std::net::SocketAddr;
 use tokio::sync::mpsc;
 
 use crate::connection::send_packet;
+use crate::protocol_ids as pid;
 use crate::server::SharedServer;
 
 // ---------------------------------------------------------------------------
 // Serverbound play packet IDs
 // ---------------------------------------------------------------------------
-const SB_KEEPALIVE_RESPONSE: u32 = 0x18;
-const SB_PLAYER_POSITION: u32 = 0x17;
-const SB_PLAYER_ROTATION: u32 = 0x19;
-const SB_CHAT_COMMAND: u32 = 0x04;
-const SB_CLIENT_STATUS: u32 = 0x07;
-const SB_SET_PLAYER_ABILITIES: u32 = 0x1E;
-const SB_TELEPORT_CONFIRM: u32 = 0x00;
+
+const SB_KEEPALIVE_RESPONSE: u32 = pid::PLAY_SB_KEEP_ALIVE;
+const SB_PLAYER_POSITION: u32 = pid::PLAY_SB_MOVE_POS;
+const SB_PLAYER_POS_ROT: u32 = pid::PLAY_SB_MOVE_POS_ROT;
+const SB_PLAYER_ROTATION: u32 = pid::PLAY_SB_MOVE_ROT;
+const SB_CHAT_COMMAND: u32 = pid::PLAY_SB_CHAT_COMMAND;
+const SB_CLIENT_STATUS: u32 = pid::PLAY_SB_CLIENT_COMMAND;
+const SB_SET_PLAYER_ABILITIES: u32 = pid::PLAY_SB_ABILITIES;
+const SB_TELEPORT_CONFIRM: u32 = pid::PLAY_SB_ACCEPT_TELEPORT;
+const SB_CHUNK_BATCH: u32 = pid::PLAY_SB_CHUNK_BATCH;
 
 // ---------------------------------------------------------------------------
 // Handle play packets
@@ -46,7 +50,11 @@ pub async fn handle_play_packet(
             handle_keepalive_response(server, player_uuid, payload, addr).await
         }
         SB_PLAYER_POSITION => handle_player_position(server, player_uuid, payload, addr).await,
+        SB_PLAYER_POS_ROT => {
+            handle_player_pos_and_rotation(server, player_uuid, payload, addr).await
+        }
         SB_PLAYER_ROTATION => handle_player_rotation(server, player_uuid, payload, addr).await,
+        SB_CHUNK_BATCH => Ok(()),
         SB_CHAT_COMMAND => handle_chat_command(server, tx, player_uuid, payload, addr).await,
         SB_CLIENT_STATUS => handle_client_status(server, tx, player_uuid, payload, addr).await,
         SB_SET_PLAYER_ABILITIES => handle_set_player_abilities(player_uuid, payload, addr).await,
@@ -204,8 +212,7 @@ async fn handle_chat_command(
     buf.put_slice(json_bytes);
     buf.put_u8(0); // overlay = false
 
-    // SystemChatMessage packet ID: 0x67
-    send_packet(tx, &codec, 0x67, &buf).await?;
+    send_packet(tx, &codec, pid::PLAY_SYSTEM_CHAT, &buf).await?;
 
     Ok(())
 }

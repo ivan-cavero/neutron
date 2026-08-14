@@ -2,7 +2,7 @@
 
 Servidor de Minecraft Java Edition reimplementado desde cero en Rust. Multiplataforma (Windows/Linux/macOS x86-64/ARM64), paridad 1:1 con vanilla, plugins WASM/Lua seguros por construcción, y `main` siempre en la última versión de Minecraft.
 
-**Estado**: PRE-ALPHA · Fase F0 (ver STATE.md) · 5 ago 2026
+**Estado**: PRE-ALPHA · F2d worldgen 97.84 % + servidor jugable · 14 ago 2026
 
 ## Cómo orientarte (qué leer cuándo)
 
@@ -49,6 +49,8 @@ neutron/
 ## Quick start (dev)
 
 ```bash
-cargo run --release -p neutron-cli
-# Conecta con un cliente vanilla 26.2 a localhost:25565 (online-mode=false en dev)
+# Servidor jugable (worldgen real, seed 12345, no 1:1 todavía)
+cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
+# Cliente vanilla 26.2 → localhost:25565  (online-mode=false, Creative + vuelo)
+# Estado de worldgen y gaps: crates/neutron-worldgen/WORLDGEN.md
 ```

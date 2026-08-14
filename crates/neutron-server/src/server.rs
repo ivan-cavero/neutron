@@ -5,7 +5,10 @@ use std::sync::atomic::{AtomicI32, AtomicU64};
 use std::sync::Arc;
 use std::time::Instant;
 
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, RwLock};
+
+use crate::connection::OutgoingPacket;
+use crate::world::WorldgenHandle;
 
 // ---------------------------------------------------------------------------
 // ServerConfig
@@ -34,10 +37,10 @@ impl Default for ServerConfig {
     fn default() -> Self {
         Self {
             port: 25565,
-            seed: 0,
-            motd: "A Neutron Server".to_string(),
+            seed: 12345,
+            motd: "Neutron — live worldgen".to_string(),
             max_players: 20,
-            view_distance: 10,
+            view_distance: 8,
             online_mode: false,
             compression_threshold: 256,
         }
@@ -97,19 +100,36 @@ pub struct ServerState {
     next_entity_id: AtomicI32,
     /// Server start time.
     pub start_time: Instant,
+    /// Worldgen worker (one generator + chunk cache).
+    pub world: WorldgenHandle,
+    /// Per-player packet writers so the tick loop can stream chunks.
+    writers: RwLock<HashMap<uuid::Uuid, mpsc::Sender<OutgoingPacket>>>,
 }
 
 impl ServerState {
     /// Create a new ServerState.
     pub fn new(config: ServerConfig) -> Self {
         let start_time = Instant::now();
+        let world = WorldgenHandle::start(config.seed);
         Self {
             config,
             players: RwLock::new(HashMap::new()),
             tick_count: AtomicU64::new(0),
             next_entity_id: AtomicI32::new(1),
             start_time,
+            world,
+            writers: RwLock::new(HashMap::new()),
         }
+    }
+
+    /// Bind this player's TCP writer so the tick loop can send chunks.
+    pub async fn register_writer(&self, uuid: uuid::Uuid, tx: mpsc::Sender<OutgoingPacket>) {
+        self.writers.write().await.insert(uuid, tx);
+    }
+
+    /// Writer for a connected player, if still online.
+    pub async fn writer(&self, uuid: &uuid::Uuid) -> Option<mpsc::Sender<OutgoingPacket>> {
+        self.writers.read().await.get(uuid).cloned()
     }
 
     /// Allocate a new entity ID.
@@ -131,7 +151,7 @@ impl ServerState {
             uuid,
             username: username.clone(),
             x: 0.0,
-            y: 65.0, // spawn above ground
+            y: 80.0, // overwritten from heightmap during play sequence
             z: 0.0,
             chunk_x: 0,
             chunk_z: 0,
@@ -154,6 +174,7 @@ impl ServerState {
 
     /// Remove a player.
     pub async fn remove_player(&self, uuid: &uuid::Uuid) -> Option<PlayerState> {
+        self.writers.write().await.remove(uuid);
         let player = self.players.write().await.remove(uuid);
         if let Some(ref p) = player {
             tracing::info!(
