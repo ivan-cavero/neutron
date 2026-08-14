@@ -280,5 +280,7 @@ fn block_to_name(b: BlockId) -> &'static str {
         BlockId::LeafLitter => "minecraft:leaf_litter",
         BlockId::DarkOakLog => "minecraft:dark_oak_log",
         BlockId::DarkOakLeaves => "minecraft:dark_oak_leaves",
+        BlockId::OakPlanks => "minecraft:oak_planks",
+        BlockId::OakFence => "minecraft:oak_fence",
     }
 }

@@ -40,6 +40,9 @@ PASS / FAIL (parcial) / BLOCKED
 
 | Run | Fase | Resultado | Fecha |
 |---|---|---|---|
+| run-040 | F2d R40 | FAIL (bar 1:1) · generateBox; roll 0.029; ALL 97.28% | 14 ago 2026 |
+| run-039 | F2d R39 | FAIL (bar 1:1) · 116/121 BB; roll 0.996→0.112 (catalyst sí); ALL 97.27% | 14 ago 2026 |
+| run-038 | F2d R38 | FAIL (bar 1:1) · mineshaft (4,-1) 4 piezas XZ 1:1; roll sigue 0.996 | 14 ago 2026 |
 | run-037 | F2d R37 | FAIL (bar 1:1) · 98.48%; roll 0.996→0.30 si se abre la mineshaft vecina | 14 ago 2026 |
 | run-036 | F2d R36 | FAIL (bar 1:1) · **98.48%**; ChargeCursor 1:1 cueva; cat 2=2 | 14 ago 2026 |
 | run-035 | F2d R35 | FAIL (bar 1:1) · 98.35%; plano 1:1; sculk 643/518; Y=-32 213 | 14 ago 2026 |

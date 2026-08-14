@@ -6,6 +6,9 @@
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
+**F2d R40 — generateBox+placeSupport; roll 0.029 (catalyst sí); 116/121 BB; ALL 97.28%**  
+**F2d R39 — Crossing N/S/E; 116/121 BB 1:1 Y=-44; catalyst_roll 0.112; ALL 97.27%**  
+**F2d R38 — Mineshaft start (4,-1) + 4 piezas XZ 1:1; árbol diverge en #4; roll 0.996; ALL 98.48%**  
 **F2d R37 — HORIZONTAL N,E,S,W; primer parche roll 0.996 por mineshaft en (5,-2)/(5,-1); ALL 98.48%**  
 **F2d R36 — spreadAll snapshot; ChargeCursor 1:1 cueva+plano; sculk 446/518 cat 2=2; ALL 98.48%**  
 **F2d R35 — ChargeCursor 1:1 suelo plano (166/174/roll 0.821); sculk 382→643/518; Y=-32 213/278; 98.35%**  

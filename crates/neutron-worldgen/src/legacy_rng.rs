@@ -58,6 +58,11 @@ impl LegacyRandom {
         ((a << 27).wrapping_add(b) as f64) * (1.0 / ((1u64 << 53) as f64))
     }
 
+    /// `RandomSource.nextBoolean` / `java.util.Random.nextBoolean`: `next(1) != 0`.
+    pub fn next_boolean(&mut self) -> bool {
+        self.next(1) != 0
+    }
+
     /// `WorldgenRandom.setLargeFeatureSeed(seed, chunkX, chunkZ)`.
     pub fn set_large_feature_seed(&mut self, seed: i64, chunk_x: i32, chunk_z: i32) {
         self.set_seed(seed);

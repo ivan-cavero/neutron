@@ -78,6 +78,8 @@ pub enum BlockId {
     LeafLitter = 81,
     DarkOakLog = 82,
     DarkOakLeaves = 83,
+    OakPlanks = 84,
+    OakFence = 85,
 }
 
 impl BlockId {
@@ -154,6 +156,8 @@ impl BlockId {
             81 => Some(Self::LeafLitter),
             82 => Some(Self::DarkOakLog),
             83 => Some(Self::DarkOakLeaves),
+            84 => Some(Self::OakPlanks),
+            85 => Some(Self::OakFence),
             _ => None,
         }
     }
@@ -237,6 +241,8 @@ impl BlockId {
             "dark_oak_leaves" => Some(Self::DarkOakLeaves),
             "oak_log" => Some(Self::OakLog),
             "oak_leaves" => Some(Self::OakLeaves),
+            "oak_planks" => Some(Self::OakPlanks),
+            "oak_fence" => Some(Self::OakFence),
             _ => None,
         }
     }

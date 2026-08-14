@@ -22,6 +22,7 @@ pub mod feature_rng;
 pub mod features;
 pub mod generator;
 pub mod legacy_rng;
+pub mod mineshaft;
 pub mod multiface_spreader;
 pub mod noise;
 pub mod ore_vein;

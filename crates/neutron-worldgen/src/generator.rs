@@ -89,6 +89,8 @@ impl ChunkGenerator {
 
         // Classic carvers (caves + canyon).
         carvers::apply_carvers_region(&mut region, self.state.seed);
+        // FEATURES: structure pieces (mineshafts) before biome decoration.
+        crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
         // Step 6 — ores (dedicated OreFeature port).
         features::apply_underground_ores_region(&mut region, self.state.seed);
         // Step 7 — sculk_vein + sculk_patch (CFR MultifaceSpreader + ChargeCursor).
@@ -120,6 +122,7 @@ impl ChunkGenerator {
             }
         }
         crate::carvers::apply_carvers_region(&mut region, self.state.seed);
+        crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
         crate::features::apply_underground_ores_region(&mut region, self.state.seed);
         region
     }
