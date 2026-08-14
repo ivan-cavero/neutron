@@ -1,24 +1,16 @@
-//! Flat chunk generation and chunk data encoding.
+//! Chunk data encoding for the 26.2 `level_chunk_with_light` packet.
 //!
-//! Generates flat (superflat) Minecraft chunks in the exact binary format
-//! expected by the client's ChunkDataAndUpdateLight packet.
+//! Playable path (`encode_playable_chunk`) remaps internal `BlockId`s to
+//! vanilla 26.2 block-state IDs and uses the 26.2 wire layout:
+//! heightmap map + section bytes + empty block-entity list + BitSet light.
 //!
-//! Flat world layout:
-//!   y = -64 to -61: bedrock (block_state_id = 33)
-//!   y = -60 to 3:   stone (block_state_id = 1)
-//!   y = 4:           dirt (block_state_id = 3)
-//!   y = 5:           grass_block[snowy=false] (block_state_id = 8)
-//!   y = 6 to 319:   air (block_state_id = 0)
-//!
-//! The chunk format uses the 1.18+ section-based format with:
-//! - 24 sections per chunk (y = -64 to 320, each 16 blocks tall)
-//! - Block state palette per section (bits_per_block encoding)
-//! - Biome palette per section
-//! - Heightmaps as a LongArray in NBT
+//! The older flat-world helpers stay for unit tests of palette packing.
 
 use bytes::{BufMut, BytesMut};
 use neutron_protocol::types::write_varint;
-use neutron_worldgen::ChunkGenerator;
+use neutron_worldgen::{ChunkGenerator, GeneratedChunk};
+
+use crate::protocol_data;
 
 use ussr_nbt::mutf8::MString;
 use ussr_nbt::owned::{Compound, Nbt, Tag};
@@ -47,73 +39,66 @@ const BIOME_PLAINS: i32 = 0;
 // Public API
 // ---------------------------------------------------------------------------
 
-/// Generate a chunk using the worldgen crate's terrain generation.
-///
-/// This produces real terrain with height variation, biomes, caves, and
-/// biome-specific surface layers (grass, sand, etc.) instead of flat chunks.
-///
-/// Returns the raw bytes for the ChunkDataAndUpdateLight packet's chunk data
-/// portion (heightmaps + sections + biomes), same format as `build_flat_chunk`.
-pub fn build_worldgen_chunk(chunk_x: i32, chunk_z: i32, seed: i64) -> Vec<u8> {
-    let gen = ChunkGenerator::new(seed);
-    let chunk = gen.generate_chunk(chunk_x, chunk_z);
+/// Encode a generated chunk for the 26.2 play packet (everything after X/Z).
+pub fn encode_playable_chunk(chunk: &GeneratedChunk) -> Vec<u8> {
+    let mut buf = BytesMut::with_capacity(16_384);
 
-    let mut buf = BytesMut::with_capacity(8192);
+    write_heightmaps_26(&mut buf, &chunk.heightmap);
 
-    // 1. Heightmaps NBT
-    let heightmaps_nbt = build_heightmaps_from_chunk(&chunk.heightmap);
-    buf.put_slice(&heightmaps_nbt);
-
-    // 2. Section data (24 sections, y=-64 to y=320)
-    let mut non_air_counts = [0i16; SECTIONS_PER_CHUNK as usize];
-
+    let mut sections = BytesMut::with_capacity(12_288);
     for section_idx in 0..SECTIONS_PER_CHUNK {
         let y_start = MIN_Y + section_idx * 16;
-
-        // Extract blocks for this section from the flat chunk data.
-        // Index = (y - WORLD_BOTTOM) * 16 * 16 + z * 16 + x
-        // Section `section_idx` covers y_start..y_start+16
         let mut section_blocks = Vec::with_capacity(4096);
+        let mut non_air = 0i16;
         for local_y in 0..16i32 {
             let world_y = y_start + local_y;
-            let idx_base = (world_y - (-64)) as usize * 16 * 16;
-            for lz in 0..16u32 {
-                for lx in 0..16u32 {
-                    let block_id = chunk.blocks[idx_base + (lz as usize) * 16 + (lx as usize)];
-                    if block_id != 0 {
-                        non_air_counts[section_idx as usize] += 1;
+            let idx_base = (world_y - MIN_Y) as usize * 16 * 16;
+            for lz in 0..16usize {
+                for lx in 0..16usize {
+                    let internal = chunk.blocks[idx_base + lz * 16 + lx];
+                    if internal != 0 {
+                        non_air += 1;
                     }
-                    section_blocks.push(block_id as i32);
+                    section_blocks.push(protocol_data::block_state_id(internal));
                 }
             }
         }
 
-        // Extract biomes for this section.
-        // Biomes index = (section * 4 + bz/4) * 4 + bx/4, stored as Vec<u8>
         let biome_base = (section_idx as usize) * 16;
         let mut section_biomes = Vec::with_capacity(64);
-        for bz4 in 0..4u32 {
-            for bx4 in 0..4u32 {
-                let biome_id = chunk.biomes[biome_base + (bz4 as usize) * 4 + (bx4 as usize)];
-                section_biomes.push(biome_id as i32);
+        for bz4 in 0..4usize {
+            for bx4 in 0..4usize {
+                let internal = chunk.biomes[biome_base + bz4 * 4 + bx4];
+                section_biomes.push(protocol_data::biome_protocol_id(internal));
             }
         }
 
-        // Block count
-        buf.put_i16(non_air_counts[section_idx as usize]);
-
-        // Block palette + data
-        encode_worldgen_section(&mut buf, &section_blocks);
-
-        // Biome palette + data
-        encode_worldgen_biome_section(&mut buf, &section_biomes);
+        sections.put_i16(non_air);
+        encode_worldgen_section(&mut sections, &section_blocks);
+        encode_worldgen_biome_section(&mut sections, &section_biomes);
     }
 
-    // 3. Block entity count = 0
-    write_varint(&mut buf, 0).expect("varint write");
+    write_varint(&mut buf, sections.len() as i32).expect("varint");
+    buf.put_slice(&sections);
 
+    // Empty block-entity list (Prefixed Array).
+    write_varint(&mut buf, 0).expect("varint");
+
+    write_full_sky_light_26(&mut buf);
     buf.to_vec()
 }
+
+/// Generate a chunk using the worldgen crate's terrain generation.
+///
+/// Used by unit tests. The live server goes through `WorldgenHandle` so the
+/// expensive `ChunkGenerator` is built once.
+pub fn build_worldgen_chunk(chunk_x: i32, chunk_z: i32, seed: i64) -> Vec<u8> {
+    let gen = ChunkGenerator::new(seed);
+    let chunk = gen.generate_chunk(chunk_x, chunk_z);
+    encode_playable_chunk(&chunk)
+}
+
+
 
 /// Generate a flat chunk's data payload (heightmaps + sections + biomes).
 ///
@@ -238,6 +223,67 @@ pub fn spiral_chunks(center_x: i32, center_z: i32, radius: i32) -> Vec<(i32, i32
     }
 
     chunks
+}
+
+// ---------------------------------------------------------------------------
+// 26.2 wire helpers (heightmaps map + BitSet light)
+// ---------------------------------------------------------------------------
+
+/// `Heightmap.Types.MOTION_BLOCKING` protocol id (enum declaration order).
+const HEIGHTMAP_MOTION_BLOCKING: i32 = 4;
+
+/// 24 world sections + 1 below + 1 above.
+const LIGHT_SECTION_COUNT: usize = 26;
+
+fn write_heightmaps_26(buf: &mut BytesMut, heightmap: &[i16]) {
+    // Map size = 1 (only MOTION_BLOCKING).
+    write_varint(buf, 1).expect("varint");
+    write_varint(buf, HEIGHTMAP_MOTION_BLOCKING).expect("varint");
+
+    // 256 entries, 9 bits each, packed 7 per long → 37 longs.
+    let bits_per_entry = 9;
+    let mask: i64 = (1i64 << bits_per_entry) - 1;
+    let entries_per_long = 64 / bits_per_entry;
+    let total_longs = (256 + entries_per_long - 1) / entries_per_long;
+
+    write_varint(buf, total_longs as i32).expect("varint");
+    for long_idx in 0..total_longs {
+        let mut long_val: i64 = 0;
+        for entry in 0..entries_per_long {
+            let global_entry = long_idx * entries_per_long + entry;
+            if global_entry >= 256 {
+                break;
+            }
+            let h = i64::from(heightmap.get(global_entry).copied().unwrap_or(-64)) + 1;
+            let clamped = h.clamp(0, 383);
+            long_val |= (clamped & mask) << (entry * bits_per_entry);
+        }
+        buf.put_i64(long_val);
+    }
+}
+
+fn write_bitset(buf: &mut BytesMut, bits: u64, long_count: i32) {
+    write_varint(buf, long_count).expect("varint");
+    for i in 0..long_count {
+        buf.put_i64(if i == 0 { bits as i64 } else { 0 });
+    }
+}
+
+fn write_full_sky_light_26(buf: &mut BytesMut) {
+    // All 26 light sections present for sky; none for block.
+    let sky_bits: u64 = (1u64 << LIGHT_SECTION_COUNT) - 1;
+    write_bitset(buf, sky_bits, 1);
+    write_bitset(buf, 0, 1); // block mask empty
+    write_bitset(buf, 0, 1); // empty sky mask
+    write_bitset(buf, 0, 1); // empty block mask
+
+    let light_array = vec![0xFFu8; 2048];
+    write_varint(buf, LIGHT_SECTION_COUNT as i32).expect("varint");
+    for _ in 0..LIGHT_SECTION_COUNT {
+        write_varint(buf, light_array.len() as i32).expect("varint");
+        buf.put_slice(&light_array);
+    }
+    write_varint(buf, 0).expect("varint"); // no block-light arrays
 }
 
 // ---------------------------------------------------------------------------
@@ -718,5 +764,14 @@ mod tests {
         let data2 = build_worldgen_chunk(1, 0, 42);
         // Different chunk positions should produce different data (terrain varies).
         assert_ne!(data1, data2);
+    }
+
+    #[test]
+    fn test_protocol_block_ids_are_vanilla_26_2() {
+        assert_eq!(crate::protocol_data::block_state_id(0), 0); // air
+        assert_eq!(crate::protocol_data::block_state_id(1), 1); // stone
+        assert_eq!(crate::protocol_data::block_state_id(12), 9); // grass_block[snowy=false]
+        assert_eq!(crate::protocol_data::block_state_id(33), 85); // bedrock
+        assert_eq!(crate::protocol_data::biome_protocol_id(1), 1); // plains
     }
 }
