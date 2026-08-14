@@ -453,8 +453,9 @@ fn add_corridor_children(
         (Dir::West, 2) => (bb.min_x, bb.min_z - 1, Dir::North),
         (Dir::West, _) => (bb.min_x, bb.max_z + 1, Dir::South),
         (Dir::East, 0 | 1) => (bb.max_x + 1, bb.min_z, dir),
-        (Dir::East, 2) => (bb.max_x, bb.min_z - 1, Dir::North),
-        (Dir::East, _) => (bb.max_x, bb.max_z + 1, Dir::South),
+        // javap: maxX - 3 (corridor is 3 wide; spawn at west edge of the 3-block strip)
+        (Dir::East, 2) => (bb.max_x - 3, bb.min_z - 1, Dir::North),
+        (Dir::East, _) => (bb.max_x - 3, bb.max_z + 1, Dir::South),
     };
     let _ = generate_and_add(start_idx, pieces, rng, x, y, z, d, depth);
     if depth < 8 {

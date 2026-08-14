@@ -6,6 +6,7 @@
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
+**F2d R41 — EAST maxX-3; 121/121 BB 1:1; roll 0.467; ALL 97.84%**  
 **F2d R40 — generateBox+placeSupport; roll 0.029 (catalyst sí); 116/121 BB; ALL 97.28%**  
 **F2d R39 — Crossing N/S/E; 116/121 BB 1:1 Y=-44; catalyst_roll 0.112; ALL 97.27%**  
 **F2d R38 — Mineshaft start (4,-1) + 4 piezas XZ 1:1; árbol diverge en #4; roll 0.996; ALL 98.48%**  

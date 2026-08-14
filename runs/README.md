@@ -40,6 +40,7 @@ PASS / FAIL (parcial) / BLOCKED
 
 | Run | Fase | Resultado | Fecha |
 |---|---|---|---|
+| run-041 | F2d R41 | FAIL (bar 1:1) · 121/121 BB 1:1; roll 0.467; ALL 97.84% | 14 ago 2026 |
 | run-040 | F2d R40 | FAIL (bar 1:1) · generateBox; roll 0.029; ALL 97.28% | 14 ago 2026 |
 | run-039 | F2d R39 | FAIL (bar 1:1) · 116/121 BB; roll 0.996→0.112 (catalyst sí); ALL 97.27% | 14 ago 2026 |
 | run-038 | F2d R38 | FAIL (bar 1:1) · mineshaft (4,-1) 4 piezas XZ 1:1; roll sigue 0.996 | 14 ago 2026 |
