@@ -280,6 +280,8 @@ chunks de `ChunkGenerator` con IDs de bloque vanilla.
 | Otras estructuras | 🔴 | villages, stronghold, … |
 
 ## Ver
+- `crates/neutron-worldgen/WORLDGEN.md` — freeze F2d: métricas, gaps, cómo entrar
+- `runs/run-042.md` — servidor 26.2 + chunks reales
 - `runs/run-032.md` — F2d R32: ChargeCursor shuffle 1:1 + capa Y=-32
 - `runs/run-031.md` — F2d R31: sculk centro primero
 - `runs/run-030.md` — F2d R30: OCEAN_FLOOR blocksMotion
