@@ -1,6 +1,8 @@
 //! Redstone simulation for Minecraft 26.2.
-//! Implements wire, torches, levers, doors, comparators, repeaters,
-//! observers, hoppers, TNT, pistons, and quasi-connectivity.
+//!
+//! Wire, torches, levers, doors, comparators, repeaters, observers, hoppers,
+//! TNT, pistons, and Java quasi-connectivity. Isolated test engine — the
+//! live server does not tick redstone yet.
 
 use std::collections::{HashMap, VecDeque};
 

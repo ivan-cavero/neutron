@@ -1,9 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// level.dat reading and writing.
-//
-// The file is gzip-compressed NBT. The root compound contains a single
-// child called "Data" which holds all the world settings.
+//! `level.dat`: gzip NBT with a root `Data` compound of world settings.
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::fs;
 use std::path::Path;

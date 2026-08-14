@@ -1,14 +1,12 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// MineshaftStructure + MineshaftPieces for Minecraft 26.2.
-//
-// javap:
-//   StructurePlacement.legacyProbabilityReducerWithDouble (legacy_type_3)
-//   Structure.GenerationContext.makeRandom = LegacyRandom + setLargeFeatureSeed
-//   MineshaftStructure.findGenerationPoint / generatePiecesAndAdjust
-//   MineshaftPieces createRandomShaftPiece / generateAndAddPiece
-//   MineShaftRoom / Corridor / Crossing / Stairs
-// datapack: worldgen/structure_set/mineshafts.json (spacing 1, frequency 0.004)
+//! `MineshaftStructure` + `MineshaftPieces` for Minecraft 26.2.
+//!
+//! Placement uses `legacyProbabilityReducerWithDouble` (`legacy_type_3`).
+//! `GenerationContext.makeRandom` is LegacyRandom + `setLargeFeatureSeed`.
+//!
+//! Pieces: room, corridor, crossing, stairs. Datapack set
+//! `worldgen/structure_set/mineshafts.json` (spacing 1, frequency 0.004).
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::legacy_rng::LegacyRandom;
 use crate::region_buf::RegionBuf;

@@ -1,7 +1,8 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Vanilla 26.2 `BiomeManager.getBiome(BlockPos)`: 4-block voronoi fuzz.
-// `obfuscateSeed(worldSeed)` is Guava SHA-256 of the little-endian long.
+//! Vanilla 26.2 `BiomeManager.getBiome(BlockPos)`: 4-block voronoi fuzz.
+//!
+//! `obfuscateSeed(worldSeed)` is Guava SHA-256 of the little-endian `long`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::biome_source::{climate_at_block, find_biome};
 use crate::density::DensityEnv;

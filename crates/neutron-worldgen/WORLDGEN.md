@@ -68,15 +68,16 @@ Ir a chunk `(6, -2)` (aprox. x=96, z=-32) para ver mineshaft + deep dark.
 
 | Archivo | Rol |
 |---|---|
-| `generator.rs` | Orquesta el chunk (3×3 region + features) |
-| `density.rs` / `worldgen.rs` | Noise router + markers |
+| `generator.rs` | Orquesta el chunk (3×3 region + features). `Send` (`Arc` density). |
+| `biome/` | Multi-noise + voronoi. Params en `data/biome_params.bin` (7498 puntos). |
+| `density.rs` / `worldgen.rs` | Noise router + markers (`DF = Arc<DFNode>`) |
 | `surface.rs` / `surface_rules.rs` | `BlockId` interno + surface JSON |
 | `carvers.rs` | Cuevas / cañón |
 | `mineshaft.rs` | Structure pieces 26.2 |
 | `features.rs` | OreFeature + rarity |
 | `sculk.rs` | ChargeCursor + vein |
 | `feature_dispatch.rs` / `tree.rs` / `vegetation.rs` | Step 9 |
-| `examples/` | Sondas de parity (no son el binario) |
+| `examples/` | Sondas de parity (`autoexamples = false`; solo 6 se compilán por defecto) |
 
 `BlockId` es **interno** (Air=0, Stone=1, Dirt=10, …). El servidor lo traduce a
 block-state IDs de protocolo 26.2 en `neutron-server`.

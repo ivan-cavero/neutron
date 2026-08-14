@@ -1,5 +1,8 @@
-// Auto-generated data module: embeds the vanilla 26.2 datapack worldgen JSONs.
-// Source: tools/vanilla-extract/server-classes/data/minecraft/worldgen/
+//! Embedded vanilla 26.2 datapack worldgen JSONs (`include_str!`).
+//!
+//! Source: `tools/vanilla-extract/server-classes/data/minecraft/worldgen/`.
+//! Prefer editing the JSON under `src/data/` and re-extracting; do not add
+//! new `include_str!` arms by hand unless the extract script is updated too.
 
 /// Return the embedded JSON content for a datapack path (relative to worldgen/).
 pub fn datapack_json(path: &str) -> Option<&'static str> {

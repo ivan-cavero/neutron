@@ -1,11 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// XORoshiro128++ PRNG -- exact implementation matching Minecraft 26.2's Java
-// `net.minecraft.world.level.levelgen.XoroshiroRandomSource`.
-//
-// 26.2 differences vs 1.18:
-// - Seed mixing uses `RandomSupport.upgradeSeedTo128bit` (mixStafford13 on
-//   `seed ^ 0x6A09E667F3BCC909` and that value + GOLDEN_RATIO_64).
+//! Xoroshiro128++ matching 26.2 `XoroshiroRandomSource`.
+//!
+//! Seed mixing uses `RandomSupport.upgradeSeedTo128bit` (`mixStafford13` on
+//! `seed ^ 0x6A09E667F3BCC909` and that value + `GOLDEN_RATIO_64`).
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 // - `nextInt(bound)` uses the Lemire multiplier-based algorithm (full 32-bit
 //   draw, no modulo rejection loop).
 // - `forkPositional()` consumes two `nextLong` calls and returns a positional

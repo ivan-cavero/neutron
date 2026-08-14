@@ -1,12 +1,14 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Chunk generator matching Minecraft 26.2's `NoiseBasedChunkGenerator.doFill`.
-//
-// Evaluation model (mirrors `NoiseChunk`):
-// - Every `interpolated` marker in `finalDensity` (A-path + all four noodle
-//   markers) is sampled on a 4×8 grid and trilinearly lerped per block.
-// - Nonlinear ops (squeeze, min, range_choice, …) run *outside* interpolators.
-// - Aquifer.computeSubstance decides stone/fluid/air from final density.
+//! `NoiseBasedChunkGenerator.doFill` for Minecraft 26.2.
+//!
+//! Evaluation model (mirrors `NoiseChunk`):
+//! - every `interpolated` marker in `finalDensity` is sampled on a 4×8 grid
+//!   and trilinearly lerped per block
+//! - nonlinear ops (squeeze, min, range_choice, …) run *outside* interpolators
+//! - `Aquifer.computeSubstance` picks stone / fluid / air from final density
+//!
+//! The density tree is `Arc`, so [`ChunkGenerator`] is `Send`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::aquifer::{GlobalFluidPicker, NoiseBasedAquifer};
 use crate::carvers;
@@ -38,8 +40,69 @@ pub const WORLD_TOP: i32 = 320;
 
 /// Pre-feature column: blocks + heightmap + biomes.
 pub type NoiseColumn = (Vec<u16>, Vec<i16>, Vec<u8>);
-/// Cache of [`NoiseColumn`] keyed by chunk XZ.
-pub type NoiseCache = std::collections::HashMap<(i32, i32), NoiseColumn>;
+
+/// FIFO cache of [`NoiseColumn`] keyed by chunk XZ.
+///
+/// Neighbour decoration reuses the expensive noise+surface fill. Oldest
+/// columns are dropped when `cap` is exceeded (insertion order, not
+/// HashMap iteration). `cap == usize::MAX` means unbounded (tests).
+pub struct NoiseCache {
+    map: std::collections::HashMap<(i32, i32), NoiseColumn>,
+    order: std::collections::VecDeque<(i32, i32)>,
+    cap: usize,
+}
+
+impl NoiseCache {
+    /// Unbounded cache (parity tests / one-shot generate).
+    pub fn new() -> Self {
+        Self::with_cap(usize::MAX)
+    }
+
+    /// Cache that drops the oldest column once `cap` entries are stored.
+    pub fn with_cap(cap: usize) -> Self {
+        Self {
+            map: std::collections::HashMap::new(),
+            order: std::collections::VecDeque::new(),
+            cap: cap.max(1),
+        }
+    }
+
+    /// Number of cached columns.
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// True when no columns are cached.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
+    /// Return the cached column, inserting `f()` on miss (and evicting if full).
+    pub fn get_or_insert_with(
+        &mut self,
+        key: (i32, i32),
+        f: impl FnOnce() -> NoiseColumn,
+    ) -> &NoiseColumn {
+        if self.map.contains_key(&key) {
+            return self.map.get(&key).expect("key present");
+        }
+        while self.map.len() >= self.cap {
+            if let Some(old) = self.order.pop_front() {
+                self.map.remove(&old);
+            } else {
+                break;
+            }
+        }
+        self.order.push_back(key);
+        self.map.entry(key).or_insert_with(f)
+    }
+}
+
+impl Default for NoiseCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// A generated chunk column.
 pub struct GeneratedChunk {
@@ -102,8 +165,7 @@ impl ChunkGenerator {
                 let ncx = cx + dx;
                 let ncz = cz + dz;
                 let (blocks, heightmap, biomes) = noise_cache
-                    .entry((ncx, ncz))
-                    .or_insert_with(|| self.generate_noise_and_surface(ncx, ncz));
+                    .get_or_insert_with((ncx, ncz), || self.generate_noise_and_surface(ncx, ncz));
                 region.put_chunk(ncx, ncz, blocks, heightmap);
                 if dx == 0 && dz == 0 {
                     center_biomes = biomes.clone();
@@ -181,7 +243,7 @@ impl ChunkGenerator {
         let mut grids: Vec<Vec<f64>> = Vec::with_capacity(interp_markers.len());
         let mut ids: Vec<usize> = Vec::with_capacity(interp_markers.len());
         for marker in &interp_markers {
-            ids.push(std::rc::Rc::as_ptr(marker) as usize);
+            ids.push(std::sync::Arc::as_ptr(marker) as usize);
             let wrapped = interpolated_wrapped(marker);
             let mut samples = vec![0f64; grid_len];
             for iy in 0..=cell_count_y {
@@ -394,4 +456,28 @@ impl ChunkGenerator {
 #[inline]
 pub fn lerp(alpha: f64, a: f64, b: f64) -> f64 {
     a + alpha * (b - a)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chunk_generator_is_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<ChunkGenerator>();
+        assert_send::<NoiseCache>();
+    }
+
+    #[test]
+    fn noise_cache_drops_oldest() {
+        let mut cache = NoiseCache::with_cap(2);
+        cache.get_or_insert_with((0, 0), || (vec![1], vec![0], vec![0]));
+        cache.get_or_insert_with((1, 0), || (vec![2], vec![0], vec![0]));
+        cache.get_or_insert_with((2, 0), || (vec![3], vec![0], vec![0]));
+        assert_eq!(cache.len(), 2);
+        assert!(cache.map.contains_key(&(1, 0)));
+        assert!(cache.map.contains_key(&(2, 0)));
+        assert!(!cache.map.contains_key(&(0, 0)));
+    }
 }

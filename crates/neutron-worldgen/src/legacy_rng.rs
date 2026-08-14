@@ -1,7 +1,8 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// `LegacyRandomSource` — Java `java.util.Random` LCG used by carvers via
-// `WorldgenRandom(new LegacyRandomSource(...))`.
+//! `LegacyRandomSource` — Java `java.util.Random` LCG.
+//!
+//! Used by carvers via `WorldgenRandom(new LegacyRandomSource(...))`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 /// 48-bit LCG matching `LegacyRandomSource` / `java.util.Random`.
 pub struct LegacyRandom {

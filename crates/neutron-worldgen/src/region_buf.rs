@@ -1,6 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Multi-chunk block buffer for feature placement that crosses chunk borders.
+//! Multi-chunk block buffer for features that cross chunk borders.
+//!
+//! Mirrors vanilla `WorldGenRegion`: a square of columns so ore blobs,
+//! trees and sculk can write into neighbours during decoration.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::generator::{CHUNK_BLOCK_VOLUME, HEIGHTMAP_SIZE, WORLD_BOTTOM, WORLD_TOP};
 use crate::surface::BlockId;

@@ -1,7 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Surface rules engine matching vanilla 26.2 `SurfaceSystem.buildSurface` +
-// `SurfaceRules` evaluation over the datapack `surface_rule` JSON.
+//! Surface rules: `SurfaceSystem.buildSurface` + datapack `surface_rule` JSON.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::HashMap;
 use std::sync::OnceLock;

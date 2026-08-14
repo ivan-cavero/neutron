@@ -3,6 +3,7 @@ name = "neutron-worldgen"
 version = "0.1.0"
 edition = "2021"
 description = "Minecraft 26.2 world generation: deterministic chunk generation matching vanilla"
+autoexamples = false
 
 [dependencies]
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
@@ -12,4 +13,24 @@ serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 neutron-world = { path = "../neutron-world" }
+
+# Default examples (parity probes). Historical run probes stay on disk
+# under examples/ but are not built unless named here.
+[[example]]
+name = "block_parity"
+
+[[example]]
+name = "dump_ms"
+
+[[example]]
+name = "sculk_cave"
+
+[[example]]
+name = "parity_diag"
+
+[[example]]
+name = "chunk_check"
+
+[[example]]
+name = "gap_diag"
 

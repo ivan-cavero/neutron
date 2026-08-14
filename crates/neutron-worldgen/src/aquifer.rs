@@ -1,10 +1,10 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Aquifer system matching Minecraft 26.2's `Aquifer.NoiseBasedAquifer`.
-//
-// `compute_substance` converts a density value + context into the block state
-// to place (None = solid default block, Some = fluid/air), implementing the
-// water/lava pocket logic driven by the 4 aquifer noises and the fluid grid.
+//! Aquifer system matching Minecraft 26.2 `Aquifer.NoiseBasedAquifer`.
+//!
+//! `compute_substance` turns a density sample into a block: `None` is the
+//! solid default, `Some` is fluid or air. Driven by four aquifer noises and
+//! the fluid grid.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::HashMap;
 

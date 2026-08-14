@@ -1,6 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// OreVeinifier matching Minecraft 26.2 `OreVeinifier.create`.
+//! `OreVeinifier.create` — vein toggle / ridged / gap density path.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::density::{DensityEnv, DF};
 use crate::positional::PositionalRandomFactory;

@@ -1,11 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// TreeFeature + trunk/foliage placers ported from 26.2 CFR:
-//   TreeFeature.doPlace / getMaxFreeTreeHeight
-//   StraightTrunkPlacer / DarkOakTrunkPlacer / FancyTrunkPlacer
-//   BlobFoliagePlacer / DarkOakFoliagePlacer / FancyFoliagePlacer
-//   TwoLayersFeatureSize / ThreeLayersFeatureSize
-//   BeehiveDecorator (RNG) + PlaceOnGroundDecorator (leaf_litter)
+//! `TreeFeature` + trunk/foliage placers (26.2 CFR).
+//!
+//! Straight / dark-oak / fancy trunks, blob / dark-oak / fancy foliage,
+//! two- and three-layer feature size, beehive + leaf-litter ground decorators.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 //
 // RNG order matches vanilla WorldgenRandom wrapping Xoroshiro:
 //   getTreeHeight → foliageHeight → foliageRadius → placeTrunk → createFoliage

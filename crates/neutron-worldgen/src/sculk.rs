@@ -1,16 +1,14 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Deep dark underground decoration (step 7) — vanilla-faithful port.
-//
-// Sources (re-sync: pwsh tools/vanilla-extract/extract-worldgen.ps1):
-//   CFR decompiled:
-//     SculkPatchFeature, SculkSpreader.ChargeCursor, SculkVeinBlock,
-//     SculkBlock, SculkBehaviour.DEFAULT, MultifaceGrowthFeature
-//   Datapack:
-//     configured/placed_feature sculk_*, biome/deep_dark.json
-//
-// Rules: no wall-paint, no expand rings, no vertical seed rescue.
-// Vein face bits are tracked; attemptPlaceSculk requires hasFace.
+//! Deep-dark underground decoration (generation step 7).
+//!
+//! Ports `SculkPatchFeature`, `ChargeCursor`, `SculkVeinBlock`, `SculkBlock`,
+//! `SculkBehaviour.DEFAULT` and `MultifaceGrowthFeature`. Re-sync from CFR
+//! after a Mojang drop (`extract-worldgen.ps1`).
+//!
+//! Datapack: `sculk_*` features + `biome/deep_dark.json`.
+//! No wall-paint, no expand rings, no vertical seed rescue.
+//! Vein face bits are tracked; `attemptPlaceSculk` requires `hasFace`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::biome_source::biome_id_at_block;
 use crate::feature_catalog::{self, step};

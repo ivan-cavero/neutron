@@ -1,11 +1,11 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Data-driven feature step / index resolution from vanilla biome JSON.
-//
-// Minecraft `WorldgenRandom.setFeatureSeed(decorationSeed, index, step)` uses
-// the **global FeatureSorter index** for that step (ChunkGenerator.applyBiomeDecoration),
-// not the index inside one biome's features[step] list.
-// Re-run extract-worldgen.ps1 after a Mojang drop; biome JSON drives the sorter.
+//! Feature step / index resolution from vanilla biome JSON.
+//!
+//! `WorldgenRandom.setFeatureSeed(decorationSeed, index, step)` uses the
+//! **global FeatureSorter index** (`ChunkGenerator.applyBiomeDecoration`),
+//! not the index inside one biome's `features[step]` list.
+//! Re-run `extract-worldgen.ps1` after a Mojang drop.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::datapack_fs;
 use serde_json::Value;

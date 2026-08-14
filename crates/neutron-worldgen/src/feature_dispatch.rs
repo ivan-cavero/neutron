@@ -1,15 +1,10 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Feature placement dispatcher: reads biome feature lists + placed_feature JSON
-// and routes by configured_feature `type` to Rust ports.
-//
-// Placement modifiers implemented (vanilla placement chain):
-//   count (fixed | uniform | weighted_list)
-//   in_square
-//   height_range (uniform absolute/above_bottom/below_top)
-//   heightmap (OCEAN_FLOOR = blocksMotion incl. leaves; WORLD_SURFACE = !air)
-//   biome (caller supplies allowed biome check)
-//   random_offset (xz/y trapezoid or uniform IntProvider)
+//! Feature placement dispatcher (biome lists + `placed_feature` JSON).
+//!
+//! Routes by configured_feature `type` to the Rust ports. Placement modifiers
+//! implemented: count, in_square, height_range, heightmap (`OCEAN_FLOOR` /
+//! `WORLD_SURFACE`), biome filter, random_offset.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 //   block_predicate_filter (air, matching_blocks offset — common cases)
 //   noise_threshold_count (uses feature RNG as density stand-in until noise port)
 //   rarity_filter

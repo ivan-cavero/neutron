@@ -3,6 +3,10 @@
 No son la API pública. Cada uno se lanzó en un run para aislar un gap
 contra vanilla (seed 12345, a menudo chunk 6,-2).
 
+`Cargo.toml` pone `autoexamples = false`. Solo se compilán los examples
+listados ahí (`block_parity`, `dump_ms`, `sculk_cave`, `parity_diag`,
+`chunk_check`, `gap_diag`). El resto queda en disco como evidencia.
+
 ```bash
 cargo run --release -p neutron-worldgen --example block_parity
 ```

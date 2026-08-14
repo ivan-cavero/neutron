@@ -1,7 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// PositionalRandomFactory matching Minecraft 26.2
-// `XoroshiroRandomSource.XoroshiroPositionalRandomFactory`.
+//! `XoroshiroPositionalRandomFactory` — seed a RNG from block / hash.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::rng::Xoroshiro128;
 

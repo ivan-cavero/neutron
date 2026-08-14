@@ -16,6 +16,20 @@
 
 ## 2. Vista general
 
+### Hoy (agosto 2026) — grafo real
+
+```
+  neutron-server (binario)
+       │  login 26.2 + 1 worker worldgen + LRU de chunks
+       ├── neutron-protocol     paquetes 26.2 escritos a mano
+       └── neutron-worldgen     overworld; DF = Arc (Send); no 1:1
+
+  neutron-world     Anvil listo, no usado por el server
+  neutron-sim       luz / redstone / fluidos / spawn — solo tests
+```
+
+### Objetivo (sin implementar todavía)
+
 ```
                         ┌──────────────────────┐
                         │    neutron-cli      │  binario, config, comandos

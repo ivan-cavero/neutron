@@ -1,10 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Mob spawning engine for Minecraft 26.2.
-//
-// Handles spawn cycle ticking, light/biome/distance checks, pack spawning,
-// spawn caps, and despawn logic. All world data is accessed through the
-// `SpawnAccess` trait so the engine stays decoupled from chunk storage.
+//! Mob spawn cycle: light / biome / distance checks, packs, caps, despawn.
+//!
+//! World access goes through `SpawnAccess` so this stays decoupled from
+//! chunk storage.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::HashMap;
 

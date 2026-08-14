@@ -1,19 +1,15 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Noise generation matching Minecraft 26.2 exactly.
-//
-// Key types (mirroring `net.minecraft.world.level.levelgen.synth`):
-// - `ImprovedNoise`: core Perlin noise with 5-arg `noise(x,y,z,yScale,yFudge)`,
-//   Simplex gradient table, and a 256-entry byte permutation.
-// - `PerlinNoise`: octave composite. Supports both the positional
-//   (`create`/`useNewInitialization=true`, MD5-seeded octaves) and the legacy
-//   (shared-RNG consumption, used by BlendedNoise) construction paths.
-// - `NormalNoise`: first+second PerlinNoise with INPUT_FACTOR scaling.
-// - `BlendedNoise`: the 26.2 overworld base 3D noise (three PerlinNoise,
-//   684.412 multiplier).
-//
-// Verification: `tools/java-probe` dumps the exact vanilla states for a seed;
-// the tests in `tests/parity_noise.rs` compare against that ground truth.
+//! Synth noise matching Minecraft 26.2 (`levelgen.synth`).
+//!
+//! - [`ImprovedNoise`]: Perlin with 5-arg `noise(x,y,z,yScale,yFudge)`,
+//!   Simplex gradient table, 256-entry permutation
+//! - [`PerlinNoise`]: octave composite (positional + legacy)
+//! - [`NormalNoise`]: paired Perlin used by density functions
+//! - [`BlendedNoise`]: `base_3d_noise` / old 3D terrain
+//!
+//! Positional Perlin uses MD5-seeded octaves; legacy Perlin consumes a shared
+//! RNG (BlendedNoise). Verify against `tools/java-probe`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::rng::Xoroshiro128;
 

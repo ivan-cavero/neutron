@@ -1,10 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// MultifaceSpreader — port of net.minecraft.world.level.block.MultifaceSpreader
-// (CFR: tools/vanilla-extract/decompiled/.../MultifaceSpreader.java).
-//
-// Face state is a u8 mask (bit i = Direction.values()[i]), not full BlockState.
-// Used by sculk veins and MultifaceGrowthFeature.
+//! `MultifaceSpreader` port (`net.minecraft.world.level.block.MultifaceSpreader`).
+//!
+//! Face state is a `u8` mask (bit i = `Direction.values()[i]`), not a full
+//! `BlockState`. Used by sculk veins and `MultifaceGrowthFeature`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::feature_rng::FeatureRandom;
 use crate::region_buf::RegionBuf;

@@ -1,10 +1,10 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Lighting engine — Starlight-inspired BFS propagation.
-//
-// Provides both sky light and block light computation for a chunk column.
-// Sky light starts at 15 at the top of the world and decreases through
-// opaque blocks. Block light propagates from light sources outward.
+//! Starlight-style BFS sky + block light for a chunk column.
+//!
+//! Sky light starts at 15 at world top and falls through opaque blocks.
+//! Block light spreads from sources. Isolated from the server chunk writer
+//! (which currently fakes sky light from the heightmap).
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::VecDeque;
 

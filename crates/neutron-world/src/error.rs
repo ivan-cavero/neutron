@@ -1,6 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// WorldError types for neutron-world.
+//! Typed errors for Anvil / `level.dat` / session-lock IO.
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::path::PathBuf;
 

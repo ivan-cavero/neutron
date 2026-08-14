@@ -1,30 +1,21 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Density function engine matching Minecraft 26.2 exactly.
-//
-// Density functions are loaded from the vanilla datapack JSONs (see
-// `datapack_data.rs`) and evaluated at block coordinates. Semantics mirror
-// `net.minecraft.world.level.levelgen.DensityFunctions`:
-// - Arithmetic nodes (add/mul/min/max/abs/square/cube/half_negative/
-//   quarter_negative/invert/squeeze/clamp)
-// - Noise sampling (`noise`, `shifted_noise`, `shift_a`, `shift_b`)
-// - `y_clamped_gradient`, `range_choice`, `interval_select`
-// - `spline` with the exact `CubicSpline.Multipoint` float math
-// - Marker wrappers (flat_cache/cache_2d/cache_once/cache_all_in_cell/
-//   blend_density) which are pure caching for values and evaluate their
-//   wrapped function directly; `interpolated` is handled by the chunk
-//   generator's grid interpolator.
-// - `find_top_surface` (used by the router's preliminarySurfaceLevel)
+//! Density-function engine matching Minecraft 26.2 `DensityFunctions`.
+//!
+//! Trees are loaded from the embedded datapack JSONs (`datapack_data`) and
+//! evaluated at block coordinates. Nodes are [`Arc`] so a `ChunkGenerator`
+//! can move across threads. Interpolated markers are sampled on a cell grid
+//! by the chunk generator, not here.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde_json::Value;
 
 use crate::noise::NormalNoise;
 
-/// Shared density function handle.
-pub type DF = Rc<DFNode>;
+/// Shared density function handle (`Arc` so the tree is `Send + Sync`).
+pub type DF = Arc<DFNode>;
 
 /// Marker wrapper kinds (pure value caching / grid interpolation).
 ///
@@ -53,7 +44,7 @@ pub enum MarkerKind {
 /// them as point samples leaves tunnels solid (see run-016 / ProbeInterpDensity).
 #[derive(Debug)]
 pub struct CellInterpRuntime {
-    /// `Rc::as_ptr` of each Interpolated marker DF (stable identity).
+    /// `Arc::as_ptr` of each Interpolated marker DF (stable allocation identity).
     pub ids: Vec<usize>,
     /// Per-marker samples on the chunk grid: index `(iy * stride_xz + iz) * stride_xz + ix`.
     pub grids: Vec<Vec<f64>>,
@@ -459,7 +450,7 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             if *kind == MarkerKind::Interpolated {
                 if let Some(state) = env.marker_state.as_ref() {
                     if let Some(rt) = state.cell_interp.as_ref() {
-                        let id = Rc::as_ptr(df) as usize;
+                        let id = Arc::as_ptr(df) as usize;
                         if let Some(i) = rt.ids.iter().position(|&x| x == id) {
                             return rt.sample(i);
                         }
@@ -730,7 +721,7 @@ impl DensityRegistry {
     /// Parse a density function JSON value into a node.
     pub fn parse(&mut self, value: &Value) -> DF {
         match value {
-            Value::Number(n) => Rc::new(DFNode::Const(n.as_f64().unwrap())),
+            Value::Number(n) => Arc::new(DFNode::Const(n.as_f64().unwrap())),
             Value::String(s) => {
                 // A reference to a named density function (e.g. "minecraft:overworld/offset").
                 let key = s.strip_prefix("minecraft:").unwrap_or(s);
@@ -740,37 +731,37 @@ impl DensityRegistry {
                 let t = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
                 let t = t.strip_prefix("minecraft:").unwrap_or(t);
                 match t {
-                    "constant" => Rc::new(DFNode::Const(0.0)),
-                    "mul" => Rc::new(DFNode::Mul(
+                    "constant" => Arc::new(DFNode::Const(0.0)),
+                    "mul" => Arc::new(DFNode::Mul(
                         self.parse(&obj["argument1"]),
                         self.parse(&obj["argument2"]),
                     )),
-                    "add" => Rc::new(DFNode::Add(
+                    "add" => Arc::new(DFNode::Add(
                         self.parse(&obj["argument1"]),
                         self.parse(&obj["argument2"]),
                     )),
-                    "min" => Rc::new(DFNode::Min(
+                    "min" => Arc::new(DFNode::Min(
                         self.parse(&obj["argument1"]),
                         self.parse(&obj["argument2"]),
                     )),
-                    "max" => Rc::new(DFNode::Max(
+                    "max" => Arc::new(DFNode::Max(
                         self.parse(&obj["argument1"]),
                         self.parse(&obj["argument2"]),
                     )),
-                    "abs" => Rc::new(DFNode::Abs(self.parse(&obj["argument"]))),
-                    "square" => Rc::new(DFNode::Square(self.parse(&obj["argument"]))),
-                    "cube" => Rc::new(DFNode::Cube(self.parse(&obj["argument"]))),
-                    "half_negative" => Rc::new(DFNode::HalfNegative(self.parse(&obj["argument"]))),
+                    "abs" => Arc::new(DFNode::Abs(self.parse(&obj["argument"]))),
+                    "square" => Arc::new(DFNode::Square(self.parse(&obj["argument"]))),
+                    "cube" => Arc::new(DFNode::Cube(self.parse(&obj["argument"]))),
+                    "half_negative" => Arc::new(DFNode::HalfNegative(self.parse(&obj["argument"]))),
                     "quarter_negative" => {
-                        Rc::new(DFNode::QuarterNegative(self.parse(&obj["argument"])))
+                        Arc::new(DFNode::QuarterNegative(self.parse(&obj["argument"])))
                     }
-                    "invert" => Rc::new(DFNode::Invert(self.parse(&obj["argument"]))),
-                    "squeeze" => Rc::new(DFNode::Squeeze(self.parse(&obj["argument"]))),
+                    "invert" => Arc::new(DFNode::Invert(self.parse(&obj["argument"]))),
+                    "squeeze" => Arc::new(DFNode::Squeeze(self.parse(&obj["argument"]))),
                     "clamp" => {
                         let inner = self.parse(&obj["input"]);
                         let lo = obj["min"].as_f64().unwrap();
                         let hi = obj["max"].as_f64().unwrap();
-                        Rc::new(DFNode::Clamp(inner, lo, hi))
+                        Arc::new(DFNode::Clamp(inner, lo, hi))
                     }
                     "range_choice" => {
                         let input = self.parse(&obj["input"]);
@@ -778,7 +769,7 @@ impl DensityRegistry {
                         let max = obj["max_exclusive"].as_f64().unwrap();
                         let in_range = self.parse(&obj["when_in_range"]);
                         let out_of_range = self.parse(&obj["when_out_of_range"]);
-                        Rc::new(DFNode::RangeChoice(input, min, max, in_range, out_of_range))
+                        Arc::new(DFNode::RangeChoice(input, min, max, in_range, out_of_range))
                     }
                     "interval_select" => {
                         let input = self.parse(&obj["input"]);
@@ -794,7 +785,7 @@ impl DensityRegistry {
                             .iter()
                             .map(|v| self.parse(v))
                             .collect();
-                        Rc::new(DFNode::IntervalSelect(input, thresholds, functions))
+                        Arc::new(DFNode::IntervalSelect(input, thresholds, functions))
                     }
                     "noise" => {
                         let key = obj["noise"]
@@ -804,7 +795,7 @@ impl DensityRegistry {
                             .to_string();
                         let xz_scale = obj.get("xz_scale").and_then(|v| v.as_f64()).unwrap_or(1.0);
                         let y_scale = obj.get("y_scale").and_then(|v| v.as_f64()).unwrap_or(0.5);
-                        Rc::new(DFNode::Noise(key, xz_scale, y_scale))
+                        Arc::new(DFNode::Noise(key, xz_scale, y_scale))
                     }
                     "shifted_noise" => {
                         let sx = self.parse(&obj["shift_x"]);
@@ -817,7 +808,7 @@ impl DensityRegistry {
                             .unwrap()
                             .trim_start_matches("minecraft:")
                             .to_string();
-                        Rc::new(DFNode::ShiftedNoise(sx, sy, sz, xz_scale, y_scale, key))
+                        Arc::new(DFNode::ShiftedNoise(sx, sy, sz, xz_scale, y_scale, key))
                     }
                     "shift_a" => {
                         let key = obj["argument"]
@@ -825,7 +816,7 @@ impl DensityRegistry {
                             .unwrap()
                             .trim_start_matches("minecraft:")
                             .to_string();
-                        Rc::new(DFNode::ShiftA(key))
+                        Arc::new(DFNode::ShiftA(key))
                     }
                     "shift_b" => {
                         let key = obj["argument"]
@@ -833,9 +824,9 @@ impl DensityRegistry {
                             .unwrap()
                             .trim_start_matches("minecraft:")
                             .to_string();
-                        Rc::new(DFNode::ShiftB(key))
+                        Arc::new(DFNode::ShiftB(key))
                     }
-                    "y_clamped_gradient" => Rc::new(DFNode::YClampedGradient(
+                    "y_clamped_gradient" => Arc::new(DFNode::YClampedGradient(
                         obj["from_y"].as_f64().unwrap(),
                         obj["to_y"].as_f64().unwrap(),
                         obj["from_value"].as_f64().unwrap(),
@@ -843,52 +834,52 @@ impl DensityRegistry {
                     )),
                     "spline" => {
                         let spline = self.parse_spline(&obj["spline"]);
-                        Rc::new(DFNode::Spline(spline))
+                        Arc::new(DFNode::Spline(spline))
                     }
                     "flat_cache" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::FlatCache, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::FlatCache, inner))
                     }
                     "cache_2d" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::Cache2D, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::Cache2D, inner))
                     }
                     "cache_once" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::CacheOnce, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::CacheOnce, inner))
                     }
                     "cache_all_in_cell" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::CacheAllInCell, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::CacheAllInCell, inner))
                     }
                     "interpolated" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::Interpolated, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::Interpolated, inner))
                     }
                     "blend_density" => {
                         let inner = self.parse(&obj["argument"]);
-                        Rc::new(DFNode::Marker(MarkerKind::BlendDensity, inner))
+                        Arc::new(DFNode::Marker(MarkerKind::BlendDensity, inner))
                     }
-                    "blend_alpha" => Rc::new(DFNode::BlendAlpha),
-                    "blend_offset" => Rc::new(DFNode::BlendOffset),
+                    "blend_alpha" => Arc::new(DFNode::BlendAlpha),
+                    "blend_offset" => Arc::new(DFNode::BlendOffset),
                     "find_top_surface" => {
                         let density = self.parse(&obj["density"]);
                         let upper_bound = self.parse(&obj["upper_bound"]);
                         let lower_bound = obj["lower_bound"].as_i64().unwrap() as i32;
                         let cell_height = obj["cell_height"].as_i64().unwrap() as i32;
-                        Rc::new(DFNode::FindTopSurface(
+                        Arc::new(DFNode::FindTopSurface(
                             density,
                             upper_bound,
                             lower_bound,
                             cell_height,
                         ))
                     }
-                    "beardifier" => Rc::new(DFNode::Beardifier),
+                    "beardifier" => Arc::new(DFNode::Beardifier),
                     "old_blended_noise" => {
                         let (tlo, thi) = self
                             .terrain_random
                             .expect("terrain random must be set before parsing");
-                        Rc::new(DFNode::BlendedNoise(BlendedNode(
+                        Arc::new(DFNode::BlendedNoise(BlendedNode(
                             crate::noise::BlendedNoise::with_random(
                                 crate::rng::Xoroshiro128::from_raw(tlo, thi),
                                 obj["xz_scale"].as_f64().unwrap(),

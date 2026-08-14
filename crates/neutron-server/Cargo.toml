@@ -6,7 +6,6 @@ description = "Minimal functional Minecraft 26.2 server binary"
 
 [dependencies]
 neutron-protocol = { path = "../neutron-protocol" }
-neutron-world = { path = "../neutron-world" }
 neutron-worldgen = { path = "../neutron-worldgen" }
 tokio = { version = "1", features = ["full"] }
 bytes = "1"

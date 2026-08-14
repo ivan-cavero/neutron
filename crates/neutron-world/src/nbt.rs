@@ -1,9 +1,6 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// NBT helpers using ussr-nbt.
-//
-// Provides convenience functions for reading and writing Minecraft NBT
-// structures (used by Anvil regions, level.dat, and other world data).
+//! Thin helpers over `ussr-nbt` for Anvil regions and `level.dat`.
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::io::Cursor;
 

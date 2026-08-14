@@ -1,12 +1,11 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Surface vegetal decoration (generation step 9):
-// - short_grass (patch_grass_plain / forest / dark_forest)
-// - leaf_litter (patch_leaf_litter + tree ground decorators)
-// - simple oak / dark_oak trees (trees_plains / dark_forest_vegetation approx)
-//
-// Biome-gated via BiomeManager voronoi + multi-noise. Uses FeatureRandom
-// set_decoration_seed / set_feature_seed for deterministic placement.
+//! Surface vegetal decoration (generation step 9).
+//!
+//! Grass patches, leaf litter, and simple oak / dark-oak trees. Biome-gated
+//! via `BiomeManager` voronoi + multi-noise.
+//!
+//! Uses `set_decoration_seed` / `set_feature_seed` for deterministic placement.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::biome_source::{biome_id, biome_id_at_block};
 use crate::feature_rng::FeatureRandom;

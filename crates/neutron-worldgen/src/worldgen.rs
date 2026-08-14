@@ -1,19 +1,17 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// RandomState equivalent for Minecraft 26.2: per-seed noise instantiation and
-// the overworld NoiseRouter built from the datapack JSON.
-//
-// In 26.2 every noise is seeded independently as
-// `MD5("minecraft:" + key) XOR mainPositionalFactory` (see
-// `Noises.instantiate`), so the instantiation order is irrelevant and the only
-// main-RNG consumption is the initial `forkPositional()`.
+//! Per-seed `RandomState` + overworld `NoiseRouter` for Minecraft 26.2.
+//!
+//! Every noise is seeded independently as
+//! `MD5("minecraft:" + key) XOR mainPositionalFactory` (`Noises.instantiate`),
+//! so instantiation order does not matter. The only main-RNG consumption is
+//! the initial `forkPositional()`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use serde_json::Value;
 
-use crate::density::{DensityEnv, DensityRegistry, MarkerState, DF};
+use crate::density::{DensityEnv, DensityRegistry, DF};
 use crate::noise::{BlendedNoise, NormalNoise};
 use crate::rng::Xoroshiro128;
 

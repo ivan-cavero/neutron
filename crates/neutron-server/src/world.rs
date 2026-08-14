@@ -1,12 +1,14 @@
-//! Dedicated worldgen thread + chunk cache.
+//! Dedicated worldgen thread + encoded-chunk cache.
 //!
-//! `ChunkGenerator` is `!Send` (`Rc` density tree). One OS thread owns the
-//! generator; login/tick ask it for encoded chunks through a channel.
+//! `ChunkGenerator` is `Send` (density tree is `Arc`). One OS thread still
+//! owns the generator today so NoiseCache stays local; a pool is possible
+//! later. Login/tick ask for encoded chunks through a channel.
 //!
-//! Pre-feature noise+surface is cached so neighbouring 3×3 decorations
-//! do not redo the expensive density fill.
+//! Pre-feature noise+surface is a FIFO cache so neighbouring 3×3 decorations
+//! do not redo the density fill. Ready (encoded) chunks use an LRU so the
+//! view around the player stays hot.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -14,6 +16,7 @@ use std::thread;
 use neutron_worldgen::NoiseCache;
 
 use crate::chunk_sender;
+use crate::lru::LruCache;
 
 /// Soft cap so a long-lived process does not keep every column forever.
 const READY_CACHE_CAP: usize = 512;
@@ -47,7 +50,7 @@ enum Request {
 #[derive(Clone)]
 pub struct WorldgenHandle {
     tx: mpsc::Sender<Request>,
-    ready: Arc<Mutex<HashMap<(i32, i32), Arc<EncodedChunk>>>>,
+    ready: Arc<Mutex<LruCache<(i32, i32), Arc<EncodedChunk>>>>,
     inflight: Arc<Mutex<HashSet<(i32, i32)>>>,
 }
 
@@ -55,7 +58,7 @@ impl WorldgenHandle {
     /// Start the worker for `seed`.
     pub fn start(seed: i64) -> Self {
         let (tx, rx) = mpsc::channel::<Request>();
-        let ready = Arc::new(Mutex::new(HashMap::new()));
+        let ready = Arc::new(Mutex::new(LruCache::new(READY_CACHE_CAP)));
         let inflight = Arc::new(Mutex::new(HashSet::new()));
         let ready_worker = ready.clone();
         let inflight_worker = inflight.clone();
@@ -88,7 +91,7 @@ impl WorldgenHandle {
 
     /// Cached chunk, if the worker has already finished it.
     pub fn try_chunk(&self, cx: i32, cz: i32) -> Option<Arc<EncodedChunk>> {
-        self.ready.lock().ok()?.get(&(cx, cz)).cloned()
+        self.ready.lock().ok()?.get_cloned(&(cx, cz))
     }
 
     /// Ask the worker to generate this column when idle (does not block).
@@ -139,7 +142,7 @@ impl WorldgenHandle {
 fn worker(
     seed: i64,
     rx: mpsc::Receiver<Request>,
-    ready: Arc<Mutex<HashMap<(i32, i32), Arc<EncodedChunk>>>>,
+    ready: Arc<Mutex<LruCache<(i32, i32), Arc<EncodedChunk>>>>,
     inflight: Arc<Mutex<HashSet<(i32, i32)>>>,
 ) {
     tracing::info!(seed, "worldgen worker starting (building NoiseRouter)");
@@ -150,7 +153,7 @@ fn worker(
         "worldgen worker ready"
     );
 
-    let mut noise_cache = NoiseCache::new();
+    let mut noise_cache = NoiseCache::with_cap(NOISE_CACHE_CAP);
     let mut queued: VecDeque<(i32, i32)> = VecDeque::new();
     let mut queued_set: HashSet<(i32, i32)> = HashSet::new();
     let mut spawn: Option<(f64, f64, f64)> = None;
@@ -210,24 +213,17 @@ fn ensure_encoded(
     cz: i32,
     gen: &neutron_worldgen::ChunkGenerator,
     noise_cache: &mut NoiseCache,
-    ready: &Arc<Mutex<HashMap<(i32, i32), Arc<EncodedChunk>>>>,
+    ready: &Arc<Mutex<LruCache<(i32, i32), Arc<EncodedChunk>>>>,
     inflight: &Arc<Mutex<HashSet<(i32, i32)>>>,
 ) -> Arc<EncodedChunk> {
-    if let Ok(guard) = ready.lock() {
-        if let Some(hit) = guard.get(&(cx, cz)) {
-            return hit.clone();
+    if let Ok(mut guard) = ready.lock() {
+        if let Some(hit) = guard.get_cloned(&(cx, cz)) {
+            return hit;
         }
     }
 
     let t0 = std::time::Instant::now();
     let chunk = gen.generate_chunk_cached(cx, cz, noise_cache);
-    if noise_cache.len() > NOISE_CACHE_CAP {
-        // Drop an arbitrary older column; HashMap iteration order is fine
-        // here (cache is a speed hint, not a correctness store).
-        if let Some(key) = noise_cache.keys().next().copied() {
-            noise_cache.remove(&key);
-        }
-    }
     let body = chunk_sender::encode_playable_chunk(&chunk);
     let ms = t0.elapsed().as_millis() as u64;
     tracing::debug!(cx, cz, ms, bytes = body.len(), "generated chunk");
@@ -236,11 +232,6 @@ fn ensure_encoded(
         heightmap: chunk.heightmap,
     });
     if let Ok(mut guard) = ready.lock() {
-        if guard.len() >= READY_CACHE_CAP {
-            if let Some(key) = guard.keys().next().copied() {
-                guard.remove(&key);
-            }
-        }
         guard.insert((cx, cz), encoded.clone());
     }
     if let Ok(mut inf) = inflight.lock() {

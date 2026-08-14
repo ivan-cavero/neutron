@@ -1,11 +1,10 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// WorldgenRandom-compatible RNG for feature placement.
-//
-// WorldgenRandom wrapping Xoroshiro128 (26.2 overworld default).
-// `next(bits)` = xoroshiro.nextLong() >>> (64-bits).
-// `nextInt`/`nextLong`/`nextFloat`/`nextDouble` follow BitRandomSource
-// (Legacy-style): nextLong and nextDouble each consume two `next(bits)`.
+//! `WorldgenRandom` wrapping Xoroshiro128 (26.2 overworld default).
+//!
+//! `next(bits)` = `xoroshiro.nextLong() >>> (64-bits)`.
+//! `nextInt` / `nextLong` / `nextFloat` / `nextDouble` follow `BitRandomSource`
+//! (legacy-style): `nextLong` and `nextDouble` each consume two `next(bits)`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::rng::Xoroshiro128;
 

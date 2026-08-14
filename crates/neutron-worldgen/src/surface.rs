@@ -1,9 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Block IDs used internally by world generation.
-//
-// These are the internal IDs stored in `GeneratedChunk.blocks`. The parity
-// tool maps them to vanilla resource locations for NBT serialization.
+//! Internal worldgen block IDs stored in [`GeneratedChunk::blocks`](crate::GeneratedChunk).
+//!
+//! Compact `u16` values, **not** protocol state IDs. The server remaps them
+//! in `neutron-server::protocol_data`. The parity tool maps names for NBT.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 /// Minecraft block IDs used during chunk generation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

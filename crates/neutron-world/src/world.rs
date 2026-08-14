@@ -1,13 +1,8 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// World directory management.
-//
-// Manages the vanilla directory structure:
-//   world/          - Overworld regions + level.dat + session.lock
-//   world_nether/   - Nether regions
-//   world_the_end/  - The End regions
-//
-// Each dimension has its own `region/` subdirectory containing `.mca` files.
+//! Vanilla world directory: overworld / nether / end regions + `level.dat`.
+//!
+//! Each dimension has its own `region/` subdirectory of `.mca` files.
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::collections::HashMap;
 use std::fs;

@@ -1,18 +1,13 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Underground ore + disk + magma features for overworld generation step 6.
-//
-// Ports:
-// - `OreFeature.place` / `doPlace` (ellipsoid blob)
-// - `DiskFeature.place` / `placeColumn`
-// - `UnderwaterMagmaFeature.place`
-// - Placement: count, rarity_filter, in_square, height_range, heightmap
-//   OCEAN_FLOOR_WG, matching_fluids water, surface_relative_threshold_filter
-// - `WorldgenRandom` decoration/feature seeding via FeatureSorter global index
-//
-// FeatureSorter step-6 indices are explicit on each def (`feature_index`).
-// Biome filter is sampled at the placement origin (vanilla `minecraft:biome`
-// modifier). `WorldgenState` is rebuilt from seed — generator.rs is frozen.
+//! Underground ore, disk and magma features (generation step 6).
+//!
+//! Ports `OreFeature`, `DiskFeature`, `UnderwaterMagmaFeature` and the
+//! placement chain (`count`, `rarity_filter`, `in_square`, `height_range`,
+//! `OCEAN_FLOOR_WG`, water `matching_fluids`).
+//!
+//! FeatureSorter step-6 indices are explicit (`feature_index`). Biome filter
+//! is sampled at the placement origin.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::biome_manager::biome_id_at_block;
 use crate::biome_source::biome_id;

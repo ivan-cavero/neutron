@@ -1,12 +1,11 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// neutron-world: Minecraft world storage for the Neutron server.
-//
-// Handles reading and writing of:
-// - Anvil `.mca` region files (32x32 chunk regions)
-// - `level.dat` (gzip-compressed NBT world metadata)
-// - Vanilla directory structure (world/, world_nether/, world_the_end/)
-// - `session.lock` (file-based PID lock for single-instance access)
+//! Anvil / vanilla world storage.
+//!
+//! Reads and writes `.mca` regions, gzip `level.dat`, `session.lock`, and the
+//! `world/` / `world_nether/` / `world_the_end/` directory layout.
+//! Not yet wired into `neutron-server` (the join path caches encoded chunks
+//! in memory only).
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 #![forbid(unsafe_code)]
 

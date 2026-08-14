@@ -1,19 +1,11 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// Anvil .mca region file reading/writing.
-//
-// Format reference: https://minecraft.wiki/Region_file_format
-//
-// File layout:
-//   Bytes 0..4096    - Chunk offset table (1024 entries, 4 bytes each)
-//     3 bytes sector offset (from file start, in 4096-byte sectors)
-//     1 byte  sector count
-//   Bytes 4096..8192 - Timestamp table (1024 entries, 4 bytes each, Unix seconds)
-//   Bytes 8192..     - Chunk data sectors (4096-byte aligned)
-//     Each chunk payload:
-//       4 bytes: length of compressed data (big-endian, includes the compression byte)
-//       1 byte:  compression type (2 = zlib)
-//       N bytes: compressed data
+//! Anvil `.mca` region files (32×32 chunks). See minecraft.wiki/Region_file_format.
+//!
+//! Layout: 4 KiB offset table, 4 KiB timestamp table, then 4 KiB sectors.
+//!
+//! Offset table entry: 3-byte sector offset + 1-byte sector count.
+//! Chunk payload: 4-byte length (includes compression byte) + type 2 (zlib).
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::fs;
 use std::io::{Read, Write};

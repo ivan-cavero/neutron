@@ -1,10 +1,10 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Load vanilla worldgen JSON from the crate's data tree (synced by
-// tools/vanilla-extract/extract-worldgen.ps1). Prefer this for biomes/features
-// so a datapack update is a re-run of the extract script, not a hand-edit.
-//
-// Paths are relative to `src/data/worldgen/` or `src/data/tags/`.
+//! Load vanilla worldgen JSON from the crate data tree at runtime.
+//!
+//! Synced by `tools/vanilla-extract/extract-worldgen.ps1`. Prefer this for
+//! biomes/features so a datapack update is a re-run of the extract script.
+//! Paths are relative to `src/data/worldgen/` or `src/data/tags/`.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::path::{Path, PathBuf};
 

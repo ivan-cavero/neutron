@@ -1,9 +1,8 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Block properties for the lighting engine.
-//
-// Maps block state IDs to their transparency and light emission values.
-// Block IDs must match the vanilla block registry for Minecraft 26.2.
+//! Block transparency and light-emission tables for the lighting engine.
+//!
+//! IDs must match the 26.2 block registry used by the tests in this crate.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 /// Check if a block is transparent to light.
 ///

@@ -1,10 +1,9 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Fluid mechanics for Minecraft 26.2.
-//
-// Implements water and lava flow, bubble columns, waterlogging,
-// and fluid tick scheduling. Fluids are tracked per-block and
-// spread according to Minecraft's flow rules.
+//! Water / lava flow, bubble columns, waterlogging, and fluid tick scheduling.
+//!
+//! Block IDs are re-declared here so this crate stays independent of
+//! `neutron-worldgen`. Not used by the live server yet.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use std::collections::{HashMap, VecDeque};
 

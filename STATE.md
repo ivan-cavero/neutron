@@ -37,24 +37,25 @@
 **F2d R4 — Surface rules + bedrock/deepslate** (DONE)
 **F2d R3 — Marker wrapping** (T1 DONE)
 
-### Workspace Rust — 6 crates + tools
+### Workspace Rust — 6 crates + tools (forma real)
 
 ```
 neutron/
 ├── crates/
-│   ├── neutron-protocol/       ✅ 54 tests — protocolo 26.2
-│   ├── neutron-world/          ✅ 39 tests — Anvil, level.dat
-│   ├── neutron-worldgen/       ✅ 45+ tests — noise, caves, biomes, markers
-│   ├── neutron-server/         ✅ 13 tests — server binario
-│   ├── neutron-sim/            ✅ 65 tests — light, redstone (B+C), fluid, spawn
-│   └── neutron-bench-server/   ✅ Criterion benchmarks
+│   ├── neutron-protocol/       # paquetes 26.2 a mano (no hay codegen aún)
+│   ├── neutron-world/          # Anvil + level.dat — NO cableado al server
+│   ├── neutron-worldgen/       # overworld; biome params en .bin; DF = Arc (Send)
+│   ├── neutron-server/         # único binario jugable
+│   ├── neutron-sim/            # motores de test — NO cableados al server
+│   └── neutron-bench-server/   # criterion
 ├── tools/
-│   ├── golden-data/            ✅ Vanilla chunk extraction
-│   ├── parity-check/           ✅ Parity verification
-│   └── vanilla-extract/        ✅ PARAMETERS.md (650+ líneas)
-└── tests/
-    └── e2e-server/             ✅ E2E bot test
+│   ├── golden-data/            # extracción de chunks vanilla
+│   ├── parity-check/           # verificación de parity
+│   └── vanilla-extract/        # jar + PARAMETERS.md (local, gitignored)
+└── tests/e2e-server/           # bot E2E
 ```
+
+`ARCHITECTURE.md` (cli / plugin / Folia / `neutron-data`) es **aspiración**, no el árbol de crates. Worldgen 97.84 % — bar 1:1 intacto (`WORLDGEN.md`).
 
 ### Resultados de F3 FASE A (9 ago 2026)
 

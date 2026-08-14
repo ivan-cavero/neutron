@@ -1,14 +1,8 @@
-// Copyright (c) 2026 Neutron Contributors — MIT License
-//
-// session.lock handling for Minecraft worlds.
-//
-// Vanilla creates a `session.lock` file in the world directory containing
-// the PID of the running server process. On startup, if the lock file exists
-// and the PID is still alive, the server refuses to open the world (another
-// instance holds it). If the PID is dead, the lock is considered stale and
-// can be taken over.
-//
-// We follow the same convention for vanilla compatibility.
+//! Vanilla `session.lock`: PID of the process that owns the world directory.
+//!
+//! A live PID blocks a second server; a dead PID is treated as stale.
+//!
+//! Copyright (c) 2026 Neutron Contributors — MIT License
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};

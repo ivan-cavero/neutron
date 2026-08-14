@@ -1,14 +1,15 @@
-//! Neutron: Minecraft 26.2 server that serves live worldgen chunks.
+//! Neutron 26.2 playable binary: login, configuration, live worldgen chunks.
 //!
-//! Vanilla 26.2 client, online-mode=false. Terrain comes from
-//! `neutron-worldgen` (F2d, not 1:1). Creative + flight.
+//! Vanilla 26.2 client, `online-mode=false`. Terrain comes from
+//! `neutron-worldgen` (not 1:1 — see `WORLDGEN.md`). Creative + flight.
+//! Simulation (`neutron-sim`) and Anvil (`neutron-world`) are not on this path.
 //!
-//! Usage:
-//!   cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
+//! Usage: `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8`
 
 mod chunk_sender;
 mod connection;
 mod login;
+mod lru;
 mod play;
 mod protocol_data;
 mod protocol_ids;

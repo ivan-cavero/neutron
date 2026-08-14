@@ -1,4 +1,4 @@
-//! Server state and configuration.
+//! Shared server state: config, player map, worldgen handle, tick counter.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicI32, AtomicU64};

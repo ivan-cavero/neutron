@@ -5,7 +5,6 @@ edition = "2021"
 description = "Minecraft 26.2 simulation systems: lighting engine, entity ticks, redstone"
 
 [dependencies]
-neutron-worldgen = { path = "../neutron-worldgen" }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [dev-dependencies]

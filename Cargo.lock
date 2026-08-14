@@ -676,7 +676,6 @@ dependencies = [
  "bytes",
  "clap",
  "neutron-protocol",
- "neutron-world",
  "neutron-worldgen",
  "tokio",
  "tracing",
@@ -689,7 +688,6 @@ dependencies = [
 name = "neutron-sim"
 version = "0.1.0"
 dependencies = [
- "neutron-worldgen",
  "xxhash-rust",
 ]
 

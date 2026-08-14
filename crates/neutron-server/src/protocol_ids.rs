@@ -2,6 +2,9 @@
 //!
 //! Source: `java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --reports`
 //! → `generated/reports/packets.json`.
+//!
+//! Keep these in lockstep with the typed packets in `neutron-protocol`.
+//! Status pong is `0x01` (not `0x00` — that id is the status response).
 
 // ---------------------------------------------------------------------------
 // Handshake / status / login

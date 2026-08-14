@@ -1,12 +1,11 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// MultiNoise biome source matching vanilla 26.2's `Climate.Sampler` exactly.
-//
-// Uses quantized i64 arithmetic: `coord → (float)(coord * 10000.0f) as i64`.
-// Brute-force search over ~7500 parameter points for nearest match.
+//! Multi-noise biome source matching vanilla 26.2 `Climate.Sampler`.
+//!
+//! Uses quantized i64 arithmetic: `coord → (coord as f32 * 10000.0) as i64`.
+//! Nearest-point search walks the packed table in [`crate::biome::params`].
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
 use crate::density::DensityEnv;
-use crate::surface::BlockId;
 
 /// Quantize a climate coordinate: `(coord * 10000.0f32) as i64`.
 ///
@@ -144,11 +143,11 @@ pub fn find_biome(target: &ClimateTarget) -> u8 {
     let mut best_fitness = i64::MAX;
     let mut best_biome = biome_id::PLAINS; // default
 
-    for &(biome, ref intervals) in crate::biome_params::BIOME_PARAMS {
-        let f = fitness(intervals, &target_arr);
+    for point in crate::biome::params::iter() {
+        let f = fitness(&point.intervals, &target_arr);
         if f < best_fitness {
             best_fitness = f;
-            best_biome = biome;
+            best_biome = point.biome;
         }
     }
     best_biome

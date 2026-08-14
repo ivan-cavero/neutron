@@ -34,16 +34,23 @@ Servidor de Minecraft Java Edition reimplementado desde cero en Rust. Multiplata
 | Join p95 @100 bots | < 2 s |
 | Nueva versión de Mojang | main ≤ 7 días |
 
-## Estructura del repo
+## Estructura del repo (hoy)
+
+El diagrama de `ARCHITECTURE.md` describe el **objetivo** (cli, plugins WASM, Folia). El grafo real es más pequeño:
 
 ```
 neutron/
-├─ crates/          # neutron-core · data · protocol · worldgen · world · sim · server · plugin · scripting · cli
-├─ tools/           # mc-extract (jar → JSON) · codegen (JSON → Rust) · patch-bukkit (fase tardía)
-├─ bench/           # harness de benchmarks + bots + results/
-├─ runs/            # historial de runs (run-NNN.md) — cómo se genera: AGENTS.md §6
-├─ docs/            # ADRs y documentación técnica
-└─ *.md             # README · AGENTS · ARCHITECTURE · ROADMAP · BENCHMARKS · STATE
+├─ crates/
+│  ├─ neutron-protocol/     # paquetes 26.2 (a mano)
+│  ├─ neutron-world/        # Anvil / level.dat (aún no lo usa el server)
+│  ├─ neutron-worldgen/     # overworld 26.2 (~98 % parity)
+│  ├─ neutron-server/       # binario jugable: login + chunks
+│  ├─ neutron-sim/          # luz / redstone / fluidos / spawn (tests, no cableado)
+│  └─ neutron-bench-server/ # criterion
+├─ tools/                   # golden-data · parity-check · vanilla-extract · java-probe
+├─ bench/                   # workspace aparte: bots + jars de referencia
+├─ runs/                    # historial de runs
+└─ docs/                    # ADRs y notas (WHAT-NOT-TO-COMMIT)
 ```
 
 ## Quick start (dev)

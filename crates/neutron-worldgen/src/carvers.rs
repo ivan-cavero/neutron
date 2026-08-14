@@ -1,14 +1,15 @@
-// Copyright (c) 2026 Neutron Contributors -- MIT License
-//
-// Classic overworld carvers ported from Minecraft 26.2:
-// - `NoiseBasedChunkGenerator.applyCarvers` (range ±8, LegacyRandom + setLargeFeatureSeed)
-// - `CaveWorldCarver` (isStartChunk, carve, createRoom, createTunnel)
-// - `WorldCarver.carveEllipsoid` (target-chunk local write)
-// - `Mth.sin`/`Mth.cos` use the vanilla 65536-entry lookup table
-//
-// Carvers run after noise+surface, before ore features.
+//! Classic overworld carvers ported from Minecraft 26.2.
+//!
+//! - `NoiseBasedChunkGenerator.applyCarvers` (range ±8, LegacyRandom + `setLargeFeatureSeed`)
+//! - `CaveWorldCarver` (`isStartChunk`, carve, createRoom, createTunnel)
+//! - `WorldCarver.carveEllipsoid` (target-chunk local write)
+//! - `Mth.sin` / `Mth.cos` use the vanilla 65536-entry lookup table
+//!
+//! Runs after noise+surface, before ore features.
+//!
+//! Copyright (c) 2026 Neutron Contributors -- MIT License
 
-use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
+use crate::generator::WORLD_BOTTOM;
 use crate::legacy_rng::LegacyRandom;
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;

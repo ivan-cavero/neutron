@@ -1,10 +1,7 @@
-//! Play state packets for Minecraft 26.2.
+//! Play-state packets for Minecraft 26.2 (protocol 776).
 //!
-//! This module contains the core gameplay packets for both clientbound
-//! (server -> client) and serverbound (client -> server) directions.
-//!
-//! Packet IDs are approximate for 26.2 and may need updating when the
-//! exact protocol version is confirmed. The constants are easy to change.
+//! Clientbound and serverbound. IDs are the 26.2 values used by
+//! `neutron-server` (spawn `0x61`, position `0x48`, chunk `0x2D`, …).
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 

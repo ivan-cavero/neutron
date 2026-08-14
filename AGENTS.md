@@ -74,7 +74,7 @@ Copia el prompt completo de la fase desde **ROADMAP.md** (§2, Fases). Cada prom
 - **Vanilla 26.2**: Java 25. `java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui` con `eula.txt=true`, `online-mode=false`, `level-seed=<fija>`, `view-distance=10`. Arranque = línea `Done (Xs)!`.
 - **Paper**: última build (verificar soporte 26.x). Spark incluido (`/spark tps`). Rate limit de comandos ~15/s → throttle de bots (sleep ≥ 80 ms).
 - **Pumpkin nightly**: binario de releases oficiales; `config.toml` con `online_mode = false`. No tiene Chunky → cps con método propio.
-- **Neutron**: `cargo run --release -p neutron-cli`.
+- **Neutron**: `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8`. (`neutron-cli` no existe todavía.)
 - **Bots**: mineflayer (Node, ≤ 1.21.11; quirk 1.20.2+: `physicsEnabled: false` hasta `spawn`) · azalea (Rust, 26.x — usar para 26.2).
 - **Métricas**: startup regex `Done (Xs)!` · join timestamps de login/spawn · cps Chunky (vanilla/Paper) o contador propio · TPS spark/endpoint · RAM RSS por OS.
 
