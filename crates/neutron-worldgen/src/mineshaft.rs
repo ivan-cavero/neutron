@@ -717,6 +717,48 @@ fn generate_maybe_box(
     }
 }
 
+/// Port of `StructurePiece.generateUpperHalfSphere` used by mine rooms.
+///
+/// Vanilla accepts points whose squared normalized distance is at most 1.05;
+/// keep that threshold and the room's replaceability rules identical to
+/// `generate_box`.
+fn generate_upper_half_sphere(
+    region: &mut RegionBuf,
+    p: &Piece,
+    x0: i32,
+    y0: i32,
+    z0: i32,
+    x1: i32,
+    y1: i32,
+    z1: i32,
+) {
+    let diag_x = (x1 - x0 + 1) as f32;
+    let diag_y = (y1 - y0 + 1) as f32;
+    let diag_z = (z1 - z0 + 1) as f32;
+    let center_x = x0 as f32 + diag_x / 2.0;
+    let center_z = z0 as f32 + diag_z / 2.0;
+
+    for y in y0..=y1 {
+        let normalized_y = (y - y0) as f32 / diag_y;
+        for x in x0..=x1 {
+            let normalized_x = (x as f32 - center_x) / (diag_x * 0.5);
+            for z in z0..=z1 {
+                let normalized_z = (z as f32 - center_z) / (diag_z * 0.5);
+                let distance = normalized_x * normalized_x
+                    + normalized_y * normalized_y
+                    + normalized_z * normalized_z;
+                if distance > 1.05 {
+                    continue;
+                }
+                let (wx, wy, wz) = world_pos(p, x, y, z);
+                if region.index(wx, wy, wz).is_some() && can_replace(region.get(wx, wy, wz)) {
+                    region.set(wx, wy, wz, BlockId::Air);
+                }
+            }
+        }
+    }
+}
+
 fn get_block(region: &RegionBuf, p: &Piece, x: i32, y: i32, z: i32) -> BlockId {
     let (wx, wy, wz) = world_pos(p, x, y, z);
     region.get(wx, wy, wz)
@@ -800,6 +842,16 @@ fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &WorldgenState)
                         BlockId::Air,
                     );
                 }
+                generate_upper_half_sphere(
+                    region,
+                    p,
+                    p.bb.min_x,
+                    p.bb.min_y + 4,
+                    p.bb.min_z,
+                    p.bb.max_x,
+                    p.bb.max_y,
+                    p.bb.max_z,
+                );
             }
             Kind::Corridor => {
                 let nsec = if p.dir.axis_z() {
@@ -1004,5 +1056,30 @@ mod tests {
         };
         region.set(4, -11, 4, BlockId::Water);
         assert!(is_in_invalid_location(&region, &state, &piece));
+    }
+
+    #[test]
+    fn room_upper_half_sphere_uses_vanilla_threshold() {
+        let mut region = RegionBuf::new(0, 0, 0);
+        let piece = Piece {
+            kind: Kind::Room,
+            bb: Bb::new(2, 0, 2, 5, 5, 5),
+            depth: 0,
+            dir: Dir::North,
+            orient: None,
+            entrances: Vec::new(),
+        };
+        for y in 4..=5 {
+            for x in 2..=5 {
+                for z in 2..=5 {
+                    region.set(x, y, z, BlockId::Deepslate);
+                }
+            }
+        }
+
+        generate_upper_half_sphere(&mut region, &piece, 2, 4, 2, 5, 5, 5);
+
+        assert_eq!(region.get(4, 4, 4), BlockId::Air);
+        assert_eq!(region.get(2, 5, 2), BlockId::Deepslate);
     }
 }
