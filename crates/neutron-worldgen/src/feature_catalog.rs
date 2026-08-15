@@ -290,9 +290,50 @@ fn parse_biome_features(text: &str) -> Option<Vec<Vec<String>>> {
     Some(steps)
 }
 
+struct FeatureJsonCache {
+    placed: HashMap<String, Value>,
+    configured: HashMap<String, Value>,
+}
+
+fn feature_json_cache() -> &'static FeatureJsonCache {
+    static CACHE: OnceLock<FeatureJsonCache> = OnceLock::new();
+    CACHE.get_or_init(|| FeatureJsonCache {
+        placed: load_feature_directory("placed_feature"),
+        configured: load_feature_directory("configured_feature"),
+    })
+}
+
+fn load_feature_directory(kind: &str) -> HashMap<String, Value> {
+    let mut out = HashMap::new();
+    let dir = datapack_fs::worldgen_path(kind);
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|x| x.to_str()) != Some("json") {
+            continue;
+        }
+        let Some(name) = path.file_stem().and_then(|s| s.to_str()).map(str::to_owned) else {
+            continue;
+        };
+        let Ok(text) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(value) = serde_json::from_str(&text) else {
+            continue;
+        };
+        out.insert(name, value);
+    }
+    out
+}
+
 /// Load a placed_feature JSON object.
 pub fn load_placed_feature(id: &str) -> Option<Value> {
     let name = strip_mc(id);
+    if let Some(value) = feature_json_cache().placed.get(name) {
+        return Some(value.clone());
+    }
     let text = datapack_fs::worldgen_json_with_fallback(&format!("placed_feature/{name}.json"))?;
     serde_json::from_str(&text).ok()
 }
@@ -300,6 +341,9 @@ pub fn load_placed_feature(id: &str) -> Option<Value> {
 /// Load a configured_feature JSON object.
 pub fn load_configured_feature(id: &str) -> Option<Value> {
     let name = strip_mc(id);
+    if let Some(value) = feature_json_cache().configured.get(name) {
+        return Some(value.clone());
+    }
     let text =
         datapack_fs::worldgen_json_with_fallback(&format!("configured_feature/{name}.json"))?;
     serde_json::from_str(&text).ok()
