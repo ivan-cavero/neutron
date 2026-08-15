@@ -76,6 +76,8 @@ tools/vanilla-extract/lib/
 tools/vanilla-extract/javap/
 tools/vanilla-extract/**/*.jar
 tools/vanilla-extract/EXTRACT-STAMP.txt
+# Decompiled Java sources — reference parity data, not runtime
+tools/vanilla-extract/decompiled/**/*.jar
 
 # NBT reference vanilla server runtime
 tools/nbt-ref/vanilla1/libraries/
