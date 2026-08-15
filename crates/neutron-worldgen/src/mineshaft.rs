@@ -128,9 +128,9 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
             if pieces.is_empty() {
                 continue;
             }
-            // isValidBiome at stub (middleX, 50+dy, minZ) after vertical adjust.
-            // dy is already applied inside generate_start; stub y = first room minY
-            // after moveBelowSeaLevel ≈ MAGIC_START_Y + offset. Use room bb min.
+            // MineshaftStructure.findGenerationPoint rejects deep_dark at the
+            // generation stub. Individual pieces also repeat the blocking check
+            // during postProcess below, matching MineshaftPiece.isInInvalidLocation.
             let stub_x = (cx << 4) + 8;
             let stub_z = cz << 4;
             let stub_y = pieces[0].bb.min_y;
@@ -138,7 +138,7 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
             {
                 continue;
             }
-            place_pieces(region, &pieces, state.seed);
+            place_pieces(region, &pieces, state);
         }
     }
 }
@@ -766,10 +766,13 @@ fn set_planks_block(region: &mut RegionBuf, p: &Piece, x: i32, y: i32, z: i32) {
     region.set(wx, wy, wz, BlockId::OakPlanks);
 }
 
-fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], level_seed: i64) {
+fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &WorldgenState) {
     let mut rng = LegacyRandom::new(0);
-    rng.set_large_feature_seed(level_seed, 0, 0);
+    rng.set_large_feature_seed(state.seed, 0, 0);
     for p in pieces {
+        if is_in_invalid_location(region, state, p) {
+            continue;
+        }
         match p.kind {
             Kind::Room => {
                 let top = (p.bb.min_y + 3).min(p.bb.max_y);
@@ -871,6 +874,57 @@ fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], level_seed: i64) {
     }
 }
 
+/// Port of `MineshaftPiece.isInInvalidLocation` for the generated region.
+///
+/// Vanilla skips a piece when its expanded bounding box touches a liquid or
+/// belongs to the mineshaft-blocking `deep_dark` biome. The old implementation
+/// only checked one approximate point of the structure start, which allowed
+/// invalid pieces to carve air and subsequently changed sculk placement.
+fn is_in_invalid_location(region: &RegionBuf, state: &WorldgenState, p: &Piece) -> bool {
+    let x0 = (p.bb.min_x - 1).max(region.origin_x);
+    let y0 = (p.bb.min_y - 1).max(WORLD_MIN_Y);
+    let z0 = (p.bb.min_z - 1).max(region.origin_z);
+    let x1 = (p.bb.max_x + 1).min(region.origin_x + region.side - 1);
+    let y1 = (p.bb.max_y + 1).min(crate::generator::WORLD_TOP - 1);
+    let z1 = (p.bb.max_z + 1).min(region.origin_z + region.side - 1);
+
+    if x0 > x1 || y0 > y1 || z0 > z1 {
+        return false;
+    }
+
+    let center_x = (x0 + x1) / 2;
+    let center_y = (y0 + y1) / 2;
+    let center_z = (z0 + z1) / 2;
+    if biome_id::DEEP_DARK == crate::biome_source::biome_id_at_block(
+        state, center_x, center_y, center_z,
+    ) {
+        return true;
+    }
+
+    for x in x0..=x1 {
+        for z in z0..=z1 {
+            if region.get(x, y0, z).is_fluid() || region.get(x, y1, z).is_fluid() {
+                return true;
+            }
+        }
+    }
+    for x in x0..=x1 {
+        for y in y0..=y1 {
+            if region.get(x, y, z0).is_fluid() || region.get(x, y, z1).is_fluid() {
+                return true;
+            }
+        }
+    }
+    for z in z0..=z1 {
+        for y in y0..=y1 {
+            if region.get(x0, y, z).is_fluid() || region.get(x1, y, z).is_fluid() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -934,5 +988,21 @@ mod tests {
         }
         eprintln!("(5,-2) y<16 air={air} planks={planks}");
         assert!(air > 0, "mineshaft must carve air into (5,-2)");
+    }
+
+    #[test]
+    fn invalid_piece_rejects_boundary_liquid() {
+        let state = WorldgenState::overworld(12345);
+        let mut region = RegionBuf::new(0, 0, 0);
+        let piece = Piece {
+            kind: Kind::Room,
+            bb: Bb::new(4, -10, 4, 6, -8, 6),
+            depth: 0,
+            dir: Dir::North,
+            orient: None,
+            entrances: Vec::new(),
+        };
+        region.set(4, -11, 4, BlockId::Water);
+        assert!(is_in_invalid_location(&region, &state, &piece));
     }
 }
