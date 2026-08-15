@@ -70,9 +70,24 @@ mod tests {
 
     #[test]
     fn packed_table_has_expected_count() {
-        assert_eq!(POINT_COUNT, 7498);
-        assert_eq!(RAW.len(), 7498 * RECORD_SIZE);
-        assert_eq!(decoded_table().len(), 7498);
+        assert_eq!(POINT_COUNT, 7594);
+        assert_eq!(RAW.len(), 7594 * RECORD_SIZE);
+        assert_eq!(decoded_table().len(), 7594);
+    }
+
+    #[test]
+    fn distinct_biome_count_and_pale_garden_points() {
+        let mut ids = std::collections::BTreeSet::new();
+        let mut pale = 0usize;
+        for p in iter() {
+            ids.insert(p.biome);
+            if p.biome == 54 {
+                pale += 1;
+            }
+        }
+        // 55 distinct biomes (vanilla 26.2 OverworldBiomeBuilder), 40 pale_garden points
+        assert_eq!(ids.len(), 55);
+        assert_eq!(pale, 40);
     }
 
     #[test]

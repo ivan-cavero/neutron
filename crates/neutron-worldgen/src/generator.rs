@@ -409,13 +409,9 @@ impl ChunkGenerator {
 
     fn build_aquifer(&self, cx: i32, cz: i32) -> NoiseBasedAquifer<'_> {
         let st = &self.state;
-        let grid_x = |b: i32| b >> 4;
-        let grid_z = |b: i32| b >> 4;
-        let min_grid_x = grid_x(cx * 16 - 5);
-        let max_grid_x = grid_x(cx * 16 + 15 - 5) + 1;
-        let min_grid_z = grid_z(cz * 16 - 5);
-        let max_grid_z = grid_z(cz * 16 + 15 - 5) + 1;
-        let mut aqua = NoiseBasedAquifer::create(
+        // maxPreliminarySurfaceLevel is derived inside `create` (same rectangle
+        // and 4-block sampling as the vanilla constructor, Aquifer.java:124).
+        NoiseBasedAquifer::create(
             st.noises.noises(),
             st.router.barrier.clone(),
             st.router.fluid_level_floodedness.clone(),
@@ -431,24 +427,7 @@ impl ChunkGenerator {
             st.min_y,
             st.height,
             GlobalFluidPicker::overworld(st.sea_level),
-            0,
-        );
-        // maxPreliminarySurfaceLevel over the grid region (same loop as vanilla).
-        let mut m = i32::MIN;
-        for gz in min_grid_z..=max_grid_z {
-            let bz = gz * 16;
-            for gx in min_grid_x..=max_grid_x {
-                let bx = gx * 16;
-                for ox in (0..10).step_by(4) {
-                    for oz in (0..10).step_by(4) {
-                        let v = aqua.preliminary_surface_level(bx + ox, bz + oz);
-                        m = m.max(v);
-                    }
-                }
-            }
-        }
-        let _ = m;
-        aqua
+        )
     }
 }
 

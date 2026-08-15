@@ -3,6 +3,7 @@
 > Estado actual del proyecto. Se lee al empezar cada run y se actualiza al terminar.
 
 ## Fase actual
+**F2d R43 — diagnóstico de referencia + multi-seed (hallazgos críticos)**
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
@@ -256,6 +257,29 @@ neutron/
 | **block name match** | 🟡 | **98.41%** (sin cambio de volumen) |
 | sculk Y=-32..-17 | 🔴 | 135 vs 278; 15-radius del único parche no cubre |
 
+## Estado de paridad F2d (run-043, 15 ago 2026)
+
+### Hallazgos críticos del run-043
+
+1. **Referencia `vanilla1` viciada para decoración** (nunca regenerada tras
+   el 9 ago; diffs 1233 vs mundo fresco mismo seed/jar).
+2. **Vanilla 26.2 no es determinista en decoración**: dos corridas idénticas
+   seed 12345 → 99.05 %, 938 diffs, 100 % vegetación, 0 terreno. Techo de
+   block-match vegetal = banda van-vs-van.
+3. **Multi-seed** (`tools/nbt-ref/multiseed.py`): 12345 98.15–98.51 %,
+   777 99.39 %, **424242 88.47 % (gap de TERRENO: aquifer 7149 celdas
+   air→water, surface desierto ~1500, lush caves ~700, pale garden ~600)**.
+
+| Métrica | Valor |
+|---|---|
+| BASE 12345 vs fresh | 99.69–99.70 % |
+| ALL 12345 vs fresh | 98.15–98.51 % (vs viejo: 98.59 %) |
+| van-vs-van 12345 | 99.05 % |
+| BASE 777 / 424242 | 99.89 % / 89.30 % |
+
+Ver `crates/neutron-worldgen/WORLDGEN-PIPELINE.md` (pipeline + hallazgos) y
+`runs/run-043.md`. Bar suspendido hasta gate humano (nueva definición 1:1).
+
 ### F2d R42 (14 ago 2026) — freeze + join
 
 Worldgen **congelado** en R41. Documentado en `crates/neutron-worldgen/WORLDGEN.md`.
@@ -305,3 +329,16 @@ chunks de `ChunkGenerator` con IDs de bloque vanilla.
 - `crates/neutron-worldgen/src/density.rs` — MarkerState, DensityEnv, compute() con markers
 - `tools/java-probe/` — Java verification probes
 - `tools/vanilla-extract/decompiled/*.java` — fuentes descompiladas (NoiseChunk.java)
+
+### F2d R44 — T3 sculk: mecanismo cerrado, agregado pendiente (16 ago 2026)
+
+- **Mecanismo sculk: ✅ PASS** — critic ciego Codex verificó el fix de
+  sturdiness por cara, `cargo test` 59/59, seis intentos aceptados con las
+  mismas coordenadas Java/Rust y 64/64 dumps idénticos en i=124.
+- **Instrumentación:** dumps Rust opt-in mediante
+  `NEUTRON_SCULK_TICK_DUMPS`, `NEUTRON_SCULK_TICK_PATCH` y
+  `NEUTRON_SCULK_TICK_DUMPS_DIR`; el flujo normal no cambia.
+- **Pendiente:** la diferencia agregada de región no se atribuye todavía a
+  sculk; sigue abierta la arquitectura de input cross-chunk/orden de
+  decoración (vecinos, estructuras/lush y spill de ores).
+- Evidencia completa: `runs/run-044.md` y `tools/java-probe/repro-i124/`.

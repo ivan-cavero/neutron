@@ -1,55 +1,32 @@
-# Worldgen — punto de congelación (F2d R41)
+# Worldgen — punto de congelación (F2d R41) + corrección R43
 
-> 14 ago 2026. La generación **no es 1:1**. El bar sigue siendo 100 % block
-> match en seed `12345`, chunk `(6, -2)`. Este archivo congela el estado para
-> poder **jugar el mundo** en el servidor mientras el parity queda pendiente.
+> Actualizado 15 ago 2026. Ver **`WORLDGEN-PIPELINE.md`** (obligatorio): mapa
+> de determinismo de vanilla (hallazgo R43) y la decisión de bar por
+> **paridad de mecanismo**. Los números de esta tabla se midieron contra la
+> referencia `vanilla1`, hoy sabida **viciada** para decoración.
 
-## Qué hay hoy
-
-Pipeline de `ChunkGenerator::generate_chunk` (overworld 26.2):
-
-1. Noise + aquifer + ore veins + surface rules (datapack JSON)
-2. Carvers (cuevas + cañón)
-3. Estructuras: **mineshafts** (start, árbol de piezas, `generateBox`, `placeSupport`)
-4. Step 6 — ores (`OreFeature`)
-5. Step 7 — sculk (`ChargeCursor` + `MultifaceSpreader`)
-6. Step 9 — vegetación (árboles, hierba, leaf litter)
-
-| Métrica (seed 12345, chunk 6,-2) | Valor | Notas |
-|---|---|---|
-| ALL (nombre de bloque) | **97.84 %** (96177 / 98304) | run-041 |
-| BASE (sin veg) | **99.34 %** | residual = ores + shape |
-| dens_shape | ~99.55–99.67 % | noodle / interpolators |
-| Bedrock | 758 / 758 | positional RNG |
-| Andesite | 1424 = vanilla | RarityFilter `nextFloat` |
-| Mineshaft start `(4,-1)` | **121 / 121 BB bit-exact** | Crossing N/S/E + EAST `maxX-3` |
-| Primer parche sculk `(98,-43,-23)` | roll **0.467** (catalyst sí) | cueva aún incompleta |
-| Sculk volume | 917 vs van 518 | de más: mineshaft air residual |
-| ChargeCursor (suelo plano) | 1:1 ticks 1–2 | no basta en cueva real |
-
-## Qué falta (prioridad para volver a 1:1)
-
-No tocar el bar. El siguiente gap que mueve celdas, en este orden:
-
-1. **Mineshaft `postProcess`** — raíles, cobweb, `generateMaybeBox` con el RNG del structure start. 10 `cave_air` residuales en r≤15 del parche mueven el roll a 0.269.
-2. **`Room.generateUpperHalfSphere`** + `isInInvalidLocation`.
-3. **Sculk de más** — baja cuando el air de la mineshaft vecina `(5,-2)` / `(5,-1)` coincide.
-4. **TreeFeature** — extra `dark_oak_leaves` (~240 air→leaves).
-5. **BASE residual** — ores posicionales, emerald/magma sin `BlockId`.
-6. **Otras estructuras** — no hay villages, strongholds, trial chambers, etc.
-7. **Carver `widthFactors`** — port inicial; no es el residual dominante.
-
-Criterio para retomar: un critic ciego ejecuta `block_parity` contra un mundo vanilla fresco (no golden viejo) y compara contra la tabla de arriba.
-
-## Cómo se verifica
+**Cómo se mide ahora** (referencias frescas, multi-chunk, multi-seed):
 
 ```bash
-# Parity del chunk bar (necesita un mundo vanilla seed 12345 pregenerado)
-cargo run --release -p neutron-worldgen --example block_parity
+# 9 chunks alrededor de (6,-2) con desglose core/border
+cargo run --release -p neutron-worldgen --example region_parity -- 12345 6 -2 1
 
-# Un solo chunk, seed 12345
-cargo test -p neutron-worldgen --release
+# multi-seed (genera referencias frescas y mide)
+python tools/nbt-ref/multiseed.py 12345 777 424242
 ```
+
+Baseline R43 (region 3×3, referencias frescas): 12345 → ALL 97.73 %;
+424242 → ALL 89.07 % (aquifer + surface desierto + lush caves + pale garden).
+Chunks core deben ser 100 % en fases deterministas — ver PIPELINE.
+
+## Qué falta (prioridad R44, gap real determinista)
+
+1. **Aquifer/agua** — 424242: 7149 celdas air→water (determinista).
+2. **Surface rules desierto/playa** — 424242: ~1500 celdas.
+3. **Lush caves features** (moss/clay/cave_vines) + **pale garden**.
+4. **Sculk posiciones** — 12345: ~325 celdas.
+5. **Ores posicionales + tuff** — 12345: ~250 celdas.
+6. Vegetación: paridad de stream (mecanismo), no block-match absoluto.
 
 ## Cómo se ve en el servidor
 
@@ -71,13 +48,27 @@ Ir a chunk `(6, -2)` (aprox. x=96, z=-32) para ver mineshaft + deep dark.
 | `generator.rs` | Orquesta el chunk (3×3 region + features). `Send` (`Arc` density). |
 | `biome/` | Multi-noise + voronoi. Params en `data/biome_params.bin` (7498 puntos). |
 | `density.rs` / `worldgen.rs` | Noise router + markers (`DF = Arc<DFNode>`) |
-| `surface.rs` / `surface_rules.rs` | `BlockId` interno + surface JSON |
+| `surface.rs` / `surface_rules.rs` | `BlockId` interno + surface JSON + `vanilla_name` |
 | `carvers.rs` | Cuevas / cañón |
 | `mineshaft.rs` | Structure pieces 26.2 |
 | `features.rs` | OreFeature + rarity |
 | `sculk.rs` | ChargeCursor + vein |
-| `feature_dispatch.rs` / `tree.rs` / `vegetation.rs` | Step 9 |
-| `examples/` | Sondas de parity (`autoexamples = false`; solo 6 se compilán por defecto) |
+| `feature_dispatch.rs` / `tree.rs` | Step 9 (dispatch JSON + TreeFeature CFR) |
 
 `BlockId` es **interno** (Air=0, Stone=1, Dirt=10, …). El servidor lo traduce a
-block-state IDs de protocolo 26.2 en `neutron-server`.
+block-state IDs de protocolo 26.2 en `neutron-server`. (`vegetation.rs`
+aproximado fue eliminado en R43 — el dispatch JSON es el único camino.)
+
+## Histórico R41 (contra referencia `vanilla1` — viciada para decoración)
+
+Pipeline `ChunkGenerator::generate_chunk`: noise+aquifer+veins+surface →
+carvers → mineshafts → step 6 ores → step 7 sculk → step 9 vegetación.
+
+| Métrica (chunk 6,-2) | Valor R41 |
+|---|---|
+| ALL | 97.84 % · BASE 99.34 % · dens_shape ~99.6 % |
+| Bedrock 758/758 · Andesite 1424 = vanilla · Mineshaft 121/121 BB bit-exact |
+| Sculk volume 917 vs 518 · ChargeCursor 1:1 plano |
+
+Pendiente R41→R44: mineshaft postProcess (raíles/cobweb), sculk posiciones,
+TreeFeature stream, ores posicionales, otras estructuras, carver widthFactors.

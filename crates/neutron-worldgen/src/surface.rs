@@ -322,3 +322,120 @@ impl BlockId {
         }
     }
 }
+
+/// Canonical vanilla block name for parity tooling (moved from block_parity example).
+pub fn vanilla_name(b: BlockId) -> &'static str {
+    match b {
+        BlockId::Air => "minecraft:air",
+        BlockId::Stone => "minecraft:stone",
+        BlockId::Granite => "minecraft:granite",
+        BlockId::Diorite => "minecraft:diorite",
+        BlockId::Andesite => "minecraft:andesite",
+        BlockId::Dirt => "minecraft:dirt",
+        BlockId::CoarseDirt => "minecraft:coarse_dirt",
+        BlockId::GrassBlock => "minecraft:grass_block",
+        BlockId::Podzol => "minecraft:podzol",
+        BlockId::Mycelium => "minecraft:mycelium",
+        BlockId::Cobblestone => "minecraft:cobblestone",
+        BlockId::Sand => "minecraft:sand",
+        BlockId::RedSand => "minecraft:red_sand",
+        BlockId::Gravel => "minecraft:gravel",
+        BlockId::GoldOre => "minecraft:gold_ore",
+        BlockId::IronOre => "minecraft:iron_ore",
+        BlockId::CoalOre => "minecraft:coal_ore",
+        BlockId::CopperOre => "minecraft:copper_ore",
+        BlockId::DeepslateIronOre => "minecraft:deepslate_iron_ore",
+        BlockId::DeepslateCoalOre => "minecraft:deepslate_coal_ore",
+        BlockId::DeepslateGoldOre => "minecraft:deepslate_gold_ore",
+        BlockId::DeepslateCopperOre => "minecraft:deepslate_copper_ore",
+        BlockId::DeepslateDiamondOre => "minecraft:deepslate_diamond_ore",
+        BlockId::DeepslateRedstoneOre => "minecraft:deepslate_redstone_ore",
+        BlockId::DeepslateLapisOre => "minecraft:deepslate_lapis_ore",
+        BlockId::DiamondOre => "minecraft:diamond_ore",
+        BlockId::RedstoneOre => "minecraft:redstone_ore",
+        BlockId::LapisOre => "minecraft:lapis_ore",
+        BlockId::RawIronBlock => "minecraft:raw_iron_block",
+        BlockId::RawCopperBlock => "minecraft:raw_copper_block",
+        BlockId::Bedrock => "minecraft:bedrock",
+        BlockId::OakLog => "minecraft:oak_log",
+        BlockId::OakLeaves => "minecraft:oak_leaves",
+        BlockId::Water => "minecraft:water",
+        BlockId::Lava => "minecraft:lava",
+        BlockId::Sandstone => "minecraft:sandstone",
+        BlockId::RedSandstone => "minecraft:red_sandstone",
+        BlockId::Ice => "minecraft:ice",
+        BlockId::Snow => "minecraft:snow_block",
+        BlockId::Clay => "minecraft:clay",
+        BlockId::PackedIce => "minecraft:packed_ice",
+        BlockId::PowderSnow => "minecraft:powder_snow",
+        BlockId::Terracotta => "minecraft:terracotta",
+        BlockId::WhiteTerracotta => "minecraft:white_terracotta",
+        BlockId::OrangeTerracotta => "minecraft:orange_terracotta",
+        BlockId::BrownTerracotta => "minecraft:brown_terracotta",
+        BlockId::BlackTerracotta => "minecraft:black_terracotta",
+        BlockId::YellowTerracotta => "minecraft:yellow_terracotta",
+        BlockId::RedTerracotta => "minecraft:red_terracotta",
+        BlockId::LightGrayTerracotta => "minecraft:light_gray_terracotta",
+        BlockId::Mud => "minecraft:mud",
+        BlockId::Deepslate => "minecraft:deepslate",
+        BlockId::Tuff => "minecraft:tuff",
+        BlockId::Calcite => "minecraft:calcite",
+        BlockId::BlueIce => "minecraft:blue_ice",
+        BlockId::Cinnabar => "minecraft:cinnabar",
+        BlockId::Sulfur => "minecraft:sulfur",
+        BlockId::Sculk => "minecraft:sculk",
+        BlockId::SculkCatalyst => "minecraft:sculk_catalyst",
+        BlockId::SculkVein => "minecraft:sculk_vein",
+        BlockId::SculkSensor => "minecraft:sculk_sensor",
+        BlockId::SculkShrieker => "minecraft:sculk_shrieker",
+        BlockId::MossBlock => "minecraft:moss_block",
+        BlockId::ShortGrass => "minecraft:short_grass",
+        BlockId::LeafLitter => "minecraft:leaf_litter",
+        BlockId::DarkOakLog => "minecraft:dark_oak_log",
+        BlockId::DarkOakLeaves => "minecraft:dark_oak_leaves",
+        BlockId::OakPlanks => "minecraft:oak_planks",
+        BlockId::OakFence => "minecraft:oak_fence",
+
+    }
+}
+
+/// Vegetation classifier for BASE (no-veg) parity (moved from block_parity example).
+pub fn is_vegetation_name(name: &str) -> bool {
+    is_veg(name)
+}
+
+fn is_veg(name: &str) -> bool {
+    let n = name.strip_prefix("minecraft:").unwrap_or(name);
+    n.contains("leaves")
+        || n.contains("log")
+        || n.contains("wood")
+        || n == "leaf_litter"
+        || n == "vine"
+        || n == "short_grass"
+        || n == "tall_grass"
+        || n == "grass"
+        || n == "fern"
+        || n == "large_fern"
+        || n.contains("orchid")
+        || n.contains("tulip")
+        || n.contains("daisy")
+        || n.contains("lilac")
+        || n.contains("rose")
+        || n.contains("peony")
+        || n.contains("azalea")
+        || n.contains("mushroom")
+        || n == "dandelion"
+        || n == "poppy"
+        || n == "cornflower"
+        || n == "oxeye_daisy"
+        || n == "lily_of_the_valley"
+        || n == "pink_petals"
+        || n == "moss_carpet"
+        || n == "sculk"
+        || n == "sculk_vein"
+        || n == "sculk_sensor"
+        || n == "sculk_catalyst"
+        || n == "sculk_shrieker"
+        || n == "glow_lichen"
+        || n.contains("sapling")
+}

@@ -20,10 +20,31 @@ neutron-world = { path = "../neutron-world" }
 name = "block_parity"
 
 [[example]]
+name = "surface_diag"
+
+[[example]]
 name = "dump_ms"
 
 [[example]]
 name = "sculk_cave"
+
+[[example]]
+name = "sculk_pos"
+
+[[example]]
+name = "sculk_replay"
+
+[[example]]
+name = "sculk_vanworld"
+
+[[example]]
+name = "idx_probe"
+
+[[example]]
+name = "sculk_veintrace"
+
+[[example]]
+name = "biomecheck_tmp"
 
 [[example]]
 name = "parity_diag"
@@ -33,4 +54,28 @@ name = "chunk_check"
 
 [[example]]
 name = "gap_diag"
+
+[[example]]
+name = "tree_gap"
+
+[[example]]
+name = "feature_index_probe"
+
+[[example]]
+name = "dump_van_tree"
+
+[[example]]
+name = "compare_worlds"
+
+[[example]]
+name = "border_analysis"
+
+[[example]]
+name = "region_parity"
+
+[[example]]
+name = "t3_diag"
+
+[[example]]
+name = "aquifer_diag"
 

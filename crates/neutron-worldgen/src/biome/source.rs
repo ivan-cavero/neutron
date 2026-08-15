@@ -91,6 +91,27 @@ pub mod biome_id {
     pub const LUSH_CAVES: u8 = 34;
     /// Unique id — point 7592 in BIOME-SPEC.
     pub const SULFUR_CAVES: u8 = 36;
+
+    // Ocean variants (previously collapsed into OCEAN).
+    pub const DEEP_FROZEN_OCEAN: u8 = 37;
+    pub const DEEP_COLD_OCEAN: u8 = 38;
+    pub const COLD_OCEAN: u8 = 39;
+    pub const DEEP_LUKEWARM_OCEAN: u8 = 40;
+    pub const LUKEWARM_OCEAN: u8 = 41;
+    pub const WARM_OCEAN: u8 = 42;
+    // Land biomes previously merged or dropped by the lossy pack.
+    pub const SNOWY_BEACH: u8 = 43;
+    pub const WINDSWEPT_FOREST: u8 = 44;
+    pub const WINDSWEPT_GRAVELLY_HILLS: u8 = 45;
+    pub const WINDSWEPT_SAVANNA: u8 = 46;
+    pub const SAVANNA_PLATEAU: u8 = 47;
+    pub const SPARSE_JUNGLE: u8 = 48;
+    pub const BAMBOO_JUNGLE: u8 = 49;
+    pub const SUNFLOWER_PLAINS: u8 = 50;
+    pub const FLOWER_FOREST: u8 = 51;
+    pub const OLD_GROWTH_SPRUCE_TAIGA: u8 = 52;
+    pub const SNOWY_TAIGA: u8 = 53;
+    pub const PALE_GARDEN: u8 = 54;
 }
 
 /// Climate target: quantized values for the 6 climate dimensions.

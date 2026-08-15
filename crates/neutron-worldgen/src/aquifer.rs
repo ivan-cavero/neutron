@@ -15,9 +15,10 @@ use crate::surface::BlockId;
 /// `DimensionType.WAY_BELOW_MIN_Y` — the "no fluid" sentinel.
 pub const WAY_BELOW_MIN_Y: i32 = -32512;
 
-/// `Mth.getSeed(x, y, z)`.
+/// `Mth.getSeed(x, y, z)` (Mth.java:356-360). Note `x * 3129871` is an int
+/// multiply (wraps on overflow) widened to long, while `z * 116129781L` is long.
 pub fn get_seed(x: i32, y: i32, z: i32) -> i64 {
-    let mut s = (x as i64 * 3129871) ^ (z as i64 * 116_129_781) ^ y as i64;
+    let mut s = (x.wrapping_mul(3129871) as i64) ^ (z as i64 * 116_129_781) ^ y as i64;
     s = s
         .wrapping_mul(s)
         .wrapping_mul(42317861)
@@ -154,6 +155,11 @@ impl<'a> NoiseBasedAquifer<'a> {
     ];
 
     /// `Aquifer.create(noiseChunk, pos, router, aquiferRandom, minBlockY, yBlockSize, fluidRule)`.
+    ///
+    /// The vanilla constructor derives `skipSamplingAboveY` from
+    /// `noiseChunk.maxPreliminarySurfaceLevel(fromGridX(minGridX, 0),
+    /// fromGridZ(minGridZ, 0), fromGridX(maxGridX, 9), fromGridZ(maxGridZ, 9))`
+    /// (Aquifer.java:124-126); we compute the same max here.
     pub fn create(
         env_noises: &'a std::collections::HashMap<String, crate::noise::NormalNoise>,
         barrier_noise: DF,
@@ -170,7 +176,6 @@ impl<'a> NoiseBasedAquifer<'a> {
         min_block_y: i32,
         y_block_size: i32,
         global_fluid_picker: GlobalFluidPicker,
-        max_preliminary_surface_level: i32,
     ) -> Self {
         let min_grid_x = grid_x(chunk_min_x - 5);
         let max_grid_x = grid_x(chunk_min_x + 15 - 5) + 1;
@@ -181,6 +186,21 @@ impl<'a> NoiseBasedAquifer<'a> {
         let grid_size_x = max_grid_x - min_grid_x + 1;
         let grid_size_y = max_grid_y - min_grid_y + 1;
         let grid_size_z = max_grid_z - min_grid_z + 1;
+
+        // `NoiseChunk.maxPreliminarySurfaceLevel(minBlockX, minBlockZ, maxBlockX, maxBlockZ)`
+        // (NoiseChunk.java:198-207): max over the grid rectangle sampled every 4 blocks.
+        let mut max_preliminary_surface_level = i32::MIN;
+        for bz in (from_grid_z(min_grid_z, 0)..=from_grid_z(max_grid_z, 9)).step_by(4) {
+            for bx in (from_grid_x(min_grid_x, 0)..=from_grid_x(max_grid_x, 9)).step_by(4) {
+                let v = preliminary_surface_level_at(
+                    env_noises,
+                    &preliminary_surface_level,
+                    bx,
+                    bz,
+                );
+                max_preliminary_surface_level = max_preliminary_surface_level.max(v);
+            }
+        }
 
         let max_adjusted_surface = max_preliminary_surface_level + 8;
         let skip_sampling_above_grid_y = grid_y(max_adjusted_surface + 12) + 1;
@@ -435,8 +455,12 @@ impl<'a> NoiseBasedAquifer<'a> {
         if let Some(&v) = self.surface_cache.get(&(qx, qz)) {
             return v;
         }
-        let mut env = DensityEnv::new(qx, 0, qz, self.env_noises);
-        let v = crate::density::compute(&self.preliminary_surface_level, &mut env).floor() as i32;
+        let v = preliminary_surface_level_at(
+            self.env_noises,
+            &self.preliminary_surface_level,
+            qx,
+            qz,
+        );
         self.surface_cache.insert((qx, qz), v);
         v
     }
@@ -592,6 +616,19 @@ impl<'a> NoiseBasedAquifer<'a> {
 /// `similarity(distanceSqr1, distanceSqr2)`.
 fn similarity(distance_sqr1: i32, distance_sqr2: i32) -> f64 {
     1.0 - (distance_sqr2 - distance_sqr1) as f64 / 25.0
+}
+
+/// `NoiseChunk.computePreliminarySurfaceLevel` (NoiseChunk.java:217-219):
+/// `floor(preliminarySurfaceLevel.compute(SinglePointContext(blockX, 0, blockZ)))`.
+/// The caller passes already-quantized block coords (`QuartPos.toBlock(QuartPos.fromBlock(x))`).
+fn preliminary_surface_level_at(
+    env_noises: &std::collections::HashMap<String, crate::noise::NormalNoise>,
+    preliminary_surface_level: &DF,
+    block_x: i32,
+    block_z: i32,
+) -> i32 {
+    let mut env = DensityEnv::new(block_x, 0, block_z, env_noises);
+    crate::density::compute(preliminary_surface_level, &mut env).floor() as i32
 }
 
 /// `FLOWING_UPDATE_SIMULARITY = similarity(square(10), square(12))`.

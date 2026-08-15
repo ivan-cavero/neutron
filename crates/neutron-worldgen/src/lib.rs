@@ -35,7 +35,6 @@ pub mod sculk;
 pub mod surface;
 pub mod surface_rules;
 pub mod tree;
-pub mod vegetation;
 pub mod worldgen;
 
 /// Compatibility alias for [`biome::manager`].

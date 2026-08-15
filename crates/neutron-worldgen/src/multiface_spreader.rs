@@ -250,6 +250,21 @@ impl MultifaceSpreader {
         sz: i32,
         sp: SpreadPos,
     ) -> bool {
+        if let Some(c) = trace_coord() {
+            if (sp.x, sp.y, sp.z) == c || (sx, sy, sz) == c {
+                eprintln!(
+                    "TRACE place ({},{},{}) face={} from ({},{},{}) ok={}",
+                    sp.x,
+                    sp.y,
+                    sp.z,
+                    sp.face,
+                    sx,
+                    sy,
+                    sz,
+                    self.can_spread_into(region, faces, sx, sy, sz, sp)
+                );
+            }
+        }
         if !self.can_spread_into(region, faces, sx, sy, sz, sp) {
             return false;
         }
@@ -412,6 +427,19 @@ impl MultifaceSpreader {
         }
         true
     }
+}
+
+/// NEUTRON_TRACE_COORD="x,y,z" — log every spread touching that cell.
+pub fn trace_coord() -> Option<(i32, i32, i32)> {
+    static CACHED: std::sync::OnceLock<Option<(i32, i32, i32)>> = std::sync::OnceLock::new();
+    *CACHED.get_or_init(|| {
+        std::env::var("NEUTRON_TRACE_COORD")
+            .ok()
+            .and_then(|s| {
+                let p: Vec<i32> = s.split(',').filter_map(|v| v.parse().ok()).collect();
+                if p.len() == 3 { Some((p[0], p[1], p[2])) } else { None }
+            })
+    })
 }
 
 fn axis(dir: usize) -> u8 {
