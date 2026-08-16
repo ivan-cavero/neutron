@@ -1,7 +1,7 @@
 # AGENTS.md — Neutron: how we work
 
 > v1.1 · 16 Aug 2026 · Read automatically by the coding agent at task start.
-> Agent-facing files are in English. Human docs (README.md) may stay in Spanish.
+> All docs are in English (README included).
 > **Harness-agnostic**: this file is the universal contract. Primary harness is **pi**
 > (with plugins); opencode/zcode also work. Tool names in §7 are pi-specific — each
 > harness maps them to its own (see README.md §AI workflow).

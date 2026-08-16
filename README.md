@@ -1,138 +1,139 @@
 # Neutron
 
-Servidor de Minecraft Java Edition reimplementado desde cero en Rust. Multiplataforma
-(Windows/Linux/macOS x86-64/ARM64), paridad 1:1 con vanilla, plugins WASM/Lua seguros por
-construcción, y `main` siempre en la última versión de Minecraft.
+A Minecraft Java Edition server reimplemented from scratch in Rust. Multi-platform
+(Windows/Linux/macOS x86-64/ARM64), 1:1 vanilla parity, secure-by-construction
+WASM/Lua plugins, and `main` always on the latest Minecraft version.
 
-**Estado**: PRE-ALPHA · worldgen F2d activo (paridad de mecanismo, run-046) · servidor 26.2 jugable
+**Status**: PRE-ALPHA · worldgen F2d active (mechanism parity, run-046) · playable 26.2 server
 
-## Qué es este proyecto
+## What this project is
 
-1. **Extreme performance** — rendimiento medido y publicado con metodología reproducible (BENCHMARKS.md), no marketing.
-2. **Security by construction** — plugins en sandbox WASM: un plugin nunca tumba el servidor.
-3. **1:1 vanilla parity** — misma seed → mismo mundo; redstone, iluminación y spawns idénticos; verificado por checksums en CI.
-4. **Version cadence** — `main` = última versión de Mojang en ≤ 7 días (pipeline D0-D4).
+1. **Extreme performance** — measured and published with reproducible methodology (BENCHMARKS.md), not marketing.
+2. **Security by construction** — plugins in a WASM sandbox: a plugin never takes down the server.
+3. **1:1 vanilla parity** — same seed → same world; redstone, lighting and spawns identical; verified by CI checksums.
+4. **Version cadence** — `main` = latest Mojang version in ≤ 7 days (D0-D4 pipeline).
 
 ---
 
-## Cómo se trabaja en este proyecto con la AI (LEER)
+## How AI work happens in this project (READ)
 
-Este repo está diseñado para que un agente (pi, opencode o zcode) trabaje sobre él con
-**estado en disco, no en memoria de chat**. El método es genérico — sirve para worldgen,
-redstone, protocolo, tools, lo que sea — y escala porque cada sesión reconstruye su
-contexto desde archivos, no desde la conversación anterior.
+This repo is designed for an agent (pi, opencode or zcode) to work on it with
+**state on disk, not in chat memory**. The method is generic — it works for worldgen,
+redstone, protocol, tools, anything — and scales because each session rebuilds its
+context from files, not from the previous conversation.
 
-### El método: Gauntlet Loop
+### The method: Gauntlet Loop
 
 ```
-LEAD → divide el objetivo en piezas gradeables
-  ├─ BUILDER construye cada pieza
-  └─ CRITIC (subagente, contexto limpio) inspecciona el artefacto REAL contra el bar
-       PASS → siguiente pieza · FAIL → el gap más grande → reconstruir → repetir
+LEAD → splits the goal into gradeable pieces
+  ├─ BUILDER builds each piece
+  └─ CRITIC (subagent, clean context) inspects the REAL artifact against the bar
+       PASS → next piece · FAIL → the biggest gap → rebuild → repeat
 ```
 
-Reglas no negociables: el **bar** es una referencia real (checksum, benchmark, server
-vanilla) que nunca se edita para que un test pase · el **builder nunca se autoevalúa** ·
-**ratchet**: cada ronda re-mide TODOS los seeds, una regresión es FAIL · **commits
-incrementales**: cada pieza probada se commitea sola, nunca mega-commits.
+Non-negotiable rules: the **bar** is a real reference (checksum, benchmark, vanilla
+server) that is never edited to make a test pass · the **builder never grades itself** ·
+**ratchet**: every round re-measures ALL seeds, a regression is FAIL · **incremental
+commits**: each proven piece is committed alone, never mega-commits.
 
-### Mapa de archivos (qué es cada uno, quién lo toca)
+### File map (what each file is, who touches it)
 
-| Archivo | Qué es | Quién lo lee | Quién lo escribe | Cuándo |
+| File | What it is | Who reads it | Who writes it | When |
 | --- | --- | --- | --- | --- |
-| `AGENTS.md` | Contrato universal: cómo se trabaja, bar, loop, límites, tools | todo agente, al empezar | humano + LEAD | cuando cambia el método |
-| `STATE.md` | **Estado real** (≤80 líneas): fase, bar único, última medición, próxima acción, gaps | todo agente, al empezar | LEAD, al cerrar cada run | cada run |
-| `workbench.md` | Round log VIVO del run activo: ronda actual, PASS/FAIL por unidad | LEAD + quien supervisa | LEAD, tras cada ronda | cada ronda |
-| `runs/run-NNN.md` | Evidencia de cada run: objetivo, bar, tareas, logs, rounds | critic ciego + quien audita | LEAD | cada run |
-| `runs/README.md` | Plantilla de run + disciplina de PASS + cómo lanzar | LEAD | LEAD | cuando cambia la plantilla |
-| `ROADMAP.md` | Fases + bars + links (índice, no prompts) | LEAD | humano + LEAD | cuando cambia el plan |
-| `docs/prompts/*.md` | Prompts de fase listos para copiar a pi | LEAD | LEAD | al lanzar una fase |
-| `ARCHITECTURE.md` | Diseño del servidor + evidencia verificada | quien diseña | humano | cuando cambia el diseño |
+| `AGENTS.md` | Universal contract: how we work, bar, loop, boundaries, tools | every agent, at start | human + LEAD | when the method changes |
+| `STATE.md` | **Real state** (≤80 lines): phase, single bar, last measurement, next action, gaps | every agent, at start | LEAD, at run close | every run |
+| `workbench.md` | LIVE round log of the active run: current round, per-unit PASS/FAIL | LEAD + whoever supervises | LEAD, after each round | every round |
+| `runs/run-NNN.md` | Evidence of each run: objective, bar, tasks, logs, rounds | blind critic + auditors | LEAD | every run |
+| `runs/README.md` | Run template + PASS discipline + how to launch | LEAD | LEAD | when the template changes |
+| `ROADMAP.md` | Phases + bars + links (index, not prompts) | LEAD | human + LEAD | when the plan changes |
+| `docs/prompts/*.md` | Phase prompts ready to paste into pi | LEAD | LEAD | when launching a phase |
+| `ARCHITECTURE.md` | Server design + verified evidence | whoever designs | human | when the design changes |
 
-**Reglas de estado** (contra el "estado falso"):
+**State rules** (against "false state"):
 
-- Al empezar sesión, **auditar STATE.md contra la evidencia real** (git log, runs/,
-  logs): si una afirmación no tiene archivo de evidencia, se re-mide, no se confía.
-- El estado lo escribe quien tiene la evidencia, nunca se copia de resúmenes ajenos.
-- Un PASS exige critic ciego con evidencia; lo verificado por el builder se etiqueta
-  "builder-verified", nunca PASS.
-- **Resume test**: el sistema funciona si podés matar la sesión, retomarla, y el próximo
-  agente retoma solo desde disco.
+- At session start, **audit STATE.md against real evidence** (git log, runs/, logs):
+  if a claim has no evidence file, re-measure it — don't trust it.
+- State is written by whoever holds the evidence, never copied from someone else's
+  summaries.
+- A PASS requires blind-critic evidence; builder-verified work is labeled
+  "builder-verified", never PASS.
+- **Resume test**: the system works if you can kill the session, resume, and the next
+  agent picks up from disk alone.
 
 ### Harness (pi / opencode / zcode)
 
-El harness principal es **pi** (con plugins). `AGENTS.md` es el contrato universal: todos
-los harness mainstream lo leen. Los nombres de herramientas de `AGENTS.md` §7 son de pi
-(`subagent`, `todo`, `ask_user_question`); opencode/zcode mapean esos roles a sus propias
-herramientas — los roles importan, no los nombres. La delegación de subagentes (builder
-vs critic con contexto limpio) y la búsqueda en internet (`web_search`/`fetch_content`)
-funcionan igual en los tres.
+The primary harness is **pi** (with plugins). `AGENTS.md` is the universal contract:
+all mainstream harnesses read it. The tool names in `AGENTS.md` §7 are pi's
+(`subagent`, `todo`, `ask_user_question`); opencode/zcode map those roles to their own
+tools — the roles matter, not the names. Subagent delegation (builder vs blind critic
+with clean context) and web research (`web_search`/`fetch_content`) work the same in
+all three.
 
-### Varios agentes a la vez
+### Multiple agents at once
 
-El repo soporta agentes paralelos con **reglas de propiedad** (AGENTS.md §5.5): cada
-agente toca solo sus archivos, el estado compartido (STATE/workbench/runs) lo escribe
-solo el LEAD (append-only), y lo ideal es aislamiento por worktree. Sin estas reglas,
-dos agentes en el mismo árbol se pisan — pasó en ago 2026 (un agente paralelo
-sobrescribió ARCHITECTURE.md). Si ves trabajo ajeno sin commitear, no lo pises: preguntá
-quién lo dueño.
+The repo supports parallel agents with **ownership rules** (AGENTS.md §5.5): each agent
+touches only its own files, shared state (STATE/workbench/runs) is written only by the
+LEAD (append-only), and worktree isolation is preferred. Without these rules, two agents
+in the same tree clobber each other — it happened in Aug 2026 (a parallel agent
+overwrote ARCHITECTURE.md). If you see foreign uncommitted work, don't overwrite it:
+ask who owns it.
 
 ### Skills
 
-Cargar **solo las skills del proyecto que apliquen a la tarea** (p. ej. buenas prácticas
-de Rust para una tarea de worldgen, gauntlet-loop para un run). No cargar skills que no
-tengan que ver con la tarea. Viven en el directorio de skills del harness.
+Load **only the project skills that apply to the task** (e.g. Rust best practices for a
+worldgen task, gauntlet-loop for a run). Don't load skills unrelated to the task. They
+live in the harness's skill directory.
 
 ---
 
-## Cómo orientarte (qué leer cuándo)
+## Orientation (what to read when)
 
-| Necesitas | Documento |
+| You need | Document |
 | --- | --- |
-| Saber qué es esto y cómo se trabaja con la AI | este README |
-| Saber en qué punto estamos y qué sigue | STATE.md |
-| El plan (fases, bars, pipeline de versiones) | ROADMAP.md (prompts en docs/prompts/) |
-| Cómo está diseñado el servidor + evidencia | ARCHITECTURE.md (Anexo A) |
-| Cómo se miden los benchmarks | BENCHMARKS.md |
-| Cómo trabajar / lanzar un run | AGENTS.md + runs/README.md |
+| What this is and how AI work happens | this README |
+| Where we are and what's next | STATE.md |
+| The plan (phases, bars, version pipeline) | ROADMAP.md (prompts in docs/prompts/) |
+| How the server is designed + evidence | ARCHITECTURE.md (Annex A) |
+| How benchmarks are measured | BENCHMARKS.md |
+| How to work / launch a run | AGENTS.md + runs/README.md |
 
-## Targets (a validar con BENCHMARKS.md)
+## Targets (to validate with BENCHMARKS.md)
 
-| Métrica | Target |
+| Metric | Target |
 | --- | --- |
-| Startup (mundo vacío → `Done`) | < 2 s |
-| Chunks/s @16 hilos | > 250 |
-| RAM base | < 150 MB |
-| RAM por jugador | < 1 MB |
-| TPS @500 jugadores | 20.0, p99 < 25 ms |
+| Startup (empty world → `Done`) | < 2 s |
+| Chunks/s @16 threads | > 250 |
+| Base RAM | < 150 MB |
+| RAM per player | < 1 MB |
+| TPS @500 players | 20.0, p99 < 25 ms |
 | Join p95 @100 bots | < 2 s |
-| Nueva versión de Mojang | main ≤ 7 días |
+| New Mojang version | main ≤ 7 days |
 
-## Estructura del repo (hoy)
+## Repo structure (today)
 
-El diagrama de `ARCHITECTURE.md` describe el **objetivo** (cli, plugins WASM, Folia). El grafo real es más pequeño:
+The diagram in `ARCHITECTURE.md` describes the **goal** (cli, WASM plugins, Folia). The real graph is smaller:
 
 ```
 neutron/
 ├─ crates/
-│  ├─ neutron-protocol/     # paquetes 26.2 (a mano)
-│  ├─ neutron-world/        # Anvil / level.dat (aún no lo usa el server)
-│  ├─ neutron-worldgen/     # overworld 26.2 — el foco actual de parity
-│  ├─ neutron-server/       # binario jugable: login + chunks
-│  ├─ neutron-sim/          # luz / redstone / fluidos / spawn (tests, no cableado)
+│  ├─ neutron-protocol/     # 26.2 packets (hand-written)
+│  ├─ neutron-world/        # Anvil / level.dat (not yet used by the server)
+│  ├─ neutron-worldgen/     # 26.2 overworld — the current parity focus
+│  ├─ neutron-server/       # playable binary: login + chunks
+│  ├─ neutron-sim/          # light / redstone / fluids / spawn (tests, not wired)
 │  └─ neutron-bench-server/ # criterion
 ├─ tools/                   # golden-data · parity-check · vanilla-extract · java-probe
-├─ bench/                   # workspace aparte: bots + jars de referencia
-├─ runs/                    # historial de runs (run-NNN.md)
-├─ docs/prompts/            # prompts de fase para pi
-└─ docs/                    # ADRs y notas
+├─ bench/                   # separate workspace: bots + reference jars
+├─ runs/                    # run history (run-NNN.md)
+├─ docs/prompts/            # phase prompts for pi
+└─ docs/                    # ADRs and notes
 ```
 
 ## Quick start (dev)
 
 ```bash
-# Servidor jugable (worldgen real, seed 12345)
+# Playable server (real worldgen, seed 12345)
 cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
-# Cliente vanilla 26.2 → localhost:25565  (online-mode=false, Creative + vuelo)
-# Estado de worldgen y gaps: STATE.md + crates/neutron-worldgen/WORLDGEN.md
+# Vanilla 26.2 client → localhost:25565  (online-mode=false, Creative + fly)
+# Worldgen state and gaps: STATE.md + crates/neutron-worldgen/WORLDGEN.md
 ```
