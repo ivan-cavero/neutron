@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/store",
+    "crates/decompile",
+    "crates/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+indicatif = "0.17"
+colored = "2"
+similar = "2"
+sha2 = "0.10"
+thiserror = "2"
+anyhow = "1"
+zip = "0.6"
+ureq = { version = "2", features = ["json"] }
+
+mc-decompiler-core = { path = "crates/core" }
+mc-decompiler-store = { path = "crates/store" }
+mc-decompiler-decompile = { path = "crates/decompile" }

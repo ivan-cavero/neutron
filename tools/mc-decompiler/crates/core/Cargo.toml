@@ -1,0 +1,11 @@
+[package]
+name = "mc-decompiler-core"
+description = "Core types for Minecraft server decompiler"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

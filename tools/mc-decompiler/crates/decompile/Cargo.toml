@@ -1,0 +1,17 @@
+[package]
+name = "mc-decompiler-decompile"
+description = "Vineflower wrapper + Mojang JAR resolver"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+mc-decompiler-core = { workspace = true }
+mc-decompiler-store = { workspace = true }
+anyhow = { workspace = true }
+sha2 = { workspace = true }
+indicatif = { workspace = true }
+colored = { workspace = true }
+zip = { workspace = true }
+ureq = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

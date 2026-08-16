@@ -1,0 +1,19 @@
+[package]
+name = "mc-decompiler"
+description = "Decompile Minecraft server JARs for code analysis"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "mc-decompiler"
+path = "src/main.rs"
+
+[dependencies]
+mc-decompiler-core = { workspace = true }
+mc-decompiler-store = { workspace = true }
+mc-decompiler-decompile = { workspace = true }
+clap = { workspace = true }
+indicatif = { workspace = true }
+colored = { workspace = true }
+anyhow = { workspace = true }
+similar = { workspace = true }
