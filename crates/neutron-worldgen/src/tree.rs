@@ -9,10 +9,12 @@
 //   getTreeHeight → foliageHeight → foliageRadius → placeTrunk → createFoliage
 //   → decorators. TrunkPlacer.getTreeHeight always samples both nextInt calls.
 
+use crate::feature_catalog;
 use crate::feature_rng::FeatureRandom;
 use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;
+use crate::worldgen::WorldgenState;
 use serde_json::Value;
 
 #[derive(Clone, Copy)]
@@ -83,6 +85,9 @@ enum SizeKind {
 struct TreeCtx<'a> {
     rng: &'a mut FeatureRandom,
     region: &'a mut RegionBuf,
+    /// Worldgen context for decorator sub-features (e.g. the pale_moss
+    /// ground patch). `None` in unit tests (no decorators exercised there).
+    state: Option<&'a WorldgenState>,
     log: BlockId,
     leaves: BlockId,
     trunks: Vec<(i32, i32, i32)>,
@@ -93,6 +98,7 @@ struct TreeCtx<'a> {
 pub fn place_tree_from_config(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
+    state: Option<&WorldgenState>,
     x: i32,
     y: i32,
     z: i32,
@@ -139,6 +145,7 @@ pub fn place_tree_from_config(
     let mut ctx = TreeCtx {
         rng,
         region,
+        state,
         log,
         leaves,
         trunks: Vec::new(),
@@ -172,6 +179,11 @@ pub fn place_tree_from_config(
     if ctx.trunks.is_empty() && ctx.foliage.is_empty() {
         return false;
     }
+
+    // TreeDecorator.Context sorts logs/leaves by Y (ascending, stable) before
+    // any decorator runs (TreeDecorator.Context ctor, decompiled 26.2).
+    ctx.trunks.sort_by_key(|p| p.1);
+    ctx.foliage.sort_by_key(|p| p.1);
 
     if let Some(decorators) = cfg["decorators"].as_array() {
         apply_decorators(&mut ctx, decorators);
@@ -268,9 +280,18 @@ fn is_free(b: BlockId) -> bool {
 }
 
 fn cannot_replace_below_tree_trunk(b: BlockId) -> bool {
+    // #minecraft:cannot_replace_below_tree_trunk (26.2) = #dirt + #mud +
+    // #moss_blocks + podzol (dirt, coarse_dirt, rooted_dirt, mud,
+    // muddy_mangrove_roots, moss_block, pale_moss_block, podzol).
     matches!(
         b,
-        BlockId::Dirt | BlockId::CoarseDirt | BlockId::Mud | BlockId::MossBlock | BlockId::Podzol
+        BlockId::Dirt
+            | BlockId::CoarseDirt
+            | BlockId::RootedDirt
+            | BlockId::Mud
+            | BlockId::MossBlock
+            | BlockId::PaleMossBlock
+            | BlockId::Podzol
     )
 }
 
@@ -734,29 +755,96 @@ fn apply_decorators(ctx: &mut TreeCtx<'_>, decorators: &[Value]) {
             "minecraft:beehive" => place_beehive(ctx, dec),
             "minecraft:place_on_ground" => place_on_ground(ctx, dec),
             "minecraft:pale_moss" => place_pale_moss(ctx, dec),
+            "minecraft:creaking_heart" => place_creaking_heart(ctx, dec),
             // trunk_vine / leave_vine / attached_to_leaves: no vine BlockId — skip.
             _ => {}
         }
     }
 }
 
-/// Port of `PaleMossDecorator.place` (pale_hanging_moss under trunks/leaves).
+/// Port of `PaleMossDecorator.place` (26.2 CFR), RNG order exact:
+///   1. `Util.shuffledCopy(context.logs(), random)` — Fisher-Yates over the
+///      Y-sorted trunk list (consumes nextInt(size..2)).
+///   2. origin = min-Y trunk; `nextFloat() < ground_probability` → place the
+///      `pale_moss_patch` configured feature at origin.above().
+///   3. per trunk (Y-sorted): nextFloat < trunk_probability && air below →
+///      hanging-moss hanger.
+///   4. per leaf (Y-sorted): nextFloat < leaves_probability && air below →
+///      hanging-moss hanger.
 fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
+    let ground_prob = dec["ground_probability"].as_f64().unwrap_or(0.0) as f32;
     let trunk_prob = dec["trunk_probability"].as_f64().unwrap_or(0.0) as f32;
     let leaves_prob = dec["leaves_probability"].as_f64().unwrap_or(0.0) as f32;
-    let mut starts = Vec::new();
-    for &(tx, ty, tz) in &ctx.trunks {
+    // Util.shuffledCopy(context.logs(), random) — consumes RNG even when the
+    // ground check then fails.
+    let mut shuffled: Vec<(i32, i32, i32)> = ctx.trunks.clone();
+    shuffle(&mut shuffled, ctx.rng);
+    if shuffled.is_empty() {
+        return;
+    }
+    // Collections.min(logs, comparingInt(Y)) — FIRST minimal element on ties
+    // (Java only replaces the winner when compare > 0), over the shuffled list.
+    let origin = *shuffled
+        .iter()
+        .fold(&shuffled[0], |best, p| if p.1 < best.1 { p } else { best });
+    if ctx.rng.next_f32() < ground_prob {
+        // PALE_MOSS_PATCH configured feature at origin.above().
+        if let Some(cfg) = feature_catalog::load_configured_feature("pale_moss_patch") {
+            crate::feature_dispatch::place_vegetation_patch(
+                ctx.rng,
+                ctx.region,
+                ctx.state,
+                origin.0,
+                origin.1 + 1,
+                origin.2,
+                &cfg,
+                crate::feature_catalog::step::VEGETAL_DECORATION,
+            );
+        }
+    }
+    for i in 0..ctx.trunks.len() {
+        let (tx, ty, tz) = ctx.trunks[i];
         if ctx.rng.next_f32() < trunk_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
-            starts.push((tx, ty - 1, tz));
+            add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
     }
-    for &(tx, ty, tz) in &ctx.foliage {
+    for i in 0..ctx.foliage.len() {
+        let (tx, ty, tz) = ctx.foliage[i];
         if ctx.rng.next_f32() < leaves_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
-            starts.push((tx, ty - 1, tz));
+            add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
     }
-    for (sx, sy, sz) in starts {
-        add_pale_moss_hanger(ctx, sx, sy, sz);
+}
+
+/// Port of `CreakingHeartDecorator.place` (26.2 CFR). RNG: one nextFloat for
+/// the probability gate, then a Fisher-Yates shuffle of the trunk list.
+/// The first trunk whose six cardinal neighbours are all logs becomes a
+/// dormant natural creaking heart.
+fn place_creaking_heart(ctx: &mut TreeCtx<'_>, dec: &Value) {
+    if ctx.trunks.is_empty() {
+        return;
+    }
+    let probability = dec["probability"].as_f64().unwrap_or(0.0) as f32;
+    if ctx.rng.next_f32() >= probability {
+        return;
+    }
+    let mut placements: Vec<(i32, i32, i32)> = ctx.trunks.clone();
+    shuffle(&mut placements, ctx.rng);
+    // Direction.values() = DOWN, UP, NORTH, SOUTH, WEST, EAST.
+    const DIRS: [(i32, i32, i32); 6] = [
+        (0, -1, 0),
+        (0, 1, 0),
+        (0, 0, -1),
+        (0, 0, 1),
+        (-1, 0, 0),
+        (1, 0, 0),
+    ];
+    let target = placements.into_iter().find(|&(x, y, z)| {
+        DIRS.iter()
+            .all(|&(dx, dy, dz)| is_log(ctx.region.get(x + dx, y + dy, z + dz)))
+    });
+    if let Some((hx, hy, hz)) = target {
+        ctx.region.set(hx, hy, hz, BlockId::CreakingHeart);
     }
 }
 
@@ -1175,6 +1263,7 @@ mod tests {
         assert!(place_tree_from_config(
             &mut rng,
             &mut region,
+            None,
             8,
             64,
             8,
@@ -1253,6 +1342,7 @@ mod tests {
         assert!(place_tree_from_config(
             &mut rng,
             &mut region,
+            None,
             6,
             64,
             6,
@@ -1329,6 +1419,7 @@ mod tests {
         assert!(place_tree_from_config(
             &mut rng,
             &mut region,
+            None,
             8,
             64,
             8,
@@ -1393,6 +1484,7 @@ mod tests {
         assert!(!place_tree_from_config(
             &mut rng,
             &mut region,
+            None,
             8,
             64,
             8,

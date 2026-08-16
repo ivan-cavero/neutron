@@ -156,7 +156,16 @@ impl ChunkGenerator {
         cz: i32,
         noise_cache: &mut NoiseCache,
     ) -> GeneratedChunk {
-        const FEATURE_RADIUS: i32 = 1;
+        // Vanilla `WorldGenRegion` for FEATURES: the decorated chunk is the
+        // center of a 3×3 whose neighbours are at CARVERS, but each of those
+        // 8 neighbours is itself decorated as the center of ITS OWN 3×3, which
+        // reaches one chunk further out. A 5×5 buffer puts every one of the 9
+        // decoration origins' 3×3 fully in-buffer, so the ring origins never
+        // read out-of-bounds air where vanilla reads real terrain. The outer
+        // ring is only ever CARVERS (terrain + carvers + structures, no feature
+        // output of its own); it accumulates the inner origins' cross-chunk
+        // writes (vanilla persists those writes in the shared chunk data).
+        const FEATURE_RADIUS: i32 = 2;
         let mut region = RegionBuf::new(cx, cz, FEATURE_RADIUS);
         let mut center_biomes = vec![0u8; CHUNK_BIOME_VOLUME];
 
@@ -175,19 +184,111 @@ impl ChunkGenerator {
 
         // Classic carvers (caves + canyon).
         carvers::apply_carvers_region(&mut region, self.state.seed);
-        // FEATURES: structure pieces (mineshafts) before biome decoration.
+        // Structure pieces (mineshafts) are part of the CARVERS status — placed
+        // once over the region before decoration, visible to every origin.
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
-        // Step 6 — ores (dedicated OreFeature port).
-        features::apply_underground_ores_region(&mut region, self.state.seed);
-        // Step 7 — sculk_vein + sculk_patch (CFR MultifaceSpreader + ChargeCursor).
-        crate::sculk::apply_sculk_region(&mut region, &self.state);
-        // Step 9 — vegetal decoration via datapack feature dispatcher (trees, grass, litter).
-        crate::feature_dispatch::apply_step_region(
-            &mut region,
-            &self.state,
-            crate::feature_catalog::step::VEGETAL_DECORATION,
-            "plains", // primary fallback; per-origin biome resolved inside
-        );
+
+        // Origin-major decoration (vanilla `ChunkGenerator.applyBiomeDecoration`
+        // per chunk). The center chunk is decorated FIRST while its neighbours
+        // are still at CARVERS (terrain + surface + carvers + structures, no
+        // feature output); each later origin then decorates as center of its own
+        // 3×3 and can overwrite what earlier origins spilled into its cells
+        // (last-writer-wins). Every origin runs its steps 6 → 7 → 8 → 9 with its
+        // own `setDecorationSeed` (feature_rng.rs) — steps 0-5 and 10 are not
+        // ported (no blocks produced in the ported steps).
+        //
+        // No masking: vanilla shares the chunk data between generation batches
+        // (WorldGenRegion.setBlock → chunk.setBlockState on the same
+        // ProtoChunk; GenerationChunkHolder futures hold the same ChunkAccess
+        // through the status chain), so spillover written by an earlier origin
+        // into a not-yet-decorated neighbour IS visible to the later origins.
+        // Masking the undecorated cells to stone deepens the lush_caves clay
+        // patch (stone is lush_ground_replaceable, ores are not) and inflated
+        // the center clay 437 → 864 vs vanilla 497. `NEUTRON_TMP_MASK`
+        // re-enables the mask for A/B diagnostics.
+        let order = crate::sculk::decoration_origin_order(region.chunks);
+        let mid = region.chunks / 2;
+        let inner: Vec<(i32, i32)> = order
+            .iter()
+            .copied()
+            .filter(|&(cxl, czl)| (cxl - mid).abs() <= 1 && (czl - mid).abs() <= 1)
+            .collect();
+        let mut faces: crate::multiface_spreader::FaceMap = std::collections::HashMap::new();
+        let tmp_diag = std::env::var_os("NEUTRON_TMP_ORIGIN_DIAG").is_some();
+        let tmp_mask = std::env::var_os("NEUTRON_TMP_MASK").is_some();
+        for (pos, &(cxl, czl)) in inner.iter().enumerate() {
+            let ox0 = region.origin_x + cxl * 16;
+            let oz0 = region.origin_z + czl * 16;
+            let undecorated = if tmp_mask { &inner[pos + 1..] } else { &[][..] };
+            // Step 6 — ores + disks (dedicated OreFeature port).
+            features::apply_underground_ores_origin(&mut region, self.state.seed, ox0, oz0, undecorated);
+            if tmp_diag {
+                let mut clay = 0u32;
+                for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                    for z in 0..16i32 {
+                        for x in 0..16i32 {
+                            if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay {
+                                clay += 1;
+                            }
+                        }
+                    }
+                }
+                eprintln!("TMPDIAG origin {pos} ({cxl},{czl}) after_step6 clay={clay}");
+            }
+            // Step 7 — sculk_vein + sculk_patch (CFR MultifaceSpreader + ChargeCursor).
+            crate::sculk::apply_sculk_origin(&mut region, &self.state, ox0, oz0, undecorated, &mut faces);
+            if tmp_diag {
+                let mut clay = 0u32;
+                for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                    for z in 0..16i32 {
+                        for x in 0..16i32 {
+                            if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay {
+                                clay += 1;
+                            }
+                        }
+                    }
+                }
+                eprintln!("TMPDIAG origin {pos} ({cxl},{czl}) after_step7 clay={clay}");
+            }
+            // Step 8 — FLUID_SPRINGS (spring_water / spring_lava). Vanilla runs
+            // this before step 9: spring water in the caves is the state the
+            // vegetal step (moss pools, clay) and the biome filters see.
+            crate::feature_dispatch::apply_step_origin(
+                &mut region,
+                &self.state,
+                crate::feature_catalog::step::FLUID_SPRINGS,
+                ox0,
+                oz0,
+                undecorated,
+                "plains",
+            );
+            // Step 9 — vegetal decoration via datapack feature dispatcher.
+            crate::feature_dispatch::apply_step_origin(
+                &mut region,
+                &self.state,
+                crate::feature_catalog::step::VEGETAL_DECORATION,
+                ox0,
+                oz0,
+                undecorated,
+                "plains", // primary fallback; per-origin biome union resolved inside
+            );
+            if tmp_diag {
+                let mut leaves = 0u32;
+                let mut clay = 0u32;
+                for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                    for z in 0..16i32 {
+                        for x in 0..16i32 {
+                            match region.get(cx * 16 + x, y, cz * 16 + z) {
+                                crate::surface::BlockId::PaleOakLeaves => leaves += 1,
+                                crate::surface::BlockId::Clay => clay += 1,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                eprintln!("TMPDIAG origin {pos} ({cxl},{czl}) center leaves={leaves} clay={clay}");
+            }
+        }
 
         let (blocks, heightmap) = region.take_chunk(cx, cz);
         GeneratedChunk {

@@ -97,6 +97,11 @@ tools/nbt-ref/vanilla1/server.properties
 tools/nbt-ref/find-real/target/
 tools/nbt-ref/**/target/
 
+# Vanilla reference server runtimes (re-extract with pregen scripts)
+tools/nbt-ref/vanilla-fresh-*/
+tools/nbt-ref/vanilla-fresh2-*/
+tools/nbt-ref/vanilla-det-*/
+
 # Java probe runtime
 tools/java-probe/bin/
 tools/java-probe/libs/

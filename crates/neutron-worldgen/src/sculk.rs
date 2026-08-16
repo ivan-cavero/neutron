@@ -138,8 +138,40 @@ impl VeinConfig {
     }
 }
 
-/// Apply sculk_vein + sculk_patch for every chunk origin in the feature region.
-pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
+/// Feature-output families that an undecorated neighbour chunk (still at
+/// CARVERS) must not show while the current origin is being decorated.
+///
+/// Vanilla `ChunkStatus.FEATURES` requires the 3×3 neighbourhood of the
+/// decorated center at CARVERS (ChunkPyramid.GENERATION_PYRAMID: FEATURES
+/// needs CARVERS at radius 1), so the not-yet-decorated origins have no
+/// feature output at all. In the single-buffer model the buffer accumulates
+/// output origin by origin (center first); masking reverts feature-family
+/// cells of the *undecorated* origins to the terrain base for the duration
+/// of the current origin's pass, then restores them (last-writer-wins).
+pub(crate) const FAMILY_ORES: u8 = 1 << 0;
+pub(crate) const FAMILY_SCULK: u8 = 1 << 1;
+pub(crate) const FAMILY_VEGETAL: u8 = 1 << 2;
+/// FLUID_SPRINGS output. Neutron does not port step 8 yet, so no block is
+/// produced under this family (aquifer/lava are terrain, never masked).
+pub(crate) const FAMILY_SPRINGS: u8 = 1 << 3;
+pub(crate) const FAMILY_ALL: u8 = FAMILY_ORES | FAMILY_SCULK | FAMILY_VEGETAL | FAMILY_SPRINGS;
+
+/// Apply sculk_vein + sculk_patch for one chunk origin `(ox0, oz0)`.
+///
+/// `undecorated` are the origins after this one in the decoration order:
+/// their feature output (ores/sculk/vegetal spilled by earlier origins) is
+/// reverted to the terrain base for the duration of the vein+patch pass and
+/// restored afterwards. `faces` is the region-wide face map so a later
+/// origin's cursors see earlier origins' veins (vanilla reads vein faces
+/// from the world block states).
+pub(crate) fn apply_sculk_origin(
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+    undecorated: &[(i32, i32)],
+    faces: &mut FaceMap,
+) {
     if !SCULK_ENABLED {
         return;
     }
@@ -154,63 +186,75 @@ pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
     )
     .unwrap_or(1);
 
+    // Diagnostic: decorate only the center origin (cross-origin analysis).
+    if std::env::var_os("NEUTRON_SCULK_ONE_ORIGIN").is_some()
+        && ((ox0 - region.origin_x) / 16 != 1 || (oz0 - region.origin_z) / 16 != 1)
+    {
+        return;
+    }
+
     let level_seed = state.seed;
-    let mut faces: FaceMap = HashMap::new();
+    // Vanilla decorates each origin while not-yet-decorated neighbour chunks
+    // are still at CARVERS — their feature output (ores/sculk/vegetal spilled
+    // by earlier origins) is not visible yet. Revert those cells for the
+    // duration of this origin's vein+patch pass, then restore them.
+    let saved = mask_undecorated_output(region, undecorated, FAMILY_ALL);
+
+    let mut rng = FeatureRandom::new(level_seed);
+    let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
+    if std::env::var_os("NEUTRON_SCULK_NO_VEIN").is_none() {
+        rng.set_feature_seed(dec, idx_vein, step::UNDERGROUND_DECORATION);
+        place_sculk_vein(&mut rng, region, state, faces, ox0, oz0, &vein_cfg);
+    }
+
+    let mut rng = FeatureRandom::new(level_seed);
+    let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
+    rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
+    place_sculk_patch(&mut rng, region, state, faces, ox0, oz0, &patch_cfg);
+
+    restore_masked(region, saved);
+}
+
+/// Apply sculk_vein + sculk_patch for every chunk origin in the feature
+/// region, origin-major center-first (the driver used by the standalone
+/// `generate_ores_region`-style paths and diagnostics).
+pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
+    if !SCULK_ENABLED {
+        return;
+    }
     // ChunkStatus.FEATURES: when the center is decorated, neighbours are still
     // at carvers (no sculk). Then each neighbour origin runs and can spill in.
     let origin_order = decoration_origin_order(region.chunks);
+    let mut faces: FaceMap = HashMap::new();
     for (pos, &(cxl, czl)) in origin_order.iter().enumerate() {
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
-        // Diagnostic: decorate only the center origin (cross-origin analysis).
-        if std::env::var_os("NEUTRON_SCULK_ONE_ORIGIN").is_some() && (cxl, czl) != (1, 1) {
-            continue;
-        }
-
-        // Vanilla decorates each origin while not-yet-decorated neighbour
-        // chunks are still at CARVERS — their step<=6 output (ore blobs) is
-        // not visible yet. Revert ore cells in those chunks for the duration
-        // of this origin's vein+patch pass, then restore them.
-        let saved = mask_undecorated_ores(region, &origin_order[pos + 1..]);
-
-        let mut rng = FeatureRandom::new(level_seed);
-        let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
-        if std::env::var_os("NEUTRON_SCULK_NO_VEIN").is_none() {
-            rng.set_feature_seed(dec, idx_vein, step::UNDERGROUND_DECORATION);
-            place_sculk_vein(&mut rng, region, state, &mut faces, ox0, oz0, &vein_cfg);
-        }
-
-        let mut rng = FeatureRandom::new(level_seed);
-        let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
-        rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
-        place_sculk_patch(&mut rng, region, state, &mut faces, ox0, oz0, &patch_cfg);
-
-        for (x, y, z, b) in saved {
-            // Vanilla: a later origin's ore pass cannot replace sculk-family
-            // blocks (not in stone_ore_replaceables), so sculk/veins spilled
-            // onto masked cells during this pass must survive the restore.
-            if matches!(
-                region.get(x, y, z),
-                BlockId::Sculk
-                    | BlockId::SculkVein
-                    | BlockId::SculkSensor
-                    | BlockId::SculkShrieker
-                    | BlockId::SculkCatalyst
-            ) {
-                continue;
-            }
-            region.set(x, y, z, b);
-        }
+        apply_sculk_origin(region, state, ox0, oz0, &origin_order[pos + 1..], &mut faces);
     }
 }
 
-/// Ore-family blocks (step 6 output) that an undecorated neighbour would not
-/// show yet. The revert base (deepslate below y=0, stone above) is
-/// behaviourally equivalent for sculk: same sturdiness, same replaceable tags,
-/// same vein-placeable set.
-fn mask_undecorated_ores(
+/// Restore cells masked by [`mask_undecorated_output`].
+///
+/// Vanilla: a later origin's ore pass cannot replace sculk-family blocks (not
+/// in stone_ore_replaceables), so sculk/veins spilled onto masked cells during
+/// this pass must survive the restore.
+pub(crate) fn restore_masked(region: &mut RegionBuf, saved: Vec<(i32, i32, i32, BlockId)>) {
+    for (x, y, z, b) in saved {
+        if is_sculk_family(region.get(x, y, z)) {
+            continue;
+        }
+        region.set(x, y, z, b);
+    }
+}
+
+/// Feature-family blocks (step 6/7/9 output) that an undecorated neighbour
+/// would not show yet. The revert base (deepslate below y=0, stone above) is
+/// behaviourally equivalent for the ported steps: same sturdiness, same
+/// replaceable tags, same vein-placeable set.
+pub(crate) fn mask_undecorated_output(
     region: &mut RegionBuf,
     undecorated: &[(i32, i32)],
+    families: u8,
 ) -> Vec<(i32, i32, i32, BlockId)> {
     let mut saved = Vec::new();
     for &(cxl, czl) in undecorated {
@@ -220,7 +264,11 @@ fn mask_undecorated_ores(
             for z in z0..z0 + 16 {
                 for x in x0..x0 + 16 {
                     let b = region.get(x, y, z);
-                    if is_ore_family(b) {
+                    let is_family = (families & FAMILY_ORES != 0 && is_ore_family(b))
+                        || (families & FAMILY_SCULK != 0 && is_sculk_family(b))
+                        || (families & FAMILY_VEGETAL != 0 && is_vegetal_family(b))
+                        || (families & FAMILY_SPRINGS != 0 && is_spring_family(b));
+                    if is_family {
                         saved.push((x, y, z, b));
                         region.set(
                             x,
@@ -238,6 +286,48 @@ fn mask_undecorated_ores(
         }
     }
     saved
+}
+
+fn is_sculk_family(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::Sculk
+            | BlockId::SculkVein
+            | BlockId::SculkSensor
+            | BlockId::SculkShrieker
+            | BlockId::SculkCatalyst
+    )
+}
+
+/// Vegetal-decoration output (step 9): logs, leaves, grass, saplings,
+/// flowers, vines, moss carpets/blocks.
+fn is_vegetal_family(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::OakLog
+            | BlockId::OakLeaves
+            | BlockId::DarkOakLog
+            | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLog
+            | BlockId::PaleOakLeaves
+            | BlockId::ShortGrass
+            | BlockId::LeafLitter
+            | BlockId::MossCarpet
+            | BlockId::MossBlock
+            | BlockId::PaleMossBlock
+            | BlockId::PaleMossCarpet
+            | BlockId::PaleHangingMoss
+            | BlockId::CaveVines
+            | BlockId::CaveVinesPlant
+            | BlockId::Azalea
+            | BlockId::FloweringAzalea
+    )
+}
+
+/// FLUID_SPRINGS (step 8) output. Not ported yet — always empty. Kept so the
+/// masking family set matches vanilla's step coverage once springs land.
+fn is_spring_family(_b: BlockId) -> bool {
+    false
 }
 
 fn is_ore_family(b: BlockId) -> bool {
@@ -265,7 +355,7 @@ fn is_ore_family(b: BlockId) -> bool {
 /// Center chunk first (vanilla FEATURES), then the other origins in x/z order.
 /// NEUTRON_SCULK_ORIGIN_ORDER (diagnostic): `row`/`col` = plain scan with the
 /// center in natural position; `center_row`/`center_col` = center first.
-fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
+pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
     let order = std::env::var("NEUTRON_SCULK_ORIGIN_ORDER")

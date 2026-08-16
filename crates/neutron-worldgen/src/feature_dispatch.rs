@@ -25,14 +25,43 @@ use serde_json::Value;
 
 /// Run decoration for one generation step across all origins in `region`.
 ///
-/// For each origin chunk, seeds decoration RNG, then for each feature in every
-/// biome that appears… simplified: runs features listed for `primary_biome`
-/// with index-based seeds (vanilla uses per-chunk biome sampling per column —
-/// full parity needs column biome; this uses biome at chunk center surface).
+/// Origin-major, center first (vanilla FEATURES order) with masking of the
+/// not-yet-decorated origins.
 pub fn apply_step_region(
     region: &mut RegionBuf,
     state: &WorldgenState,
     gen_step: i32,
+    primary_biome: &str,
+) {
+    let order = crate::sculk::decoration_origin_order(region.chunks);
+    for (pos, &(cxl, czl)) in order.iter().enumerate() {
+        let ox0 = region.origin_x + cxl * 16;
+        let oz0 = region.origin_z + czl * 16;
+        apply_step_origin(region, state, gen_step, ox0, oz0, &order[pos + 1..], primary_biome);
+    }
+}
+
+/// Run one generation step for ONE chunk origin `(ox0, oz0)`.
+///
+/// `undecorated` are the origins after this one in the decoration order: their
+/// feature output is masked to the terrain base for the duration of the pass
+/// and restored afterwards (vanilla decorates each origin while the
+/// not-yet-decorated neighbours are still at CARVERS).
+///
+/// The candidate feature list is the union of the feature lists of every biome
+/// present in the 3×3 chunk neighbourhood of the origin (vanilla
+/// `ChunkGenerator.applyBiomeDecoration` collects `section.getBiomes().getAll`
+/// over `ChunkPos.rangeClosed(center, 1)`). For the center origin the 3×3
+/// coincides with the region buffer; for edge origins the neighbourhood is
+/// clamped to the buffer, which is an approximation (vanilla would read the
+/// full 3×3 from the world).
+pub(crate) fn apply_step_origin(
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    gen_step: i32,
+    ox0: i32,
+    oz0: i32,
+    undecorated: &[(i32, i32)],
     primary_biome: &str,
 ) {
     let features = feature_catalog::features_at_step(primary_biome, gen_step);
@@ -40,53 +69,74 @@ pub fn apply_step_region(
         return;
     }
     let level_seed = state.seed;
-    let chunks = region.chunks;
-    for czl in 0..chunks {
-        for cxl in 0..chunks {
-            let ox0 = region.origin_x + cxl * 16;
-            let oz0 = region.origin_z + czl * 16;
-            let cx = ox0 + 8;
-            let cz = oz0 + 8;
-            // Collect the biomes present in this origin chunk: the surface biome
-            // plus underground cave biomes (lush_caves, dripstone, deep_dark, ...).
-            // Vanilla places the *global* FeatureSorter list and lets each placed
-            // feature's `biome` filter pick columns; we approximate by unioning
-            // the feature lists of the biomes actually present.
-            let sy = surface_y(region, cx, cz).unwrap_or(64);
-            let mut biomes: Vec<String> = Vec::new();
-            let mut push_if_new = |b: &str| {
-                if !biomes.iter().any(|x| x == b) {
-                    biomes.push(b.to_string());
+    // Union of the biomes present in the sections of the 3×3 chunks around
+    // this origin (clamped to the buffer), then the union of their feature
+    // lists in global FeatureSorter index order.
+    let biomes = origin_biome_union(region, state, ox0, oz0);
+    let mut merged: Vec<(i32, String)> = Vec::new();
+    for b in &biomes {
+        for f in feature_catalog::features_at_step(b, gen_step) {
+            if let Some(idx) = feature_catalog::global_feature_index(gen_step, &f) {
+                if !merged.iter().any(|(_, s)| s == &f) {
+                    merged.push((idx, f));
                 }
-            };
-            push_if_new(&biome_name_at(state, cx, sy, cz));
-            let cols = [(0i32, 0i32), (7, 7), (-7, 7), (7, -7), (-7, -7)];
-            for &y in &[0i32, 16, 32, 48, 64, 80, 96, 112, 128] {
-                for &(dxc, dzc) in &cols {
-                    push_if_new(&biome_name_at(state, cx + dxc, y, cz + dzc));
-                }
-            }
-            // Union of feature lists, in global FeatureSorter index order.
-            let mut merged: Vec<(i32, String)> = Vec::new();
-            for b in &biomes {
-                for f in feature_catalog::features_at_step(b, gen_step) {
-                    if let Some(idx) = feature_catalog::global_feature_index(gen_step, &f) {
-                        if !merged.iter().any(|(_, s)| s == &f) {
-                            merged.push((idx, f));
-                        }
-                    }
-                }
-            }
-            merged.sort_by_key(|(i, _)| *i);
-            let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
-            if list.is_empty() {
-                // fall back to primary list if no biome matched
-                place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &features);
-            } else {
-                place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &list);
             }
         }
     }
+    merged.sort_by_key(|(i, _)| *i);
+    let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
+    let saved = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+    if list.is_empty() {
+        // fall back to primary list if no biome matched
+        place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &features);
+    } else {
+        place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &list);
+    }
+    crate::sculk::restore_masked(region, saved);
+}
+
+/// Biomes present in the sections of the 3×3 chunk neighbourhood of origin
+/// `(ox0, oz0)`, clamped to the region buffer (approximation for edge
+/// origins — vanilla reads the full 3×3 from the world).
+///
+/// Sampled on the same 4×4×24 quart grid that `generate_noise_and_surface`
+/// stores (one Y quart per section at the section midpoint) via the noise
+/// biome (no voronoi — mirrors vanilla `fillBiomesFromNoise`).
+fn origin_biome_union(region: &RegionBuf, state: &WorldgenState, ox0: i32, oz0: i32) -> Vec<String> {
+    let cxl = (ox0 - region.origin_x) / 16;
+    let czl = (oz0 - region.origin_z) / 16;
+    let mut names: Vec<String> = Vec::new();
+    let mut push = |id: u8| {
+        let n = biome_id_to_name(id);
+        if !names.iter().any(|x| x == n) {
+            names.push(n.to_string());
+        }
+    };
+    for dz in -1..=1i32 {
+        for dx in -1..=1i32 {
+            let ncx = cxl + dx;
+            let ncz = czl + dz;
+            if ncx < 0 || ncz < 0 || ncx >= region.chunks || ncz >= region.chunks {
+                continue;
+            }
+            let cx0 = region.origin_x + ncx * 16;
+            let cz0 = region.origin_z + ncz * 16;
+            for section in 0..24i32 {
+                let y = WORLD_BOTTOM + section * 16 + 8;
+                for bz4 in 0..4i32 {
+                    for bx4 in 0..4i32 {
+                        push(crate::biome_manager::noise_biome_at_quart(
+                            state,
+                            cx0 / 4 + bx4,
+                            y >> 2,
+                            cz0 / 4 + bz4,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    names
 }
 
 fn place_feature_list(
@@ -108,7 +158,7 @@ fn place_feature_list(
     indexed.sort_by_key(|(i, _)| *i);
     for (global_index, placed_id) in indexed {
         rng.set_feature_seed(decoration_seed, global_index, gen_step);
-        place_placed_feature(&mut rng, region, state, ox0, oz0, placed_id);
+        place_placed_feature_step(&mut rng, region, state, ox0, oz0, placed_id, gen_step);
     }
 }
 
@@ -120,6 +170,29 @@ pub fn place_placed_feature(
     origin_min_x: i32,
     origin_min_z: i32,
     placed_id: &str,
+) {
+    place_placed_feature_step(
+        rng,
+        region,
+        state,
+        origin_min_x,
+        origin_min_z,
+        placed_id,
+        step::VEGETAL_DECORATION,
+    );
+}
+
+/// [`place_placed_feature`] with an explicit generation step (the `minecraft:biome`
+/// placement filter must check the feature list of the *actual* step — vanilla
+/// `placeWithBiomeCheck` runs per step).
+pub(crate) fn place_placed_feature_step(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    origin_min_x: i32,
+    origin_min_z: i32,
+    placed_id: &str,
+    gen_step: i32,
 ) {
     let Some(placed) = feature_catalog::load_placed_feature(placed_id) else {
         return;
@@ -144,7 +217,13 @@ pub fn place_placed_feature(
         None
     };
     let base_count = placement_count(rng, &placed);
+    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok() && strip(placed_id) == "pale_garden_vegetation";
+    if trace_trees {
+        eprintln!("[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}");
+    }
+    let mut draw_no = 0;
     for _ in 0..base_count {
+        draw_no += 1;
         let mut x = origin_min_x;
         let mut z = origin_min_z;
         let mut y = 0i32;
@@ -234,7 +313,7 @@ pub fn place_placed_feature(
                     "minecraft:biome" => {
                         let bname = biome_name_at(state, x, y, z);
                         let step_list =
-                            feature_catalog::features_at_step(&bname, step_for_id(placed_id));
+                            feature_catalog::features_at_step(&bname, step_for_id(placed_id, gen_step));
                         let id = strip(placed_id);
                         if !step_list.iter().any(|f| strip(f) == id) {
                             ok = false;
@@ -276,25 +355,35 @@ pub fn place_placed_feature(
                 .unwrap_or(64);
         }
         if !ok {
+            if trace_trees {
+                eprintln!("[trace]   draw {draw_no} REJECT (x={x},z={z},y={y})");
+            }
             continue;
         }
+        let mut tree_placed = false;
         if let Some(ref cfg) = configured {
-            dispatch_configured(rng, region, state, x, y, z, cfg);
+            dispatch_configured(rng, region, Some(state), x, y, z, cfg, gen_step);
+            tree_placed = true;
         } else if let Some(ref id) = feature_ref {
             // nested placed
             if let Some(inner) = feature_catalog::load_placed_feature(id) {
                 if let Some(cid) = inner["feature"].as_str() {
                     if let Some(cfg) = feature_catalog::load_configured_feature(cid) {
-                        dispatch_configured(rng, region, state, x, y, z, &cfg);
+                        dispatch_configured(rng, region, Some(state), x, y, z, &cfg, gen_step);
                     }
                 }
             }
         }
+        if trace_trees {
+            eprintln!(
+                "[trace]   draw {draw_no} ACCEPT x={x} z={z} y={y} tree_feature={tree_placed}"
+            );
+        }
     }
 }
 
-fn step_for_id(_placed_id: &str) -> i32 {
-    step::VEGETAL_DECORATION
+fn step_for_id(_placed_id: &str, gen_step: i32) -> i32 {
+    gen_step
 }
 
 fn placement_count(rng: &mut FeatureRandom, placed: &Value) -> i32 {
@@ -430,6 +519,21 @@ fn sample_height(rng: &mut FeatureRandom, height: &Value) -> i32 {
         let a = min + rng.next_int((max - min + 1).max(1));
         let b = min + rng.next_int((max - min + 1).max(1));
         (a + b) / 2
+    } else if ty.contains("very_biased_to_bottom") {
+        // VeryBiasedToBottomHeight.sample (decompiled 26.2):
+        //   if max - min - inner + 1 <= 0 → min
+        //   upper = nextInt(min + inner, max)
+        //   biased = nextInt(min, upper - 1)
+        //   return nextInt(min, biased - 1 + inner)
+        let min = resolve_anchor(&height["min_inclusive"]);
+        let max = resolve_anchor(&height["max_inclusive"]);
+        let inner = height["inner"].as_i64().unwrap_or(1) as i32;
+        if max - min - inner + 1 <= 0 {
+            return min;
+        }
+        let upper = min + inner + rng.next_int((max - (min + inner) + 1).max(1));
+        let biased = min + rng.next_int((upper - min).max(1));
+        min + rng.next_int((biased - 1 + inner - min + 1).max(1))
     } else {
         64
     }
@@ -521,29 +625,37 @@ fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value
             arr.iter().any(|p| eval_block_predicate(region, x, y, z, p))
         }
         "minecraft:would_survive" => {
-            // SaplingBlock.mayPlaceOn = BlockTags.DIRT (+ farmland).
+            // WouldSurvivePredicate: `state.canSurvive(level, pos)` =
+            // SaplingBlock.canSurvive → mayPlaceOn(below) only (no check on the
+            // position cell itself). mayPlaceOn = BlockTags.SUPPORTS_VEGETATION
+            // (server-classes/data/minecraft/tags/block/supports_vegetation.json:
+            //  #substrate_overworld + farmland;
+            //  substrate_overworld = #dirt + #mud + #moss_blocks + #grass_blocks;
+            //  dirt = dirt, coarse_dirt, rooted_dirt; mud = mud,
+            //  muddy_mangrove_roots; moss_blocks = moss_block, pale_moss_block;
+            //  grass_blocks = grass_block, podzol, mycelium). Farmland has no
+            //  BlockId in surface.rs (surface trees never sit on farmland).
             let below = region.get(x, y - 1, z);
-            is_dirt_tag(below)
-                && matches!(
-                    region.get(x, y, z),
-                    BlockId::Air | BlockId::ShortGrass | BlockId::LeafLitter
-                )
+            supports_vegetation(below)
         }
         "minecraft:true" => true,
         _ => true,
     }
 }
 
-fn is_dirt_tag(b: BlockId) -> bool {
+/// `BlockTags.SUPPORTS_VEGETATION` — what a sapling may place on.
+fn supports_vegetation(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Dirt
+            | BlockId::CoarseDirt
+            | BlockId::RootedDirt
             | BlockId::GrassBlock
             | BlockId::Podzol
-            | BlockId::CoarseDirt
             | BlockId::Mycelium
             | BlockId::Mud
             | BlockId::MossBlock
+            | BlockId::PaleMossBlock
     )
 }
 
@@ -601,11 +713,12 @@ fn is_in_tag(b: BlockId, tag: &str) -> bool {
 fn dispatch_configured(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
-    state: &WorldgenState,
+    state: Option<&WorldgenState>,
     x: i32,
     y: i32,
     z: i32,
     cfg: &Value,
+    gen_step: i32,
 ) {
     let ty = cfg["type"].as_str().unwrap_or("");
     match ty {
@@ -617,7 +730,7 @@ fn dispatch_configured(
             }
         }
         "minecraft:tree" => {
-            tree::place_tree_from_config(rng, region, x, y, z, cfg);
+            tree::place_tree_from_config(rng, region, state, x, y, z, cfg);
         }
         "minecraft:random_selector" => {
             // weighted chance features then default
@@ -625,13 +738,13 @@ fn dispatch_configured(
                 for f in features {
                     let chance = f["chance"].as_f64().unwrap_or(0.0) as f32;
                     if rng.next_f32() < chance {
-                        place_feature_ref(rng, region, state, x, y, z, &f["feature"]);
+                        place_feature_ref(rng, region, state, x, y, z, &f["feature"], gen_step);
                         return;
                     }
                 }
             }
             if let Some(def) = cfg["config"].get("default") {
-                place_feature_ref(rng, region, state, x, y, z, def);
+                place_feature_ref(rng, region, state, x, y, z, def, gen_step);
             }
         }
         "minecraft:sculk_patch" => {
@@ -644,7 +757,11 @@ fn dispatch_configured(
             // step 6 ores still use features.rs batch
         }
         "minecraft:vegetation_patch" | "minecraft:waterlogged_vegetation_patch" => {
-            place_vegetation_patch(rng, region, state, x, y, z, cfg);
+            place_vegetation_patch(rng, region, state, x, y, z, cfg, gen_step);
+        }
+        "minecraft:spring_feature" => {
+            // SpringFeature.place (spring_water / spring_lava, step 8).
+            place_spring(rng, region, x, y, z, cfg);
         }
         "minecraft:block_column" => {
             place_block_column(rng, region, x, y, z, cfg);
@@ -653,7 +770,7 @@ fn dispatch_configured(
             if let Some(features) = cfg["config"]["features"].as_array() {
                 if !features.is_empty() {
                     let idx = rng.next_int(features.len() as i32) as usize;
-                    place_feature_ref(rng, region, state, x, y, z, &features[idx]["feature"]);
+                    place_feature_ref(rng, region, state, x, y, z, &features[idx]["feature"], gen_step);
                 }
             }
         }
@@ -664,7 +781,7 @@ fn dispatch_configured(
             } else {
                 &cfg["feature_false"]
             };
-            place_feature_ref(rng, region, state, x, y, z, feature);
+            place_feature_ref(rng, region, state, x, y, z, feature, gen_step);
         }
         _ => {
             // unknown type — no-op (log in future)
@@ -675,34 +792,35 @@ fn dispatch_configured(
 fn place_feature_ref(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
-    state: &WorldgenState,
+    state: Option<&WorldgenState>,
     x: i32,
     y: i32,
     z: i32,
     v: &Value,
+    gen_step: i32,
 ) {
     if let Some(id) = v.as_str() {
         // RandomSelector / WeightedPlacedFeature hold a *placed* feature id.
         // Prefer placed over configured so `would_survive` etc. actually run.
         // (`dark_oak_leaf_litter` exists as both.)
         if let Some(pl) = feature_catalog::load_placed_feature(id) {
-            place_resolved_placed(rng, region, state, x, y, z, &pl);
+            place_resolved_placed(rng, region, state, x, y, z, &pl, gen_step);
             return;
         }
         if let Some(cfg) = feature_catalog::load_configured_feature(id) {
-            dispatch_configured(rng, region, state, x, y, z, &cfg);
+            dispatch_configured(rng, region, state, x, y, z, &cfg, gen_step);
         }
         return;
     }
     if let Some(obj) = v.as_object() {
         if obj.get("placement").is_some() && obj.get("feature").is_some() {
-            place_resolved_placed(rng, region, state, x, y, z, v);
+            place_resolved_placed(rng, region, state, x, y, z, v, gen_step);
         } else if let Some(fid) = obj.get("feature").and_then(|f| f.as_str()) {
             if let Some(cfg) = feature_catalog::load_configured_feature(fid) {
-                dispatch_configured(rng, region, state, x, y, z, &cfg);
+                dispatch_configured(rng, region, state, x, y, z, &cfg, gen_step);
             }
         } else if obj.get("type").is_some() {
-            dispatch_configured(rng, region, state, x, y, z, v);
+            dispatch_configured(rng, region, state, x, y, z, v, gen_step);
         }
     }
 }
@@ -712,11 +830,12 @@ fn place_feature_ref(
 fn place_resolved_placed(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
-    state: &WorldgenState,
+    state: Option<&WorldgenState>,
     x: i32,
     y: i32,
     z: i32,
     placed: &Value,
+    gen_step: i32,
 ) {
     if let Some(mods) = placed["placement"].as_array() {
         for m in mods {
@@ -725,22 +844,26 @@ fn place_resolved_placed(
                 "minecraft:block_predicate_filter" => {
                     eval_block_predicate(region, x, y, z, &m["predicate"])
                 }
-                "minecraft:biome" => {
-                    let bname = biome_name_at(state, x, y, z);
-                    let id = placed["feature"]
-                        .as_str()
-                        .map(strip)
-                        .unwrap_or("");
-                    let list = feature_catalog::features_at_step(&bname, step::VEGETAL_DECORATION);
-                    list.iter().any(|f| strip(f) == id)
-                        || list.iter().any(|f| {
-                            feature_catalog::load_placed_feature(f)
-                                .and_then(|p| {
-                                    p["feature"].as_str().map(|s| strip(s) == id)
-                                })
-                                .unwrap_or(false)
-                        })
-                }
+                "minecraft:biome" => match state {
+                    Some(st) => {
+                        let bname = biome_name_at(st, x, y, z);
+                        let id = placed["feature"]
+                            .as_str()
+                            .map(strip)
+                            .unwrap_or("");
+                        let list =
+                            feature_catalog::features_at_step(&bname, step_for_id("", gen_step));
+                        list.iter().any(|f| strip(f) == id)
+                            || list.iter().any(|f| {
+                                feature_catalog::load_placed_feature(f)
+                                    .and_then(|p| {
+                                        p["feature"].as_str().map(|s| strip(s) == id)
+                                    })
+                                    .unwrap_or(false)
+                            })
+                    }
+                    None => true,
+                },
                 "minecraft:rarity_filter" => {
                     let chance = m["chance"].as_i64().unwrap_or(1) as i32;
                     chance > 0 && rng.next_f32() < 1.0 / chance as f32
@@ -767,7 +890,7 @@ fn place_resolved_placed(
             }
         });
     if let Some(cfg) = configured {
-        dispatch_configured(rng, region, state, x, y, z, &cfg);
+        dispatch_configured(rng, region, state, x, y, z, &cfg, gen_step);
     }
 }
 
@@ -804,14 +927,18 @@ fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
 }
 
 /// Port of `VegetationPatchFeature.place` (moss patches, pale moss patches).
-fn place_vegetation_patch(
+///
+/// `state` is `None` when invoked from a tree decorator (vanilla
+/// `Feature.place` of an inline placed feature with no biome filter).
+pub(crate) fn place_vegetation_patch(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
-    state: &WorldgenState,
+    state: Option<&WorldgenState>,
     x: i32,
     y: i32,
     z: i32,
     cfg: &Value,
+    gen_step: i32,
 ) {
     let c = &cfg["config"];
     let surface = c["surface"].as_str().unwrap_or("floor");
@@ -912,14 +1039,67 @@ fn place_vegetation_patch(
             let vx = sx + out_dx;
             let vy = sy + out_dy;
             let vz = sz + out_dz;
-            place_feature_ref(rng, region, state, vx, vy, vz, &veg_feature);
+            place_feature_ref(rng, region, state, vx, vy, vz, &veg_feature, gen_step);
+        }
+    }
+}
+
+/// Port of `SpringFeature.place` (step 8, FLUID_SPRINGS).
+///
+/// `SpringConfiguration`: state (water/lava), valid_blocks, requiresBlockBelow
+/// (default true), rockCount (default 4), holeCount (default 1).
+/// Place conditions (SpringFeature.java): the block ABOVE must be a valid
+/// block; if requiresBlockBelow the block BELOW must be valid; the origin cell
+/// must be air or a valid block; exactly `rockCount` of the five neighbours
+/// (N/E/S/W/below) must be valid blocks and exactly `holeCount` must be air.
+fn place_spring(rng: &mut FeatureRandom, region: &mut RegionBuf, x: i32, y: i32, z: i32, cfg: &Value) {
+    let _ = rng;
+    let c = &cfg["config"];
+    let valid = c["valid_blocks"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| {
+                    v.as_str()
+                        .and_then(BlockId::from_name)
+                })
+                .collect::<Vec<BlockId>>()
+        })
+        .unwrap_or_default();
+    let is_valid = |b: BlockId| valid.contains(&b);
+    if !is_valid(region.get(x, y + 1, z)) {
+        return;
+    }
+    if c["requires_block_below"].as_bool().unwrap_or(true) && !is_valid(region.get(x, y - 1, z)) {
+        return;
+    }
+    let here = region.get(x, y, z);
+    if !matches!(here, BlockId::Air) && !is_valid(here) {
+        return;
+    }
+    let nb = [
+        region.get(x - 1, y, z),
+        region.get(x + 1, y, z),
+        region.get(x, y, z - 1),
+        region.get(x, y, z + 1),
+        region.get(x, y - 1, z),
+    ];
+    let rock = nb.iter().filter(|b| is_valid(**b)).count() as i32;
+    let holes = nb.iter().filter(|b| matches!(b, BlockId::Air)).count() as i32;
+    let rock_count = c["rock_count"].as_i64().unwrap_or(4) as i32;
+    let hole_count = c["hole_count"].as_i64().unwrap_or(1) as i32;
+    if rock == rock_count && holes == hole_count {
+        if let Some(st) = c["state"]["Name"]
+            .as_str()
+            .and_then(BlockId::from_name)
+        {
+            region.set(x, y, z, st);
         }
     }
 }
 
 /// Port of `BlockColumnFeature.place` (cave vines).
-fn place_block_column(
-    rng: &mut FeatureRandom,
+fn place_block_column(    rng: &mut FeatureRandom,
     region: &mut RegionBuf,
     x: i32,
     y: i32,
@@ -1063,10 +1243,6 @@ fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Opt
         }
     }
     None
-}
-
-fn surface_y(region: &RegionBuf, x: i32, z: i32) -> Option<i32> {
-    heightmap_top(region, x, z, HeightmapKind::OceanFloor)
 }
 
 /// `WORLD_SURFACE` first-available minus `OCEAN_FLOOR` first-available.

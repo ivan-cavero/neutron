@@ -22,26 +22,48 @@ const PI: f32 = 3.1415927;
 
 /// Apply underground ores for every chunk origin inside `region`.
 ///
-/// Order: Z then X over the region chunk grid, then feature index — deterministic
-/// and matches a full WorldGenRegion decoration pass over the area.
+/// Origin-major, center first (vanilla FEATURES order) with masking of the
+/// not-yet-decorated origins — deterministic and matches a full WorldGenRegion
+/// decoration pass over the area.
 pub fn apply_underground_ores_region(region: &mut RegionBuf, level_seed: i64) {
-    let state = WorldgenState::overworld(level_seed);
-    let chunks = region.chunks;
-    for czl in 0..chunks {
-        for cxl in 0..chunks {
-            let origin_min_x = region.origin_x + cxl * 16;
-            let origin_min_z = region.origin_z + czl * 16;
-            let mut rng = FeatureRandom::new(level_seed);
-            let decoration_seed = rng.set_decoration_seed(level_seed, origin_min_x, origin_min_z);
-            for def in OVERWORLD_ORES {
-                rng.set_feature_seed(decoration_seed, def.feature_index, STEP_UNDERGROUND_ORES);
-                if matches!(def.gate, BiomeGate::Off) {
-                    continue;
-                }
-                place_feature(&mut rng, region, &state, origin_min_x, origin_min_z, def);
-            }
-        }
+    let order = crate::sculk::decoration_origin_order(region.chunks);
+    for (pos, &(cxl, czl)) in order.iter().enumerate() {
+        let origin_min_x = region.origin_x + cxl * 16;
+        let origin_min_z = region.origin_z + czl * 16;
+        apply_underground_ores_origin(
+            region,
+            level_seed,
+            origin_min_x,
+            origin_min_z,
+            &order[pos + 1..],
+        );
     }
+}
+
+/// Run the step-6 ore/disk pass for ONE chunk origin `(origin_min_x,
+/// origin_min_z)`. `undecorated` are the origins after this one in the
+/// decoration order: their feature output is masked to the terrain base for
+/// the duration of the pass and restored afterwards (vanilla decorates each
+/// origin while the not-yet-decorated neighbours are still at CARVERS).
+pub(crate) fn apply_underground_ores_origin(
+    region: &mut RegionBuf,
+    level_seed: i64,
+    origin_min_x: i32,
+    origin_min_z: i32,
+    undecorated: &[(i32, i32)],
+) {
+    let state = WorldgenState::overworld(level_seed);
+    let saved = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+    let mut rng = FeatureRandom::new(level_seed);
+    let decoration_seed = rng.set_decoration_seed(level_seed, origin_min_x, origin_min_z);
+    for def in OVERWORLD_ORES {
+        rng.set_feature_seed(decoration_seed, def.feature_index, STEP_UNDERGROUND_ORES);
+        if matches!(def.gate, BiomeGate::Off) {
+            continue;
+        }
+        place_feature(&mut rng, region, &state, origin_min_x, origin_min_z, def);
+    }
+    crate::sculk::restore_masked(region, saved);
 }
 
 // ---------------------------------------------------------------------------
