@@ -1,173 +1,169 @@
-# Cómo funciona la generación de mundo de Minecraft 26.2 (y dónde estamos)
+# How Minecraft 26.2 world generation works (and where we are)
 
-> 15 ago 2026 · Escrito para Neutron a partir de las fuentes decompiladas del jar
-> real (`tools/vanilla-extract/decompiled/`). Cada fase cita la clase Java que
-> la implementa y el módulo Rust que la porta.
+> 15 Aug 2026 · Written for Neutron from the decompiled sources of the real jar
+> (`tools/vanilla-extract/decompiled/`). Each phase cites the Java class that
+> implements it and the Rust module that ports it.
 
-## El pipeline completo (qué pasa cuando pides un chunk)
+## The full pipeline (what happens when you request a chunk)
 
-Cada chunk pasa por una **cadena de estados** (`ChunkStatus`). Cada estado
-requiere que los vecinos 3×3 hayan alcanzado el estado anterior. El orden:
+Each chunk goes through a **chain of states** (`ChunkStatus`). Each state requires
+the 3×3 neighbors to have reached the previous state. The order:
 
 ```
 EMPTY → STRUCTURE_STARTS → STRUCTURE_REFERENCES → BIOMES → NOISE
       → SURFACE → CARVERS → FEATURES (liquid/hot/cool/etc.) → INITIALIZE_LIGHT → LIGHT → SPAWN
 ```
 
-Cuando el servidor necesita un chunk (jugador lo ve), sube la cadena por
-dependencias: pedir el chunk (6,-2) en estado LIGHT implica generar los 8
-vecinos hasta INITIALIZE_LIGHT, y los anillos exteriores hasta estados
-previos. **Eso es lo que replica nuestro `RegionBuf` 3×3.**
+When the server needs a chunk (a player sees it), it climbs the chain by
+dependencies: requesting chunk (6,-2) at LIGHT means generating the 8 neighbors up
+to INITIALIZE_LIGHT, and outer rings up to earlier states. **That is what our
+`RegionBuf` 3×3 replicates.**
 
-### Fase 1 — BIOMES: `ChunkGenerator.createBiomes`
+### Phase 1 — BIOMES: `ChunkGenerator.createBiomes`
 
-- Fuente: `ChunkGenerator.java` → `BiomeResolver` desde `Climate.Sampler`.
-- El clima es 6 ruidos (temperature, vegetation, continentalness, erosion,
-  depth, weirdness) → tabla de 7498 puntos (parameter list del overworld).
-- Elección de bioma: el punto con mayor `fitness` (producto de deltas).
-- Bordes suaves: **voronoi a escala 1:4** (4×4×4 bloques por celda de bioma)
-  con `obfuscateSeed` (SHA-256 del seed).
-- Rust: `biome/` (multi-noise + voronoi). Params en `data/biome_params.bin`.
+- Source: `ChunkGenerator.java` → `BiomeResolver` from `Climate.Sampler`.
+- Climate is 6 noises (temperature, vegetation, continentalness, erosion, depth,
+  weirdness) → 7498-point table (overworld parameter list).
+- Biome choice: the point with highest `fitness` (product of deltas).
+- Smooth borders: **voronoi at 1:4 scale** (4×4×4 blocks per biome cell) with
+  `obfuscateSeed` (SHA-256 of the seed).
+- Rust: `biome/` (multi-noise + voronoi). Params in `data/biome_params.bin`.
 
-### Fase 2 — NOISE: la forma del terreno
+### Phase 2 — NOISE: terrain shape
 
-- Fuente: `NoiseChunk.java`, `NoiseRouter.java`, `RandomState.java`.
-- Un **NoiseRouter** = árbol de density functions (noise + operaciones).
-  Se deriva del seed con `RandomState.create(...)` — cada noise tiene su
-  propio sub-seed derivado en orden fijo (`NoiseData.bootstrap`): esto hace
-  el terreno **100 % determinista por chunk**.
-- El router produce una densidad por celda 4×8×4 (cell) y luego se
-  **interpola** a bloques (`NoiseInterpolator`) con lerp sobre cells.
-- Sobre la densidad final: `finalDensity < 0` = sólido. El aquifer
-  (`NoiseBasedAquifer`) decide agua/lava en huecos; `OreVeinifier`
-  decide vetas de copper/iron + tuff/granite.
+- Source: `NoiseChunk.java`, `NoiseRouter.java`, `RandomState.java`.
+- A **NoiseRouter** = tree of density functions (noise + operations). Derived from
+  the seed with `RandomState.create(...)` — each noise has its own sub-seed derived
+  in fixed order (`NoiseData.bootstrap`): this makes terrain **100% deterministic
+  per chunk**.
+- The router produces one density per 4×8×4 cell, then **interpolates** to blocks
+  (`NoiseInterpolator`) with lerp over cells.
+- On final density: `finalDensity < 0` = solid. The aquifer (`NoiseBasedAquifer`)
+  decides water/lava in holes; `OreVeinifier` decides copper/iron veins +
+  tuff/granite.
 - Rust: `density.rs`, `noise.rs`, `aquifer.rs`, `ore_vein.rs`.
 
-### Fase 3 — SURFACE: reglas de superficie
+### Phase 3 — SURFACE: surface rules
 
-- Fuente: `NoiseChunk.java` + datapack `surface_rules` del noise_settings.
-- Árbol de condiciones (steep, hole, water, y-checks, bandlands…) que decide
-  grass/dirt/stone/terracota por columna, usando `surfaceDepth` (un noise).
-- **Bedrock**: `vertical_gradient` + RNG posicional
-  (`PositionalRandomFactory` con `Mth.getSeed(x,y,z)`) — verificado 758/758
+- Source: `NoiseChunk.java` + datapack `surface_rules` of the noise_settings.
+- Condition tree (steep, hole, water, y-checks, badlands…) deciding
+  grass/dirt/stone/terracotta per column, using `surfaceDepth` (a noise).
+- **Bedrock**: `vertical_gradient` + positional RNG
+  (`PositionalRandomFactory` with `Mth.getSeed(x,y,z)`) — verified 758/758
   bit-exact.
 - Rust: `surface.rs`, `surface_rules.rs`.
 
-### Fase 4 — CARVERS: cuevas y cañones
+### Phase 4 — CARVERS: caves and canyons
 
-- Fuente: `CaveWorldCarver.java`, `CanyonWorldCarver.java`.
-- Por chunk se sortean N intentos (`setLargeFeatureWithSalt`); cada cueva es
-  un "gusano" de elipsoides con ruido de anchura. Determinista por chunk.
+- Source: `CaveWorldCarver.java`, `CanyonWorldCarver.java`.
+- Per chunk, N attempts are drawn (`setLargeFeatureWithSalt`); each cave is a
+  "worm" of ellipsoids with width noise. Deterministic per chunk.
 - Rust: `carvers.rs`.
 
-### Fase 5 — ESTRUCTURAS: `StructureStart` por chunk
+### Phase 5 — STRUCTURES: `StructureStart` per chunk
 
-- Fuente: `ChunkGenerator.createStructures` → cada `Structure` decide si el
-  chunk tiene start (RNG por salt) y construye piezas (`MineShaftPieces`…).
-- Las piezas se escriben en `applyBiomeDecoration` (paso 3 del step loop).
-- Rust: `mineshaft.rs` (121/121 bounding boxes bit-exact). Villages,
-  strongholds, trial chambers: **no portadas**.
+- Source: `ChunkGenerator.createStructures` → each `Structure` decides if the chunk
+  has a start (RNG by salt) and builds pieces (`MineShaftPieces`…).
+- Pieces are written in `applyBiomeDecoration` (step 3 of the step loop).
+- Rust: `mineshaft.rs` (121/121 bounding boxes bit-exact). Villages, strongholds,
+  trial chambers: **not ported**.
 
-### Fase 6 — FEATURES (decoración): el paso complicado
+### Phase 6 — FEATURES (decoration): the hard step
 
-- Fuente: `ChunkGenerator.applyBiomeDecoration` (línea ~263).
-- Para el chunk que se decora, con `origin` = esquina NW del chunk:
-  1. `setDecorationSeed(seed, originX, originZ)` → un seed por chunk.
-  2. Se reunen los biomas presentes en el 3×3 (`possibleBiomes`).
-  3. Por cada step (0..10): los features del step presentes en esos biomas,
-     ordenados por **índice global FeatureSorter** (106 features en step 9).
-  4. Por feature: `setFeatureSeed(decorSeed, índiceGlobal, step)` → stream
-     de RNG propio del feature. Luego `PlacedFeature.placeWithContext`:
-     una **secuencia lazy** de modificadores (count → in_square → filtros →
-     altura) que produce posiciones, y por cada posición el feature corre
-     (p.ej. `TreeFeature` consume ~50 valores del stream).
-- Los features **leen y escriben fuera del chunk** (un árbol cruza bordes)
-  a través de un `WorldGenRegion`.
-- Rust: `feature_dispatch.rs` + `feature_catalog.rs` (índices FeatureSorter
-  verificados contra el jar con `ProbeFeatureOrder`) + ports por feature.
+- Source: `ChunkGenerator.applyBiomeDecoration` (~line 263).
+- For the chunk being decorated, with `origin` = NW corner of the chunk:
+  1. `setDecorationSeed(seed, originX, originZ)` → one seed per chunk.
+  2. Collect the biomes present in the 3×3 (`possibleBiomes`).
+  3. For each step (0..10): the step's features present in those biomes, ordered by
+     **global FeatureSorter index** (106 features in step 9).
+  4. Per feature: `setFeatureSeed(decorSeed, globalIndex, step)` → the feature's own
+     RNG stream. Then `PlacedFeature.placeWithContext`: a **lazy sequence** of
+     modifiers (count → in_square → filters → height) producing positions, and per
+     position the feature runs (e.g. `TreeFeature` consumes ~50 stream values).
+- Features **read and write outside the chunk** (a tree crosses borders) through a
+  `WorldGenRegion`.
+- Rust: `feature_dispatch.rs` + `feature_catalog.rs` (FeatureSorter indices verified
+  against the jar with `ProbeFeatureOrder`) + per-feature ports.
 
-## EL HALLAZGO (15 ago 2026): mapa de determinismo de vanilla 26.2
+## THE FINDING (15 Aug 2026): vanilla 26.2 determinism map
 
-**Experimento:** 7 corridas del servidor real (mismo jar, seed 12345,
-procedimiento idéntico), comparando bloques del chunk (6,-2):
+**Experiment:** 7 runs of the real server (same jar, seed 12345, identical
+procedure), comparing blocks of chunk (6,-2):
 
-| Resultado | Corridas | Diffs |
-|---|---|---|
-| 100.00 % idéntico | 4/7 | 0 |
+| Result | Runs | Diffs |
+| --- | --- | --- |
+| 100.00 % identical | 4/7 | 0 |
 | 99.98 % | 2/7 | 15 |
 | 99.05 % | 1/7 | 938 |
 
-**Distribución espacial de los diffs (corrida con 15):** 13/15 a distancia
-≤1 del borde del chunk, **0 en el core** (dist ≥5). Los 938 de la corrida
-extrema también son 100 % vegetación.
+**Spatial distribution of diffs (run with 15):** 13/15 at distance ≤1 from the
+chunk border, **0 in the core** (dist ≥5). The 938 of the extreme run are also
+100% vegetation.
 
-### El modelo (verificado empíricamente)
+### The model (empirically verified)
 
-1. **Todo lo que decide un stream con seed por chunk es 100 % determinista**:
-   posiciones de features (`setFeatureSeed` → in_square), estructuras y sus
-   cofres (mineshaft/dungeon/…), ores, sculk, bedrock, terreno completo.
-   Vanilla reproduce esto SIEMPRE — igual que un cofre de mineshaft siempre
-   está en el mismo sitio con la misma seed.
-2. **La única fuente de variación** es la decoración PARALELA: un árbol cuyo
-   canopy cruza el borde lee el estado del chunk vecino (heightmap /
-   `would_survive`), que depende de si el vecino ya decoró. El scheduler de
-   threads decide el orden → en la mayoría de corridas el orden típico se
-   repite (chunk idéntico), rara vez cambia (±15 celdas en el borde),
-   muy rara vez colisiona fuerte (±938 celdas de vegetación).
-3. **El core del chunk (≥5 bloques del borde) salió idéntico en las 7
-   corridas.**
+1. **Everything driven by a per-chunk seeded stream is 100% deterministic**:
+   feature positions (`setFeatureSeed` → in_square), structures and their chests
+   (mineshaft/dungeon/…), ores, sculk, bedrock, full terrain. Vanilla always
+   reproduces this — like a mineshaft chest is always in the same spot with the
+   same seed.
+2. **The only variation source** is PARALLEL decoration: a tree whose canopy
+   crosses the border reads the neighbor chunk's state (heightmap / `would_survive`),
+   which depends on whether the neighbor already decorated. The thread scheduler
+   decides the order → most runs repeat the typical order (identical chunk), rarely
+   changes (±15 border cells), very rarely collides hard (±938 vegetation cells).
+3. **The chunk core (≥5 blocks from the border) was identical in all 7 runs.**
 
-### Consecuencia práctica para Neutron
+### Practical consequence for Neutron
 
-- Paridad de mecanismo (decisión del humano): mismos seeds/streams/algoritmos.
-- Verificar chunks NÚCLEO contra cualquier referencia fresca: deben ser
-  100 % (salvo gaps reales del port).
-- Los diffs de borde son ruido vanilla: medir, pero no perseguir celda a
-  celda contra UNA corrida.
-- La comparación multi-chunk (no un solo chunk) separa señal (gaps del port,
-  deterministas y reproducibles) de ruido (bordes).
+- Mechanism parity (human decision): same seeds/streams/algorithms.
+- Verify CORE chunks against any fresh reference: must be 100% (except real port
+  gaps).
+- Border diffs are vanilla noise: measure, but don't chase cell-by-cell against ONE
+  run.
+- Multi-chunk comparison (not a single chunk) separates signal (port gaps,
+  deterministic and reproducible) from noise (borders).
 
-## Estado por fase (medido contra mundos frescos, seed 12345, chunk (6,-2))
+## Status per phase (measured against fresh worlds, seed 12345, chunk (6,-2))
 
-| Fase | Determinismo | Estado Neutron | Gap real |
-|---|---|---|---|
-| Noise/shape | ✅ determinista | ~99.6 % dens_shape | interpoladores residuales |
-| Surface + bedrock | ✅ | bedrock 758/758 exact | dirt/grass swap colateral de árboles |
-| Carvers | ✅ | port completo | widthFactors inicial |
-| Ores (step 6) | ✅ | andesite/diorite 1:1 | ~180 celdas posicionales (iron/redstone/diamond) |
-| Tuff/ore veins | ✅ | parcial | ~69 celdas frontera |
-| Mineshaft | ✅ | 121/121 BB bit-exact | postProcess (raíles/cobweb) |
-| Sculk (step 7) | ✅ (3 celdas de ruido en 2 corridas) | volumen ok | **~325 celdas de posición** |
-| Vegetación (step 9) | ❌ estocástico corrida a corrida | 2 árboles vs ~6 | gap real de count/posición + ruido irreducible |
-| Otras estructuras | ✅ | no portadas | villages, strongholds, … |
+| Phase | Determinism | Neutron state | Real gap |
+| --- | --- | --- | --- |
+| Noise/shape | ✅ deterministic | ~99.6 % dens_shape | residual interpolators |
+| Surface + bedrock | ✅ | bedrock 758/758 exact | dirt/grass swap collateral of trees |
+| Carvers | ✅ | full port | initial widthFactors |
+| Ores (step 6) | ✅ | andesite/diorite 1:1 | ~180 positional cells (iron/redstone/diamond) |
+| Tuff/ore veins | ✅ | partial | ~69 border cells |
+| Mineshaft | ✅ | 121/121 BB bit-exact | postProcess (rails/cobweb) |
+| Sculk (step 7) | ✅ (3 noise cells in 2 runs) | volume ok | **~325 position cells** |
+| Vegetation (step 9) | ❌ stochastic run to run | 2 trees vs ~6 | real count/position gap + irreducible noise |
+| Other structures | ✅ | not ported | villages, strongholds, … |
 
-## Qué significa "1:1" — DECIDIDO (gate humano, 15 ago 2026)
+## What "1:1" means — DECIDED (human gate, 15 Aug 2026)
 
-> "Quiero que se comporte como vanilla. Si en vanilla X cosa no es
-> determinista, usar el mismo mecanismo de hacerlo random que en vanilla."
+> "I want it to behave like vanilla. If X is not deterministic in vanilla, use the
+> same mechanism of making it random as vanilla."
 
-1. **Paridad de mecanismo**: mismos seeds → mismos streams de RNG → mismos
-   algoritmos por feature, bit a bit.
-2. **Fases deterministas** (terreno, carvers, ores, estructuras, sculk,
-   bedrock) → 100 % block match multi-seed contra referencias frescas.
-3. **Vegetación** → mismo stream por chunk (verificado con probes Java
-   contra el jar); nuestro orden serial produce una salida válida del
-   espacio de salidas de vanilla.
-4. **Multi-seed**: la paridad se mide en N seeds × sus chunks de spawn con
+1. **Mechanism parity**: same seeds → same RNG streams → same per-feature
+   algorithms, bit by bit.
+2. **Deterministic phases** (terrain, carvers, ores, structures, sculk, bedrock) →
+   100% block match multi-seed against fresh references.
+3. **Vegetation** → same per-chunk stream (verified with Java probes against the
+   jar); our serial order produces a valid output of vanilla's output space.
+4. **Multi-seed**: parity is measured on N seeds × their spawn chunks with
    `tools/nbt-ref/multiseed.py`.
 
-## Verificación rápida
+## Quick verification
 
 ```bash
-# generar referencia fresca (seed arbitraria)
+# generate a fresh reference (arbitrary seed)
 cd tools/nbt-ref && mkdir vanilla-fresh-<seed> && cd vanilla-fresh-<seed>
 cp ../vanilla1/server.jar . && echo eula=true > eula.txt
 printf 'level-seed=<seed>\nonline-mode=false\nview-distance=5\n' > server.properties
 (sleep 75; echo stop; sleep 20) | java -Xms1G -Xmx1G -jar server.jar nogui
 
-# parity contra esa referencia
+# parity against that reference
 cargo run --release -p neutron-worldgen --example block_parity -- <seed> <cx> <cz> <region-dir>
 
-# comparar dos mundos vanilla entre sí (ruido estocástico)
+# compare two vanilla worlds against each other (stochastic noise)
 cargo run --release -p neutron-worldgen --example compare_worlds -- <a.mca> <b.mca>
 ```

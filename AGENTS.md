@@ -116,6 +116,27 @@ docs/prompts/         # phase prompt templates (from ROADMAP.md)
 - **Reference worlds**: `tools/nbt-ref/vanilla-fresh-*` (gitignored, re-extract with
   `multiseed.py`/pregen scripts).
 
+## 5.5 Parallel agents & concurrency
+
+Multiple agents may run on this repo at once (parallel sessions, or subagents).
+Without rules they clobber each other — this happened Aug 2026: a parallel agent
+overwrote `ARCHITECTURE.md` and deleted docs while the main session worked. Rules:
+
+1. **Ownership map** — declare who owns what BEFORE parallel work starts:
+   - Human: `tools/` (refactor in progress, Aug 2026) — agents never touch it.
+   - LEAD: `STATE.md`, `workbench.md`, `runs/` (single writer, append-only).
+   - Builder: only the files of its assigned unit (from the run file).
+   - Critic/Reviewer: read-only — never writes.
+2. **One writer per file**: if a file is not yours, don't edit it. Two agents
+   editing the same file = guaranteed clobber.
+3. **Worktree isolation (preferred)**: parallel agents work in separate git
+   worktrees; the LEAD merges. Same-tree parallel work only when ownership is
+   disjoint (different dirs).
+4. **Commit early**: commit each proven increment so others can pull. Uncommitted
+   changes are invisible to everyone else — don't hold them long.
+5. **If you see foreign uncommitted work**: stop, don't overwrite it, ask the
+   human who owns it.
+
 ## 6. Running a run
 
 **Single source of truth: `runs/README.md`** (template, how to launch, orchestration).

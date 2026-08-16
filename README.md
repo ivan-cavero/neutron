@@ -68,6 +68,15 @@ herramientas — los roles importan, no los nombres. La delegación de subagente
 vs critic con contexto limpio) y la búsqueda en internet (`web_search`/`fetch_content`)
 funcionan igual en los tres.
 
+### Varios agentes a la vez
+
+El repo soporta agentes paralelos con **reglas de propiedad** (AGENTS.md §5.5): cada
+agente toca solo sus archivos, el estado compartido (STATE/workbench/runs) lo escribe
+solo el LEAD (append-only), y lo ideal es aislamiento por worktree. Sin estas reglas,
+dos agentes en el mismo árbol se pisan — pasó en ago 2026 (un agente paralelo
+sobrescribió ARCHITECTURE.md). Si ves trabajo ajeno sin commitear, no lo pises: preguntá
+quién lo dueño.
+
 ### Skills
 
 Cargar **solo las skills del proyecto que apliquen a la tarea** (p. ej. buenas prácticas
