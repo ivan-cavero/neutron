@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Neutron Contributors — MIT License
 //
-// Compare two golden-data JSON files and report differences.
+// Compare two vanilla-hash JSON files and report differences.
 
 use std::collections::HashMap;
 use std::fs;
@@ -9,7 +9,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
-/// A single chunk entry from a golden-data JSON file.
+/// A single chunk entry from a vanilla-hash JSON file.
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct ChunkEntry {
@@ -21,7 +21,7 @@ pub struct ChunkEntry {
     pub size_bytes: usize,
 }
 
-/// The top-level golden-data JSON structure.
+/// The top-level vanilla-hash JSON structure.
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct GoldenData {
@@ -73,7 +73,7 @@ pub fn load_golden_data(path: &Path) -> Result<GoldenData> {
     Ok(data)
 }
 
-/// Compare two golden-data files and return a report.
+/// Compare two vanilla-hash files and return a report.
 pub fn compare(left: &GoldenData, right: &GoldenData) -> ComparisonReport {
     // Build lookup maps: (region_x, region_z, chunk_x, chunk_z) -> hash
     let left_map: HashMap<(i32, i32, i32, i32), &ChunkEntry> = left

@@ -8,7 +8,7 @@ members = [
     "crates/neutron-server",
     "crates/neutron-bench-server",
     "crates/neutron-sim",
-    "tools/golden-data",
-    "tools/parity-check",
-    "tools/nbt-ref/dump-chunk",
+    "tools/vanilla-hash",
+    "tools/vanilla-parity",
+    "tools/chunk-dump/dump-chunk",
 ]

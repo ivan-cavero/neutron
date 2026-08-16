@@ -1,7 +1,7 @@
-// dump-chunk: Dump vanilla chunk NBT structure from .mca region files.
+// chunk-dump: Dump vanilla chunk NBT structure from .mca region files.
 //
 // Usage:
-//   cargo run -p dump-chunk -- <region.mca> <local_cx> <local_cz> [--dump-longs] [--verbose]
+//   cargo run -p chunk-dump -- <region.mca> <local_cx> <local_cz> [--dump-longs] [--verbose]
 //
 // Reads one chunk from an Anvil region file and prints the full NBT tree,
 // including palette entries and (optionally) the raw packed long arrays.
@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 4 {
         eprintln!(
-            "Usage: dump-chunk <region.mca> <local_cx> <local_cz> [--dump-longs] [--verbose]"
+            "Usage: chunk-dump <region.mca> <local_cx> <local_cz> [--dump-longs] [--verbose]"
         );
         std::process::exit(1);
     }

@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Neutron Contributors -- MIT License
 //
-// parity-check: Compare Neutron-generated chunks against vanilla golden data.
+// vanilla-parity: Compare Neutron-generated chunks against vanilla golden data.
 //
 // Two comparison modes:
 // 1. Raw hash: hash the block/biome arrays directly (for neutron-vs-neutron consistency)
 // 2. NBT hash: serialize to vanilla-compatible NBT sections and hash (for vanilla parity)
 //
 // Also generates a "neutron golden data" JSON that can be compared with the
-// vanilla golden data using `golden-data compare`.
+// vanilla golden data using `vanilla-hash compare`.
 
 #![forbid(unsafe_code)]
 
@@ -27,7 +27,7 @@ use xxhash_rust::xxh3::xxh3_64;
 
 /// Compare Neutron-generated chunks against vanilla golden data.
 #[derive(Parser, Debug)]
-#[command(name = "parity-check", version, about)]
+#[command(name = "vanilla-parity", version, about)]
 struct Cli {
     /// Path to golden data JSON file (vanilla).
     #[arg(long)]
@@ -54,7 +54,7 @@ struct Cli {
     detail: usize,
 }
 
-/// Golden data JSON format (matching golden-data tool output).
+/// Golden data JSON format (matching vanilla-hash tool output).
 #[derive(Debug, Deserialize)]
 struct GoldenData {
     seed: i64,
@@ -220,7 +220,7 @@ fn main() -> Result<()> {
 
     // Compare with golden data if provided
     if let Some(golden_path) = &cli.golden {
-        compare_with_golden(&golden_path, &neutron_chunks)?;
+        compare_with_golden(golden_path, &neutron_chunks)?;
     }
 
     // Generate neutron golden data if requested
@@ -243,7 +243,7 @@ fn main() -> Result<()> {
         println!("\nNeutron golden data saved to {}", output_path.display());
         if let Some(ref golden_path) = cli.golden {
             println!(
-                "Compare with: cargo run -p golden-data -- compare --left {} --right {}",
+                "Compare with: cargo run -p vanilla-hash -- compare --left {} --right {}",
                 golden_path.display(),
                 output_path.display()
             );
@@ -318,7 +318,7 @@ fn compare_with_golden(golden_path: &PathBuf, neutron_chunks: &[NeutronChunkInfo
 
     if different > 0 {
         println!("\nNote: NBT hash differences are expected because the serialization format");
-        println!("differs between vanilla and neutron-worldgen. Use 'golden-data compare'");
+        println!("differs between vanilla and neutron-worldgen. Use 'vanilla-hash compare'");
         println!("for a proper NBT-level comparison after writing compatible .mca files.");
     }
 
@@ -406,7 +406,7 @@ fn hash_neutron_chunk(chunk: &neutron_worldgen::GeneratedChunk) -> String {
 fn serialize_chunk_to_nbt_bytes(chunk: &neutron_worldgen::GeneratedChunk) -> Vec<u8> {
     let sections_nbt = serialize_chunk_to_sections_nbt(chunk);
 
-    // Wrap in a compound and serialize (matching golden-data's hash format)
+    // Wrap in a compound and serialize (matching vanilla-hash's hash format)
     let mut wrapper = Compound { tags: Vec::new() };
     wrapper
         .tags
@@ -465,7 +465,7 @@ fn serialize_chunk_to_sections_nbt(chunk: &neutron_worldgen::GeneratedChunk) -> 
         // Expand to 64 entries: repeat each of the 16 entries 4 times (for by4=0,1,2,3).
         let section_biomes_64: Vec<u8> = section_biomes_16
             .iter()
-            .flat_map(|&b| std::iter::repeat(b).take(4))
+            .flat_map(|&b| std::iter::repeat_n(b, 4))
             .collect();
 
         // Build biome palette
@@ -517,8 +517,8 @@ fn build_block_palette(blocks: &[u16]) -> (List, HashMap<u16, usize>) {
     let mut palette_map = HashMap::new();
 
     for &block_id in blocks {
-        if !palette_map.contains_key(&block_id) {
-            palette_map.insert(block_id, seen.len());
+        if let std::collections::hash_map::Entry::Vacant(e) = palette_map.entry(block_id) {
+            e.insert(seen.len());
             seen.push(block_id);
         }
     }
@@ -581,8 +581,8 @@ fn build_biome_palette(biomes: &[u8]) -> (List, HashMap<u8, usize>) {
     let mut palette_map = HashMap::new();
 
     for &biome_id in biomes {
-        if !palette_map.contains_key(&biome_id) {
-            palette_map.insert(biome_id, seen.len());
+        if let std::collections::hash_map::Entry::Vacant(e) = palette_map.entry(biome_id) {
+            e.insert(seen.len());
             seen.push(biome_id);
         }
     }
@@ -607,7 +607,7 @@ fn pack_block_data(blocks: &[u16], palette_map: &HashMap<u16, usize>) -> Vec<i64
 
     let bits_per_entry = ((palette_size as f64).log2().ceil() as usize).max(4);
     let entries_per_long = 64 / bits_per_entry;
-    let total_longs = (4096 + entries_per_long - 1) / entries_per_long;
+    let total_longs = 4096_usize.div_ceil(entries_per_long);
 
     let mut data = vec![0i64; total_longs];
 
@@ -633,7 +633,7 @@ fn pack_biome_data(biomes: &[u8], palette_map: &HashMap<u8, usize>) -> Vec<i64> 
 
     let bits_per_entry = ((palette_size as f64).log2().ceil() as usize).max(4);
     let entries_per_long = 64 / bits_per_entry;
-    let total_longs = (biomes.len() + entries_per_long - 1) / entries_per_long;
+    let total_longs = biomes.len().div_ceil(entries_per_long);
 
     let mut data = vec![0i64; total_longs];
 
@@ -655,7 +655,7 @@ fn pack_heightmap(heights: &[i16]) -> Vec<i64> {
     const MIN_Y: i32 = -64;
     let bits_per_entry = 9;
     let entries_per_long = 64 / bits_per_entry; // 7
-    let total_longs = (heights.len() + entries_per_long - 1) / entries_per_long;
+    let total_longs = heights.len().div_ceil(entries_per_long);
 
     let mut data = vec![0i64; total_longs];
 

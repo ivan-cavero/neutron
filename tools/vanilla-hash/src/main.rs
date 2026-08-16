@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Neutron Contributors — MIT License
 //
-// golden-data: Extract chunk checksums from a Minecraft server for parity verification.
+// vanilla-hash: Extract chunk checksums from a Minecraft server for parity verification.
 //
 // Starts a vanilla/paper/folia server, lets it generate chunks around spawn,
 // then reads the .mca region files and computes xxHash64 of each chunk's
@@ -27,7 +27,7 @@ use xxhash_rust::xxh3::xxh3_64;
 
 /// Extract chunk checksums from a Minecraft server for parity verification.
 #[derive(Parser, Debug)]
-#[command(name = "golden-data", version, about)]
+#[command(name = "vanilla-hash", version, about)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -175,7 +175,7 @@ fn main() -> Result<()> {
         Some(Commands::Compare { left, right }) => cmd_compare(left, right),
         None => {
             // Default: show help
-            Cli::parse_from(["golden-data", "--help"]);
+            Cli::parse_from(["vanilla-hash", "--help"]);
             Ok(())
         }
     }
@@ -197,7 +197,7 @@ fn cmd_extract(
         seed = seed,
         server = %server,
         output = %output.display(),
-        "starting golden-data extraction"
+        "starting vanilla-hash extraction"
     );
 
     // Determine servers directory
@@ -212,7 +212,7 @@ fn cmd_extract(
             p.clone()
         }
         None => {
-            let base = std::env::temp_dir().join(format!("golden-data-{}", seed));
+            let base = std::env::temp_dir().join(format!("vanilla-hash-{}", seed));
             if base.exists() {
                 fs::remove_dir_all(&base)
                     .with_context(|| format!("Failed to clean old tmp dir {}", base.display()))?;
@@ -493,7 +493,7 @@ fn read_and_hash_regions(region_dir: &Path, hash_mode: &HashMode) -> Result<Vec<
     let mut entries: Vec<_> = fs::read_dir(region_dir)
         .with_context(|| format!("Failed to read {}", region_dir.display()))?
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "mca"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "mca"))
         .collect();
 
     entries.sort_by_key(|e| e.file_name());
