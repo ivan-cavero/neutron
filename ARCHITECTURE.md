@@ -1,251 +1,362 @@
-# Neutron — Arquitectura
+# Neutron — Architecture
 
-> v0.1 · 5 ago 2026 · Documento vivo: cada decisión marcada con `[ADR]` se mueve a `docs/adr/` cuando se implementa.
-> Todas las decisiones técnicas se basan en investigación verificada (Anexo A al final).
+> v0.1 · 5 Aug 2026 · Living document: every decision marked `[ADR]` moves to `docs/adr/`
+> when implemented. All technical decisions are based on verified research (Annex A at the end).
 
-## 1. Principios de diseño
+## 1. Design principles
 
-1. **Cero panics en runtime** — política panic-free en código de producción (Pumpkin está eliminando ~70 `unwrap/expect` como blocker de su 1.0; lo hacemos desde el día 1: `#![forbid(unsafe_code)]` en la mayoría de crates, error handling tipado).
-2. **Determinismo como contrato** — misma seed + misma versión = mismo mundo y mismo comportamiento. Verificado por checksums en CI, no por opinión.
-3. **Sin GC, sin sorpresas** — memoria explícita, arenas y pooling; perfiles de memoria medidos en CI.
-4. **Medir antes de optimizar** — ningún "optimización" entra sin benchmark (criterion) y sin comparación contra la referencia verificada.
-5. **Paridad por tests, no por fe** — cada subsistema tiene un "test de oro" contra vanilla (hash de chunks, secuencia de updates de redstone, resultado de iluminación).
-6. **Seguridad por construcción** — plugins en sandbox WASM con fuel/memory limits; el servidor nunca cae por un plugin.
-7. **`main` = última versión de Minecraft** — la cadencia de versiones es una feature de primera clase (pipeline D0-D4, ver §10).
-8. **Estructura de carpetas del mundo 100% vanilla** — `world/`, `world_nether/`, `world_the_end/`, `level.dat`, `region/*.mca`, `session.lock`: un mundo de Neutron abre en vanilla y viceversa.
+1. **Zero runtime panics** — panic-free policy in production code (Pumpkin is removing ~70
+   `unwrap/expect` as a 1.0 blocker; we do it from day 1: `#![forbid(unsafe_code)]` in most
+   crates, typed error handling).
+2. **Determinism as a contract** — same seed + same version = same world and same behavior.
+   Verified by CI checksums, not opinion.
+3. **No GC, no surprises** — explicit memory, arenas and pooling; memory profiles measured in CI.
+4. **Measure before optimizing** — no "optimization" lands without a benchmark (criterion) and
+   without comparison against the verified reference.
+5. **Parity by tests, not by faith** — every subsystem has a "golden test" against vanilla
+   (chunk hashes, redstone update sequence, lighting result).
+6. **Security by construction** — plugins in a WASM sandbox with fuel/memory limits; the server
+   never goes down because of a plugin.
+7. **`main` = latest Minecraft version** — version cadence is a first-class feature (D0-D4
+   pipeline, see §10).
+8. **100% vanilla world folder structure** — `world/`, `world_nether/`, `world_the_end/`,
+   `level.dat`, `region/*.mca`, `session.lock`: a Neutron world opens in vanilla and vice versa.
 
-## 2. Vista general
+## 2. Overview
 
-### Hoy (agosto 2026) — grafo real
+### Today (August 2026) — real graph
 
 ```
-  neutron-server (binario)
-       │  login 26.2 + 1 worker worldgen + LRU de chunks
-       ├── neutron-protocol     paquetes 26.2 escritos a mano
-       └── neutron-worldgen     overworld; DF = Arc (Send); no 1:1
+  neutron-server (binary)
+       │  login 26.2 + 1 worldgen worker + chunk LRU
+       ├── neutron-protocol     26.2 packets, hand-written
+       └── neutron-worldgen     overworld; DF = Arc (Send); not 1:1 yet
 
-  neutron-world     Anvil listo, no usado por el server
-  neutron-sim       luz / redstone / fluidos / spawn — solo tests
+  neutron-world     Anvil ready, not used by the server
+  neutron-sim       light / redstone / fluids / spawn — tests only
 ```
 
-### Objetivo (sin implementar todavía)
+### Goal (not implemented yet)
 
 ```
                         ┌──────────────────────┐
-                        │    neutron-cli      │  binario, config, comandos
+                        │    neutron-cli      │  binary, config, commands
                         └──────────┬───────────┘
                                    │
         ┌──────────────────────────▼──────────────────────────┐
         │                   neutron-server                   │
         │  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  │
         │  │ networking  │  │  scheduler   │  │ observab.  │  │
-        │  │ (tokio)     │  │ (por región) │  │ tracing+   │  │
-        │  │ sesiones    │  │ single-writer│  │ metrics    │  │
+        │  │ (tokio)     │  │ (per region) │  │ tracing+   │  │
+        │  │ sessions    │  │ single-writer│  │ metrics    │  │
         │  └──────┬──────┘  └──────┬───────┘  └────────────┘  │
         └─────────┼────────────────┼──────────────────────────┘
                   │                │
      ┌────────────▼────────────────▼─────────────┐   ┌───────────────────────┐
      │          neutron-sim (bevy_ecs)          │   │   neutron-plugin     │
-     │  entidades · redstone · iluminación       │   │  wasmtime (component  │
-     │  fluidos · spawns · mob AI · física       │   │  model, WIT) + mlua   │
+     │  entities · redstone · lighting           │   │  wasmtime (component  │
+     │  fluids · spawns · mob AI · physics       │   │  model, WIT) + mlua   │
      └────────────┬────────────────┬─────────────┘   └───────────────────────┘
                   │                │
      ┌────────────▼──────┐  ┌──────▼─────────────────┐
      │  neutron-world   │  │   neutron-worldgen    │  ← neutron-data
-     │  chunks · Anvil   │  │   paridad 1:1          │    (datos generados)
-     │  .hyp · region IO │  │   checksums xxHash64   │
+     │  chunks · Anvil   │  │   1:1 parity          │    (generated data)
+     │  .hyp · region IO │  │   xxHash64 checksums  │
      └────────────┬──────┘  └────────────────────────┘
                   │
      ┌────────────▼────────────┐
-     │    neutron-protocol    │  ← generado por tools/mc-extract + codegen
-     │   paquetes multi-versión│
+     │    neutron-protocol    │  ← generated by tools/mc-extract + codegen
+     │   multi-version packets │
      └─────────────────────────┘
 ```
 
-## 3. Protocolo y networking
+## 3. Protocol and networking
 
-- **Java Edition: versión actual de Mojang (26.2 hoy)** como objetivo primario; mapa de IDs de paquetes **multi-versión generado** (como el `MultiVersionJavaPacket` de Pumpkin) para aceptar clientes N-1..N-3.
-- **Bedrock**: fase F7 (protocolo 26.x + RakNet). Prioridad baja al inicio; no condiciona la arquitectura (capa de sesión independiente).
-- Networking con **tokio + bytes**: cero-copia donde el hot path lo permita, outbox por jugador, batch de paquetes de chunks (rate-limit por jugador como el `player-max-chunk-send-rate` de Paper).
-- Seguridad de protocolo: validación estricta de todo input, límites de tamaño, rate limits por conexión, y **fuzzing** (`cargo-fuzz` + `arbitrary`) del decode desde F1.
-- `[ADR-P1]` codec generado (como Basalt/Aero: generan paquetes desde JSON de minecraft-data) vs codec a mano → **generado**, con override manual cuando Mojang rompe patrones.
+- **Java Edition: Mojang's current version (26.2 today)** as primary target; a **generated
+  multi-version** packet ID map (like Pumpkin's `MultiVersionJavaPacket`) to accept N-1..N-3
+  clients.
+- **Bedrock**: phase F7 (26.x protocol + RakNet). Low priority initially; does not constrain
+  the architecture (independent session layer).
+- Networking with **tokio + bytes**: zero-copy where the hot path allows, per-player outbox,
+  chunk packet batching (per-player rate limit like Paper's `player-max-chunk-send-rate`).
+- Protocol security: strict validation of all input, size limits, per-connection rate limits,
+  and **fuzzing** (`cargo-fuzz` + `arbitrary`) of the decoder from F1.
+- `[ADR-P1]` generated codec (like Basalt/Aero: they generate packets from minecraft-data JSON)
+  vs hand-written codec → **generated**, with manual override when Mojang breaks patterns.
 
-## 4. Datos y registries (capa `neutron-data`)
+## 4. Data and registries (`neutron-data` layer)
 
-- Todo dato (bloques, items, biomas, registries, worldgen, protocolo) se **extrae del jar de Mojang** (desde 26.1 el jar no está ofuscado: extracción directa; para 1.21.x usar el mapa de ofuscación como los demás) y se **genera código Rust tipado** en build time.
-- El worldgen de vanilla es data-driven (datapack `worldgen/` embebido en el jar desde 1.19.3): **embebemos el datapack vanilla** como recurso y lo cargamos en runtime — así los cambios de Mojang en noise/biomas/features llegan como datos, no como reimplementación.
-- Soporte de **datapacks de usuario** (los mundos vanilla los usan): parser de codecs y registries dinámicos desde F2.
+- All data (blocks, items, biomes, registries, worldgen, protocol) is **extracted from the
+  Mojang jar** (since 26.1 the jar is unobfuscated: direct extraction; for 1.21.x use the
+  obfuscation map like everyone else) and **typed Rust code is generated** at build time.
+- Vanilla worldgen is data-driven (the `worldgen/` datapack embedded in the jar since 1.19.3):
+  we **embed the vanilla datapack** as a resource and load it at runtime — Mojang's changes to
+  noise/biomes/features arrive as data, not as reimplementation.
+- **User datapack support** (vanilla worlds use them): codec parser and dynamic registries from F2.
 
-## 5. Mundo y storage (capa `neutron-world`)
+## 5. World and storage (`neutron-world` layer)
 
-- Chunk interno: **palette compacta** (1-15 bits/bloque), heightmaps, biomes, block entities, light data — estructura de memoria propia (no NBT) para el hot path.
-- **Persistencia 1:1 con vanilla**:
-  - Lectura/escritura de **Anvil `.mca`** (NBT) — mundos intercambiables con vanilla/Paper.
-  - `level.dat` (NBT) con los campos correctos para cada versión.
-  - `world/`, `world_nether/`, `world_the_end/`, `session.lock`, estructura de carpetas idéntica.
-  - Formato propio **`.hyp`** (zstd, ~50-95% más pequeño, como el `.linear` de Pumpkin) opcional vía config, con conversor idéntico.
-- I/O asíncrono fuera del tick loop; cola de escritura con flush periódico; guardado incremental (region dirty flags).
-- `[ADR-W1]` redb como KV para estado global (players.dat, scores, metadata) — activo y ACID; sled descartado (modo mantenimiento). Para regiones: archivos `.mca`/`.hyp` + índice en memoria.
+- Internal chunk: **compact palette** (1-15 bits/block), heightmaps, biomes, block entities,
+  light data — own memory structure (not NBT) for the hot path.
+- **1:1 persistence with vanilla**:
+  - Read/write of **Anvil `.mca`** (NBT) — worlds interchangeable with vanilla/Paper.
+  - `level.dat` (NBT) with the correct fields for each version.
+  - `world/`, `world_nether/`, `world_the_end/`, `session.lock`, identical folder structure.
+  - Own **`.hyp`** format (zstd, ~50-95% smaller, like Pumpkin's `.linear`) optional via config,
+    with an identical converter.
+- Async I/O outside the tick loop; write queue with periodic flush; incremental saving (region
+  dirty flags).
+- `[ADR-W1]` redb as KV for global state (players.dat, scores, metadata) — active and ACID;
+  sled discarded (maintenance mode). For regions: `.mca`/`.hyp` files + in-memory index.
 
-## 6. Worldgen (capa `neutron-worldgen`) — paridad 1:1
+## 6. Worldgen (`neutron-worldgen` layer) — 1:1 parity
 
-Pipeline por chunk (verificado contra el flujo real de vanilla):
+Per-chunk pipeline (verified against the real vanilla flow):
 
 ```
 noise (density functions) → biome source → surface rules → carvers
-→ placed features → structures → spawn de mobs en generación → iluminación
+→ placed features → structures → in-generation mob spawns → lighting
 ```
 
-- **Determinismo**: mismo seed + misma versión = mismo mundo (verificado: minecraft.wiki/World_seed; determinismo demostrado por cubiomes y por el PR #2506 de Pumpkin con checksums).
-- RNG: reimplementación exacta del PRNG de Mojang (**XORoshiro128** — Pumpkin ya lo hizo y verificó paridad de seed).
-- Funciones de densidad: port 1:1 de los algoritmos (Perlin/octaves 3D) + carga del JSON del datapack vanilla.
-- **Paralelismo**: pool dedicado (rayon o tokio con DAG de dependencias — como el DAG de Pumpkin para dependencias cross-chunk) generando chunks en paralelo; los chunks vecinos (3×3) son dependencia para features/estructuras.
-- **Verificación de paridad en CI**: checksum **xxHash64** del bloque final (y del mapa de biomas) por chunk, comparado contra golden data de vanilla (generado una vez por versión con un server vanilla headless). 50+ seeds golden por versión. Esto es el "test de oro" — la misma técnica que verificó Pumpkin en su PR #2506.
-- Estructuras: port por fases (fuertes → aldeas → ancient city → resto) con los "generation attempts" por región de 32×32 (mecánica verificada por cubiomes).
+- **Determinism**: same seed + same version = same world (verified: minecraft.wiki/World_seed;
+  determinism demonstrated by cubiomes and by Pumpkin PR #2506 with checksums).
+- RNG: exact reimplementation of Mojang's PRNG (**XORoshiro128** — Pumpkin already did it and
+  verified seed parity).
+- Density functions: 1:1 port of the algorithms (Perlin/3D octaves) + loading of the vanilla
+  datapack JSON.
+- **Parallelism**: dedicated pool (rayon or tokio with a dependency DAG — like Pumpkin's DAG for
+  cross-chunk dependencies) generating chunks in parallel; neighbor chunks (3×3) are a
+  dependency for features/structures.
+- **Parity verification in CI**: **xxHash64** checksum of the final block (and biome map) per
+  chunk, compared against vanilla golden data (generated once per version with a headless
+  vanilla server). 50+ golden seeds per version. This is the "golden test" — the same technique
+  that verified Pumpkin in PR #2506.
+- Structures: phased port (strongholds → villages → ancient city → rest) with "generation
+  attempts" per 32×32 region (mechanic verified by cubiomes).
 
-## 7. Simulación (capa `neutron-sim`) — comportamiento vanilla
+## 7. Simulation (`neutron-sim` layer) — vanilla behavior
 
-- **ECS con `bevy_ecs`** — IMPORTANTE: usamos SOLO el crate `bevy_ecs` (la librería de Entity Component System: almacén de entidades + scheduler de systems), **NO el engine Bevy completo** (sin renderer, sin ventanas, sin assets — un servidor no pinta nada). Verificado: Valence, FerrumC y Azalea lo usan en producción; es el estándar de facto.
-- **Qué NO es ECS**: los chunks (arrays densos con palettes), la redstone y los fluidos son simulación por tiles con estructuras de datos propias (§5, redstone en §7). El ECS cubre SOLO la capa de entidades: componentes (posición, salud, AI state, inventario) + systems (movimiento, AI, combate) ejecutados en paralelo por el scheduler por regiones. La capa está aislada en `neutron-sim`: si los benchmarks de F4 lo desaconsejan, se puede sustituir por `hecs` o almacén custom sin tocar el resto.
-- **Tick a 20 TPS** con scheduler por regiones (estilo Folia): cada región (p.ej. 8×8 chunks) tiene su propio loop de tick con **single-writer**; sync global solo donde hace falta (redstone cross-región, física de jugadores). Esto es lo que permite escalar a 1000+ jugadores sin un hilo único.
-- **Redstone** (el mayor reto, verificado): subsistema dedicado con
-  - orden de updates exacto de vanilla: **PP: W, E, N, S, D, U · NC: W, E, D, U, N, S** (minecraft.wiki/Block_update);
-  - **quasi-connectivity** (solo Java — "works as intended");
-  - comportamiento de wire post-1.21.2 (Redstone Experiments: left-first, cómputo de potencia antes de updates);
-  - **tests posicionales**: las mismas contraptions en posiciones distintas del mundo (la vanilla es position-dependent — Paper issue #7725);
-  - suite de "contraptions doradas" comparada contra un server vanilla real con bots (no solo unit tests).
-- **Iluminación**: engine propio estilo Starlight (propagar niveles, skylight dedicado, gestión stateless de light sections para generación paralela) con el contrato de Starlight: "cualquier diferencia con vanilla es un bug". 1.20 demostró que vanilla puede adoptar estas ideas → paridad alcanzable.
-- **Fluidos**: flujo determinista con las reglas de update de vanilla (mismo orden de ticks de fluido).
-- **Spawns**: ciclo hostil cada tick / pasivo cada 400, caps (monster 70, creature 10, ambient 15…), pack spawning triangular ±5, reglas de luz y distancia (24/32/128 bloques) — todo según minecraft.wiki/Mob_spawning. Spawns de chunk-gen incluidos (seed-derived).
-- **Mob AI**: port desde el jar sin ofuscar (26.1+); behavior por mob con prioridad: pasivos → hostiles → jefes; pathfinding A* con optimizaciones (Pumpkin ya demostró mejoras grandes en su A*).
-- **Physics/combate**: knockback, cooldown, i-frames, proyectiles (verificado en Pumpkin #1404 como referencia de alcance).
+- **ECS with `bevy_ecs`** — IMPORTANT: we use ONLY the `bevy_ecs` crate (the Entity Component
+  System library: entity store + system scheduler), **NOT the full Bevy engine** (no renderer,
+  no windows, no assets — a server renders nothing). Verified: Valence, FerrumC and Azalea use
+  it in production; it's the de facto standard.
+- **What is NOT ECS**: chunks (dense arrays with palettes), redstone and fluids are tile
+  simulation with own data structures (§5, redstone in §7). ECS covers ONLY the entity layer:
+  components (position, health, AI state, inventory) + systems (movement, AI, combat) executed
+  in parallel by the regional scheduler. The layer is isolated in `neutron-sim`: if F4
+  benchmarks advise against it, it can be replaced by `hecs` or a custom store without touching
+  the rest.
+- **20 TPS tick** with a regional scheduler (Folia-style): each region (e.g. 8×8 chunks) has its
+  own tick loop with **single-writer**; global sync only where needed (cross-region redstone,
+  player physics). This is what allows scaling to 1000+ players without a single thread.
+- **Redstone** (the biggest challenge, verified): dedicated subsystem with
+  - vanilla's exact update order: **PP: W, E, N, S, D, U · NC: W, E, D, U, N, S**
+    (minecraft.wiki/Block_update);
+  - **quasi-connectivity** (Java only — "works as intended");
+  - post-1.21.2 wire behavior (Redstone Experiments: left-first, power computed before updates);
+  - **positional tests**: the same contraptions at different world positions (vanilla is
+    position-dependent — Paper issue #7725);
+  - a "golden contraptions" suite compared against a real vanilla server with bots (not just
+    unit tests).
+- **Lighting**: own Starlight-style engine (propagate levels, dedicated skylight, stateless
+  light section management for parallel generation) with Starlight's contract: "any difference
+  from vanilla is a bug". 1.20 proved vanilla can adopt these ideas → parity is reachable.
+- **Fluids**: deterministic flow with vanilla's update rules (same fluid tick order).
+- **Spawns**: hostile cycle every tick / passive every 400, caps (monster 70, creature 10,
+  ambient 15…), triangular pack spawning ±5, light and distance rules (24/32/128 blocks) —
+  all per minecraft.wiki/Mob_spawning. Chunk-gen spawns included (seed-derived).
+- **Mob AI**: port from the unobfuscated jar (26.1+); per-mob behavior with priority:
+  passive → hostile → bosses; A*pathfinding with optimizations (Pumpkin already showed big
+  improvements in its A*).
+- **Physics/combat**: knockback, cooldown, i-frames, projectiles (verified via Pumpkin #1404
+  as a scope reference).
 
-## 8. Scheduler y paralelismo
+## 8. Scheduler and parallelism
 
-- **Regla de oro**: un escritor por región; lectura concurrente permitida con `RwLock` por chunk o versioning.
-- Chunk pipeline: generación en paralelo (DAG), carga/descarga asíncrona, envío al cliente con rate-limit.
-- Hot paths sin locks: arenas de memoria, reuso de buffers (el PR #2506 de Pumpkin: −56% tiempo de noise con optimización de buffers; nosotros lo hacemos desde el diseño).
-- Networking fuera del tick (tokio); los paquetes se encolan en el outbox del jugador.
-- Determinismo vs paralelismo: el orden de ejecución *dentro* de una región es fijo (lista ordenada de entidades/updates); el paralelismo nunca reordena updates visibles (contrato de parity).
+- **Golden rule**: one writer per region; concurrent reads allowed with `RwLock` per chunk or
+  versioning.
+- Chunk pipeline: parallel generation (DAG), async load/unload, rate-limited sending to the client.
+- Lock-free hot paths: memory arenas, buffer reuse (Pumpkin PR #2506: −56% noise time with
+  buffer optimization; we do it from design).
+- Networking outside the tick (tokio); packets are queued in the player's outbox.
+- Determinism vs parallelism: the execution order *within* a region is fixed (ordered list of
+  entities/updates); parallelism never reorders visible updates (parity contract).
 
-## 9. Plugins: WASM + Lua (capa `neutron-plugin`)
+## 9. Plugins: WASM + Lua (`neutron-plugin` layer)
 
-- **Runtime: wasmtime** (verificado: runtime de referencia de la Bytecode Alliance, component model + WASI preview 2 estable; Pumpkin probó Extism y migró a wasmtime — nosotros podemos usar Extism como capa ergonómica *sobre* wasmtime si aporta, decisión en F6).
-- Formato: **componentes WASM (`wasm32-wasip2`)** con interface **WIT** (`neutron-plugin-api.wit`): ABI estable entre versiones del servidor → un plugin compilado una vez corre en todas las versiones futuras (esto es lo que resuelve el problema de "mi plugin se rompe en cada release").
-- **Seguridad**: sandbox de memoria por store, **fuel limits** (opcodes por tick), memory limits, capacidades explícitas por plugin (permisos: chat, world access, network…), hot reload, y aislamiento: panic/crash del plugin ≠ crash del servidor.
-- **Lua (mlua 0.12)** para scripting ligero de confianza (eventos simples, comandos, GUI) — ergonomía alta, sin recompilar.
-- **API más potente que Bukkit, más simple**: eventos con tipado fuerte, sistema de entidades vía bevy_ecs (queries, systems), comandos declarativos, y un modelo de permisos built-in (Bukkit lo resolvió con terceros como LuckPerms).
-- **Conversor de plugins existentes — honesto** (verificado: TeaVM/JWebAssembly prohíben reflection/class-loading; CheerpJ es una JVM-en-WASM para browser; FerrumC descarta compat Bukkit):
-  1. **Fase A**: analizador estático que detecta plugins "convertibles" (sin reflection, sin internals de CraftBukkit) → recompila el *bytecode puro* a WASM sobre nuestra API reimplementada (subconjunto del API Bukkit en Rust/WIT). Funciona para una fracción pequeña pero real de plugins simples.
-  2. **Fase B**: capa de compat PatchBukkit-style (como la que Pumpkin está construyendo) que ejecuta jars Bukkit reales en un runtime JVM embebido, traducido a eventos de Neutron — lento, pero compatible.
-  3. Mensaje claro a la comunidad: los plugins nuevos se escriben nativos (Rust/WASM o Lua). La "herramienta de conversión" es un puente, no el futuro.
+- **Runtime: wasmtime** (verified: Bytecode Alliance reference runtime, component model + stable
+  WASI preview 2; Pumpkin tried Extism and migrated to wasmtime — we can use Extism as an
+  ergonomic layer *over* wasmtime if it adds value, decision in F6).
+- Format: **WASM components (`wasm32-wasip2`)** with a **WIT** interface
+  (`neutron-plugin-api.wit`): stable ABI between server versions → a plugin compiled once runs
+  on all future versions (this solves "my plugin breaks on every release").
+- **Security**: per-store memory sandbox, **fuel limits** (opcodes per tick), memory limits,
+  explicit per-plugin capabilities (permissions: chat, world access, network…), hot reload,
+  and isolation: plugin panic/crash ≠ server crash.
+- **Lua (mlua 0.12)** for trusted lightweight scripting (simple events, commands, GUI) — high
+  ergonomics, no recompilation.
+- **More powerful API than Bukkit, simpler**: strongly typed events, entity system via
+  bevy_ecs (queries, systems), declarative commands, and a built-in permission model (Bukkit
+  solved this with third parties like LuckPerms).
+- **Existing plugin converter — honest** (verified: TeaVM/JWebAssembly forbid
+  reflection/class-loading; CheerpJ is a JVM-in-WASM for browsers; FerrumC rejects Bukkit compat):
+  1. **Phase A**: static analyzer that detects "convertible" plugins (no reflection, no
+     CraftBukkit internals) → recompiles the *pure bytecode* to WASM on our reimplemented API
+     (Bukkit API subset in Rust/WIT). Works for a small but real fraction of simple plugins.
+  2. **Phase B**: PatchBukkit-style compat layer (like the one Pumpkin is building) that runs
+     real Bukkit jars in an embedded JVM runtime, translated to Neutron events — slow, but
+     compatible.
+  3. Clear message to the community: new plugins are written native (Rust/WASM or Lua). The
+     "conversion tool" is a bridge, not the future.
 
-## 10. Pipeline de versiones (la feature "días, no semanas")
+## 10. Version pipeline (the "days, not weeks" feature)
 
-Flujo D0-D4, automatizado y con SLA ≤ 7 días tras release de Mojang:
+D0-D4 flow, automated, SLA ≤ 7 days after a Mojang release:
 
-| Día | Paso | Herramienta | Verificación |
-|---|---|---|---|
-| D0 | Mojang publica release (ej. 26.3) | webhook/CI detecta | — |
-| D1 | Descargar jar + extraer: registries, protocolo, worldgen datapack, assets | `tools/mc-extract` (jar sin ofuscar desde 26.1; para 1.21.x usar mapping) | diff de registries vs versión anterior; validación contra minecraft-data |
-| D2 | Codegen: paquetes, block states, biomes, density functions JSON → Rust | `tools/codegen` | `cargo check` limpio, sin diffs manuales |
-| D3 | Regenerar golden data con server vanilla (chunks por seed, contraptions) | harness | checksums xxHash64 |
-| D4 | Correr suite de parity completa + benchmarks; release de `main` | CI | parity 100%, benchmarks publicados |
+| Day | Step | Tool | Verification |
+| --- | --- | --- | --- |
+| D0 | Mojang publishes release (e.g. 26.3) | webhook/CI detects | — |
+| D1 | Download jar + extract: registries, protocol, worldgen datapack, assets | `tools/mc-extract` (unobfuscated jar since 26.1; for 1.21.x use mapping) | registry diff vs previous; validation against minecraft-data |
+| D2 | Codegen: packets, block states, biomes, density functions JSON → Rust | `tools/codegen` | clean `cargo check`, no manual diffs |
+| D3 | Regenerate golden data with a vanilla server (chunks per seed, contraptions) | harness | xxHash64 checksums |
+| D4 | Run full parity suite + benchmarks; release `main` | CI | parity 100%, benchmarks published |
 
-- `main` = siempre la última; las versiones anteriores se mantienen como **protocolo multi-versión** (N-1..N-3) pero simulación solo latest (como vanilla: no hay soporte de simulación para viejas).
-- Cadencia de Mojang verificada: ~3 drops/año desde 2025 + hotfixes (1.21.5→1.21.11 en 2025; 26.1, 26.2, 26.3 en 2026) — el pipeline se ejecuta ~4-6 veces/año + hotfixes puntuales.
-- Referencia del ecosistema: el pipeline de **minecraft-data** (PrismarineJS) ya hace esto en JS (proto.yml por versión + auto-updater + extractor Fabric); Valence también tiene extractor. Nosotros lo hacemos nativo en Rust con salida tipada.
+- `main` = always latest; older versions are kept as **multi-version protocol** (N-1..N-3) but
+  simulation is latest-only (like vanilla: no simulation support for old versions).
+- Mojang cadence verified: ~3 drops/year since 2025 + hotfixes (1.21.5→1.21.11 in 2025; 26.1,
+  26.2, 26.3 in 2026) — the pipeline runs ~4-6 times/year + occasional hotfixes.
+- Ecosystem reference: **minecraft-data**'s pipeline (PrismarineJS) already does this in JS
+  (proto.yml per version + auto-updater + Fabric extractor); Valence also has an extractor. We
+  do it natively in Rust with typed output.
 
-## 11. Observabilidad
+## 11. Observability
 
-- `tracing` + métricas (prometheus-style) exportadas por endpoint interno.
-- Endpoint de profiling propio (equivalente a spark: TPS, tick durations min/max/avg/p99, CPU, memoria, disk).
-- CLI de bench integrado (`neutron bench ...`) para medir sin bots externos cuando sea posible.
-- Todo benchmark publicado en `bench/results/` (ver BENCHMARKS.md).
+- `tracing` + metrics (prometheus-style) exported via an internal endpoint.
+- Own profiling endpoint (spark equivalent: TPS, tick durations min/max/avg/p99, CPU, memory,
+  disk).
+- Integrated bench CLI (`neutron bench ...`) to measure without external bots when possible.
+- Every benchmark published in `bench/results/` (see BENCHMARKS.md).
 
-## 12. Seguridad
+## 12. Security
 
-- Protocolo: validación estricta, límites, fuzzing continuo.
-- Plugins: sandbox WASM (fuel, memoria, capacidades) — "Security by construction" no es una capa, es el diseño.
-- Panic-free en release; `cargo deny` para supply chain; vendoring de dependencias críticas.
-- Anti-cheat server-side básico (movimiento, velocidad, noclip) como servicio interno (plugins pueden ampliarlo).
+- Protocol: strict validation, limits, continuous fuzzing.
+- Plugins: WASM sandbox (fuel, memory, capabilities) — "Security by construction" is not a
+  layer, it's the design.
+- Panic-free in release; `cargo deny` for supply chain; vendoring of critical dependencies.
+- Basic server-side anti-cheat (movement, speed, noclip) as an internal service (plugins can
+  extend it).
 
-## 13. Stack de dependencias (verificado ago 2026)
+## 13. Dependency stack (verified Aug 2026)
 
-| Crate | Uso | Estado verificado |
-|---|---|---|
-| tokio | networking, async I/O | estándar |
-| bevy_ecs | simulación de entidades (solo el crate ECS, sin el engine) | usado por Valence/FerrumC/Azalea |
-| wasmtime | runtime de plugins WASM | referencia de la Bytecode Alliance; elegido por Pumpkin |
-| mlua 0.12 | scripting Lua (5.1-5.5/LuaJIT/Luau) | activo (jul 2026) |
-| redb | KV embeddable (estado global) | activo; sled descartado |
-| rayon | paralelismo de chunks (o pool propio con DAG) | estándar |
-| xxhash-rust | checksums de paridad | estándar |
+| Crate | Use | Verified status |
+| --- | --- | --- |
+| tokio | networking, async I/O | standard |
+| bevy_ecs | entity simulation (ECS crate only, not the engine) | used by Valence/FerrumC/Azalea |
+| wasmtime | WASM plugin runtime | Bytecode Alliance reference; chosen by Pumpkin |
+| mlua 0.12 | Lua scripting (5.1-5.5/LuaJIT/Luau) | active (Jul 2026) |
+| redb | embeddable KV (global state) | active; sled discarded |
+| rayon | chunk parallelism (or own pool with DAG) | standard |
+| xxhash-rust | parity checksums | standard |
 | serde + simdnbt | NBT (Anvil, level.dat) | — |
-| criterion | micro-benchmarks | estándar |
-| clap, tracing, anyhow/thiserror, bytes, flate2/zstd | infra | estándar |
+| criterion | micro-benchmarks | standard |
+| clap, tracing, anyhow/thiserror, bytes, flate2/zstd | infrastructure | standard |
 
-## 14. Decisiones abiertas (ADR pendientes)
+## 14. Open decisions (pending ADRs)
 
-- Licencia: MIT o Apache-2.0 (recomendado) vs GPL-3.0 (como Pumpkin). Decisión del dueño.
-- Extism como capa sobre wasmtime: sí/no (F6).
-- Formato `.hyp` vs solo Anvil: .hyp como opt-in (F3).
-- Region size y granularidad del scheduler (F4, con benchmark de decisión).
+- License: MIT or Apache-2.0 (recommended) vs GPL-3.0 (like Pumpkin). Owner's decision.
+- Extism as a layer over wasmtime: yes/no (F6).
+- `.hyp` format vs Anvil only: .hyp as opt-in (F3).
+- Region size and scheduler granularity (F4, with a decision benchmark).
 
+## Annex A — Verified evidence (5 Aug 2026)
 
-## Anexo A — Evidencia verificada (5 ago 2026)
+> Fact base anchoring this document's and the roadmap's decisions. Format: fact — source —
+> confidence. Updated in every phase (D0-D4 pipeline, new benchmarks).
 
-> Base de hechos que anclan las decisiones de este documento y del roadmap. Formato: hecho — fuente — confianza. Se actualiza en cada fase (pipeline D0-D4, benchmarks nuevos).
+### 1. Minecraft: cadence and versions
 
-### 1. Minecraft: cadencia y versiones
+1. Mojang switched to year-based numbering on 2 Dec 2025. **There is no "1.22"**. —
+   minecraft.net (new-version-numbering-system) — HIGH
+2. 26.1 "Tiny Takeover" (24 Mar 2026): first **unobfuscated** jar, requires Java 25. —
+   minecraft.net — HIGH
+3. 26.2 "Chaos Cubed" (16 Jun 2026): current version; 26.3 in snapshots (Q3 2026). —
+   minecraft.wiki (version history) — HIGH
+4. Cadence: ~3 drops/year + hotfixes (1.21.5→1.21.11 in 2025; 26.1, 26.2, 26.3 in 2026). —
+   minecraft.wiki — HIGH
 
-1. Mojang cambió a numeración por año el 2 dic 2025. **No existe "1.22"**. — minecraft.net (new-version-numbering-system) — ALTA
-2. 26.1 "Tiny Takeover" (24 mar 2026): primer jar **sin ofuscar**, requiere Java 25. — minecraft.net — ALTA
-3. 26.2 "Chaos Cubed" (16 jun 2026): versión actual; 26.3 en snapshots (Q3 2026). — minecraft.wiki (version history) — ALTA
-4. Cadencia: ~3 drops/año + hotfixes (1.21.5→1.21.11 en 2025; 26.1, 26.2, 26.3 en 2026). — minecraft.wiki — ALTA
+### 2. Rust server ecosystem
 
-### 2. Ecosistema Rust de servidores
+1. **Pumpkin** (reference): ~10.6k★, GPL-3.0, nightly-only (no 1.0); worldgen almost complete
+   (biomes/terrain/carvers), partial structures, early redstone (broken pistons), OK lighting,
+   WASM plugins (wasmtime + WIT), PatchBukkit in development. —
+   github.com/Pumpkin-MC/Pumpkin, issues #449 #36 #1402 — HIGH
+2. Pumpkin 1.0 promised "in 2026", delayed since 2025. — r/rust (Feb 2026) — HIGH
+3. Valence active (framework, Bevy ECS, no full server); Feather inactive since 2024; FerrumC
+   active (explicitly rejects Bukkit compat); Oxide active. — official repos — HIGH
 
-5. **Pumpkin** (referente): ~10.6k★, GPL-3.0, solo nightly (sin 1.0); worldgen casi completo (biomas/terreno/carvers), estructuras parciales, redstone temprana (pistones rotos), iluminación OK, plugins WASM (wasmtime + WIT), PatchBukkit en desarrollo. — github.com/Pumpkin-MC/Pumpkin, issues #449 #36 #1402 — ALTA
-6. Pumpkin 1.0 prometida "en 2026", retrasada desde 2025. — r/rust (feb 2026) — ALTA
-7. Valence activo (framework, Bevy ECS, sin server completo); Feather inactivo desde 2024; FerrumC activo (rechaza compat Bukkit explícitamente); Oxide activo. — repos oficiales — ALTA
+### 3. Performance references
 
-### 3. Referencias de rendimiento
+1. **C2ME** (1.21.10, rigorous methodology: fixed seed, tmpfs, warmup): vanilla 10.6-14.2 cps,
+   Paper 17.4-84.8, C2ME 22.6-182.4 by threads; **vanilla doesn't scale beyond ~14 cps**. —
+   gist.github.com/ishland — HIGH
+2. **Pumpkin self-reported** (its doc warns the comparison is unfair): startup ~8 ms vs 7-8 s
+   Paper; RAM 0.4-27 MB vs 1-2 GB; CPU 1.5% vs 20-26%. **No chunks/s published**. —
+   docs.pumpkinmc.org/about/benchmarks — MEDIUM
+3. Community test (Jul 2026): confirmed Pumpkin's startup/RAM; found broken entities. —
+   YouTube kxTZb0FYiTU — MEDIUM
+4. Pumpkin PR #2506: `populate_noise_stage` 43.1 → 18.8 ms/chunk (−56%) with **bit-for-bit
+   parity verified by xxHash64 checksums**. — github.com/Pumpkin-MC/Pumpkin/pull/2506 — HIGH
 
-8. **C2ME** (1.21.10, metodología rigurosa: seed fija, tmpfs, warmup): vanilla 10.6-14.2 cps, Paper 17.4-84.8, C2ME 22.6-182.4 según hilos; **vanilla no escala > ~14 cps**. — gist.github.com/ishland — ALTA
-9. **Pumpkin self-reported** (su doc avisa que la comparación es injusta): startup ~8 ms vs 7-8 s Paper; RAM 0.4-27 MB vs 1-2 GB; CPU 1.5% vs 20-26%. **Sin chunks/s publicados**. — docs.pumpkinmc.org/about/benchmarks — MEDIA
-10. Test comunitario (jul 2026): confirmó startup/RAM de Pumpkin; encontró entidades rotas. — YouTube kxTZb0FYiTU — MEDIA
-11. Pumpkin PR #2506: `populate_noise_stage` 43.1 → 18.8 ms/chunk (−56%) con **paridad bit-for-bit verificada por checksums xxHash64**. — github.com/Pumpkin-MC/Pumpkin/pull/2506 — ALTA
+### 4. Vanilla parity
 
-### 4. Paridad vanilla
+1. Worldgen deterministic and data-driven (datapack `worldgen/`); cubiomes reproduces
+   biomes/structures per seed. — minecraft.wiki (World_seed, World_generation), cubiomes — HIGH
+2. Redstone: update order **PP: W,E,N,S,D,U / NC: W,E,D,U,N,S**; quasi-connectivity Java only;
+   1.21.2 changed the wire (left-first); positional behavior. — minecraft.wiki (Block_update,
+   Redstone_mechanics, 1.21.2) — HIGH
+3. Lighting: Starlight proved **identical output with a different, faster engine**; 1.20 adopted
+   its ideas. — PaperMC/Starlight (TECHNICAL_DETAILS.md) — HIGH
+4. Spawns: cycles (hostile/tick, passive/400 ticks), caps (monster 70, creature 10...), pack
+   spawning ±5, light/distance rules (24/32/128). — minecraft.wiki (Mob_spawning) — HIGH
+5. Mob AI **hardcoded** in Java (not data-driven like Bedrock). — minecraft.wiki
+   (Behavior_pack) — HIGH
 
-12. Worldgen determinista y data-driven (datapack `worldgen/`); cubiomes reproduce biomas/estructuras por seed. — minecraft.wiki (World_seed, World_generation), cubiomes — ALTA
-13. Redstone: orden de updates **PP: W,E,N,S,D,U / NC: W,E,D,U,N,S**; quasi-connectivity solo Java; 1.21.2 cambió el wire (left-first); comportamiento posicional. — minecraft.wiki (Block_update, Redstone_mechanics, 1.21.2) — ALTA
-14. Iluminación: Starlight demostró **salida idéntica con engine distinto y más rápido**; 1.20 adoptó sus ideas. — PaperMC/Starlight (TECHNICAL_DETAILS.md) — ALTA
-15. Spawns: ciclos (hostil/tick, pasivo/400 ticks), caps (monster 70, creature 10...), pack spawning ±5, reglas de luz/distancia (24/32/128). — minecraft.wiki (Mob_spawning) — ALTA
-16. Mob AI **hardcoded** en Java (no data-driven como Bedrock). — minecraft.wiki (Behavior_pack) — ALTA
+### 5. Rust stack
 
-### 5. Stack Rust
+1. **wasmtime**: reference runtime (component model, WASI preview 2); Pumpkin tried Extism and
+   migrated to wasmtime. — wasmtime.dev, pumpkin issue #662 — HIGH
+2. **mlua 0.12** (Jul 2026): Lua 5.1-5.5/LuaJIT/Luau. — crates.io/mlua — HIGH
+3. **bevy_ecs**: ECS crate only (not the engine); used by Valence, FerrumC, Azalea. — repos —
+   HIGH
+4. **redb**: active embeddable KV (ACID); sled in maintenance mode. — github.com/cberner/redb —
+   HIGH
 
-17. **wasmtime**: runtime de referencia (component model, WASI preview 2); Pumpkin probó Extism y migró a wasmtime. — wasmtime.dev, pumpkin issue #662 — ALTA
-18. **mlua 0.12** (jul 2026): Lua 5.1-5.5/LuaJIT/Luau. — crates.io/mlua — ALTA
-19. **bevy_ecs**: solo el crate ECS (sin el engine); lo usan Valence, FerrumC, Azalea. — repos — ALTA
-20. **redb**: KV embeddable activo (ACID); sled en modo mantenimiento. — github.com/cberner/redb — ALTA
+### 6. Java → WASM plugins (verified limits)
 
-### 6. Plugins Java → WASM (límites verificados)
-
-21. TeaVM/JWebAssembly: sin reflection ni class-loading por defecto; CheerpJ = JVM-en-WASM orientada a browser; FerrumC descarta compat Bukkit. **Conclusión: compat Bukkit solo por capas** (API nativa → convertidor para plugins puros → capa PatchBukkit-style). — teavm.org, CheerpJ blog, ferrumc README — ALTA
+1. TeaVM/JWebAssembly: no reflection or class-loading by default; CheerpJ = JVM-in-WASM for
+   browsers; FerrumC rejects Bukkit compat. **Conclusion: Bukkit compat only in layers** (native
+   API → converter for pure plugins → PatchBukkit-style layer). — teavm.org, CheerpJ blog,
+   ferrumc README — HIGH
 
 ### 7. Orca ADE + Gauntlet Loop
 
-22. **Orca**: Stably AI, MIT, onorca.dev; worktrees por tarea + orquestación CLI; soporta pi, Claude Code, Codex. — onorca.dev/docs, github.com/stablyai/orca — ALTA
-23. **Gauntlet Loop**: Matt Shumer, "How to Run a Gauntlet Loop" (somethingbig.ai/gauntlet-loop, jul 2026), repo mshumer/Claude-of-Duty. Núcleo: split → build → blind critic → repeat contra un bar real; sin cap arbitrario de rondas. — somethingbig.ai, Decrypt, ThePromptIndex, We0 — ALTA
-24. Lección del propio Shumer: el bar puede ser **inalcanzable** (su critic nunca ganó a CoD real: 3.59 → 5+/10). El bar tira del trabajo hacia arriba; no se negocia. — somethingbig.ai — ALTA
+1. **Orca**: Stably AI, MIT, onorca.dev; per-task worktrees + CLI orchestration; supports pi,
+   Claude Code, Codex. — onorca.dev/docs, github.com/stablyai/orca — HIGH
+2. **Gauntlet Loop**: Matt Shumer, "How to Run a Gauntlet Loop" (somethingbig.ai/gauntlet-loop,
+   Jul 2026), repo mshumer/Claude-of-Duty. Core: split → build → blind critic → repeat against a
+   real bar; no arbitrary round cap. — somethingbig.ai, Decrypt, ThePromptIndex, We0 — HIGH
+3. Shumer's own lesson: the bar can be **unreachable** (his critic never beat real CoD:
+   3.59 → 5+/10). The bar pulls work upward; it is not negotiated. — somethingbig.ai — HIGH
 
-### 8. Herramientas de medición
+### 8. Measurement tools
 
-25. **spark** (TPS/salud, incluido en Paper 1.21+; Timings deprecado) · **Chunky** (chunks/s) · **mineflayer** (bots ≤ 1.21.11) · **azalea** (bots Rust, trackea 26.x) · marcador de arranque = línea `Done (Xs)!` · RSS por OS (no heap JVM). — spark.lucko.me, Chunky wiki, repos mineflayer/azalea — ALTA
+1. **spark** (TPS/health, included in Paper 1.21+; Timings deprecated) · **Chunky** (chunks/s) ·
+   **mineflayer** (bots ≤ 1.21.11) · **azalea** (Rust bots, tracks 26.x) · startup marker =
+   `Done (Xs)!` line · RSS by OS (not JVM heap). — spark.lucko.me, Chunky wiki,
+   mineflayer/azalea repos — HIGH
 
-### Mantenimiento
+### Maintenance
 
-Actualizar este anexo: (a) en cada release de Mojang (pipeline D0-D4); (b) tras cada benchmark publicado; (c) cuando cambie el estado de Pumpkin (nuestra referencia). Toda afirmación nueva entra solo con fuente y fecha.
+Update this annex: (a) at every Mojang release (D0-D4 pipeline); (b) after each published
+benchmark; (c) when Pumpkin's status changes (our reference). New claims enter only with
+source and date.
