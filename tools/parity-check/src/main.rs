@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 use neutron_world::nbt::ussr_nbt::mutf8::MString;
 use neutron_world::nbt::ussr_nbt::owned::{Compound, List, Nbt, Tag};
@@ -124,7 +124,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Create chunk generator
-    let mut generator = ChunkGenerator::new(cli.seed);
+    let generator = ChunkGenerator::new(cli.seed);
 
     println!("Parity check for seed={}", cli.seed);
     println!("Generating chunks in radius {} around spawn...", cli.radius);

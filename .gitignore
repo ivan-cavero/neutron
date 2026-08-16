@@ -179,3 +179,7 @@ logs/
 # Windows reserved / accidental
 /nul
 *.stackdump
+tools/mc-decompiler/output/
+tools/mc-decompiler/target/
+tools/mc-decompiler/jars/
+tools/mc-decompiler/Cargo.lock

@@ -35,7 +35,10 @@ pub fn decompile_version(
     println!("  {}", "Resolving JAR...".dimmed());
     let resolved_jar = inventory::resolve_server_jar(jar_path)?;
     let extracted_dir = if resolved_jar != jar_path {
-        let dir = resolved_jar.parent().unwrap_or(Path::new(".")).to_path_buf();
+        let dir = resolved_jar
+            .parent()
+            .unwrap_or(Path::new("."))
+            .to_path_buf();
         println!(
             "  {} {}",
             "Extracted inner server JAR:".dimmed(),
@@ -95,7 +98,7 @@ pub fn decompile_version(
         id: version.to_string(),
         protocol: 0,
         jar_sha256: hash,
-        class_count: class_count,
+        class_count,
         total_lines,
     };
     store.add_version(&metadata)?;
