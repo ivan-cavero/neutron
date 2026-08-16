@@ -1,7 +1,10 @@
 # AGENTS.md — Neutron: how we work
 
-> v1.0 · 16 Aug 2026 · Read automatically by the coding agent (pi) at task start.
+> v1.1 · 16 Aug 2026 · Read automatically by the coding agent at task start.
 > Agent-facing files are in English. Human docs (README.md) may stay in Spanish.
+> **Harness-agnostic**: this file is the universal contract. Primary harness is **pi**
+> (with plugins); opencode/zcode also work. Tool names in §7 are pi-specific — each
+> harness maps them to its own (see README.md §AI workflow).
 
 ## 0. Working directory rule
 
@@ -34,10 +37,33 @@ LEAD (pi)
   summary. Default stance: REJECT until evidence.
 - **Ratchet**: every round must re-measure ALL seeds in the current bar (multi-seed
   regression gate). A regression on any seed is a FAIL.
+- **Reviewer/verifier**: before trusting state, an independent read-only agent audits
+  the claims against repository evidence (git log, run files, test output). If the
+  builder's critic missed something, the reviewer catches it. Every session starts
+  with this audit (§2.5).
 - **Stop**: bar wins, 2 rounds without improvement, or budget exhausted. Record what
   is still below the bar.
 - Evidence = raw logs with timestamps, hashes, bot outputs, links. "It works" is not
   evidence.
+
+## 2.5 Session start: audit the state (resume boundary)
+
+**Never trust STATE.md or workbench.md on faith.** A state file can be stale, wrong,
+or written by an agent that misjudged. Before doing anything, verify it against
+repository evidence:
+
+1. `git status --short` + `git log --oneline -10` — does the working tree match what
+   STATE.md claims (committed WIP, uncommitted changes)?
+2. Re-read the latest `runs/run-NNN.md` + `workbench.md` round log — do the claimed
+   numbers match the evidence files (logs, JSON, test output) they cite?
+3. If a claim is unverifiable (no evidence file, no log, no test run), **flag it and
+   re-measure** — do not build on it. State written by an agent that holds no evidence
+   is a hypothesis, not a fact.
+4. Only then choose the next action. If the audit contradicts STATE.md, fix STATE.md
+   first (append a correction, never rewrite history).
+
+This is the **resume test**: the system works when you can kill a session, resume,
+and the next agent picks up correctly from disk alone — no chat memory needed.
 
 ## 3. Commands
 
@@ -95,27 +121,36 @@ docs/prompts/         # phase prompt templates (from ROADMAP.md)
 **Single source of truth: `runs/README.md`** (template, how to launch, orchestration).
 Read it before creating a run. Summary:
 
+0. **Audit the state first** (§2.5) — verify STATE.md against evidence before trusting it.
 1. Read `STATE.md` → decide which run is next (bar not met → same run continues).
 2. Create `runs/run-NNN.md` with the template (objective, bar, tasks with
    What/AC/Evidence/DoD).
 3. Track units with `todo`; launch builders via `subagent` (parallel, background).
 4. Gauntlet Loop: builder → blind critic (`subagent` with clean context) → fix → repeat.
-5. Update `workbench.md` (round log) and `STATE.md` (state, not history) when done.
+5. **Commit proven increments as you go** (§8) — never wait until the end.
+6. Update `workbench.md` (round log) and `STATE.md` (state, not history) when done.
 
-## 7. pi tools (this harness)
+## 7. Tools (harness-dependent)
 
-| Tool | Use |
+Primary harness: **pi** (with plugins). Other harnesses (opencode, zcode) map these
+roles to their own tools — the roles are what matter, not the names.
+
+| Role | pi tool |
 | --- | --- |
-| `subagent` | builder / blind critic / Explore (read-only) subagents, async or foreground |
-| `todo` | task tracking with status and dependencies |
-| `ask_user_question` | human gates (releases, credentials, bar changes) |
-| `bash` / `read` / `write` / `edit` | commands and file manipulation |
-| `subagent_wait` | block until an async subagent finishes |
-| `web_search` / `fetch_content` | research (crates.io, minecraft docs, vanilla sources) |
+| builder / blind critic / Explore (read-only) subagents | `subagent` |
+| task tracking with status and dependencies | `todo` |
+| human gates (releases, credentials, bar changes) | `ask_user_question` |
+| commands and file manipulation | `bash` / `read` / `write` / `edit` |
+| block until an async subagent finishes | `subagent_wait` |
+| research (crates.io, minecraft docs, vanilla sources) | `web_search` / `fetch_content` |
 
 ## 8. Git workflow
 
-- Commit in small, descriptive units. Always run `cargo test --workspace` first.
+- **Commit incrementally**: commit each proven unit as it passes (`cargo test` green +
+  measurement evidence), with a descriptive message. Never a mega-commit at the end —
+  a 47-file commit is un-bisectable. If a unit is WIP and unproven, commit it on a
+  branch or label it clearly in the message (e.g. "WIP: ...").
+- Always run `cargo test --workspace` before committing.
 - **Never commit**: `target/`, `bench/results/` dumps, vanilla runtimes
   (`tools/nbt-ref/vanilla-*/`), jars, `tools/vanilla-extract/` extract, `logs/`, `tmp*`.
 - A PASS in a run file requires blind-critic evidence. Builder-verified work is labeled
@@ -129,6 +164,13 @@ Read it before creating a run. Summary:
 - Modify `STATE.md` history or run files retroactively (append only).
 - Commit secrets, jars, worlds, or bulk runtime data.
 - Declare a task done without its parity test or benchmark (golden rule).
+- Trust a state claim without evidence (§2.5) — build on verified state only.
+
+## 9.5 Skills
+
+Load project skills only when needed and only the relevant ones (e.g. Rust/gauntlet
+best practices for a worldgen task). Do not load skills that don't apply to the task.
+Skills live in the harness's skill directory (pi: `~/.pi/agent/skills/`).
 
 ## 10. Task format
 

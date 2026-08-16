@@ -1,5 +1,11 @@
 # F2d run-046 — Cross-chunk input model · gauntlet workbench
 
+> **What this is**: the live round log for the ACTIVE run — current round, per-unit
+> PASS/FAIL, critic evidence, budget. Updated by the LEAD after each round. It is a
+> **read-only reference** for builders/critics: claims live in `runs/run-NNN.md` with
+> evidence; this file only tracks where the loop stands. If it contradicts a run file,
+> the run file wins (it has the evidence).
+
 > Active loop since 16 Aug 2026. **Bar (human decision R43, run-045)**:
 > **mechanism parity** — same seeds/streams/algorithms as vanilla; deterministic
 > phases → 100% block match multi-seed; vegetation/sculk → same RNG stream 1:1.
