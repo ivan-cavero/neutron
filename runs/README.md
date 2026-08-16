@@ -1,92 +1,96 @@
-# Runs — Historial de ejecuciones
+# Runs — execution history
 
-> Cada run se registra aquí con su objetivo, tareas, evidencia y resultado. Formato: `run-NNN.md`.
+> Every run is recorded here: objective, bar, tasks, evidence, outcome. Format: `run-NNN.md`.
+> **This file is the single source of truth for "how to run a run"** (AGENTS.md §6).
 
-## Formato de run
+## Run template
 
-Cada `run-NNN.md` sigue esta estructura:
+Every `run-NNN.md` follows this structure (see `run-001.md` for a good example):
 
 ```markdown
-# run-NNN — <título>
+# Run NNN — <title>
 
-## Objetivo
-Una frase con lo que debe ser verdad al terminar.
+## Objective
+One sentence: what must be true when done.
 
 ## Bar
-Criterios medibles (del ROADMAP.md).
+Measurable criteria (from ROADMAP.md). Include the multi-seed ratchet:
+no regression on ANY seed in the current bar (e.g. 12345/424242/777).
 
-## Tareas
-### T1 — <título>
-- Qué: medible
-- AC: criterios concretos
-- Evidencia: logs, hashes, salidas
-- DoD: qué ejecuta el critic
+## Tasks
+### T1 — <title>
+- What: measurable
+- AC: concrete criteria with thresholds (+ ratchet: no regression on other seeds)
+- Evidence: raw logs, hashes, outputs
+- DoD: what the blind critic runs from scratch to give PASS
 
 ### T2 — ...
 ...
 
-## Evidencia
-(Se pegan aquí los logs crudos con timestamps, hashes, salidas de bots, etc.)
+## Evidence
+(Raw logs with timestamps, hashes, bot outputs, links to reports.)
 
-## Resultado
-PASS / FAIL (parcial) / BLOCKED
+## Result
+PASS / FAIL (partial) / BLOCKED
 
 ## Rounds
-- R1: T1 PASS, T2 FAIL (motivo)
-- R2: T2 corregido → PASS
+- R1: T1 PASS, T2 FAIL (reason)
+- R2: T2 fixed → PASS
 ```
 
-## Historial
+## PASS discipline (mandatory)
 
-| Run | Fase | Resultado | Fecha |
-|---|---|---|---|
-| run-042 | F2d freeze + join | worldgen congelado; servidor 26.2 sirve chunks reales | 14 ago 2026 |
-| run-041 | F2d R41 | FAIL (bar 1:1) · 121/121 BB 1:1; roll 0.467; ALL 97.84% | 14 ago 2026 |
-| run-040 | F2d R40 | FAIL (bar 1:1) · generateBox; roll 0.029; ALL 97.28% | 14 ago 2026 |
-| run-039 | F2d R39 | FAIL (bar 1:1) · 116/121 BB; roll 0.996→0.112 (catalyst sí); ALL 97.27% | 14 ago 2026 |
-| run-038 | F2d R38 | FAIL (bar 1:1) · mineshaft (4,-1) 4 piezas XZ 1:1; roll sigue 0.996 | 14 ago 2026 |
-| run-037 | F2d R37 | FAIL (bar 1:1) · 98.48%; roll 0.996→0.30 si se abre la mineshaft vecina | 14 ago 2026 |
-| run-036 | F2d R36 | FAIL (bar 1:1) · **98.48%**; ChargeCursor 1:1 cueva; cat 2=2 | 14 ago 2026 |
-| run-035 | F2d R35 | FAIL (bar 1:1) · 98.35%; plano 1:1; sculk 643/518; Y=-32 213 | 14 ago 2026 |
-| run-034 | F2d R34 | FAIL (bar 1:1) · 98.40%; sculk 330→382; tick 3 mata cursores | 14 ago 2026 |
-| run-033 | F2d R33 | FAIL (bar 1:1) · 98.41%; i=0 pos 1:1, catalyst_roll 0.701 | 14 ago 2026 |
-| run-032 | F2d R32 | FAIL (bar 1:1) · 98.41%; shuffle 1:1; capa Y=-32 | 14 ago 2026 |
-| run-031 | F2d R31 | FAIL (bar 1:1) · 98.41%; sculk 187→330 | 14 ago 2026 |
-| run-030 | F2d R30 | FAIL (bar 1:1) · 98.33% / BASE 99.69%; OCEAN_FLOOR + stream | 14 ago 2026 |
-| run-029 | F2d R29 | FAIL (bar 1:1) · 97.65% / BASE 99.65%; andesite 1:1 | 14 ago 2026 |
-| run-028 | F2d R28 | FAIL (bar 1:1) · 97.02%; BiomeFilter; van upper en 28 chunks | 14 ago 2026 |
-| run-027 | F2d R27 | FAIL (bar 1:1) · 97.02%; andesite_upper diag | 14 ago 2026 |
-| run-026 | F2d R26 | FAIL (bar 1:1) · block 94→97%, BASE 99% | 14 ago 2026 |
-| run-025 | F2d R25 | FAIL (bar 1:1) · block match 85→94% | 14 ago 2026 |
-| run-000 | Fundación | TERMINADO | 5 ago 2026 |
-| run-001 | F0 | | |
-| run-002 | F0 | | |
-| ... | ... | ... | ... |
+- A **PASS** verdict in a run file requires **blind-critic evidence**: an independent
+  subagent with clean context re-ran the measurement from scratch and inspected the
+  real artifact (not the builder's summary).
+- Builder-verified work is labeled **"builder-verified"**, never PASS.
+- Every round re-measures ALL seeds in the bar (ratchet). A regression on any seed
+  is a FAIL.
 
-## Cómo generar un run
+## How to launch a run
 
-Copia el prompt de la fase correspondiente desde **ROADMAP.md** (sección 2, "Fases") y pégalo en pi. Pi:
+1. Read `STATE.md` → decide which run is next (bar not met → same run continues).
+2. Create `runs/run-NNN.md` with the template above.
+3. Track units with `todo`; launch builders via `subagent` (parallel, background).
+4. Gauntlet Loop: builder → blind critic (`subagent`, clean context) → fix → repeat.
+5. Update `workbench.md` (live round log) and `STATE.md` (state, not history) when done.
 
-1. Lee STATE.md → decide qué run toca
-2. Crea `runs/run-NNN.md` con el formato arriba
-3. Lanza el Gauntlet Loop (builder → critic → fix → repetir)
-4. Actualiza STATE.md y el historial cuando termine
+## History
 
-### Orquestación (qué usa pi detrás de cámaras)
+| Run | Phase | Result | Date |
+| --- | --- | --- | --- |
+| run-046 | F2d cross-chunk input model | **ACTIVE** — R3 committed 91862d4, critic pending | 16 Aug 2026 |
+| run-045 | F2d lush/pale dispatch | recall 11→49.6%; 424242 97.28%; cross-chunk model isolated | 16 Aug 2026 |
+| run-044 | F2d mechanism parity | ✅ T1-T3 PASS (blind critic); T4 → run-045 | 15-16 Aug 2026 |
+| run-043 | F2d R43 | new bar: mechanism parity (human gate); vanilla1 reference poisoned | 15 Aug 2026 |
+| run-042 | F2d freeze + join | worldgen frozen; 26.2 server serves real chunks | 14 Aug 2026 |
+| run-041 | F2d R41 | FAIL (bar 1:1) · 121/121 BB 1:1; ALL 97.84% | 14 Aug 2026 |
+| run-040 | F2d R40 | FAIL (bar 1:1) · generateBox; ALL 97.28% | 14 Aug 2026 |
+| run-039 | F2d R39 | FAIL (bar 1:1) · 116/121 BB; ALL 97.27% | 14 Aug 2026 |
+| run-038 | F2d R38 | FAIL (bar 1:1) · mineshaft (4,-1) 4 pieces XZ 1:1 | 14 Aug 2026 |
+| run-037 | F2d R37 | FAIL (bar 1:1) · 98.48%; HORIZONTAL N,E,S,W | 14 Aug 2026 |
+| run-036 | F2d R36 | FAIL (bar 1:1) · 98.48%; ChargeCursor cave 1:1 | 14 Aug 2026 |
+| run-035 | F2d R35 | FAIL (bar 1:1) · 98.35%; flat floor 1:1 | 14 Aug 2026 |
+| run-034 | F2d R34 | FAIL (bar 1:1) · 98.40%; sculk 330→382 | 14 Aug 2026 |
+| run-033 | F2d R33 | FAIL (bar 1:1) · 98.41%; first sculk patch 1:1 | 14 Aug 2026 |
+| run-032 | F2d R32 | FAIL (bar 1:1) · 98.41%; shuffle 1:1 | 14 Aug 2026 |
+| run-031 | F2d R31 | FAIL (bar 1:1) · 98.41%; sculk 187→330 | 14 Aug 2026 |
+| run-030 | F2d R30 | FAIL (bar 1:1) · 98.33% / BASE 99.69% | 14 Aug 2026 |
+| run-029 | F2d R29 | FAIL (bar 1:1) · 97.65%; andesite 1:1 | 14 Aug 2026 |
+| run-028 | F2d R28 | FAIL (bar 1:1) · 97.02%; BiomeFilter | 14 Aug 2026 |
+| run-027 | F2d R27 | FAIL (bar 1:1) · 97.02%; andesite_upper diag | 14 Aug 2026 |
+| run-026 | F2d R26 | FAIL (bar 1:1) · block 94→97% | 14 Aug 2026 |
+| run-025 | F2d R25 | FAIL (bar 1:1) · block match 85→94% | 14 Aug 2026 |
+| run-024..000 | F2d R24..F0 | early parity + harness | 5-14 Aug 2026 |
 
-Pi usa **Orca CLI** y **Orca Orchestration** para:
+> **Historical runs (run-000..run-043) are in Spanish** — they are superseded by
+> `STATE.md` + the recent runs. Translate only when a run becomes active again.
 
-- **Worktrees**: cada builder corre en su propio worktree aislado
-  - `orca worktree create --name <task> --no-parent --agent codex --setup run`
-- **Terminals**: cada worker tiene su terminal gestionada por Orca
-  - `orca terminal create --worktree id:<repoId>::<path> --command "codex"`
-  - `orca terminal send --text "<prompt>" --enter`
-  - `orca terminal read --terminal <handle>`
-- **Orquestación**: DAG de tasks, worker_done, decision gates
-  - `orca orchestration run-create --objective "<objective>"`
-  - `orca orchestration task-create --spec "<spec>" --deps '["task_a"]'`
-  - `orca orchestration worker-start --task <task_id> --worktree new-child`
-  - `orca orchestration check --wait --types worker_done,escalation,question`
-  - `orca orchestration gate-create --task <task_id> --question "¿Aprobado?"`
-- **Seguimiento**: actualizar workbench.md y comentarios del worktree
-  - `orca worktree set --worktree active --comment "F0: <estado>"`
+## Orchestration (pi)
+
+- **Subagents**: `subagent` tool — builders (parallel, `async`), blind critics
+  (foreground, clean context), Explore (read-only).
+- **Tracking**: `todo` tool — one item per unit with status and dependencies.
+- **Human gates**: `ask_user_question` — releases, credentials, bar changes.
+- **Waiting**: `subagent_wait` — block until an async subagent finishes.
+- **Research**: `web_search` / `fetch_content` for crates.io, minecraft docs, vanilla sources.
