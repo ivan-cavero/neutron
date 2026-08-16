@@ -1,0 +1,3474 @@
+$ cargo test --workspace
+
+[$(Get-Date -Format o)] started
+warning: unused variable: `delay`
+   --> crates\neutron-sim\src\redstone.rs:546:19
+    |
+546 |         let (fac, delay, lock, lit) = match self.meta.get(&pos) {
+    |                   ^^^^^ help: if this is intentional, prefix it with an underscore: `_delay`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `facing`
+   --> crates\neutron-sim\src\redstone.rs:915:17
+    |
+915 |                 facing,
+    |                 ^^^^^^ help: try ignoring the field: `facing: _`
+
+warning: function `x_to_section` is never used
+   --> crates\neutron-sim\src\light.rs:491:4
+    |
+491 | fn x_to_section(x: i32) -> isize {
+    |    ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `world_to_section_local` is never used
+   --> crates\neutron-sim\src\light.rs:496:4
+    |
+496 | fn world_to_section_local(x: i32, y: i32, z: i32) -> (u32, u32, u32) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-sim\src\redstone.rs:9:1
+   |
+ 9 | pub const MAX_POWER: u8 = 15;
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> crates\neutron-sim\src\lib.rs:11:9
+   |
+11 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+  --> crates\neutron-sim\src\redstone.rs:18:1
+   |
+18 | pub enum Direction {
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:19:5
+   |
+19 |     W,
+   |     ^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:20:5
+   |
+20 |     E,
+   |     ^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:21:5
+   |
+21 |     N,
+   |     ^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:22:5
+   |
+22 |     S,
+   |     ^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:23:5
+   |
+23 |     D,
+   |     ^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:24:5
+   |
+24 |     U,
+   |     ^
+
+warning: missing documentation for a method
+  --> crates\neutron-sim\src\redstone.rs:28:5
+   |
+28 |     pub fn offset(self) -> (i32, i32, i32) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-sim\src\redstone.rs:38:5
+   |
+38 |     pub fn opposite(self) -> Direction {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-sim\src\redstone.rs:50:1
+   |
+50 | pub const WIRE_PP_ORDER: [Direction; 6] = [
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-sim\src\redstone.rs:58:1
+   |
+58 | pub const WIRE_NC_ORDER: [Direction; 6] = [
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-sim\src\redstone.rs:66:1
+   |
+66 | pub const ALL_DIRECTIONS: [Direction; 6] = [
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+  --> crates\neutron-sim\src\redstone.rs:76:1
+   |
+76 | pub enum BlockType {
+   | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:77:5
+   |
+77 |     Air,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:78:5
+   |
+78 |     RedstoneWire,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:79:5
+   |
+79 |     RedstoneTorch,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:80:5
+   |
+80 |     Lever,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:81:5
+   |
+81 |     Door,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:82:5
+   |
+82 |     Solid,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:83:5
+   |
+83 |     Comparator,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:84:5
+   |
+84 |     Repeater,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:85:5
+   |
+85 |     Observer,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:86:5
+   |
+86 |     Hopper,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:87:5
+   |
+87 |     Tnt,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:88:5
+   |
+88 |     Piston,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\redstone.rs:89:5
+   |
+89 |     StickyPiston,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+  --> crates\neutron-sim\src\redstone.rs:93:1
+   |
+93 | pub struct HopperItem {
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-sim\src\redstone.rs:94:5
+   |
+94 |     pub item_id: u16,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-sim\src\redstone.rs:95:5
+   |
+95 |     pub count: u8,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for an enum
+   --> crates\neutron-sim\src\redstone.rs:107:1
+    |
+107 | pub enum BlockMeta {
+    | ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:108:5
+    |
+108 |     Wire {
+    |     ^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:109:9
+    |
+109 |         power: u8,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:111:5
+    |
+111 |     Torch {
+    |     ^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:112:9
+    |
+112 |         lit: bool,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:114:5
+    |
+114 |     Lever {
+    |     ^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:115:9
+    |
+115 |         on: bool,
+    |         ^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:117:5
+    |
+117 |     Door {
+    |     ^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:118:9
+    |
+118 |         open: bool,
+    |         ^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:120:5
+    |
+120 |     Solid,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:121:5
+    |
+121 |     Air,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:122:5
+    |
+122 |     Comparator {
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:123:9
+    |
+123 |         powered: bool,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:124:9
+    |
+124 |         facing: Direction,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:125:9
+    |
+125 |         locked: bool,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:126:9
+    |
+126 |         container_signal: u8,
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:128:5
+    |
+128 |     Repeater {
+    |     ^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:129:9
+    |
+129 |         lit: bool,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:130:9
+    |
+130 |         delay: u8,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:131:9
+    |
+131 |         locked: bool,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:132:9
+    |
+132 |         input_power: u8,
+    |         ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:133:9
+    |
+133 |         facing: Direction,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:134:9
+    |
+134 |         delay_progress: u64,
+    |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:136:5
+    |
+136 |     Observer {
+    |     ^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:137:9
+    |
+137 |         facing: Direction,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:138:9
+    |
+138 |         pulse_active: bool,
+    |         ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:140:5
+    |
+140 |     Hopper {
+    |     ^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:141:9
+    |
+141 |         cooldown: u64,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:142:9
+    |
+142 |         items: Vec<HopperItem>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:144:5
+    |
+144 |     Tnt {
+    |     ^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:145:9
+    |
+145 |         primed: bool,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:146:9
+    |
+146 |         fuse: u64,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:148:5
+    |
+148 |     Piston {
+    |     ^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:149:9
+    |
+149 |         extending: bool,
+    |         ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:150:9
+    |
+150 |         facing: Direction,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:151:9
+    |
+151 |         extending_progress: u64,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:152:9
+    |
+152 |         powered: bool,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\redstone.rs:154:5
+    |
+154 |     StickyPiston {
+    |     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:155:9
+    |
+155 |         extending: bool,
+    |         ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:156:9
+    |
+156 |         facing: Direction,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:157:9
+    |
+157 |         extending_progress: u64,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:158:9
+    |
+158 |         powered: bool,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-sim\src\redstone.rs:159:9
+    |
+159 |         pulled_block: Option<(i32, i32, i32)>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct
+   --> crates\neutron-sim\src\redstone.rs:167:1
+    |
+167 | pub struct RedstoneState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-sim\src\redstone.rs:180:5
+    |
+180 |     pub fn new() -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:195:5
+    |
+195 |     pub fn place_wire(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:200:5
+    |
+200 |     pub fn place_torch(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:207:5
+    |
+207 |     pub fn toggle_lever(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:222:5
+    |
+222 |     pub fn place_door(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:227:5
+    |
+227 |     pub fn place_comparator(&mut self, x: i32, y: i32, z: i32, fac: Direction) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:241:5
+    |
+241 |     pub fn set_comparator_container_signal(&mut self, x: i32, y: i32, z: i32, sig: u8) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:250:5
+    |
+250 |     pub fn set_comparator_subtraction_mode(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:255:5
+    |
+255 |     pub fn place_repeater(&mut self, x: i32, y: i32, z: i32, fac: Direction, delay: u8) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:272:5
+    |
+272 |     pub fn place_observer(&mut self, x: i32, y: i32, z: i32, fac: Direction) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:284:5
+    |
+284 |     pub fn place_hopper(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:295:5
+    |
+295 |     pub fn hopper_add_item(&mut self, x: i32, y: i32, z: i32, id: u16, cnt: u8) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:300:5
+    |
+300 |     pub fn hopper_transfer_out(&mut self, x: i32, y: i32, z: i32) -> Option<HopperItem> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:313:5
+    |
+313 |     pub fn place_tnt(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:324:5
+    |
+324 |     pub fn prime_tnt(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:330:5
+    |
+330 |     pub fn place_piston(&mut self, x: i32, y: i32, z: i32, fac: Direction) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:344:5
+    |
+344 |     pub fn place_sticky_piston(&mut self, x: i32, y: i32, z: i32, fac: Direction) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:359:5
+    |
+359 |     pub fn place_solid(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:368:5
+    |
+368 |     pub fn get_power(&self, x: i32, y: i32, z: i32) -> u8 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:371:5
+    |
+371 |     pub fn get_block(&self, x: i32, y: i32, z: i32) -> Option<BlockType> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:374:5
+    |
+374 |     pub fn get_redstone_power(&self, x: i32, y: i32, z: i32) -> u8 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:382:5
+    |
+382 |     pub fn is_door_open(&self, x: i32, y: i32, z: i32) -> bool {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:388:5
+    |
+388 |     pub fn is_torch_lit(&self, x: i32, y: i32, z: i32) -> bool {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:394:5
+    |
+394 |     pub fn is_lever_on(&self, x: i32, y: i32, z: i32) -> bool {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:401:5
+    |
+401 |     pub fn notify_neighbors(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:404:5
+    |
+404 |     pub fn schedule_update(&mut self, x: i32, y: i32, z: i32) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:418:5
+    |
+418 |     pub fn current_tick(&self) -> u64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:421:5
+    |
+421 |     pub fn update_order_log(&self) -> &[(i32, i32, i32)] {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:424:5
+    |
+424 |     pub fn last_update_order(&self) -> &[Direction] {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:427:5
+    |
+427 |     pub fn clear_update_log(&mut self) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-sim\src\redstone.rs:430:5
+    |
+430 |     pub fn pending_updates(&self) -> usize {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+    --> crates\neutron-sim\src\redstone.rs:1001:5
+     |
+1001 |     pub fn tick(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:18:5
+   |
+18 |     Ocean = 0,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:19:5
+   |
+19 |     Plains = 1,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:20:5
+   |
+20 |     Desert = 2,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:21:5
+   |
+21 |     Forest = 3,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:22:5
+   |
+22 |     Taiga = 4,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:23:5
+   |
+23 |     Swamp = 5,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:24:5
+   |
+24 |     River = 6,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:25:5
+   |
+25 |     Beach = 7,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:26:5
+   |
+26 |     DeepOcean = 8,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:27:5
+   |
+27 |     SnowyPlains = 9,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:28:5
+   |
+28 |     Jungle = 10,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:29:5
+   |
+29 |     Savanna = 11,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:30:5
+   |
+30 |     DarkForest = 12,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:31:5
+   |
+31 |     StonyShore = 13,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:32:5
+   |
+32 |     Meadow = 14,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:33:5
+   |
+33 |     FrozenOcean = 15,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:34:5
+   |
+34 |     FrozenRiver = 16,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:35:5
+   |
+35 |     IceSpikes = 17,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:36:5
+   |
+36 |     OldGrowthBirchForest = 18,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:37:5
+   |
+37 |     OldGrowthPineForest = 19,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:38:5
+   |
+38 |     WindsweptHills = 20,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:39:5
+   |
+39 |     Grove = 21,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:40:5
+   |
+40 |     SnowySlopes = 22,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:41:5
+   |
+41 |     JaggedPeaks = 23,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:42:5
+   |
+42 |     FrozenPeaks = 24,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:43:5
+   |
+43 |     StonyPeaks = 25,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:44:5
+   |
+44 |     Badlands = 26,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:45:5
+   |
+45 |     ErodedBadlands = 27,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:46:5
+   |
+46 |     WoodedBadlands = 28,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:47:5
+   |
+47 |     MushroomFields = 29,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:48:5
+   |
+48 |     CherryGrove = 30,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:49:5
+   |
+49 |     DeepDark = 31,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:50:5
+   |
+50 |     MangroveSwamp = 32,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:51:5
+   |
+51 |     BirchForest = 33,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:52:5
+   |
+52 |     LushCaves = 34,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-sim\src\spawn.rs:53:5
+   |
+53 |     DripstoneCaves = 35,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:118:5
+    |
+118 |     Zombie,
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:119:5
+    |
+119 |     Skeleton,
+    |     ^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:120:5
+    |
+120 |     Creeper,
+    |     ^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:121:5
+    |
+121 |     Spider,
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:122:5
+    |
+122 |     Enderman,
+    |     ^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:123:5
+    |
+123 |     Witch,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:124:5
+    |
+124 |     ZombieVillager,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:126:5
+    |
+126 |     Cow,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:127:5
+    |
+127 |     Pig,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:128:5
+    |
+128 |     Sheep,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:129:5
+    |
+129 |     Chicken,
+    |     ^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:130:5
+    |
+130 |     Horse,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:131:5
+    |
+131 |     Rabbit,
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:132:5
+    |
+132 |     Fox,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:133:5
+    |
+133 |     Bee,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:135:5
+    |
+135 |     Bat,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:137:5
+    |
+137 |     Squid,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:138:5
+    |
+138 |     GlowSquid,
+    |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:139:5
+    |
+139 |     Cod,
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:140:5
+    |
+140 |     Salmon,
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:141:5
+    |
+141 |     TropicalFish,
+    |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:142:5
+    |
+142 |     Pufferfish,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:143:5
+    |
+143 |     Dolphin,
+    |     ^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-sim\src\spawn.rs:144:5
+    |
+144 |     Axolotl,
+    |     ^^^^^^^
+
+warning: method `fill_block` is never used
+   --> crates\neutron-sim\src\fluid.rs:585:12
+    |
+566 |     impl TestWorld {
+    |     -------------- method in this implementation
+...
+585 |         fn fill_block(&mut self, x1: i32, y1: i32, z1: i32, x2: i32, y2: i32, z2: i32, block: u16) {
+    |            ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `x_to_section` is never used
+   --> crates\neutron-sim\src\light.rs:491:4
+    |
+491 | fn x_to_section(x: i32) -> isize {
+    |    ^^^^^^^^^^^^
+
+warning: `neutron-sim` (lib) generated 170 warnings (run `cargo fix --lib -p neutron-sim` to apply 2 suggestions)
+warning: `neutron-sim` (lib test) generated 171 warnings (169 duplicates)
+warning: variable does not need to be mutable
+   --> crates\neutron-worldgen\src\tree.rs:764:9
+    |
+764 |     let mut px = x;
+    |         ----^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> crates\neutron-worldgen\src\tree.rs:766:9
+    |
+766 |     let mut pz = z;
+    |         ----^^
+    |         |
+    |         help: remove this `mut`
+
+warning: field `grid_size_y` is never read
+   --> crates\neutron-worldgen\src\aquifer.rs:130:5
+    |
+114 | pub struct NoiseBasedAquifer<'a> {
+    |            ----------------- field in this struct
+...
+130 |     grid_size_y: i32,
+    |     ^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: variant `DeepslateOre` is never constructed
+   --> crates\neutron-worldgen\src\features.rs:173:5
+    |
+167 | enum TargetKind {
+    |      ---------- variant in this enum
+...
+173 |     DeepslateOre,
+    |     ^^^^^^^^^^^^
+    |
+    = note: `TargetKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: method `can_spread_from` is never used
+   --> crates\neutron-worldgen\src\multiface_spreader.rs:152:8
+    |
+135 | impl MultifaceSpreader {
+    | ---------------------- method in this implementation
+...
+152 |     fn can_spread_from(
+    |        ^^^^^^^^^^^^^^^
+
+warning: field `sea_level` is never read
+   --> crates\neutron-worldgen\src\surface_rules.rs:208:5
+    |
+193 | struct RuleContext<'a> {
+    |        ----------- field in this struct
+...
+208 |     sea_level: i32,
+    |     ^^^^^^^^^
+
+warning: missing documentation for a function
+  --> crates\neutron-worldgen\src\aquifer.rs:35:1
+   |
+35 | pub fn quart_to_block(q: i32) -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> crates\neutron-worldgen\src\lib.rs:13:9
+   |
+13 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\aquifer.rs:68:5
+   |
+68 |     pub fluid_level: i32,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\aquifer.rs:69:5
+   |
+69 |     pub fluid_type: BlockId,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates\neutron-worldgen\src\aquifer.rs:91:5
+   |
+91 |     pub fn overworld(sea_level: i32) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\aquifer.rs:104:5
+    |
+104 |     pub fn compute_fluid(&self, _x: i32, y: i32, _z: i32) -> FluidStatus {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\aquifer.rs:137:5
+    |
+137 |     pub should_schedule_fluid_update: bool,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:120:5
+    |
+120 |     pub temperature: i64,
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:121:5
+    |
+121 |     pub humidity: i64,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:122:5
+    |
+122 |     pub continentalness: i64,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:123:5
+    |
+123 |     pub erosion: i64,
+    |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:124:5
+    |
+124 |     pub depth: i64,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\biome\source.rs:125:5
+    |
+125 |     pub weirdness: i64,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\biome\source.rs:129:5
+    |
+129 | /     pub fn from_quantized(
+130 | |         temperature: i64,
+131 | |         humidity: i64,
+132 | |         continentalness: i64,
+...   |
+135 | |         weirdness: i64,
+136 | |     ) -> Self {
+    | |_____________^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:44:5
+   |
+44 |     pub const AIR: u8 = 0;
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:45:5
+   |
+45 |     pub const STONE: u8 = 1;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:46:5
+   |
+46 |     pub const DIRT: u8 = 10;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:47:5
+   |
+47 |     pub const COBBLESTONE: u8 = 20;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:48:5
+   |
+48 |     pub const SAND: u8 = 24;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:49:5
+   |
+49 |     pub const WATER: u8 = 50;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:50:5
+   |
+50 |     pub const LAVA: u8 = 51;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:51:5
+   |
+51 |     pub const PODZOL: u8 = 14;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:52:5
+   |
+52 |     pub const TERRACOTTA: u8 = 59;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:55:5
+   |
+55 |     pub const MUSHROOM_FIELDS: u8 = 29;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:56:5
+   |
+56 |     pub const OCEAN: u8 = 0;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:57:5
+   |
+57 |     pub const DEEP_OCEAN: u8 = 8;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:58:5
+   |
+58 |     pub const FROZEN_OCEAN: u8 = 15;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:59:5
+   |
+59 |     pub const DESERT: u8 = 2;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:60:5
+   |
+60 |     pub const PLAINS: u8 = 1;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:61:5
+   |
+61 |     pub const FOREST: u8 = 3;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:62:5
+   |
+62 |     pub const TAIGA: u8 = 4;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:63:5
+   |
+63 |     pub const SWAMP: u8 = 5;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:64:5
+   |
+64 |     pub const RIVER: u8 = 6;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:65:5
+   |
+65 |     pub const FROZEN_RIVER: u8 = 16;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:66:5
+   |
+66 |     pub const BEACH: u8 = 7;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:67:5
+   |
+67 |     pub const STONY_SHORE: u8 = 13;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:68:5
+   |
+68 |     pub const SAVANNA: u8 = 11;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:69:5
+   |
+69 |     pub const JUNGLE: u8 = 10;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:70:5
+   |
+70 |     pub const SNOWY_PLAINS: u8 = 9;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:71:5
+   |
+71 |     pub const SNOWY_SLOPES: u8 = 22;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:72:5
+   |
+72 |     pub const JAGGED_PEAKS: u8 = 23;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:73:5
+   |
+73 |     pub const FROZEN_PEAKS: u8 = 24;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:74:5
+   |
+74 |     pub const STONY_PEAKS: u8 = 25;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:75:5
+   |
+75 |     pub const GROVE: u8 = 21;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:76:5
+   |
+76 |     pub const WINDSWEPT_HILLS: u8 = 20;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:77:5
+   |
+77 |     pub const DARK_FOREST: u8 = 12;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:78:5
+   |
+78 |     pub const MEADOW: u8 = 14;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:79:5
+   |
+79 |     pub const ICE_SPIKES: u8 = 17;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:80:5
+   |
+80 |     pub const OLD_GROWTH_PINE_FOREST: u8 = 19;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:81:5
+   |
+81 |     pub const OLD_GROWTH_BIRCH_FOREST: u8 = 18;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:82:5
+   |
+82 |     pub const BIRCH_FOREST: u8 = 33;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:83:5
+   |
+83 |     pub const CHERRY_GROVE: u8 = 30;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:84:5
+   |
+84 |     pub const BADLANDS: u8 = 26;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:85:5
+   |
+85 |     pub const ERODED_BADLANDS: u8 = 27;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:86:5
+   |
+86 |     pub const WOODED_BADLANDS: u8 = 28;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:87:5
+   |
+87 |     pub const DRIPSTONE_CAVES: u8 = 35;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:88:5
+   |
+88 |     pub const MANGROVE_SWAMP: u8 = 32;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:89:5
+   |
+89 |     pub const DEEP_DARK: u8 = 31;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:96:5
+   |
+96 |     pub const DEEP_FROZEN_OCEAN: u8 = 37;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:97:5
+   |
+97 |     pub const DEEP_COLD_OCEAN: u8 = 38;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:98:5
+   |
+98 |     pub const COLD_OCEAN: u8 = 39;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\biome\source.rs:99:5
+   |
+99 |     pub const DEEP_LUKEWARM_OCEAN: u8 = 40;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:100:5
+    |
+100 |     pub const LUKEWARM_OCEAN: u8 = 41;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:101:5
+    |
+101 |     pub const WARM_OCEAN: u8 = 42;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:103:5
+    |
+103 |     pub const SNOWY_BEACH: u8 = 43;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:104:5
+    |
+104 |     pub const WINDSWEPT_FOREST: u8 = 44;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:105:5
+    |
+105 |     pub const WINDSWEPT_GRAVELLY_HILLS: u8 = 45;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:106:5
+    |
+106 |     pub const WINDSWEPT_SAVANNA: u8 = 46;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:107:5
+    |
+107 |     pub const SAVANNA_PLATEAU: u8 = 47;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:108:5
+    |
+108 |     pub const SPARSE_JUNGLE: u8 = 48;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:109:5
+    |
+109 |     pub const BAMBOO_JUNGLE: u8 = 49;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:110:5
+    |
+110 |     pub const SUNFLOWER_PLAINS: u8 = 50;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:111:5
+    |
+111 |     pub const FLOWER_FOREST: u8 = 51;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:112:5
+    |
+112 |     pub const OLD_GROWTH_SPRUCE_TAIGA: u8 = 52;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:113:5
+    |
+113 |     pub const SNOWY_TAIGA: u8 = 53;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+   --> crates\neutron-worldgen\src\biome\source.rs:114:5
+    |
+114 |     pub const PALE_GARDEN: u8 = 54;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:21:1
+   |
+21 | pub static CARVE_STARTS: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:22:1
+   |
+22 | pub static CARVE_TARGET_WRITES: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:23:1
+   |
+23 | pub static CARVE_ELLIPSOIDS: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:24:1
+   |
+24 | pub static CARVE_ELLIPSOID_HIT: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:25:1
+   |
+25 | pub static CARVE_CAN_REACH_FAIL: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:26:1
+   |
+26 | pub static CARVE_ROOM_CALLS: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:27:1
+   |
+27 | pub static CARVE_TUNNEL_STEPS: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:28:1
+   |
+28 | pub static CARVE_EARLY_OUT: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\carvers.rs:29:1
+   |
+29 | pub static CARVE_EMPTY_RANGE: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\density.rs:27:5
+   |
+27 |     FlatCache,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\density.rs:28:5
+   |
+28 |     Cache2D,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\density.rs:29:5
+   |
+29 |     CacheOnce,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\density.rs:30:5
+   |
+30 |     CacheAllInCell,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\density.rs:51:5
+   |
+51 |     pub stride_xz: usize,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\density.rs:54:5
+   |
+54 |     pub cell_iy: usize,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\density.rs:55:5
+   |
+55 |     pub cell_iz: usize,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\density.rs:58:5
+   |
+58 |     pub factor_y: f64,
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\density.rs:59:5
+   |
+59 |     pub factor_z: f64,
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:115:5
+    |
+115 |     pub cell_height: usize,
+    |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\density.rs:121:5
+    |
+121 |     pub fn new(cell_width: usize, cell_height: usize) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:151:5
+    |
+151 |     Const(f32),
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:152:5
+    |
+152 |     Spline(SplineDef),
+    |     ^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:158:5
+    |
+158 |     pub coordinate: DF,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:159:5
+    |
+159 |     pub locations: Vec<f32>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:160:5
+    |
+160 |     pub derivatives: Vec<f32>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:161:5
+    |
+161 |     pub values: Vec<SplineValue>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:176:5
+    |
+176 |     Const(f64),
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:177:5
+    |
+177 |     Mul(DF, DF),
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:178:5
+    |
+178 |     Add(DF, DF),
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:179:5
+    |
+179 |     Min(DF, DF),
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:180:5
+    |
+180 |     Max(DF, DF),
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:181:5
+    |
+181 |     Abs(DF),
+    |     ^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:182:5
+    |
+182 |     Square(DF),
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:183:5
+    |
+183 |     Cube(DF),
+    |     ^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:184:5
+    |
+184 |     HalfNegative(DF),
+    |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:185:5
+    |
+185 |     QuarterNegative(DF),
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:186:5
+    |
+186 |     Invert(DF),
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:187:5
+    |
+187 |     Squeeze(DF),
+    |     ^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:188:5
+    |
+188 |     Clamp(DF, f64, f64),
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:189:5
+    |
+189 |     RangeChoice(DF, f64, f64, DF, DF),
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:190:5
+    |
+190 |     IntervalSelect(DF, Vec<f64>, Vec<DF>),
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:199:5
+    |
+199 |     YClampedGradient(f64, f64, f64, f64),
+    |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:200:5
+    |
+200 |     Spline(SplineDef),
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:201:5
+    |
+201 |     Marker(MarkerKind, DF),
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:202:5
+    |
+202 |     BlendAlpha,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:203:5
+    |
+203 |     BlendOffset,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:206:5
+    |
+206 |     Beardifier,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\neutron-worldgen\src\density.rs:207:5
+    |
+207 |     EndIslands(f64),
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:254:5
+    |
+254 |     pub x: i32,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:255:5
+    |
+255 |     pub y: i32,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\density.rs:256:5
+    |
+256 |     pub z: i32,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\density.rs:270:5
+    |
+270 |     pub fn new(x: i32, y: i32, z: i32, noises: &'a HashMap<String, NormalNoise>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:17:5
+   |
+17 |     pub const RAW_GENERATION: i32 = 0;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:18:5
+   |
+18 |     pub const LAKES: i32 = 1;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:19:5
+   |
+19 |     pub const LOCAL_MODIFICATIONS: i32 = 2;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:20:5
+   |
+20 |     pub const UNDERGROUND_STRUCTURES: i32 = 3;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:21:5
+   |
+21 |     pub const SURFACE_STRUCTURES: i32 = 4;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:22:5
+   |
+22 |     pub const STRONGHOLDS: i32 = 5;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:23:5
+   |
+23 |     pub const UNDERGROUND_ORES: i32 = 6;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:24:5
+   |
+24 |     pub const UNDERGROUND_DECORATION: i32 = 7;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:25:5
+   |
+25 |     pub const FLUID_SPRINGS: i32 = 8;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:26:5
+   |
+26 |     pub const VEGETAL_DECORATION: i32 = 9;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\feature_catalog.rs:27:5
+   |
+27 |     pub const TOP_LAYER_MODIFICATION: i32 = 10;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates\neutron-worldgen\src\feature_rng.rs:19:5
+   |
+19 |     pub fn new(seed: i64) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\feature_rng.rs:26:5
+   |
+26 |     pub fn set_seed(&mut self, seed: i64) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\generator.rs:38:1
+   |
+38 | pub const WORLD_BOTTOM: i32 = -64;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\generator.rs:39:1
+   |
+39 | pub const WORLD_TOP: i32 = 320;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\generator.rs:118:5
+    |
+118 |     pub fn block_at(&self, x: u32, y: i32, z: u32) -> BlockId {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\generator.rs:128:5
+    |
+128 |     pub state: WorldgenState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\generator.rs:132:5
+    |
+132 |     pub fn new(seed: i64) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates\neutron-worldgen\src\legacy_rng.rs:13:5
+   |
+13 |     pub fn new(seed: i64) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:19:5
+   |
+19 |     pub fn set_seed(&mut self, seed: i64) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:28:5
+   |
+28 |     pub fn next_int(&mut self, bound: i32) -> i32 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:42:5
+   |
+42 |     pub fn next_int32(&mut self) -> i32 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:46:5
+   |
+46 |     pub fn next_long(&mut self) -> i64 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:52:5
+   |
+52 |     pub fn next_f32(&mut self) -> f32 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\legacy_rng.rs:56:5
+   |
+56 |     pub fn next_f64(&mut self) -> f64 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a type alias
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:23:1
+   |
+23 | pub type FaceMap = HashMap<(i32, i32, i32), u8>;
+   | ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:28:5
+   |
+28 |     SamePosition,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:29:5
+   |
+29 |     SamePlane,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:30:5
+   |
+30 |     WrapAround,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:33:1
+   |
+33 | pub const DEFAULT_SPREAD_ORDER: [SpreadType; 3] = [
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:42:5
+   |
+42 |     pub x: i32,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:43:5
+   |
+43 |     pub y: i32,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\multiface_spreader.rs:44:5
+   |
+44 |     pub z: i32,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\multiface_spreader.rs:102:5
+    |
+102 |     pub spread_types: &'static [SpreadType],
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\multiface_spreader.rs:136:5
+    |
+136 |     pub fn new(config: VeinSpreadConfig) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\multiface_spreader.rs:140:5
+    |
+140 |     pub fn same_space() -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\multiface_spreader.rs:144:5
+    |
+144 |     pub fn vein() -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\noise.rs:105:5
+    |
+105 |     pub xo: f64,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\noise.rs:106:5
+    |
+106 |     pub yo: f64,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\noise.rs:107:5
+    |
+107 |     pub zo: f64,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\noise.rs:394:5
+    |
+394 |     pub fn max_value(&self) -> f64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\noise.rs:545:5
+    |
+545 |     pub fn get_value(&self, x: f64, y: f64, z: f64) -> f64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\noise.rs:552:5
+    |
+552 |     pub fn max_value(&self) -> f64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\noise.rs:671:5
+    |
+671 |     pub fn max_value(&self) -> f64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\positional.rs:22:5
+   |
+22 |     pub seed_lo: u64,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\positional.rs:23:5
+   |
+23 |     pub seed_hi: u64,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates\neutron-worldgen\src\positional.rs:27:5
+   |
+27 |     pub fn new(seed_lo: u64, seed_hi: u64) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\region_buf.rs:15:5
+   |
+15 |     pub origin_z: i32,
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> crates\neutron-worldgen\src\region_buf.rs:27:5
+   |
+27 |     pub fn new(center_cx: i32, center_cz: i32, radius: i32) -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\region_buf.rs:44:5
+   |
+44 |     pub fn index(&self, x: i32, y: i32, z: i32) -> Option<usize> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\region_buf.rs:60:5
+   |
+60 |     pub fn get(&self, x: i32, y: i32, z: i32) -> BlockId {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\region_buf.rs:67:5
+   |
+67 |     pub fn set(&mut self, x: i32, y: i32, z: i32, b: BlockId) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\sculk.rs:24:1
+   |
+24 | pub static SCULK_TRIES: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\sculk.rs:26:1
+   |
+26 | pub static SCULK_BIOME_OK: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\sculk.rs:27:1
+   |
+27 | pub static SCULK_SPREAD_OK: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\sculk.rs:28:1
+   |
+28 | pub static SCULK_PLACED: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a static
+  --> crates\neutron-worldgen\src\sculk.rs:29:1
+   |
+29 | pub static SCULK_VEIN_PLACED: AtomicU32 = AtomicU32::new(0);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> crates\neutron-worldgen\src\sculk.rs:31:1
+   |
+31 | pub const SCULK_ENABLED: bool = true;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:12:5
+   |
+12 |     Air = 0,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:13:5
+   |
+13 |     Stone = 1,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:14:5
+   |
+14 |     Granite = 2,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:15:5
+   |
+15 |     Diorite = 3,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:16:5
+   |
+16 |     Andesite = 4,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:17:5
+   |
+17 |     Dirt = 10,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:18:5
+   |
+18 |     CoarseDirt = 11,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:19:5
+   |
+19 |     GrassBlock = 12,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:20:5
+   |
+20 |     Podzol = 14,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:21:5
+   |
+21 |     Mycelium = 15,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:22:5
+   |
+22 |     Cobblestone = 20,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:23:5
+   |
+23 |     Sand = 24,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:24:5
+   |
+24 |     RedSand = 25,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:25:5
+   |
+25 |     Gravel = 26,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:26:5
+   |
+26 |     GoldOre = 27,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:27:5
+   |
+27 |     IronOre = 28,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:28:5
+   |
+28 |     CoalOre = 29,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:29:5
+   |
+29 |     CopperOre = 30,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:30:5
+   |
+30 |     DeepslateIronOre = 31,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:31:5
+   |
+31 |     RawIronBlock = 32,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:32:5
+   |
+32 |     Bedrock = 33,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:33:5
+   |
+33 |     RawCopperBlock = 34,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:34:5
+   |
+34 |     DeepslateCoalOre = 35,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:35:5
+   |
+35 |     DeepslateGoldOre = 36,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:36:5
+   |
+36 |     DeepslateCopperOre = 37,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:37:5
+   |
+37 |     DeepslateDiamondOre = 38,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:38:5
+   |
+38 |     DeepslateRedstoneOre = 39,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:39:5
+   |
+39 |     DeepslateLapisOre = 42,
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:40:5
+   |
+40 |     DiamondOre = 43,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:41:5
+   |
+41 |     RedstoneOre = 44,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:42:5
+   |
+42 |     LapisOre = 45,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:43:5
+   |
+43 |     OakLog = 40,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:44:5
+   |
+44 |     OakLeaves = 41,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:45:5
+   |
+45 |     Water = 50,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:46:5
+   |
+46 |     Lava = 51,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:47:5
+   |
+47 |     Sandstone = 52,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:48:5
+   |
+48 |     RedSandstone = 53,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:49:5
+   |
+49 |     Ice = 54,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:50:5
+   |
+50 |     Snow = 55,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:51:5
+   |
+51 |     Clay = 56,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:52:5
+   |
+52 |     PackedIce = 57,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:53:5
+   |
+53 |     PowderSnow = 58,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:54:5
+   |
+54 |     Terracotta = 59,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:55:5
+   |
+55 |     WhiteTerracotta = 60,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:56:5
+   |
+56 |     OrangeTerracotta = 61,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:57:5
+   |
+57 |     BrownTerracotta = 62,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:58:5
+   |
+58 |     BlackTerracotta = 63,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:59:5
+   |
+59 |     Mud = 64,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:60:5
+   |
+60 |     Deepslate = 65,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:61:5
+   |
+61 |     Tuff = 66,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:62:5
+   |
+62 |     Calcite = 67,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:63:5
+   |
+63 |     BlueIce = 68,
+   |     ^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:64:5
+   |
+64 |     YellowTerracotta = 69,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:65:5
+   |
+65 |     RedTerracotta = 70,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:66:5
+   |
+66 |     LightGrayTerracotta = 71,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:69:5
+   |
+69 |     Sulfur = 73,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:70:5
+   |
+70 |     Sculk = 74,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:71:5
+   |
+71 |     SculkCatalyst = 75,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:72:5
+   |
+72 |     SculkVein = 76,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:73:5
+   |
+73 |     SculkSensor = 77,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:74:5
+   |
+74 |     SculkShrieker = 78,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:75:5
+   |
+75 |     MossBlock = 79,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:76:5
+   |
+76 |     ShortGrass = 80,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:79:5
+   |
+79 |     DarkOakLog = 82,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:80:5
+   |
+80 |     DarkOakLeaves = 83,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:81:5
+   |
+81 |     OakPlanks = 84,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:82:5
+   |
+82 |     OakFence = 85,
+   |     ^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:83:5
+   |
+83 |     MossCarpet = 86,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:84:5
+   |
+84 |     CaveVinesPlant = 87,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:85:5
+   |
+85 |     CaveVines = 88,
+   |     ^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:86:5
+   |
+86 |     PaleOakLog = 89,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:87:5
+   |
+87 |     PaleOakLeaves = 90,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:88:5
+   |
+88 |     PaleMossBlock = 91,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:89:5
+   |
+89 |     PaleMossCarpet = 92,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:90:5
+   |
+90 |     Azalea = 93,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:91:5
+   |
+91 |     FloweringAzalea = 94,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:92:5
+   |
+92 |     HangingRoots = 95,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:93:5
+   |
+93 |     RootedDirt = 96,
+   |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\neutron-worldgen\src\surface.rs:94:5
+   |
+94 |     PaleHangingMoss = 97,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\surface.rs:98:5
+   |
+98 |     pub fn as_u16(self) -> u16 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> crates\neutron-worldgen\src\surface.rs:102:5
+    |
+102 |     pub fn from_u16(v: u16) -> Option<Self> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\surface.rs:189:5
+    |
+189 |     pub fn is_air(self) -> bool {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+   --> crates\neutron-worldgen\src\surface.rs:193:5
+    |
+193 |     pub fn is_fluid(self) -> bool {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\worldgen.rs:40:5
+   |
+40 |     pub fn get(&self, key: &str) -> &NormalNoise {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a method
+  --> crates\neutron-worldgen\src\worldgen.rs:44:5
+   |
+44 |     pub fn noises(&self) -> &HashMap<String, NormalNoise> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:51:5
+   |
+51 |     pub barrier: DF,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:52:5
+   |
+52 |     pub fluid_level_floodedness: DF,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:53:5
+   |
+53 |     pub fluid_level_spread: DF,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:54:5
+   |
+54 |     pub lava: DF,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:55:5
+   |
+55 |     pub temperature: DF,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:56:5
+   |
+56 |     pub vegetation: DF,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:57:5
+   |
+57 |     pub continents: DF,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:58:5
+   |
+58 |     pub erosion: DF,
+   |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:59:5
+   |
+59 |     pub depth: DF,
+   |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:60:5
+   |
+60 |     pub ridges: DF,
+   |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:61:5
+   |
+61 |     pub preliminary_surface_level: DF,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:62:5
+   |
+62 |     pub final_density: DF,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:63:5
+   |
+63 |     pub vein_toggle: DF,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:64:5
+   |
+64 |     pub vein_ridged: DF,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:65:5
+   |
+65 |     pub vein_gap: DF,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:98:5
+   |
+98 |     pub reg: DensityRegistry,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> crates\neutron-worldgen\src\worldgen.rs:99:5
+   |
+99 |     pub noises: NoiseSet,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:100:5
+    |
+100 |     pub router: Router,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:101:5
+    |
+101 |     pub sea_level: i32,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:102:5
+    |
+102 |     pub min_y: i32,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:103:5
+    |
+103 |     pub height: i32,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:104:5
+    |
+104 |     pub cell_width: i32,
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:105:5
+    |
+105 |     pub cell_height: i32,
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:110:5
+    |
+110 |     pub main_hi: u64,
+    |     ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:114:5
+    |
+114 |     pub aquifer_hi: u64,
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\neutron-worldgen\src\worldgen.rs:118:5
+    |
+118 |     pub ore_hi: u64,
+    |     ^^^^^^^^^^^^^^^
+
+warning: `neutron-worldgen` (lib) generated 302 warnings (run `cargo fix --lib -p neutron-worldgen` to apply 2 suggestions)
+warning: `neutron-worldgen` (lib test) generated 302 warnings (302 duplicates)
+warning: unused import: `bail`
+  --> tools\parity-check\src\main.rs:18:14
+   |
+18 | use anyhow::{bail, Context, Result};
+   |              ^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> tools\parity-check\src\main.rs:127:9
+    |
+127 |     let mut generator = ChunkGenerator::new(cli.seed);
+    |         ----^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable `total_non_air` is assigned to, but never used
+   --> tools\parity-check\src\main.rs:172:9
+    |
+172 |     let mut total_non_air = 0;
+    |         ^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_total_non_air` instead
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `total_non_air` is never read
+   --> tools\parity-check\src\main.rs:178:9
+    |
+178 |         total_non_air += s.non_air_blocks;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `version` is never read
+  --> tools\parity-check\src\main.rs:62:5
+   |
+59 | struct GoldenData {
+   |        ---------- field in this struct
+...
+62 |     version: String,
+   |     ^^^^^^^
+   |
+   = note: `GoldenData` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `size_bytes` is never read
+  --> tools\parity-check\src\main.rs:81:5
+   |
+73 | struct GoldenChunk {
+   |        ----------- field in this struct
+...
+81 |     size_bytes: usize,
+   |     ^^^^^^^^^^
+   |
+   = note: `GoldenChunk` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: unused variable: `faces`
+  --> crates\neutron-worldgen\examples\sculk_replay.rs:80:9
+   |
+80 |     let faces: FaceMap = FaceMap::new();
+   |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_faces`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `build_heightmaps_from_chunk` is never used
+   --> crates\neutron-server\src\chunk_sender.rs:388:4
+    |
+388 | fn build_heightmaps_from_chunk(heightmap: &[i16]) -> Vec<u8> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `len` is never used
+  --> crates\neutron-server\src\lru.rs:28:12
+   |
+17 | impl<K: Clone + Eq + Hash, V> LruCache<K, V> {
+   | -------------------------------------------- method in this implementation
+...
+28 |     pub fn len(&self) -> usize {
+   |            ^^^
+
+warning: constant `HANDSHAKE` is never used
+  --> crates\neutron-server\src\protocol_ids.rs:13:11
+   |
+13 | pub const HANDSHAKE: u32 = 0x00;
+   |           ^^^^^^^^^
+
+warning: constant `LOGIN_DISCONNECT` is never used
+  --> crates\neutron-server\src\protocol_ids.rs:20:11
+   |
+20 | pub const LOGIN_DISCONNECT: u32 = 0x00;
+   |           ^^^^^^^^^^^^^^^^
+
+warning: constant `CFG_KEEP_ALIVE` is never used
+  --> crates\neutron-server\src\protocol_ids.rs:30:11
+   |
+30 | pub const CFG_KEEP_ALIVE: u32 = 0x04;
+   |           ^^^^^^^^^^^^^^
+
+warning: field `compression_threshold` is never read
+  --> crates\neutron-server\src\server.rs:33:9
+   |
+19 | pub struct ServerConfig {
+   |            ------------ field in this struct
+...
+33 |     pub compression_threshold: i32,
+   |         ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `ServerConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `game_mode` is never read
+  --> crates\neutron-server\src\server.rs:82:9
+   |
+56 | pub struct PlayerState {
+   |            ----------- field in this struct
+...
+82 |     pub game_mode: u8,
+   |         ^^^^^^^^^
+   |
+   = note: `PlayerState` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: methods `current_tick` and `get_player_info` are never used
+   --> crates\neutron-server\src\server.rs:142:12
+    |
+109 | impl ServerState {
+    | ---------------- methods in this implementation
+...
+142 |     pub fn current_tick(&self) -> u64 {
+    |            ^^^^^^^^^^^^
+...
+217 |     pub async fn get_player_info(&self, uuid: &uuid::Uuid) -> Option<(String, i32)> {
+    |                  ^^^^^^^^^^^^^^^
+
+warning: unused import: `neutron_worldgen::surface::BlockId`
+ --> crates\neutron-worldgen\examples\sculk_pos.rs:7:5
+  |
+7 | use neutron_worldgen::surface::BlockId;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `y_sec`
+  --> crates\neutron-worldgen\examples\clay_overlap.rs:85:13
+   |
+85 |         let y_sec = match compound_get(sec, "Y") { Some(Tag::Byte(y)) => *y as i8 as i32, Some(Tag::Int(y)) => *y, _ => continue };
+   |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_y_sec`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `neutron_worldgen::surface::BlockId`
+ --> crates\neutron-worldgen\examples\gap_diag.rs:3:5
+  |
+3 | use neutron_worldgen::surface::BlockId;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `parity-check` (bin "parity-check" test) generated 6 warnings (run `cargo fix --bin "parity-check" -p parity-check --tests` to apply 2 suggestions)
+warning: `neutron-worldgen` (example "sculk_replay") generated 1 warning (run `cargo fix --example "sculk_replay" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-server` (bin "neutron-server" test) generated 8 warnings
+warning: `neutron-worldgen` (example "sculk_pos") generated 1 warning (run `cargo fix --example "sculk_pos" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "clay_overlap") generated 1 warning (run `cargo fix --example "clay_overlap" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "gap_diag") generated 1 warning (run `cargo fix --example "gap_diag" -p neutron-worldgen` to apply 1 suggestion)
+   Compiling neutron-worldgen v0.1.0 (C:\Users\ivang\orca\neutron\crates\neutron-worldgen)
+warning: unused import: `neutron_worldgen::surface::BlockId`
+ --> crates\neutron-worldgen\examples\surface_diag.rs:8:5
+  |
+8 | use neutron_worldgen::surface::BlockId;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `y_sec`
+  --> crates\neutron-worldgen\examples\clay_rng_probe.rs:27:29
+   |
+27 |                         let y_sec = match compound_get(sec, "Y") {
+   |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_y_sec`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `BlockId`
+ --> crates\neutron-worldgen\examples\region_parity.rs:8:67
+  |
+8 | use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
+  |                                                                   ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `BlockId` and `is_vegetation_name`
+ --> crates\neutron-worldgen\examples\lush_pale_parity.rs:6:33
+  |
+6 | use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
+  |                                 ^^^^^^^^^^^^^^^^^^                ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `WORLD_BOTTOM` and `WORLD_TOP`
+ --> crates\neutron-worldgen\examples\chunk_check.rs:3:17
+  |
+3 |     generator::{WORLD_BOTTOM, WORLD_TOP},
+  |                 ^^^^^^^^^^^^  ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates\neutron-worldgen\examples\chunk_check.rs:12:9
+   |
+12 |     let mut gen = ChunkGenerator::new(seed);
+   |         ----^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: `neutron-worldgen` (example "surface_diag") generated 1 warning (run `cargo fix --example "surface_diag" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "clay_rng_probe") generated 1 warning (run `cargo fix --example "clay_rng_probe" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "region_parity") generated 1 warning (run `cargo fix --example "region_parity" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "lush_pale_parity") generated 1 warning (run `cargo fix --example "lush_pale_parity" -p neutron-worldgen` to apply 1 suggestion)
+warning: `neutron-worldgen` (example "chunk_check") generated 2 warnings (run `cargo fix --example "chunk_check" -p neutron-worldgen` to apply 2 suggestions)
+warning: unused variable: `y_sec`
+  --> crates\neutron-worldgen\examples\clay_probe.rs:85:29
+   |
+85 |                         let y_sec = match compound_get(sec, "Y") {
+   |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_y_sec`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `i`
+  --> crates\neutron-worldgen\examples\clay_probe.rs:98:33
+   |
+98 | ...                   for i in 0..4096u32 { van_clay += 1; }
+   |                           ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: `neutron-worldgen` (example "clay_probe") generated 2 warnings (run `cargo fix --example "clay_probe" -p neutron-worldgen` to apply 2 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.97s
+     Running unittests src\main.rs (target\debug\deps\dump_chunk-a1cd0815c40e5f53.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\golden_data-a968921e03b24840.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\neutron_protocol-ae1e092b14219be7.exe)
+
+running 47 tests
+test codec::tests::test_empty_buffer ... ok
+test codec::tests::test_encode_decode_uncompressed ... ok
+test codec::tests::test_encode_decode_compressed_below_threshold ... ok
+test login::tests::test_login_start_roundtrip ... ok
+test codec::tests::test_partial_frame_returns_none ... ok
+test login::tests::test_encryption_response_roundtrip ... ok
+test codec::tests::test_max_packet_size ... ok
+test login::tests::test_handshake_roundtrip ... ok
+test codec::tests::test_multiple_packets_in_buffer ... ok
+test login::tests::test_login_success_roundtrip ... ok
+test login::tests::test_packet_ids ... ok
+test login::tests::test_packet_states ... ok
+test login::tests::test_login_start_no_uuid ... ok
+test login::tests::test_set_compression_roundtrip ... ok
+test login::tests::test_encryption_request_roundtrip ... ok
+test packet::tests::test_raw_packet_empty_buf ... ok
+test packet::tests::test_raw_packet_incomplete ... ok
+test packet::tests::test_raw_packet_roundtrip ... ok
+test packet::tests::test_registry ... ok
+test play::tests::test_block_update_roundtrip ... ok
+test play::tests::test_chat_command_roundtrip ... ok
+test play::tests::test_chat_message_roundtrip ... ok
+test play::tests::test_chunk_data_roundtrip ... ok
+test play::tests::test_client_status_roundtrip ... ok
+test codec::tests::test_set_compression_at_runtime ... ok
+test codec::tests::test_encode_decode_compressed_above_threshold ... ok
+test codec::tests::test_large_compressed_packet ... ok
+test play::tests::test_join_game_roundtrip ... ok
+test play::tests::test_keep_alive_response_roundtrip ... ok
+test play::tests::test_keep_alive_roundtrip ... ok
+test play::tests::test_packet_ids_are_unique_within_direction ... ok
+test play::tests::test_player_position_and_rotation_roundtrip ... ok
+test play::tests::test_player_position_roundtrip ... ok
+test play::tests::test_player_rotation_roundtrip ... ok
+test play::tests::test_set_default_spawn_position_roundtrip ... ok
+test play::tests::test_set_player_abilities_roundtrip ... ok
+test play::tests::test_synchronize_player_position_roundtrip ... ok
+test play::tests::test_system_chat_message_roundtrip ... ok
+test types::tests::test_angle ... ok
+test types::tests::test_blockpos_roundtrip ... ok
+test types::tests::test_chat_plain ... ok
+test types::tests::test_gamemode ... ok
+test types::tests::test_slot_roundtrip ... ok
+test types::tests::test_string_roundtrip ... ok
+test types::tests::test_varint_encoded_size ... ok
+test types::tests::test_varint_roundtrip ... ok
+test types::tests::test_varlong_roundtrip ... ok
+
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\integration.rs (target\debug\deps\integration-d3e184b610e7c24b.exe)
+
+running 7 tests
+test test_login_flow_simulation ... ok
+test test_types_roundtrip_through_codec ... ok
+test test_packet_roundtrip_all_types ... ok
+test test_region_vanilla_format_structure ... ok
+test test_world_directory_structure ... ok
+test test_world_persistence ... ok
+test test_codec_stress ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.32s
+
+     Running unittests bench_decode.rs (target\debug\deps\bench_decode-c3f33e275898e310.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests fuzz_decode.rs (target\debug\deps\fuzz_decode-2d09b773b73eadd6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\neutron_server-c0030ec1f6228da6.exe)
+
+running 24 tests
+test chunk_sender::tests::test_block_palette_uses_min_4_bits ... ok
+test chunk_sender::tests::test_calculate_bits_per_block ... ok
+test chunk_sender::tests::test_get_block_at_y ... ok
+test chunk_sender::tests::test_build_full_light_produces_data ... ok
+test chunk_sender::tests::test_non_air_count_for_air_section ... ok
+test chunk_sender::tests::test_protocol_block_ids_are_vanilla_26_2 ... ok
+test chunk_sender::tests::test_pack_to_longs_single_bit ... ok
+test chunk_sender::tests::test_section_palette_for_all_air ... ok
+test chunk_sender::tests::test_section_palette_for_grass_level ... ok
+test chunk_sender::tests::test_pack_to_longs ... ok
+test chunk_sender::tests::test_spiral_chunks_center_is_first ... ok
+test chunk_sender::tests::test_single_value_palette_has_no_data_longs ... ok
+test login::tests::default_spawn_packet_is_26_2_respawn_data ... ok
+test login::tests::dialog_registry_matches_vanilla_26_2 ... ok
+test login::tests::player_position_packet_is_26_2_layout ... ok
+test login::tests::status_pong_uses_vanilla_status_protocol_id ... ok
+test login::tests::update_tags_binds_vanilla_dialog_tags ... ok
+test lru::tests::evicts_least_recent ... ok
+test chunk_sender::tests::test_two_block_section_writes_256_longs ... ok
+test chunk_sender::tests::test_build_flat_chunk_produces_data ... ok
+test chunk_sender::tests::test_build_worldgen_chunk_deterministic has been running for over 60 seconds
+test chunk_sender::tests::test_build_worldgen_chunk_different_chunks_differ has been running for over 60 seconds
+test chunk_sender::tests::test_build_worldgen_chunk_produces_data has been running for over 60 seconds
+test chunk_sender::tests::test_playable_chunk_sections_are_26_2_sized has been running for over 60 seconds
+test chunk_sender::tests::test_playable_chunk_sections_are_26_2_sized ... ok
+test chunk_sender::tests::test_build_worldgen_chunk_produces_data ... ok
+test chunk_sender::tests::test_build_worldgen_chunk_deterministic ... ok
+test chunk_sender::tests::test_build_worldgen_chunk_different_chunks_differ ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 141.48s
+
+     Running unittests src\lib.rs (target\debug\deps\neutron_sim-2f0180328605e15f.exe)
+
+running 65 tests
+test fluid::tests::test_default ... ok
+test fluid::tests::test_bubble_column_detection ... ok
+test fluid::tests::test_bubble_column_no_water ... ok
+test fluid::tests::test_flow_direction_empty ... ok
+test fluid::tests::test_fluid_state_helpers ... ok
+test fluid::tests::test_remove_fluid ... ok
+test fluid::tests::test_water_spreads_from_source ... ok
+test fluid::tests::test_lava_overworld_spread_rate ... ok
+test fluid::tests::test_lava_source_placement ... ok
+test fluid::tests::test_water_flows_down_first ... ok
+test fluid::tests::test_flow_direction ... ok
+test fluid::tests::test_lava_nether_spread_rate ... ok
+test fluid::tests::test_waterlogging ... ok
+test fluid::tests::test_waterlogging_multiple_blocks ... ok
+test fluid::tests::test_lava_spread_slower_than_water ... ok
+test fluid::tests::test_lava_max_horizontal_spread ... ok
+test light::tests::dirty_flag_system ... ok
+test light::tests::block_light_blocked_by_opaque ... ok
+test fluid::tests::test_water_level_decreases ... ok
+test redstone::tests::test_comparator_basic ... ok
+test redstone::tests::test_door_redstone ... ok
+test redstone::tests::test_comparator_subtraction ... ok
+test redstone::tests::test_double_doors ... ok
+test redstone::tests::test_hopper_basic ... ok
+test redstone::tests::test_lever_toggle ... ok
+test redstone::tests::test_no_qc_power ... ok
+test redstone::tests::test_observer_piston_interaction ... ok
+test redstone::tests::test_piston_extend ... ok
+test redstone::tests::test_observer_basic ... ok
+test light::tests::debug_bfs_propagation ... ok
+test redstone::tests::test_piston_retract ... ok
+test redstone::tests::test_power_decreases_by_one_per_wire ... ok
+test redstone::tests::test_repeater_basic ... ok
+test fluid::tests::test_water_spreads_7_blocks ... ok
+test redstone::tests::test_qc_power ... ok
+test redstone::tests::test_sticky_piston ... ok
+test redstone::tests::test_tnt_explosion ... ok
+test redstone::tests::test_tnt_prime_fuse ... ok
+test light::tests::hash_is_deterministic ... ok
+test redstone::tests::test_sticky_piston_retract ... ok
+test redstone::tests::test_wire_update_order_nc ... ok
+test redstone::tests::test_wire_power_propagation ... ok
+test redstone::tests::test_wire_update_order_pp ... ok
+test spawn::tests::hostile_spawn_rejected_with_block_light ... ok
+test spawn::tests::hostile_spawn_low_light ... ok
+test spawn::tests::biome_specific_mobs ... ok
+test redstone::tests::test_torch_burnout ... ok
+test spawn::tests::mob_type_categories ... ok
+test spawn::tests::pack_spawning ... ok
+test light::tests::block_light_propagation ... ok
+test spawn::tests::passive_spawn_ignores_block_light ... ok
+test spawn::tests::passive_spawn_high_light ... ok
+test spawn::tests::despawn_mechanics ... ok
+test light::tests::block_light_through_transparent ... ok
+test redstone::tests::test_torch_relight ... ok
+test spawn::tests::spawn_caps ... ok
+test spawn::tests::spawn_distance ... ok
+test spawn::tests::tick_produces_candidates ... ok
+test spawn::tests::valid_spawn_requires_solid_floor ... ok
+test light::tests::sky_light_top_is_max ... ok
+test light::tests::on_block_change_updates_light ... ok
+test light::tests::sky_light_decreases_through_transparent ... ok
+test spawn::tests::passive_tick_frequency ... ok
+test light::tests::sky_light_decreases_through_opaque ... ok
+test light::tests::hash_differs_with_different_light ... ok
+
+test result: ok. 65 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\neutron_world-351fc5210cddc232.exe)
+
+running 39 tests
+test level::tests::test_game_mode_conversions ... ok
+test level::tests::test_default_level_dat ... ok
+test level::tests::test_difficulty_conversions ... ok
+test level::tests::test_new_level_dat ... ok
+test nbt::tests::test_compound_insert_and_get ... ok
+test nbt::tests::test_missing_field_error ... ok
+test nbt::tests::test_defaults ... ok
+test nbt::tests::test_nested_compound ... ok
+test nbt::tests::test_tag_constructors ... ok
+test nbt::tests::test_root_nbt_roundtrip ... ok
+test region::tests::test_chunk_index_calculation ... ok
+test region::tests::test_chunk_index_out_of_bounds ... ok
+test region::tests::test_chunk_too_large ... ok
+test region::tests::test_get_empty_chunk ... ok
+test region::tests::test_parse_region_filename ... ok
+test region::tests::test_region_path_construction ... ok
+test region::tests::test_empty_region_roundtrip ... ok
+test region::tests::test_offset_table_entry_format ... ok
+test region::tests::test_compress_decompress_roundtrip ... ok
+test nbt::tests::test_gzip_roundtrip ... ok
+test region::tests::test_dirty_tracking ... ok
+test world::tests::test_dimension_dir_names ... ok
+test region::tests::test_remove_chunk ... ok
+test level::tests::test_roundtrip_bytes ... ok
+test world::tests::test_open_nonexistent_world ... ok
+test region::tests::test_write_and_get_chunk_roundtrip ... ok
+test region::tests::test_region_to_bytes_and_back ... ok
+test session::tests::test_is_locked_false_when_no_file ... ok
+test session::tests::test_acquire_and_release ... ok
+test session::tests::test_drop_releases_lock ... ok
+test session::tests::test_reacquire_same_process ... ok
+test session::tests::test_held_by_returns_pid ... ok
+test region::tests::test_save_and_open_roundtrip ... ok
+test level::tests::test_roundtrip_file ... ok
+test world::tests::test_list_regions_with_files ... ok
+test world::tests::test_list_regions_empty ... ok
+test world::tests::test_create_and_open_world ... ok
+test session::tests::test_is_locked_true_when_held ... ok
+test session::tests::test_acquire_stale_lock ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running unittests src\lib.rs (target\debug\deps\neutron_worldgen-2d4f57500c049913.exe)
+
+running 59 tests
+test biome::manager::tests::get_fiddle_matches_java ... ok
+test biome::manager::tests::lcg_next_matches_java ... ok
+test biome::manager::tests::get_fiddled_distance_matches_java ... ok
+test biome::manager::tests::obfuscate_seed_matches_guava_sha256_hash_long ... ok
+test biome::manager::tests::quart_pos_roundtrip ... ok
+test biome::manager::tests::voronoi_can_pick_a_neighbor_quart ... ok
+test biome::source::tests::parameter_distance_matches ... ok
+test biome::manager::tests::voronoi_quart_matches_java_probe ... ok
+test carvers::tests::can_reach_far_short_remaining ... ok
+test carvers::tests::can_reach_near_center ... ok
+test biome::source::tests::quantize_coord_matches_java ... ok
+test feature_dispatch::tests::ocean_floor_includes_leaves_world_surface_includes_plants ... ok
+test feature_rng::tests::decoration_seed_deterministic ... ok
+test feature_rng::tests::feature_seed_formula_matches_vanilla ... ok
+test feature_rng::tests::worldgen_random_matches_vanilla_xoroshiro_wrapper ... ok
+test features::tests::rarity_filter_uses_next_float_not_next_int ... ok
+test feature_dispatch::tests::ocean_floor_top_is_canopy_not_dirt_under_leaves ... ok
+test features::tests::should_skip_air_check_matches_vanilla_consumption ... ok
+test features::tests::step6_feature_indices_are_explicit_0_to_33 ... ok
+test generator::tests::chunk_generator_is_send ... ok
+test legacy_rng::tests::legacy_determinism ... ok
+test generator::tests::noise_cache_drops_oldest ... ok
+test mineshaft::tests::dump_start_4_minus_1 ... ok
+test mineshaft::tests::room_upper_half_sphere_uses_vanilla_threshold ... ok
+test mineshaft::tests::seed_12345_has_start_at_4_minus_1 ... ok
+test multiface_spreader::tests::wrap_around_rejected_when_intermediate_is_sturdy ... ok
+test multiface_spreader::tests::same_space_places_faces_on_open_with_solid ... ok
+test mineshaft::tests::start_4_minus_1_first_eight_bbs_match_vanilla_nbt ... ok
+test rng::tests::different_seeds_different_sequences ... ok
+test rng::tests::determinism_same_seed_same_sequence ... ok
+test rng::tests::from_hash_of_deterministic ... ok
+test rng::tests::zero_state_fallback ... ok
+test sculk::tests::decoration_origin_order_center_first ... ok
+test sculk::tests::fisher_yates_18_matches_probe_seed ... ok
+test rng::tests::next_f64_range ... ok
+test tree::tests::blob_layer_radii_match_cfr ... ok
+test rng::tests::next_int_bounds ... ok
+test tree::tests::blocked_column_rejects_unclipped_oak ... ok
+test tree::tests::grass_is_replaced_below_trunk_dirt_is_not ... ok
+test carvers::tests::mth_sin_half_pi_is_one ... ok
+test carvers::tests::mth_sin_zero ... ok
+test tree::tests::fancy_oak_places_branched_logs ... ok
+test tree::tests::dark_oak_places_2x2_trunk ... ok
+test biome::params::tests::packed_table_has_expected_count ... ok
+test biome::params::tests::first_and_last_points_match_legacy_dump ... ok
+test tree::tests::oak_tree_places_log_column_and_blob_canopy ... ok
+test biome::params::tests::lush_and_sulfur_keep_unique_ids ... ok
+test tree::tests::three_layers_dark_oak_sizes ... ok
+test tree::tests::tree_height_consumes_next_int_one_when_rand_b_is_zero ... ok
+test tree::tests::two_layers_default_and_fancy_sizes ... ok
+test tree::tests::valid_tree_pos_matches_replaceable_by_trees ... ok
+test biome::params::tests::distinct_biome_count_and_pale_garden_points ... ok
+test sculk::tests::one_patch_on_flat_floor_converts_deepslate ... ok
+test sculk::tests::flat_floor_matches_probe_sculk_patch ... ok
+test feature_catalog::tests::deep_dark_sculk_indices ... ok
+test feature_catalog::tests::feature_sorter_matches_vanilla_probe ... ok
+test mineshaft::tests::invalid_piece_rejects_boundary_liquid ... ok
+test feature_catalog::tests::sculk_patch_config_loads ... ok
+test mineshaft::tests::apply_carves_west_neighbor ... ok
+
+test result: ok. 59 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.90s
+
+     Running unittests src\main.rs (target\debug\deps\parity_check-953e09eb12d31d66.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests neutron_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests neutron_sim
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests neutron_world
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests neutron_worldgen
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit code: 0

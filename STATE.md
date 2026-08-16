@@ -3,7 +3,7 @@
 > Estado actual del proyecto. Se lee al empezar cada run y se actualiza al terminar.
 
 ## Fase actual
-**F2d R43 — diagnóstico de referencia + multi-seed (hallazgos críticos)**
+**F2d R45 — run-045 lush/pale dispatch fijado (recall 11→49.6 %, 424242 97.28 %); spillover cross-chunk aislado → run-046**
 **F3 FASE A — Simulación vanilla** (COMPLETADO ✅)
 **F3 FASE B — Redstone B** (COMPLETADO ✅)
 **F3 FASE C — Redstone C** (COMPLETADO ✅)
@@ -342,3 +342,51 @@ chunks de `ChunkGenerator` con IDs de bloque vanilla.
   sculk; sigue abierta la arquitectura de input cross-chunk/orden de
   decoración (vecinos, estructuras/lush y spill de ores).
 - Evidencia completa: `runs/run-044.md` y `tools/java-probe/repro-i124/`.
+
+### F2d R44 — run-044 paridad de mecanismo (16 ago 2026) — T1-T3 PASS
+
+Bar (decisión humana R43): **paridad de MECANISMO** — mismas
+seeds/streams/algoritmos que vanilla; fases deterministas → 100 % block
+match multi-seed; vegetación/sculk → mismo stream 1:1.
+
+| Tarea | Veredicto | Números |
+|---|---|---|
+| T1 Aquifer | ✅ PASS (critic ciego) | air→water **7149→0**; 424242 REGION 89.07→**96.03 %** |
+| T2 Surface + tabla biomas | ✅ PASS (critic ciego) | sandstone/sand 1678→0; 424242 96.03→**97.10 %** |
+| T3 Sculk mecanismo | ✅ PASS (verificado) | parche i=110 diff=0; 12345 **97.76 %**, 424242 **97.09 %** |
+| T4 Lush/pale features | 🔄 capa bloques; features → run-045 | 12 BlockIds en surface.rs |
+
+**Hallazgos estructurales (bugs de rondas viejas que el multi-seed expuso):**
+1. `max_preliminary_surface_level` hardcodeado a 0 → `skip_sampling_above_y`
+   34 vs 130 → agua de mar inundaba cuevas y∈[35,62]. Fix: port fiel de
+   `NoiseChunk.computePreliminarySurfaceLevel`.
+2. `biome_params.bin` incompleta (7498 vs **7594**; 18 biomas colapsaban a
+   id 0=OCEAN) → areniscaba la superficie y desactivaba features de esos
+   biomas. Fix: tabla reconstruida, 55 biomas id único.
+3. Sculk: snapshot stale en `ChargeCursor.update` + sturdiness de
+   sensor/shrieker solo DOWN/UP → parches i=0/105/110/185 diff=0.
+
+**Residuo transversal (run-045):** modelo de input cross-chunk — orden de
+decoración de vecinos (estado CARVERS), bloques de estructura/lush visibles
+antes de su step, spill del ore-pass. Afecta sculk + árboles. T4 (lush
+caves + pale garden features) pendiente.
+
+Evidencia: `runs/run-044.md`, `tools/java-probe/repro-i124/`, probes
+`ProbeAquifer`/`ProbeSculkVein`/`ProbeSculkFlow`.
+
+### F2d R45 — run-045 lush/pale dispatch (16 ago 2026)
+
+- **T1 lush/pale R1**: `apply_step_region` solo despachaba el bioma de
+  superficie → lush_caves (subterráneo) NUNCA se colocaba; PALE_GARDEN (54)
+  faltaba en biome_id_to_name. Port: vegetation_patch + waterlogged,
+  block_column, environment_scan, predicados, pale oak + PaleMossDecorator,
+  BlockId PaleHangingMoss=97. **recall lush/pale 424242 11.06→49.58 %** ·
+  REGION 424242 97.09→**97.28 %** · 12345 97.75 % · tests 59/59.
+- **T1-R2**: premisa per-cell 4×4 CORREGIDA (es pre-1.18; en 26.2
+  applyBiomeDecoration itera steps→features con índice global, gating por
+  biome en placement modifiers ya implementados). Causa del clay inflado
+  (840 vs 497) = **sobre-decoración de los 9 chunks** en apply_step_region
+  (spillover de vecinos). Modelo correcto: chunk central + spillover real
+  con decorationSeed por chunk + biome filter → **run-046**.
+- Evidencia: `runs/run-045.md`, probes `lush_pale_diag`/`clay_probe`/
+  `clay_rng_probe`/`clay_overlap`.

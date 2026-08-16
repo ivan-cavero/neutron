@@ -243,6 +243,7 @@ fn valid_tree_pos(b: BlockId) -> bool {
         BlockId::Air
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
     )
@@ -251,12 +252,15 @@ fn valid_tree_pos(b: BlockId) -> bool {
 fn is_air_or_leaves(b: BlockId) -> bool {
     matches!(
         b,
-        BlockId::Air | BlockId::OakLeaves | BlockId::DarkOakLeaves
+        BlockId::Air | BlockId::OakLeaves | BlockId::DarkOakLeaves | BlockId::PaleOakLeaves
     )
 }
 
 fn is_log(b: BlockId) -> bool {
-    matches!(b, BlockId::OakLog | BlockId::DarkOakLog)
+    matches!(
+        b,
+        BlockId::OakLog | BlockId::DarkOakLog | BlockId::PaleOakLog
+    )
 }
 
 fn is_free(b: BlockId) -> bool {
@@ -729,11 +733,42 @@ fn apply_decorators(ctx: &mut TreeCtx<'_>, decorators: &[Value]) {
         match ty {
             "minecraft:beehive" => place_beehive(ctx, dec),
             "minecraft:place_on_ground" => place_on_ground(ctx, dec),
-            // trunk_vine / leave_vine / attached_to_leaves / pale_moss: no vine /
-            // pale-moss BlockId — skip (these configs are not in the trees we place).
+            "minecraft:pale_moss" => place_pale_moss(ctx, dec),
+            // trunk_vine / leave_vine / attached_to_leaves: no vine BlockId — skip.
             _ => {}
         }
     }
+}
+
+/// Port of `PaleMossDecorator.place` (pale_hanging_moss under trunks/leaves).
+fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
+    let trunk_prob = dec["trunk_probability"].as_f64().unwrap_or(0.0) as f32;
+    let leaves_prob = dec["leaves_probability"].as_f64().unwrap_or(0.0) as f32;
+    let mut starts = Vec::new();
+    for &(tx, ty, tz) in &ctx.trunks {
+        if ctx.rng.next_f32() < trunk_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
+            starts.push((tx, ty - 1, tz));
+        }
+    }
+    for &(tx, ty, tz) in &ctx.foliage {
+        if ctx.rng.next_f32() < leaves_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
+            starts.push((tx, ty - 1, tz));
+        }
+    }
+    for (sx, sy, sz) in starts {
+        add_pale_moss_hanger(ctx, sx, sy, sz);
+    }
+}
+
+fn add_pale_moss_hanger(ctx: &mut TreeCtx<'_>, x: i32, y: i32, z: i32) {
+    let mut px = x;
+    let mut py = y;
+    let mut pz = z;
+    while ctx.region.get(px, py - 1, pz) == BlockId::Air && ctx.rng.next_f32() >= 0.5 {
+        ctx.region.set(px, py, pz, BlockId::PaleHangingMoss);
+        py -= 1;
+    }
+    ctx.region.set(px, py, pz, BlockId::PaleHangingMoss);
 }
 
 fn place_beehive(ctx: &mut TreeCtx<'_>, dec: &Value) {

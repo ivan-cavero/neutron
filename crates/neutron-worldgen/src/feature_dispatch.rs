@@ -45,14 +45,42 @@ pub fn apply_step_region(
         for cxl in 0..chunks {
             let ox0 = region.origin_x + cxl * 16;
             let oz0 = region.origin_z + czl * 16;
-            // Biome at center of this origin chunk (surface y)
             let cx = ox0 + 8;
             let cz = oz0 + 8;
+            // Collect the biomes present in this origin chunk: the surface biome
+            // plus underground cave biomes (lush_caves, dripstone, deep_dark, ...).
+            // Vanilla places the *global* FeatureSorter list and lets each placed
+            // feature's `biome` filter pick columns; we approximate by unioning
+            // the feature lists of the biomes actually present.
             let sy = surface_y(region, cx, cz).unwrap_or(64);
-            let biome_name = biome_name_at(state, cx, sy, cz);
-            let list = feature_catalog::features_at_step(&biome_name, gen_step);
+            let mut biomes: Vec<String> = Vec::new();
+            let mut push_if_new = |b: &str| {
+                if !biomes.iter().any(|x| x == b) {
+                    biomes.push(b.to_string());
+                }
+            };
+            push_if_new(&biome_name_at(state, cx, sy, cz));
+            let cols = [(0i32, 0i32), (7, 7), (-7, 7), (7, -7), (-7, -7)];
+            for &y in &[0i32, 16, 32, 48, 64, 80, 96, 112, 128] {
+                for &(dxc, dzc) in &cols {
+                    push_if_new(&biome_name_at(state, cx + dxc, y, cz + dzc));
+                }
+            }
+            // Union of feature lists, in global FeatureSorter index order.
+            let mut merged: Vec<(i32, String)> = Vec::new();
+            for b in &biomes {
+                for f in feature_catalog::features_at_step(b, gen_step) {
+                    if let Some(idx) = feature_catalog::global_feature_index(gen_step, &f) {
+                        if !merged.iter().any(|(_, s)| s == &f) {
+                            merged.push((idx, f));
+                        }
+                    }
+                }
+            }
+            merged.sort_by_key(|(i, _)| *i);
+            let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
             if list.is_empty() {
-                // fall back to primary list if climate name not in catalog
+                // fall back to primary list if no biome matched
                 place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &features);
             } else {
                 place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &list);
@@ -161,6 +189,47 @@ pub fn place_placed_feature(
                         x += ox;
                         z += oz;
                         y += oy;
+                    }
+                    "minecraft:environment_scan" => {
+                        // EnvironmentScanPlacement: scan from current y in
+                        // direction_of_search while allowed_search_condition holds
+                        // (up to max_steps), stopping at the first target_condition
+                        // match. No RNG consumed.
+                        let dir = m["direction_of_search"].as_str().unwrap_or("down");
+                        let max_steps = m["max_steps"].as_i64().unwrap_or(12) as i32;
+                        let allowed = m.get("allowed_search_condition");
+                        let target = &m["target_condition"];
+                        let true_pred = serde_json::json!({"type":"minecraft:true"});
+                        let allowed = allowed.unwrap_or(&true_pred);
+                        let mut py = y;
+                        let mut found = None;
+                        if !eval_block_predicate(region, x, py, z, allowed) {
+                            ok = false;
+                            break;
+                        }
+                        for _ in 0..max_steps {
+                            if eval_block_predicate(region, x, py, z, target) {
+                                found = Some(py);
+                                break;
+                            }
+                            py += if dir == "down" { -1 } else { 1 };
+                            if py < WORLD_BOTTOM || py > WORLD_TOP {
+                                break;
+                            }
+                            if !eval_block_predicate(region, x, py, z, allowed) {
+                                break;
+                            }
+                        }
+                        if found.is_none() && eval_block_predicate(region, x, py, z, target) {
+                            found = Some(py);
+                        }
+                        match found {
+                            Some(fy) => {
+                                y = fy;
+                                has_y = true;
+                            }
+                            None => ok = false,
+                        }
                     }
                     "minecraft:biome" => {
                         let bname = biome_name_at(state, x, y, z);
@@ -325,6 +394,26 @@ fn sample_int_provider(rng: &mut FeatureRandom, v: &Value) -> i32 {
             (a + b) / 2
         }
         Some("minecraft:constant") => obj["value"].as_i64().unwrap_or(0) as i32,
+        Some("minecraft:weighted_list") => {
+            let dist = obj.get("distribution").and_then(|d| d.as_array());
+            let Some(dist) = dist else { return 0 };
+            let total: i32 = dist
+                .iter()
+                .map(|e| e["weight"].as_i64().unwrap_or(1) as i32)
+                .sum();
+            if total <= 0 {
+                return 0;
+            }
+            let mut r = rng.next_int(total);
+            for e in dist {
+                let w = e["weight"].as_i64().unwrap_or(1) as i32;
+                if r < w {
+                    return sample_int_provider(rng, &e["data"]);
+                }
+                r -= w;
+            }
+            0
+        }
         _ => 0,
     }
 }
@@ -368,7 +457,26 @@ fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value
             if tag.ends_with("air") {
                 return b == BlockId::Air;
             }
-            true
+            is_in_tag(b, tag)
+        }
+        "minecraft:solid" => {
+            is_solid_block(region.get(x, y, z))
+        }
+        "minecraft:has_sturdy_face" => {
+            // HasSturdyFacePredicate: the block at (origin + predicate offset)
+            // must have a sturdy face in `direction`. We approximate "sturdy"
+            // with is_solid_block (full solid blocks are sturdy on all faces).
+            let off = pred["offset"].as_array();
+            let ox = off.and_then(|a| a.first()).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let oy = off.and_then(|a| a.get(1)).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let oz = off.and_then(|a| a.get(2)).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            is_solid_block(region.get(x + ox, y + oy, z + oz))
+        }
+        "minecraft:not" => {
+            !pred
+                .get("predicate")
+                .map(|p| eval_block_predicate(region, x, y, z, p))
+                .unwrap_or(false)
         }
         "minecraft:matching_blocks" => {
             let ox = pred["offset"]
@@ -439,6 +547,56 @@ fn is_dirt_tag(b: BlockId) -> bool {
     )
 }
 
+/// `BlockState.isSolid()` approximation (mirrors `blocks_motion`).
+fn is_solid_block(b: BlockId) -> bool {
+    blocks_motion(b)
+}
+
+/// Membership in a block tag (subset used by lush/pale placement predicates).
+fn is_in_tag(b: BlockId, tag: &str) -> bool {
+    let t = tag.strip_prefix("#minecraft:").unwrap_or(tag);
+    match t {
+        "air" => b == BlockId::Air,
+        "cave_vines" => matches!(b, BlockId::CaveVines | BlockId::CaveVinesPlant),
+        "dirt" => matches!(
+            b,
+            BlockId::Dirt
+                | BlockId::GrassBlock
+                | BlockId::Podzol
+                | BlockId::CoarseDirt
+                | BlockId::Mycelium
+                | BlockId::RootedDirt
+        ),
+        "moss_blocks" => matches!(b, BlockId::MossBlock | BlockId::PaleMossBlock),
+        "grass_blocks" => b == BlockId::GrassBlock,
+        "mud" => b == BlockId::Mud,
+        "base_stone_overworld" => matches!(
+            b,
+            BlockId::Stone
+                | BlockId::Granite
+                | BlockId::Diorite
+                | BlockId::Andesite
+                | BlockId::Tuff
+                | BlockId::Deepslate
+        ),
+        "moss_replaceable" => {
+            is_in_tag(b, "#minecraft:base_stone_overworld")
+                || is_in_tag(b, "#minecraft:cave_vines")
+                || is_in_tag(b, "#minecraft:dirt")
+                || is_in_tag(b, "#minecraft:mud")
+                || is_in_tag(b, "#minecraft:moss_blocks")
+                || is_in_tag(b, "#minecraft:grass_blocks")
+        }
+        "lush_ground_replaceable" => {
+            is_in_tag(b, "#minecraft:moss_replaceable")
+                || b == BlockId::Clay
+                || b == BlockId::Gravel
+                || b == BlockId::Sand
+        }
+        _ => false,
+    }
+}
+
 /// Dispatch by configured_feature.type
 fn dispatch_configured(
     rng: &mut FeatureRandom,
@@ -484,6 +642,29 @@ fn dispatch_configured(
         }
         "minecraft:ore" | "minecraft:scattered_ore" => {
             // step 6 ores still use features.rs batch
+        }
+        "minecraft:vegetation_patch" | "minecraft:waterlogged_vegetation_patch" => {
+            place_vegetation_patch(rng, region, state, x, y, z, cfg);
+        }
+        "minecraft:block_column" => {
+            place_block_column(rng, region, x, y, z, cfg);
+        }
+        "minecraft:simple_random_selector" => {
+            if let Some(features) = cfg["config"]["features"].as_array() {
+                if !features.is_empty() {
+                    let idx = rng.next_int(features.len() as i32) as usize;
+                    place_feature_ref(rng, region, state, x, y, z, &features[idx]["feature"]);
+                }
+            }
+        }
+        "minecraft:random_boolean_selector" => {
+            let cfg = &cfg["config"];
+            let feature = if rng.next_int(2) == 0 {
+                &cfg["feature_true"]
+            } else {
+                &cfg["feature_false"]
+            };
+            place_feature_ref(rng, region, state, x, y, z, feature);
         }
         _ => {
             // unknown type — no-op (log in future)
@@ -615,7 +796,207 @@ fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
             }
             None
         }
+        "minecraft:randomized_int_state_provider" => {
+            block_from_to_place(rng, &v["source"])
+        }
         _ => BlockId::from_name(v.pointer("/state/Name")?.as_str()?),
+    }
+}
+
+/// Port of `VegetationPatchFeature.place` (moss patches, pale moss patches).
+fn place_vegetation_patch(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+) {
+    let c = &cfg["config"];
+    let surface = c["surface"].as_str().unwrap_or("floor");
+    // inwards = surface direction (floor -> down, ceiling -> up).
+    let (in_dx, in_dy, in_dz) = if surface == "ceiling" {
+        (0, 1, 0)
+    } else {
+        (0, -1, 0)
+    };
+    let (out_dx, out_dy, out_dz) = (-in_dx, -in_dy, -in_dz);
+    let vertical_range = c["vertical_range"].as_i64().unwrap_or(5) as i32;
+    let extra_edge = c["extra_edge_column_chance"].as_f64().unwrap_or(0.0) as f32;
+    let extra_bottom = c["extra_bottom_block_chance"].as_f64().unwrap_or(0.0) as f32;
+    let depth_prov = &c["depth"];
+    let ground_state = block_from_to_place(rng, &c["ground_state"]);
+    let replaceable = c["replaceable"].as_str().unwrap_or("");
+    let veg_chance = c["vegetation_chance"].as_f64().unwrap_or(0.0) as f32;
+    let veg_feature = c["vegetation_feature"].clone();
+
+    let xr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
+    let zr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
+
+    let mut surface_pts: Vec<(i32, i32, i32)> = Vec::new();
+
+    for dx in -xr..=xr {
+        let is_x_edge = dx == -xr || dx == xr;
+        for dz in -zr..=zr {
+            let is_z_edge = dz == -zr || dz == zr;
+            let is_edge = is_x_edge || is_z_edge;
+            let is_corner = is_x_edge && is_z_edge;
+            let is_edge_not_corner = is_edge && !is_corner;
+            if is_corner
+                || (is_edge_not_corner && (extra_edge == 0.0 || rng.next_f32() > extra_edge))
+            {
+                continue;
+            }
+            let (mut px, mut py, mut pz) = (x + dx, y, z + dz);
+            // Scan through air inwards.
+            let mut off = 0;
+            while region.get(px, py, pz) == BlockId::Air && off < vertical_range {
+                px += in_dx;
+                py += in_dy;
+                pz += in_dz;
+                off += 1;
+            }
+            // Scan back out through solid.
+            off = 0;
+            while region.get(px, py, pz) != BlockId::Air && off < vertical_range {
+                px += out_dx;
+                py += out_dy;
+                pz += out_dz;
+                off += 1;
+            }
+            let (bx, by, bz) = (px + in_dx, py + in_dy, pz + in_dz);
+            if region.get(px, py, pz) != BlockId::Air {
+                continue;
+            }
+            if !is_solid_block(region.get(bx, by, bz)) {
+                continue;
+            }
+            let mut depth = sample_int_provider(rng, depth_prov).max(0);
+            if extra_bottom > 0.0 && rng.next_f32() < extra_bottom {
+                depth += 1;
+            }
+            // placeGround: replace replaceable blocks with ground_state.
+            let (gx0, gy0, gz0) = (bx, by, bz);
+            let (mut gx, mut gy, mut gz) = (bx, by, bz);
+            let mut placed_any = false;
+            let mut i = 0;
+            while i < depth {
+                let cur = region.get(gx, gy, gz);
+                if let Some(st) = ground_state {
+                    if st == cur {
+                        i += 1;
+                        continue;
+                    }
+                    if !is_in_tag(cur, replaceable) {
+                        placed_any = i != 0;
+                        break;
+                    }
+                    region.set(gx, gy, gz, st);
+                    placed_any = true;
+                }
+                gx += in_dx;
+                gy += in_dy;
+                gz += in_dz;
+                i += 1;
+            }
+            if placed_any {
+                surface_pts.push((gx0, gy0, gz0));
+            }
+        }
+    }
+
+    // distributeVegetation
+    for (sx, sy, sz) in surface_pts {
+        if veg_chance > 0.0 && rng.next_f32() < veg_chance {
+            let vx = sx + out_dx;
+            let vy = sy + out_dy;
+            let vz = sz + out_dz;
+            place_feature_ref(rng, region, state, vx, vy, vz, &veg_feature);
+        }
+    }
+}
+
+/// Port of `BlockColumnFeature.place` (cave vines).
+fn place_block_column(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+) {
+    let c = &cfg["config"];
+    let dir = c["direction"].as_str().unwrap_or("down");
+    let (ddx, ddy, ddz) = match dir {
+        "down" => (0, -1, 0),
+        "up" => (0, 1, 0),
+        "north" => (0, 0, -1),
+        "south" => (0, 0, 1),
+        "west" => (-1, 0, 0),
+        "east" => (1, 0, 0),
+        _ => (0, -1, 0),
+    };
+    let Some(layers) = c["layers"].as_array() else {
+        return;
+    };
+    let mut heights: Vec<i32> = Vec::new();
+    let mut total = 0;
+    for layer in layers {
+        let h = sample_int_provider(rng, &layer["height"]).max(0);
+        heights.push(h);
+        total += h;
+    }
+    if total == 0 {
+        return;
+    }
+    // Find how far the column can extend before hitting a non-allowed block.
+    let (mut nx, mut ny, mut nz) = (x + ddx, y + ddy, z + ddz);
+    let mut truncate_at = total;
+    for y in 0..total {
+        if !eval_block_predicate(region, nx, ny, nz, &c["allowed_placement"]) {
+            truncate_at = y;
+            break;
+        }
+        nx += ddx;
+        ny += ddy;
+        nz += ddz;
+    }
+    // Truncate layer heights.
+    let mut to_remove = total - truncate_at;
+    let prioritize = c["prioritize_tip"].as_bool().unwrap_or(false);
+    if prioritize {
+        let mut i = 0;
+        while i < heights.len() && to_remove > 0 {
+            let r = heights[i].min(to_remove);
+            heights[i] -= r;
+            to_remove -= r;
+            i += 1;
+        }
+    } else {
+        let mut i = heights.len();
+        while i > 0 && to_remove > 0 {
+            i -= 1;
+            let r = heights[i].min(to_remove);
+            heights[i] -= r;
+            to_remove -= r;
+        }
+    }
+    // Place layers.
+    let (mut pp_x, mut pp_y, mut pp_z) = (x, y, z);
+    for (i, layer) in layers.iter().enumerate() {
+        let count = heights[i];
+        if count == 0 {
+            continue;
+        }
+        for _ in 0..count {
+            if let Some(st) = block_from_to_place(rng, &layer["provider"]) {
+                region.set(pp_x, pp_y, pp_z, st);
+            }
+            pp_x += ddx;
+            pp_y += ddy;
+            pp_z += ddz;
+        }
     }
 }
 
@@ -657,7 +1038,10 @@ fn blocks_motion(b: BlockId) -> bool {
 }
 
 fn is_leaves(b: BlockId) -> bool {
-    matches!(b, BlockId::OakLeaves | BlockId::DarkOakLeaves)
+    matches!(
+        b,
+        BlockId::OakLeaves | BlockId::DarkOakLeaves | BlockId::PaleOakLeaves
+    )
 }
 
 fn heightmap_opaque(b: BlockId, kind: HeightmapKind) -> bool {
@@ -714,6 +1098,7 @@ pub(crate) fn biome_id_to_name(id: u8) -> &'static str {
     match id {
         x if x == biome_id::DEEP_DARK => "deep_dark",
         x if x == biome_id::DARK_FOREST => "dark_forest",
+        x if x == biome_id::PALE_GARDEN => "pale_garden",
         x if x == biome_id::PLAINS => "plains",
         x if x == biome_id::FOREST => "forest",
         x if x == biome_id::BIRCH_FOREST => "birch_forest",

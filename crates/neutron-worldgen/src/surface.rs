@@ -80,6 +80,18 @@ pub enum BlockId {
     DarkOakLeaves = 83,
     OakPlanks = 84,
     OakFence = 85,
+    MossCarpet = 86,
+    CaveVinesPlant = 87,
+    CaveVines = 88,
+    PaleOakLog = 89,
+    PaleOakLeaves = 90,
+    PaleMossBlock = 91,
+    PaleMossCarpet = 92,
+    Azalea = 93,
+    FloweringAzalea = 94,
+    HangingRoots = 95,
+    RootedDirt = 96,
+    PaleHangingMoss = 97,
 }
 
 impl BlockId {
@@ -158,6 +170,18 @@ impl BlockId {
             83 => Some(Self::DarkOakLeaves),
             84 => Some(Self::OakPlanks),
             85 => Some(Self::OakFence),
+            86 => Some(Self::MossCarpet),
+            87 => Some(Self::CaveVinesPlant),
+            88 => Some(Self::CaveVines),
+            89 => Some(Self::PaleOakLog),
+            90 => Some(Self::PaleOakLeaves),
+            91 => Some(Self::PaleMossBlock),
+            92 => Some(Self::PaleMossCarpet),
+            93 => Some(Self::Azalea),
+            94 => Some(Self::FloweringAzalea),
+            95 => Some(Self::HangingRoots),
+            96 => Some(Self::RootedDirt),
+            97 => Some(Self::PaleHangingMoss),
             _ => None,
         }
     }
@@ -242,6 +266,18 @@ impl BlockId {
             Self::DarkOakLeaves => "minecraft:dark_oak_leaves",
             Self::OakPlanks => "minecraft:oak_planks",
             Self::OakFence => "minecraft:oak_fence",
+            Self::MossCarpet => "minecraft:moss_carpet",
+            Self::CaveVinesPlant => "minecraft:cave_vines_plant",
+            Self::CaveVines => "minecraft:cave_vines",
+            Self::PaleOakLog => "minecraft:pale_oak_log",
+            Self::PaleOakLeaves => "minecraft:pale_oak_leaves",
+            Self::PaleMossBlock => "minecraft:pale_moss_block",
+            Self::PaleMossCarpet => "minecraft:pale_moss_carpet",
+            Self::Azalea => "minecraft:azalea",
+            Self::FloweringAzalea => "minecraft:flowering_azalea",
+            Self::HangingRoots => "minecraft:hanging_roots",
+            Self::RootedDirt => "minecraft:rooted_dirt",
+            Self::PaleHangingMoss => "minecraft:pale_hanging_moss",
         }
     }
 
@@ -318,6 +354,18 @@ impl BlockId {
             "oak_leaves" => Some(Self::OakLeaves),
             "oak_planks" => Some(Self::OakPlanks),
             "oak_fence" => Some(Self::OakFence),
+            "moss_carpet" => Some(Self::MossCarpet),
+            "cave_vines_plant" => Some(Self::CaveVinesPlant),
+            "cave_vines" => Some(Self::CaveVines),
+            "pale_oak_log" => Some(Self::PaleOakLog),
+            "pale_oak_leaves" => Some(Self::PaleOakLeaves),
+            "pale_moss_block" => Some(Self::PaleMossBlock),
+            "pale_moss_carpet" => Some(Self::PaleMossCarpet),
+            "azalea" => Some(Self::Azalea),
+            "flowering_azalea" => Some(Self::FloweringAzalea),
+            "hanging_roots" => Some(Self::HangingRoots),
+            "rooted_dirt" => Some(Self::RootedDirt),
+            "pale_hanging_moss" => Some(Self::PaleHangingMoss),
             _ => None,
         }
     }
@@ -395,6 +443,18 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::DarkOakLeaves => "minecraft:dark_oak_leaves",
         BlockId::OakPlanks => "minecraft:oak_planks",
         BlockId::OakFence => "minecraft:oak_fence",
+        BlockId::MossCarpet => "minecraft:moss_carpet",
+        BlockId::CaveVinesPlant => "minecraft:cave_vines_plant",
+        BlockId::CaveVines => "minecraft:cave_vines",
+        BlockId::PaleOakLog => "minecraft:pale_oak_log",
+        BlockId::PaleOakLeaves => "minecraft:pale_oak_leaves",
+        BlockId::PaleMossBlock => "minecraft:pale_moss_block",
+        BlockId::PaleMossCarpet => "minecraft:pale_moss_carpet",
+        BlockId::Azalea => "minecraft:azalea",
+        BlockId::FloweringAzalea => "minecraft:flowering_azalea",
+        BlockId::HangingRoots => "minecraft:hanging_roots",
+        BlockId::RootedDirt => "minecraft:rooted_dirt",
+        BlockId::PaleHangingMoss => "minecraft:pale_hanging_moss",
 
     }
 }
@@ -431,6 +491,9 @@ fn is_veg(name: &str) -> bool {
         || n == "lily_of_the_valley"
         || n == "pink_petals"
         || n == "moss_carpet"
+        || n == "moss_block"
+        || n == "pale_moss_block"
+        || n == "pale_moss_carpet"
         || n == "sculk"
         || n == "sculk_vein"
         || n == "sculk_sensor"
@@ -438,4 +501,9 @@ fn is_veg(name: &str) -> bool {
         || n == "sculk_shrieker"
         || n == "glow_lichen"
         || n.contains("sapling")
+        || n == "cave_vines"
+        || n == "cave_vines_plant"
+        || n == "hanging_roots"
+        || n == "rooted_dirt"
+        || n == "spore_blossom"
 }

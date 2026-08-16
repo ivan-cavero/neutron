@@ -71,6 +71,21 @@ name = "compare_worlds"
 name = "border_analysis"
 
 [[example]]
+name = "lush_pale_parity"
+
+[[example]]
+name = "lush_pale_diag"
+
+[[example]]
+name = "clay_probe"
+
+[[example]]
+name = "clay_rng_probe"
+
+[[example]]
+name = "clay_overlap"
+
+[[example]]
 name = "region_parity"
 
 [[example]]
