@@ -68,17 +68,6 @@ session.lock
 /versions/
 
 # ----- tools/ bulky runtime data (re-extract with scripts) -----
-# Vanilla server unpack + jars (GB-scale)
-tools/vanilla-extract/server-classes/
-tools/vanilla-extract/META-INF/
-tools/vanilla-extract/net/
-tools/vanilla-extract/lib/
-tools/vanilla-extract/javap/
-tools/vanilla-extract/**/*.jar
-tools/vanilla-extract/EXTRACT-STAMP.txt
-# Decompiled Java sources — reference parity data, not runtime
-tools/vanilla-extract/decompiled/**/*.jar
-
 # NBT reference vanilla server runtime
 tools/nbt-ref/vanilla1/libraries/
 tools/nbt-ref/vanilla1/versions/
@@ -94,19 +83,15 @@ tools/nbt-ref/vanilla1/whitelist.json
 tools/nbt-ref/vanilla1/usercache.json
 tools/nbt-ref/vanilla1/eula.txt
 tools/nbt-ref/vanilla1/server.properties
-tools/nbt-ref/find-real/target/
-tools/nbt-ref/**/target/
 
 # Vanilla reference server runtimes (re-extract with pregen scripts)
 tools/nbt-ref/vanilla-fresh-*/
 tools/nbt-ref/vanilla-fresh2-*/
 tools/nbt-ref/vanilla-det-*/
 
-# Java probe runtime
-tools/java-probe/bin/
-tools/java-probe/libs/
-tools/java-probe/**/*.class
-tools/java-probe/**/*.jar
+# Java probe runtime (compiled .class against vanilla jar)
+tools/worldgen-probe/bin/
+tools/worldgen-probe/**/*.class
 
 # ----- Tests e2e artifacts -----
 tests/**/target/
