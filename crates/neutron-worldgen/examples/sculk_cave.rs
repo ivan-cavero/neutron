@@ -1,7 +1,7 @@
 // Dump pre-sculk cave around (98,-43,-23) and replay one ChargeCursor patch.
 // cargo run -p neutron-worldgen --example sculk_cave --release
 //
-// Writes tools/java-probe/cave-98-43-23.txt for ProbeSculkPatch.
+// Writes tools/worldgen-probe/cave-98-43-23.txt for ProbeSculkPatch.
 
 use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
 use neutron_world::nbt::{compound_get, read_nbt};

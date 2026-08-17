@@ -1,6 +1,6 @@
 // Vein-feature differential: run sculk_vein for origin (96,-32) on the
 // vanilla-stripped 3x3 world, recording gate decisions + per-attempt events.
-// Writes tools/java-probe/vein-gate-96--32.txt for the Java probe.
+// Writes tools/worldgen-probe/vein-gate-96--32.txt for the Java probe.
 // cargo run -p neutron-worldgen --example sculk_veintrace --release
 
 use neutron_worldgen::sculk;
@@ -39,7 +39,7 @@ fn main() {
                 }
             }
         }
-        std::fs::write("tools/java-probe/cave-overlay-3x3.txt", s).expect("write world dump");
+        std::fs::write("tools/worldgen-probe/cave-overlay-3x3.txt", s).expect("write world dump");
     }
 
     // Gate decisions from neutron's biome source (or vanilla 3D biomes).
@@ -70,7 +70,7 @@ fn main() {
     for &(x, y, z, ok) in &gate {
         s.push_str(&format!("{x} {y} {z} {ok}\n"));
     }
-    std::fs::write("tools/java-probe/vein-gate-96--32.txt", s).expect("write gate file");
+    std::fs::write("tools/worldgen-probe/vein-gate-96--32.txt", s).expect("write gate file");
 
     // Also export the patch-feature gate for the Java flow probe.
     let pgate = sculk::probe_patch_gate_origin(ox0, oz0, seed, 1, &g.state);
@@ -79,7 +79,7 @@ fn main() {
         ps.push_str(&format!("{x} {y} {z} {ok}
 "));
     }
-    std::fs::write("tools/java-probe/patch-gate-96--32.txt", ps).expect("write patch gate");
+    std::fs::write("tools/worldgen-probe/patch-gate-96--32.txt", ps).expect("write patch gate");
 
     let (events, faces) = sculk::probe_vein_origin_traced(&mut region, ox0, oz0, seed, 0, &gate);
     let placed = events.iter().filter(|e| e.starts_with("PLACED")).count();

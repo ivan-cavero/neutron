@@ -1,4 +1,4 @@
-// Print our FeatureSorter step-9 indices (vs golden index 17 for
+// Print our FeatureSorter step-9 indices (vs reference index 17 for
 // dark_forest_vegetation from ProbeVegPos).
 fn main() {
     let list = neutron_worldgen::feature_catalog::features_per_step_at(9);

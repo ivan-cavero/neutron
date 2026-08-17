@@ -1,4 +1,4 @@
-// Compare Rust noise core against Java probe ground truth (tools/java-probe).
+// Compare Rust noise core against Java probe ground truth (tools/worldgen-probe).
 // Params extracted verbatim from the vanilla datapack JSONs.
 use neutron_worldgen::noise::NormalNoise;
 use neutron_worldgen::rng::Xoroshiro128;

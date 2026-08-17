@@ -1,4 +1,4 @@
-// Replay the dumped pre-sculk cave (tools/java-probe/cave-98-43-23.txt) through
+// Replay the dumped pre-sculk cave (tools/worldgen-probe/cave-98-43-23.txt) through
 // neutron's ChargeCursor patch, matching ProbeSculkPatch tick-by-tick.
 // cargo run -p neutron-worldgen --example sculk_replay --release [dump] [seed]
 
@@ -48,7 +48,7 @@ fn parse_name(n: &str) -> BlockId {
 fn main() {
     let dump = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "tools/java-probe/cave-98-43-23.txt".to_string());
+        .unwrap_or_else(|| "tools/worldgen-probe/cave-98-43-23.txt".to_string());
     let seed: i64 = std::env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or(1);
 
     // Dump covers chunks 5..7 x -3..-1 → region center (6,-2) radius 1.

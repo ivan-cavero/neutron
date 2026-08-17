@@ -7,7 +7,7 @@
 //! - [`BlendedNoise`]: `base_3d_noise` / old 3D terrain
 //!
 //! Positional Perlin uses MD5-seeded octaves; legacy Perlin consumes a shared
-//! RNG (BlendedNoise). Verify against `tools/java-probe`.
+//! RNG (BlendedNoise). Verify against `tools/worldgen-probe`.
 //!
 //! Copyright (c) 2026 Neutron Contributors -- MIT License
 

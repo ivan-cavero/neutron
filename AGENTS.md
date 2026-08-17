@@ -77,7 +77,7 @@ cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
 cargo run --release -p neutron-worldgen --example region_parity -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example clay_overlap -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example lush_pale_parity -- 424242 0 0 1 <region_dir>
-python tools/nbt-ref/multiseed.py # multi-seed parity sweep
+tools/vanilla-hash/generate-all.sh  # multi-seed reference extraction (vanilla/paper/folia)
 ```
 
 ## 4. Project structure
@@ -91,9 +91,12 @@ crates/
   neutron-sim/        # light/redstone/fluids/spawns test engines (not wired)
   neutron-bench-server/ # criterion
 tools/
-  java-probe/         # Java verification probes vs vanilla jar
-  nbt-ref/            # vanilla reference worlds + multiseed.py (runtimes gitignored)
-  vanilla-extract/    # decompiled vanilla sources (local, gitignored)
+  chunk-dump/         # dump chunk NBT from .mca regions (debug)
+  mc-decompiler/      # download + decompile server jars (vineflower, own workspace)
+  nbt-ref/            # vanilla reference worlds (runtimes gitignored)
+  vanilla-hash/       # extract reference chunk hashes from vanilla/paper/folia servers
+  vanilla-parity/     # generate neutron chunk hashes + stats (compare via vanilla-hash)
+  worldgen-probe/     # Java probes vs vanilla jar (worldgen internals; .class gitignored)
 tests/e2e-server/     # bot E2E
 runs/                 # run history (run-NNN.md) + README with template
 docs/prompts/         # phase prompt templates (from ROADMAP.md)
@@ -114,7 +117,7 @@ docs/prompts/         # phase prompt templates (from ROADMAP.md)
 - **Metrics**: startup `Done (Xs)!` regex · join timestamps · cps via Chunky (vanilla/
   Paper) or own counter · TPS via spark/endpoint · RAM RSS by OS.
 - **Reference worlds**: `tools/nbt-ref/vanilla-fresh-*` (gitignored, re-extract with
-  `multiseed.py`/pregen scripts).
+  `generate-all.sh`/pregen scripts).
 
 ## 5.5 Parallel agents & concurrency
 
@@ -173,7 +176,8 @@ roles to their own tools — the roles are what matter, not the names.
   branch or label it clearly in the message (e.g. "WIP: ...").
 - Always run `cargo test --workspace` before committing.
 - **Never commit**: `target/`, `bench/results/` dumps, vanilla runtimes
-  (`tools/nbt-ref/vanilla-*/`), jars, `tools/vanilla-extract/` extract, `logs/`, `tmp*`.
+  (`tools/nbt-ref/vanilla-*/`), jars, decompiled sources (`tools/mc-decompiler/output/`),
+  `tools/worldgen-probe/bin/` (compiled `.class`), `logs/`, `tmp*`.
 - A PASS in a run file requires blind-critic evidence. Builder-verified work is labeled
   "builder-verified", never PASS.
 - When in doubt about a bar or a boundary, ask the human — do not improvise a new bar.

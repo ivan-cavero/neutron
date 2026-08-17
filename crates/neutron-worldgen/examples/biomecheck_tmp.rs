@@ -64,6 +64,6 @@ fn main() {
             }
         }
     }
-    std::fs::write("tools/java-probe/deep-dark-quarts.txt", out).unwrap();
+    std::fs::write("tools/worldgen-probe/deep-dark-quarts.txt", out).unwrap();
     println!("written quarts");
 }

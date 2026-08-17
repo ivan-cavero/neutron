@@ -150,7 +150,7 @@ mod tests {
         assert_ne!(rng.next_int(16), swapped.next_int(16));
     }
 
-    /// Ground truth: `tools/java-probe/src/ProbeWorldgenRandom.java` vs 26.2 jar.
+    /// Ground truth: `tools/worldgen-probe/src/ProbeWorldgenRandom.java` vs 26.2 jar.
     /// WorldgenRandom wraps Xoroshiro; nextLong/nextDouble use BitRandomSource
     /// (two `next(bits)`), not a raw xoroshiro nextLong.
     #[test]
