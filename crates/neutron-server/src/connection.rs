@@ -109,8 +109,15 @@ async fn run_reader(
     let mut player_uuid: Option<uuid::Uuid> = None;
 
     loop {
-        // Read more data from TCP.
-        let n = read_half.read_buf(&mut input_buf).await?;
+        // Read more data from TCP. A read error (e.g. connection reset / RST)
+        // is a disconnect too — break so the cleanup below always runs.
+        let n = match read_half.read_buf(&mut input_buf).await {
+            Ok(n) => n,
+            Err(e) => {
+                tracing::debug!(addr = %addr, error = %e, "read error (client disconnected)");
+                break;
+            }
+        };
         if n == 0 {
             // Client disconnected.
             break;

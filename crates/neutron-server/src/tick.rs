@@ -34,16 +34,38 @@ pub async fn run_tick_loop(
     writer_tx: mpsc::Sender<crate::connection::OutgoingPacket>,
 ) {
     let tick_duration = Duration::from_millis(50); // 20 TPS
+    let mut tps_last_tick: u64 = 0;
+    let mut tps_last_time = std::time::Instant::now();
 
     tracing::info!("tick loop started (20 TPS)");
 
+    // interval() reschedules each tick relative to the previous deadline, so a
+    // slow body or coarse OS timer cannot drag the long-run rate below 20 TPS
+    // (sleep() drifted to ~16 TPS on Windows: tokio timers resolve to the next
+    // ~15.6ms boundary, 62ms instead of 50ms).
+    let mut tick_timer = tokio::time::interval(tick_duration);
+    tick_timer.tick().await; // first tick fires immediately
+
     loop {
-        tokio::time::sleep(tick_duration).await;
+        tick_timer.tick().await;
 
         let tick = server
             .tick_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             + 1;
+
+        // Report measured tick rate every 200 ticks (10 s at 20 TPS).
+        if tick % 200 == 0 {
+            let elapsed = tps_last_time.elapsed().as_secs_f64();
+            let tps = (tick - tps_last_tick) as f64 / elapsed.max(1e-9);
+            tracing::info!(
+                tick,
+                tps = format!("{:.2}", tps),
+                "tick rate"
+            );
+            tps_last_tick = tick;
+            tps_last_time = std::time::Instant::now();
+        }
 
         // Send KeepAlive every 600 ticks.
         if tick % KEEPALIVE_INTERVAL == 0 {
