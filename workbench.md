@@ -25,7 +25,8 @@
 
 ## Round log
 - R1 P1: builder timeout waiting on azalea release build (30 min) → LEAD killed orphans (7 neutron_server @300% CPU), fixed pre-existing libc build break (server.rs:175 used libc::kill without dep), rebuilt (9.55s warm), critic blind PASS 6/6.
-- R1 P2/P3/P4: in progress (parallel worktrees).
+- R1 Wave 2 (parallel worktrees): FAILED — harness worktree isolation did not bind children to their worktrees (all 3 wrote to the main checkout; 0 files in the worktrees). P2 produced non-compiling code on main, P3/P4 interleaved. LEAD stopped the workflow, stashed the mess (stash@{0}), removed worktrees. Lesson: P2/P3 share main.rs → SERIALIZE. Relaunching serial, no worktrees, strict per-piece file ownership.
+- R2 P2: in progress (serial).
 
 ## Open questions for the human
 - (none)
