@@ -2,7 +2,7 @@ import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 
 /**
- * Golden values for WorldgenRandom wrapping XoroshiroRandomSource.
+ * Reference values for WorldgenRandom wrapping XoroshiroRandomSource.
  * nextLong/nextDouble go through BitRandomSource (two next(bits) calls).
  */
 public class ProbeWorldgenRandom {
