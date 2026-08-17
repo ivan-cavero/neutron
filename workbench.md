@@ -95,6 +95,8 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R1 B1b FIX: DONE — commit 272e30b (connection.rs: read error → break, cleanup always runs; both cleanup paths confirmed in log before timeout). LEAD committed the builder's artifact + inspected diff (matches prescribed fix). → **B1b critic launched** (reproduce RST disconnect, 241 tests).
 - R1 B1b CRITIC #1: died on tool typo (`rea`). Resume unavailable → **fallback critic relaunched** (5c9cf5ed).
 - R2 A2 CRITIC #1: timed out at 30 min (no partial output; scope included live runs). Worktree clean at 519bc2e, history intact → **tight-scope critic relaunched** (331afe8b; logic-only, crafted JSON pairs, no live benchmark).
+- R2 A2 CRITIC #2 (tight scope): **PASS** — hand-verified real-history math: startup Δ −3687.8 (−21.1%) winner correct; join p50 0.0 unmeasured → Δ N/A no winner; TPS/CPS all-unmeasured sections skipped; crafted pairs (regression/improvement/absent-field/near-tie) all correct, no panics. A2 DONE (3 rounds incl. fix).
+- R3 A3 (builder, bench-refactor): in flight — exit-101 bevy_log panic fix, root gate wrapper, times measured.
 
 ## Open questions for the human
 
