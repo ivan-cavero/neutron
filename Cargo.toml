@@ -10,5 +10,5 @@ members = [
     "crates/neutron-sim",
     "tools/vanilla-hash",
     "tools/vanilla-parity",
-    "tools/chunk-dump/dump-chunk",
+    "tools/chunk-dump",
 ]

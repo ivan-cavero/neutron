@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# generate-all.sh — Generate golden data for multiple seeds and server types.
+# generate-all.sh — Generate reference data for multiple seeds and server types.
 #
 # Usage: ./generate-all.sh [seed1 seed2 ...]
 # If no seeds are given, uses default set: 12345 67890 11111 99999 42
 #
-# Requires: cargo, java
+# Requires: cargo, java, and server jars in bench/servers/ (gitignored):
+#   server-vanilla.jar, server-paper.jar, server-folia.jar
 
 set -euo pipefail
 
@@ -22,8 +23,8 @@ fi
 
 SERVERS=(vanilla)
 # Only include paper/folia if their jars exist
-[ -f "$SERVERS_DIR/paper/server.jar" ] && SERVERS+=(paper)
-[ -f "$SERVERS_DIR/folia/server.jar" ] && SERVERS+=(folia)
+[ -f "$SERVERS_DIR/server-paper.jar" ] && SERVERS+=(paper)
+[ -f "$SERVERS_DIR/server-folia.jar" ] && SERVERS+=(folia)
 
 # Check java
 if ! command -v java &>/dev/null; then
@@ -39,7 +40,7 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 
-echo "=== Golden Data Generation ==="
+echo "=== Reference Data Generation ==="
 echo "Seeds: ${SEEDS[*]}"
 echo "Servers: ${SERVERS[*]}"
 echo "Output: $OUTPUT_DIR"
@@ -48,20 +49,21 @@ echo ""
 cd "$REPO_ROOT"
 
 # Build once
-echo "--- Building golden-data ---"
-cargo build -p golden-data --release
+echo "--- Building vanilla-hash ---"
+cargo build -p vanilla-hash --release
 echo ""
 
 FAILED=0
 for server in "${SERVERS[@]}"; do
     for seed in "${SEEDS[@]}"; do
-        OUTPUT_FILE="$OUTPUT_DIR/${server}-${seed}.json"
+        OUTPUT_FILE="$OUTPUT_DIR/${server}-${seed}-blocks.json"
         echo "--- Generating: server=$server seed=$seed ---"
 
-        if cargo run -p golden-data --release -- \
+        if cargo run -p vanilla-hash --release -- \
             --seed "$seed" \
             --server "$server" \
             --servers-dir "$SERVERS_DIR" \
+            --hash-mode blocks \
             --output "$OUTPUT_FILE"; then
             echo "  OK: $OUTPUT_FILE"
         else

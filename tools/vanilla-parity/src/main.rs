@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Neutron Contributors -- MIT License
 //
-// vanilla-parity: Compare Neutron-generated chunks against vanilla golden data.
+// vanilla-parity: Compare Neutron-generated chunks against vanilla reference data.
 //
-// Two comparison modes:
+// Two hash modes:
 // 1. Raw hash: hash the block/biome arrays directly (for neutron-vs-neutron consistency)
 // 2. NBT hash: serialize to vanilla-compatible NBT sections and hash (for vanilla parity)
 //
-// Also generates a "neutron golden data" JSON that can be compared with the
-// vanilla golden data using `vanilla-hash compare`.
+// The `--generate-neutron` flag emits a "neutron reference data" JSON that can be
+// compared against a vanilla reference JSON with `vanilla-hash compare`.
 
 #![forbid(unsafe_code)]
 
@@ -22,17 +22,14 @@ use neutron_world::nbt::ussr_nbt::owned::{Compound, List, Nbt, Tag};
 use neutron_world::nbt::{compound_insert, write_nbt};
 use neutron_worldgen::generator::SECTIONS_PER_COLUMN;
 use neutron_worldgen::{BlockId, ChunkGenerator};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use xxhash_rust::xxh3::xxh3_64;
 
-/// Compare Neutron-generated chunks against vanilla golden data.
+/// Generate Neutron chunks and stats; `--generate-neutron` emits reference data
+/// JSON comparable against a vanilla reference via `vanilla-hash compare`.
 #[derive(Parser, Debug)]
 #[command(name = "vanilla-parity", version, about)]
 struct Cli {
-    /// Path to golden data JSON file (vanilla).
-    #[arg(long)]
-    golden: Option<PathBuf>,
-
     /// World seed.
     #[arg(long)]
     seed: i64,
@@ -41,7 +38,7 @@ struct Cli {
     #[arg(long)]
     output: Option<PathBuf>,
 
-    /// Generate neutron golden data JSON for later comparison.
+    /// Generate neutron reference data JSON for later comparison.
     #[arg(long)]
     generate_neutron: Option<PathBuf>,
 
@@ -54,36 +51,9 @@ struct Cli {
     detail: usize,
 }
 
-/// Golden data JSON format (matching vanilla-hash tool output).
-#[derive(Debug, Deserialize)]
-struct GoldenData {
-    seed: i64,
-    server: String,
-    version: String,
-    #[allow(dead_code)]
-    generated_at: String,
-    #[allow(dead_code)]
-    hash_mode: Option<String>,
-    chunks: Vec<GoldenChunk>,
-    total_chunks: usize,
-}
-
-/// A single chunk entry from golden data.
-#[derive(Debug, Deserialize)]
-struct GoldenChunk {
-    #[allow(dead_code)]
-    region_x: i32,
-    #[allow(dead_code)]
-    region_z: i32,
-    chunk_x: i32,
-    chunk_z: i32,
-    hash: String,
-    size_bytes: usize,
-}
-
-/// Neutron golden data output format.
+/// Neutron reference data output format.
 #[derive(Serialize)]
-struct NeutronGoldenData {
+struct NeutronData {
     seed: i64,
     server: String,
     version: String,
@@ -93,7 +63,7 @@ struct NeutronGoldenData {
     total_chunks: usize,
 }
 
-/// A chunk entry in neutron golden data.
+/// A chunk entry in neutron reference data.
 #[derive(Serialize)]
 struct NeutronChunkInfo {
     region_x: i32,
@@ -147,7 +117,7 @@ fn main() -> Result<()> {
             let stats = compute_chunk_stats(cx, cz, &chunk, &raw_hash, &nbt_hash);
             all_stats.push(stats);
 
-            // For neutron golden data output
+            // For neutron reference data output
             let region_x = cx.div_euclid(32);
             let region_z = cz.div_euclid(32);
             let nbt_bytes = serialize_chunk_to_nbt_bytes(&chunk);
@@ -218,14 +188,9 @@ fn main() -> Result<()> {
         }
     }
 
-    // Compare with golden data if provided
-    if let Some(golden_path) = &cli.golden {
-        compare_with_golden(golden_path, &neutron_chunks)?;
-    }
-
-    // Generate neutron golden data if requested
+    // Generate neutron reference data if requested
     if let Some(output_path) = &cli.generate_neutron {
-        let neutron_golden = NeutronGoldenData {
+        let neutron_data = NeutronData {
             seed: cli.seed,
             server: "neutron".to_string(),
             version: "26.2".to_string(),
@@ -234,20 +199,18 @@ fn main() -> Result<()> {
             chunks: neutron_chunks,
             total_chunks: all_stats.len(),
         };
-        let json = serde_json::to_string_pretty(&neutron_golden)?;
+        let json = serde_json::to_string_pretty(&neutron_data)?;
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)?;
         }
         fs::write(output_path, &json)
             .with_context(|| format!("Failed to write {}", output_path.display()))?;
-        println!("\nNeutron golden data saved to {}", output_path.display());
-        if let Some(ref golden_path) = cli.golden {
-            println!(
-                "Compare with: cargo run -p vanilla-hash -- compare --left {} --right {}",
-                golden_path.display(),
-                output_path.display()
-            );
-        }
+        println!("\nNeutron reference data saved to {}", output_path.display());
+        println!(
+            "Compare against a vanilla reference with: cargo run -p vanilla-hash -- compare \\
+             --left <vanilla-reference.json> --right {}",
+            output_path.display()
+        );
     }
 
     // Write output report
@@ -256,70 +219,6 @@ fn main() -> Result<()> {
         fs::write(output_path, &report)
             .with_context(|| format!("Failed to write {}", output_path.display()))?;
         println!("\nReport saved to {}", output_path.display());
-    }
-
-    Ok(())
-}
-
-/// Compare neutron chunks with golden data.
-fn compare_with_golden(golden_path: &PathBuf, neutron_chunks: &[NeutronChunkInfo]) -> Result<()> {
-    let content = fs::read_to_string(golden_path)
-        .with_context(|| format!("Failed to read {}", golden_path.display()))?;
-    let golden: GoldenData = serde_json::from_str(&content)?;
-
-    println!("\n=== Comparison with Golden Data ===");
-    println!(
-        "Golden: {} chunks from {} (seed={})",
-        golden.total_chunks, golden.server, golden.seed
-    );
-
-    // Build lookup map for golden data
-    let golden_map: HashMap<(i32, i32), &GoldenChunk> = golden
-        .chunks
-        .iter()
-        .map(|c| ((c.chunk_x, c.chunk_z), c))
-        .collect();
-
-    let mut matching = 0;
-    let mut different = 0;
-    let mut missing_in_golden = 0;
-    let mut only_in_golden = 0;
-
-    // Check neutron chunks against golden
-    for nc in neutron_chunks {
-        match golden_map.get(&(nc.chunk_x, nc.chunk_z)) {
-            Some(gc) => {
-                if gc.hash == nc.hash {
-                    matching += 1;
-                } else {
-                    different += 1;
-                }
-            }
-            None => {
-                missing_in_golden += 1;
-            }
-        }
-    }
-
-    // Check for golden chunks not in neutron
-    for gc in &golden.chunks {
-        if !neutron_chunks
-            .iter()
-            .any(|nc| nc.chunk_x == gc.chunk_x && nc.chunk_z == gc.chunk_z)
-        {
-            only_in_golden += 1;
-        }
-    }
-
-    println!("Matching NBT hashes:    {}", matching);
-    println!("Different NBT hashes:   {}", different);
-    println!("Missing in golden:      {}", missing_in_golden);
-    println!("Only in golden:         {}", only_in_golden);
-
-    if different > 0 {
-        println!("\nNote: NBT hash differences are expected because the serialization format");
-        println!("differs between vanilla and neutron-worldgen. Use 'vanilla-hash compare'");
-        println!("for a proper NBT-level comparison after writing compatible .mca files.");
     }
 
     Ok(())

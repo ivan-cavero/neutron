@@ -1,9 +1,10 @@
-# generate-all.ps1 — Generate golden data for multiple seeds and server types.
+# generate-all.ps1 — Generate reference data for multiple seeds and server types.
 #
 # Usage: .\generate-all.ps1 [seed1 seed2 ...]
 # If no seeds are given, uses default set: 12345 67890 11111 99999 42
 #
-# Requires: cargo, java
+# Requires: cargo, java, and server jars in bench/servers/ (gitignored):
+#   server-vanilla.jar, server-paper.jar, server-folia.jar
 
 param(
     [int[]]$Seeds = @(12345, 67890, 11111, 99999, 42)
@@ -18,8 +19,8 @@ $ServersDir = Join-Path $RepoRoot "bench" "servers"
 
 # Determine available servers
 $Servers = @("vanilla")
-if (Test-Path (Join-Path $ServersDir "paper" "server.jar")) { $Servers += "paper" }
-if (Test-Path (Join-Path $ServersDir "folia" "server.jar")) { $Servers += "folia" }
+if (Test-Path (Join-Path $ServersDir "server-paper.jar")) { $Servers += "paper" }
+if (Test-Path (Join-Path $ServersDir "server-folia.jar")) { $Servers += "folia" }
 
 # Check prerequisites
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
@@ -33,7 +34,7 @@ if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
-Write-Host "=== Golden Data Generation ===" -ForegroundColor Cyan
+Write-Host "=== Reference Data Generation ===" -ForegroundColor Cyan
 Write-Host "Seeds: $($Seeds -join ', ')"
 Write-Host "Servers: $($Servers -join ', ')"
 Write-Host "Output: $OutputDir"
@@ -42,21 +43,22 @@ Write-Host ""
 Set-Location $RepoRoot
 
 # Build once
-Write-Host "--- Building golden-data ---" -ForegroundColor Yellow
-cargo build -p golden-data --release
+Write-Host "--- Building vanilla-hash ---" -ForegroundColor Yellow
+cargo build -p vanilla-hash --release
 Write-Host ""
 
 $Failed = 0
 foreach ($server in $Servers) {
     foreach ($seed in $Seeds) {
-        $OutputFile = Join-Path $OutputDir "$server-$seed.json"
+        $OutputFile = Join-Path $OutputDir "$server-$seed-blocks.json"
         Write-Host "--- Generating: server=$server seed=$seed ---" -ForegroundColor Yellow
 
         try {
-            cargo run -p golden-data --release -- `
+            cargo run -p vanilla-hash --release -- `
                 --seed $seed `
                 --server $server `
                 --servers-dir $ServersDir `
+                --hash-mode blocks `
                 --output $OutputFile
             Write-Host "  OK: $OutputFile" -ForegroundColor Green
         } catch {

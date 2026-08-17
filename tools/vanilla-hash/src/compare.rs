@@ -24,7 +24,7 @@ pub struct ChunkEntry {
 /// The top-level vanilla-hash JSON structure.
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
-pub struct GoldenData {
+pub struct ReferenceData {
     pub seed: i64,
     pub server: String,
     pub version: String,
@@ -64,17 +64,17 @@ pub struct ChunkComparisonDetail {
     pub result: ChunkComparison,
 }
 
-/// Load golden data from a JSON file.
-pub fn load_golden_data(path: &Path) -> Result<GoldenData> {
+/// Load reference data from a JSON file.
+pub fn load_reference_data(path: &Path) -> Result<ReferenceData> {
     let content =
         fs::read_to_string(path).with_context(|| format!("Failed to read {}", path.display()))?;
-    let data: GoldenData = serde_json::from_str(&content)
+    let data: ReferenceData = serde_json::from_str(&content)
         .with_context(|| format!("Failed to parse {}", path.display()))?;
     Ok(data)
 }
 
 /// Compare two vanilla-hash files and return a report.
-pub fn compare(left: &GoldenData, right: &GoldenData) -> ComparisonReport {
+pub fn compare(left: &ReferenceData, right: &ReferenceData) -> ComparisonReport {
     // Build lookup maps: (region_x, region_z, chunk_x, chunk_z) -> hash
     let left_map: HashMap<(i32, i32, i32, i32), &ChunkEntry> = left
         .chunks
@@ -165,7 +165,7 @@ pub fn compare(left: &GoldenData, right: &GoldenData) -> ComparisonReport {
 
 /// Print the comparison report to stdout.
 pub fn print_report(report: &ComparisonReport) {
-    println!("=== Golden Data Comparison ===");
+    println!("=== Reference Data Comparison ===");
     println!("Matching chunks:      {}", report.matching);
     println!("Different chunks:     {}", report.different);
     println!("Missing in right:     {}", report.missing_in_right);

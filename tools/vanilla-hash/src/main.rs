@@ -35,7 +35,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Extract golden data from a running server.
+    /// Extract reference data from a running server.
     Extract {
         /// World seed to use.
         #[arg(long)]
@@ -74,13 +74,13 @@ enum Commands {
         hash_mode: HashMode,
     },
 
-    /// Compare two golden data JSON files.
+    /// Compare two reference data JSON files.
     Compare {
-        /// Path to the first golden data JSON file (left/baseline).
+        /// Path to the first reference data JSON file (left/baseline).
         #[arg(long)]
         left: PathBuf,
 
-        /// Path to the second golden data JSON file (right/test).
+        /// Path to the second reference data JSON file (right/test).
         #[arg(long)]
         right: PathBuf,
     },
@@ -120,9 +120,9 @@ impl std::fmt::Display for HashMode {
     }
 }
 
-/// Golden data output format.
+/// Reference data output format.
 #[derive(serde::Serialize)]
-struct GoldenData {
+struct ReferenceData {
     seed: i64,
     server: String,
     version: String,
@@ -181,7 +181,7 @@ fn main() -> Result<()> {
     }
 }
 
-/// Extract golden data from a server.
+/// Extract reference data from a server.
 fn cmd_extract(
     seed: i64,
     server: ServerType,
@@ -286,7 +286,7 @@ fn cmd_extract(
         ServerType::Folia => "26.2",
     };
 
-    let golden = GoldenData {
+    let reference = ReferenceData {
         seed,
         server: server.to_string(),
         version: version.to_string(),
@@ -301,10 +301,10 @@ fn cmd_extract(
         fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create output dir {}", parent.display()))?;
     }
-    let json = serde_json::to_string_pretty(&golden)?;
+    let json = serde_json::to_string_pretty(&reference)?;
     fs::write(&output, &json).with_context(|| format!("Failed to write {}", output.display()))?;
 
-    tracing::info!(path = %output.display(), "saved golden data");
+    tracing::info!(path = %output.display(), "saved reference data");
 
     // Cleanup
     if !keep_tmp {
@@ -317,16 +317,16 @@ fn cmd_extract(
 
     println!(
         "Extracted {} chunks to {}",
-        golden.total_chunks,
+        reference.total_chunks,
         output.display()
     );
     Ok(())
 }
 
-/// Compare two golden data JSON files.
+/// Compare two reference data JSON files.
 fn cmd_compare(left: PathBuf, right: PathBuf) -> Result<()> {
-    let left_data = compare::load_golden_data(&left)?;
-    let right_data = compare::load_golden_data(&right)?;
+    let left_data = compare::load_reference_data(&left)?;
+    let right_data = compare::load_reference_data(&right)?;
 
     println!(
         "Left:  {} ({} chunks, seed={}, server={})",
@@ -377,7 +377,7 @@ fn setup_server(
     seed: i64,
 ) -> Result<PathBuf> {
     // Copy server jar
-    let jar_source = servers_dir.join(server_type.to_string()).join("server.jar");
+    let jar_source = servers_dir.join(format!("server-{}.jar", server_type));
     if !jar_source.exists() {
         bail!("Server jar not found at {}", jar_source.display());
     }

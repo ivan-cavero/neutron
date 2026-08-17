@@ -5,6 +5,6 @@ edition = "2021"
 description = "Dump vanilla chunk NBT structure from .mca region files"
 
 [dependencies]
-neutron-world = { path = "../../../crates/neutron-world" }
+neutron-world = { path = "../../crates/neutron-world" }
 ussr-nbt = "0.2"
 anyhow = "1"
