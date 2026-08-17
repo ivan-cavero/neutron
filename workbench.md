@@ -88,6 +88,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R2 A1 CRITIC: **PASS** — re-proved whole bar from clean state: fresh vanilla re-download sha1/size == Mojang manifest, folia/paper sha256 == live API, pumpkin PE = AMD64, offline/fallback/network-error paths bounded, hostile inputs clean, tree clean. A1 done (2 rounds).
 - R1 B1 (finalize): DONE — 4 commits on ivan-cavero/server-worldgen: 6444286 (tick interval 20 TPS), 89550c4 (e2e join harness, zero decode errors), 7d45404 (status_ping.py), 2199b05 (REVIEW.md). `cargo test --workspace` 241/241 EXIT=0. → **B1 blind critic launched**.
 - R2 A2 (builder, bench-refactor): in flight (versioned report history + compare over history).
+- R2 A2 (builder): DONE — commits c0876c6 (history.rs, versioned reports under results/history/) + 16fb597 (compare over history, per-metric deltas + winners). 6 tests green, real runs produced history entries (vanilla-26.2-join-storm-small-1-*.json), ws_root anchoring verified from any cwd. → **A2 blind critic launched**.
 
 ## Open questions for the human
 
