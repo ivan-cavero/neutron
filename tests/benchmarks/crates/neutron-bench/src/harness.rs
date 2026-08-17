@@ -17,6 +17,7 @@ use sysinfo::System;
 /// Run a single benchmark scenario.
 pub async fn run_scenario(
     server_type: ServerType,
+    version: &str,
     size: Size,
     scenario: Scenario,
     host: &str,
@@ -85,6 +86,7 @@ pub async fn run_scenario(
         // Start server
         let mut proc = server::start(
             server_type,
+            version,
             &server_dir,
             &run_id,
             bot_count,

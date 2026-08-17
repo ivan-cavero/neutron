@@ -18,6 +18,7 @@ pub struct ServerProcess {
 /// Start a server process.
 pub fn start(
     server_type: ServerType,
+    version: &str,
     server_dir: &Path,
     run_id: &str,
     max_players: usize,
@@ -65,20 +66,11 @@ pub fn start(
             let jar_name = "server.jar";
             let jar_path = server_dir.join(jar_name);
             if !jar_path.exists() {
-                // Try tests/benchmarks/servers/<type>/server.jar
-                let bench_jar = bench_dir.join("servers").join(server_type.label()).join(jar_name);
-                if bench_jar.exists() {
-                    fs::copy(&bench_jar, &jar_path)?;
-                } else {
-                    eyre::bail!(
-                        "Server jar not found: {} or {}",
-                        jar_path.display(),
-                        bench_jar.display()
-                    );
-                }
+                let src = resolve_managed(&bench_dir, server_type, version)?;
+                fs::copy(&src, &jar_path)?;
             }
 
-            Command::new("java")
+            java_command()
                 .args([
                     "-Xms2G",
                     "-Xmx2G",
@@ -101,12 +93,8 @@ pub fn start(
             };
             let exe_path = server_dir.join(exe_name);
             if !exe_path.exists() {
-                let bench_exe = bench_dir.join("servers").join("pumpkin").join(exe_name);
-                if bench_exe.exists() {
-                    fs::copy(&bench_exe, &exe_path)?;
-                } else {
-                    eyre::bail!("Pumpkin binary not found: {}", bench_exe.display());
-                }
+                let src = resolve_managed(&bench_dir, server_type, version)?;
+                fs::copy(&src, &exe_path)?;
             }
 
             Command::new(&exe_path)
@@ -196,4 +184,90 @@ impl Drop for ServerProcess {
     fn drop(&mut self) {
         let _ = self.stop();
     }
+}
+
+/// Resolve the managed binary for `<type>/<version>` (multi-version layout
+/// `servers/<type>/<version>/<binary>`), falling back to the legacy single-jar
+/// layout `servers/<type>/<binary>`. Errors name the missing file and the
+/// download command.
+fn resolve_managed(bench_dir: &Path, server_type: ServerType, version: &str) -> Result<PathBuf> {
+    let label = server_type.label();
+    let bin = server_type.binary_name();
+    let versioned = bench_dir.join("servers").join(label).join(version).join(bin);
+    let legacy = bench_dir.join("servers").join(label).join(bin);
+    if versioned.exists() {
+        Ok(versioned)
+    } else if legacy.exists() {
+        Ok(legacy)
+    } else {
+        eyre::bail!(
+            "Server binary not found: {} (or legacy {}).
+  Download it with: neutron-bench servers download {} {}",
+            versioned.display(),
+            legacy.display(),
+            label,
+            version
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp_bench() -> PathBuf {
+        std::env::temp_dir().join(format!("nb-resolve-{}", std::process::id()))
+    }
+
+    #[test]
+    fn resolve_prefers_versioned_over_legacy() {
+        let bench = tmp_bench();
+        let versioned = bench.join("servers/vanilla/26.2/server.jar");
+        let legacy = bench.join("servers/vanilla/server.jar");
+        std::fs::create_dir_all(versioned.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&versioned, b"v").unwrap();
+        std::fs::write(&legacy, b"l").unwrap();
+
+        assert_eq!(
+            resolve_managed(&bench, ServerType::Vanilla, "26.2").unwrap(),
+            versioned
+        );
+
+        // Legacy single-jar layout still works when the versioned jar is absent.
+        std::fs::remove_file(&versioned).unwrap();
+        assert_eq!(
+            resolve_managed(&bench, ServerType::Vanilla, "26.2").unwrap(),
+            legacy
+        );
+
+        // Missing jar -> actionable error naming the file and the download command.
+        std::fs::remove_file(&legacy).unwrap();
+        let err = resolve_managed(&bench, ServerType::Vanilla, "99.9")
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("servers/vanilla/99.9/server.jar")
+                || err.contains("servers\\vanilla\\99.9\\server.jar")
+        );
+        assert!(err.contains("neutron-bench servers download vanilla 99.9"));
+
+        let _ = std::fs::remove_dir_all(&bench);
+    }
+}
+
+/// `$JAVA_HOME/bin/java` when set and present (Java 25 is required to run 26.x
+/// jars), falling back to `java` on PATH.
+fn java_command() -> Command {
+    if let Some(home) = std::env::var_os("JAVA_HOME") {
+        let java = std::path::PathBuf::from(home).join("bin").join(if cfg!(target_os = "windows") {
+            "java.exe"
+        } else {
+            "java"
+        });
+        if java.exists() {
+            return Command::new(java);
+        }
+    }
+    Command::new("java")
 }
