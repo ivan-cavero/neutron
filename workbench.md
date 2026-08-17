@@ -2,6 +2,7 @@
 
 > Live round log. LEAD: pi (main checkout). Two parallel tracks in Orca worktrees.
 > Bar is untouchable; builders never grade themselves; critics are fresh per round.
+> **SESSION PAUSED 17 Aug 2026 (user leaving; resume on another PC) — see runs/run-047.md RESUME BOUNDARY.**
 
 ## Goal
 
@@ -54,12 +55,13 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 
 | Unit | Scope | Verdict | Evidence | Artifact |
 | --- | --- | --- | --- | --- |
-| A1 | Multi-version server provisioning (`servers download <type> <version>`, Mojang/Paper API + local fallback, central dir, ref-extract decoupled) | — | | |
-| A2 | Versioned report history + `compare` over history | — | | |
-| A3 | Perf: root build works, build/runtime time before/after | — | | |
-| B1 | Server review + bot smoke test (boot, join, chunks, TPS) | — | | |
-| B2 | Reference extraction (Java 25) + baseline re-measure (424242/12345/777) | — | | |
-| B3 | Worldgen: 777 regression isolate + lush/pale recall ≥80% | — | | |
+| A1 | Multi-version server provisioning (`servers download <type> <version>`, Mojang/Paper API + local fallback, central dir, ref-extract decoupled) | ✅ PASS (R2) | critic: sha1/sha256 vs live APIs, pumpkin PE=AMD64, hostile inputs clean | 36c13a4, 3b7b0ff |
+| A2 | Versioned report history + `compare` over history | ✅ PASS (R3) | hand-verified deltas; missing/tie never win; 10 tests | c0876c6, 16fb597, 519bc2e |
+| A3 | Perf: root build works, build/runtime time before/after, exit-101 panic fix | ⏳ IN FLIGHT (relaunch 3cb4f881; died on wall/stream ×2) | | |
+| B1 | Server review + bot smoke test (boot, join, chunks, TPS) | ✅ PASS (6/6) | Done 0.0s, ping, 21 chunks, TPS 20.00, 241/241 | 6444286, 89550c4, 7d45404, 2199b05 |
+| B1b | Disconnect cleanup (critic-found defect) | ✅ PASS | RST → online 0 live; 241/241 | 272e30b |
+| B2 | Reference extraction (Java 25) + baseline re-measure (424242/12345/777) | ⏳ IN FLIGHT (fc381ce1; no artifacts yet) | | |
+| B3 | Worldgen: 777 regression isolate + lush/pale recall ≥80% | ⏳ PENDING (needs B2) | | |
 
 ## Round log
 

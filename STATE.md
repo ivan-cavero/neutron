@@ -2,74 +2,80 @@
 
 > Read this first every session. Answers: where are we, what is the bar, what is the next action.
 > History lives in `runs/` — this file only holds the current state.
+> **Updated 17 Aug 2026** — dual-track session paused (user switching PCs). Resume
+> boundary + full detail: `runs/run-047.md`. Worktree state: main contains ALL PASSED
+> work (merged); branches `ivan-cavero/bench-refactor` + `ivan-cavero/server-worldgen` pushed.
 
 ## Current phase
 
-**F2d run-046 — cross-chunk input model (WorldGenRegion)** — ACTIVE
+**Dual-track (run-047)**: Track A = benchmark harness refactor; Track B = server review +
+worldgen parity. Session paused mid-loop; next action = resume units below.
 
-## Bar (human decision R43 — mechanism parity)
+## Bars (unchanged)
 
-Same seeds/streams/algorithms as vanilla. Deterministic phases → 100% block match multi-seed;
-vegetation/sculk → same RNG stream 1:1. **Do not edit measurement examples/tests to pass.**
+- **Worldgen (human decision R43 — mechanism parity)**: same seeds/streams/algorithms as
+  vanilla. Deterministic phases → 100% block match multi-seed; vegetation/sculk → same RNG
+  stream 1:1. Do not edit measurement examples/tests to pass.
+- **Benchmarks (run-047 Track A)**: multi-version provisioning (`servers download
+  <type> <version>`, Mojang/Paper API + fallback), versioned report history + compare over
+  history, builds green in both workspaces, build/runtime measured.
 
-### run-046 acceptance criteria (intact)
+## Track A — benchmarks (`tests/benchmarks/`, own nightly workspace)
 
-| # | Criterion | Latest (R3, 16 Aug, LEAD-measured) | Status |
-| --- | --- | --- | --- |
-| 1 | clay 424242 → ~497 (lush/pale missing ≤20%, recall ≥80%) | clay **466** ✓ · recall **62.94%** (missing 37%) | ❌ |
-| 2 | border diffs 12345 down ≥30% (from 20.89pp baseline) | **-7.5%** (19.33pp) | ❌ |
-| 3 | REGION 424242 ≥97.28% · 12345 ≥97.75% (no regression) | **97.38%** ✓ · **97.94%** ✓ | ✅ |
-| 4 | `cargo test --workspace` green · worldgen 59/59 | **241/241 green** | ✅ |
-| 5 | **Multi-seed ratchet: 777 no regression** | **96.29%** (baseline ~99.4%) | ❌ REGRESSION |
-
-## Last measurement (16 Aug 2026, `region_parity`/`clay_overlap`/`lush_pale_parity`)
-
-| seed | REGION 3×3 ALL | Note |
+| Piece | Status | Commits (merged to main) |
 | --- | --- | --- |
-| 12345 (6,-2) | 97.94% | bar ✓ |
-| 424242 (0,0) | 97.38% | bar ✓ |
-| 777 (0,0) | **96.29%** | **regression vs ~99.4% — investigate first** |
+| A1 provisioning (multi-version, arch-aware pumpkin, fallback) | ✅ blind-critic PASS | 36c13a4, 3b7b0ff |
+| A2 versioned report history + compare over history | ✅ blind-critic PASS | c0876c6, 16fb597, 519bc2e |
+| A3 perf: exit-101 bevy_log panic fix, root gate, measured times | ⏳ NEXT | — |
+| A4 smoothing | ⏳ after A3 | — |
 
-## Next action
+## Track B — server + worldgen (`crates/neutron-server`, `crates/neutron-worldgen`)
 
-1. **Isolate the 777 regression**: U5 cross-chunk model vs R3 tree changes (bisect by stash).
-2. Port missing lush/pale placement: **MossVegetationFeature + CaveVineFeature** (moss_block 1218,
-   cave_vines 735 missing) — the biggest recall gap.
-3. Launch the **blind critic for R3** (working tree committed as `91862d4`, critic pending).
+| Piece | Status | Commits (merged to main) |
+| --- | --- | --- |
+| B1 server review (boot/ping/join/TPS) | ✅ blind-critic PASS (6/6) | 6444286, 89550c4, 7d45404, 2199b05 |
+| B1b disconnect cleanup (critic-found defect) | ✅ blind-critic PASS | 272e30b |
+| B2 fresh 26.2 reference extraction + baseline re-measure (424242/12345/777) | ⏳ NEXT | — |
+| B3 worldgen: 777 regression + lush/pale recall ≥80% | ⏳ after B2 | — |
+| B4 smoothing | ⏳ after B3 | — |
 
-## Open gaps (short list — details in runs/)
+## Server status (critic-verified 17 Aug, worktree build)
 
-- Lush/pale recall 62.94% (bar ≥80%): moss_block, cave_vines, clay placement
-- Border diffs: neighbor decoration order still off (decoration region model)
-- 777 regression: unisolated
-- Mineshaft postProcess (rails, cobweb), other structures (villages, stronghold) — deferred
-- F3 FASE D (golden suite posicional + survival) — not started
+- 26.2 protocol: boots (`Done (0.0s)!`), valid status ping, protocol-level join → Play +
+  real chunks (21, zero decode errors), TPS **20.00** via `tokio::time::interval(50ms)`
+  (was 16.07 with sleep), disconnect cleanup on RST fixed. `cargo test --workspace` 241/241.
+- Evidence + open items: `crates/neutron-server/REVIEW.md`.
+
+## Worldgen measurement status (IMPORTANT)
+
+- **No reference worlds on disk** (`tools/nbt-ref/` has only README.md) → the run-046
+  numbers (97.38%, 96.29% for 777, clay 466, lush/pale recall 62.94%) are **unverifiable**.
+  B2 must re-extract fresh 26.2 references (Java 25 installed at
+  `C:\Program Files\Eclipse Adoptium\jdk-25.0.4.7-hotspot`) and re-measure before B3 work.
+- Known gaps from run-046 (targets for B3): 777 regression isolate; lush/pale recall
+  (moss_block 1218, cave_vines 735 missing); border decoration order; mineshaft/structures deferred.
 
 ## System status
 
-- **Server**: 26.2 protocol joinable (Configuration + known packs), serves real chunks.
-  Spawn = heightmap (0,0). `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8`
-- **Tests**: 241 passed (worldgen 59, protocol 47, world 39, sim 65, server 24, integration 7)
-- **F3**: FASE A (light/redstone/fluids/spawns) ✅ · B (comparators/repeaters/observers/hoppers/TNT) ✅ ·
-  C (pistons/QC/block swapping) ✅ · D pending
+- **Tests**: 241 passed (worldgen 59, protocol 47, world 39, sim 65, server 24, integration 7).
+- **Server**: `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8`.
+- **F3**: FASE A ✅ B ✅ C ✅ D pending (not started).
 
 ## History (pointers — full details in each run file)
 
 | Runs | Phase | Outcome |
 | --- | --- | --- |
-| run-000..001 | F0 harness | ✅ |
-| run-002..006 | F1/F2/F2d early | ✅ baseline |
-| run-007..023 | F2d R3-R23 | terrain/density/surface/ores |
-| run-024..032 | F2d R24-R32 | RNG, ores, sculk, trees |
-| run-033..043 | F2d R33-R43 | sculk patches; R43 = new bar (mechanism parity) |
+| run-000..043 | F0→F2d | harness → parity baseline → mechanism parity bar (R43) |
 | run-044 | mechanism parity T1-T3 | ✅ aquifer/surface/sculk (blind-critic PASS) |
 | run-045 | lush/pale dispatch | recall 11→49.6%; cross-chunk model isolated |
-| run-046 | cross-chunk input model | **ACTIVE** — R3 committed, critic pending |
+| run-046 | cross-chunk input model | U1 PASS; U5 active (777 regression unverified; critic pending on R3) |
+| run-047 | dual-track: benchmarks + server/worldgen | **ACTIVE — PAUSED for PC switch** |
 
 ## Key docs
 
 - `AGENTS.md` — how we work (bar, gauntlet loop, tools)
 - `ROADMAP.md` — phases, bars, prompt templates in `docs/prompts/`
 - `workbench.md` — live round log for the active run
-- `crates/neutron-worldgen/WORLDGEN.md` — worldgen freeze, metrics, gaps
-- `crates/neutron-worldgen/WORLDGEN-PIPELINE.md` — pipeline + findings
+- `runs/run-047.md` — current run file with RESUME BOUNDARY
+- `crates/neutron-worldgen/WORLDGEN.md`, `WORLDGEN-PIPELINE.md`
+- `crates/neutron-server/REVIEW.md` — server review evidence
