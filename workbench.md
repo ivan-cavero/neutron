@@ -94,6 +94,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R2 A2 FIX: DONE — commit 519bc2e (reporter.rs +97/-16: EPS, is_measured, winner_index, delta_str; 4 new tests; 10 passed; re-run compare shows blemishes gone, real winners intact). → **A2 R2 critic launched**.
 - R1 B1b FIX: DONE — commit 272e30b (connection.rs: read error → break, cleanup always runs; both cleanup paths confirmed in log before timeout). LEAD committed the builder's artifact + inspected diff (matches prescribed fix). → **B1b critic launched** (reproduce RST disconnect, 241 tests).
 - R1 B1b CRITIC #1: died on tool typo (`rea`). Resume unavailable → **fallback critic relaunched** (5c9cf5ed).
+- R2 A2 CRITIC #1: timed out at 30 min (no partial output; scope included live runs). Worktree clean at 519bc2e, history intact → **tight-scope critic relaunched** (331afe8b; logic-only, crafted JSON pairs, no live benchmark).
 
 ## Open questions for the human
 
