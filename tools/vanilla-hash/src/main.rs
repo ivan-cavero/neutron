@@ -390,8 +390,8 @@ fn cmd_extract_all(
 
     let repo_root = find_repo_root()?;
     let servers_dir = servers_dir.unwrap_or_else(|| repo_root.join("bench").join("servers"));
-    let output_dir = output_dir
-        .unwrap_or_else(|| repo_root.join("tools").join("vanilla-hash").join("hashes"));
+    let output_dir =
+        output_dir.unwrap_or_else(|| repo_root.join("tools").join("vanilla-hash").join("hashes"));
     fs::create_dir_all(&output_dir)
         .with_context(|| format!("Failed to create {}", output_dir.display()))?;
 
