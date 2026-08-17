@@ -97,6 +97,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R2 A2 CRITIC #1: timed out at 30 min (no partial output; scope included live runs). Worktree clean at 519bc2e, history intact → **tight-scope critic relaunched** (331afe8b; logic-only, crafted JSON pairs, no live benchmark).
 - R2 A2 CRITIC #2 (tight scope): **PASS** — hand-verified real-history math: startup Δ −3687.8 (−21.1%) winner correct; join p50 0.0 unmeasured → Δ N/A no winner; TPS/CPS all-unmeasured sections skipped; crafted pairs (regression/improvement/absent-field/near-tie) all correct, no panics. A2 DONE (3 rounds incl. fix).
 - R3 A3 (builder, bench-refactor): in flight — exit-101 bevy_log panic fix, root gate wrapper, times measured.
+- R3 A3: first launch died on stream interruption (2 min in, no changes; tree clean) → **fallback relaunched** (3cb4f881).
 
 ## Open questions for the human
 
