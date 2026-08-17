@@ -13,17 +13,19 @@
 
 **Baseline (measured by LEAD, pre-loop)**:
 - `cargo build --release --manifest-path bench/Cargo.toml` from root: **FAILS** (azalea build.rs panics: requires nightly; rust-toolchain.toml not picked up from root cwd). 1:01 min elapsed to failure.
-- Execution not measurable: `bench/servers/` contains only README.md (no jars).
+- Execution not measurable: `bench/servers/` contained only README.md (no jars).
+- After P1: benchmarks release build works from `tests/benchmarks/` cwd (9.55s with warm cache, 52 MB binary); root build from root still fails on azalea toolchain unless cd'd (documented cwd-based build).
 
 | Unit | Piece | Round | Verdict | Evidence | Artifact |
 |------|-------|-------|---------|----------|----------|
-| P1 | Relayout bench/ → tests/benchmarks/ | — | pending | | |
-| P2 | Server provisioning (download + fallback, central dir, ref-extract decoupled) | — | pending | | |
-| P3 | Versioned report history + compare over history | — | pending | | |
-| P4 | Perf: root build works, build time improved, startup measured | — | pending | | |
+| P1 | Relayout bench/ → tests/benchmarks/ | 1 | **PASS** | critic: worldgen 59/59 (378s), release build fresh binary, 32 renames, docs clean grep | commit 9f8b3e4 |
+| P2 | Server provisioning (download + fallback, central dir, ref-extract decoupled) | 1 | pending | | |
+| P3 | Versioned report history + compare over history | 1 | pending | | |
+| P4 | Perf: root build works, build time improved, startup measured | 1 | pending | | |
 
 ## Round log
-- (none yet)
+- R1 P1: builder timeout waiting on azalea release build (30 min) → LEAD killed orphans (7 neutron_server @300% CPU), fixed pre-existing libc build break (server.rs:175 used libc::kill without dep), rebuilt (9.55s warm), critic blind PASS 6/6.
+- R1 P2/P3/P4: in progress (parallel worktrees).
 
 ## Open questions for the human
 - (none)
