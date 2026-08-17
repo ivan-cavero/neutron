@@ -132,7 +132,7 @@ async fn resolve_url(client: &Client, server_type: ServerType, version: &str) ->
     match server_type {
         ServerType::Vanilla => resolve_vanilla(client, version).await,
         ServerType::Paper | ServerType::Folia => resolve_paper(client, server_type, version).await,
-        ServerType::Pumpkin => resolve_pumpkin(client).await,
+        ServerType::Pumpkin => resolve_pumpkin(client, version).await,
     }
 }
 
@@ -268,7 +268,7 @@ struct GhAsset {
     browser_download_url: String,
 }
 
-async fn resolve_pumpkin(client: &Client) -> Result<Resolved> {
+async fn resolve_pumpkin(client: &Client, version: &str) -> Result<Resolved> {
     let releases: Vec<GhRelease> = client
         .get(PUMPKIN_RELEASES)
         .query(&[("per_page", "5")])
@@ -285,9 +285,10 @@ async fn resolve_pumpkin(client: &Client) -> Result<Resolved> {
     match hit {
         Some((release, asset)) => {
             println!(
-                "  pumpkin nightly {}: {}",
-                release.tag_name, asset.name
+                "  pumpkin: requested version '{version}' maps to the nightly release '{}'",
+                release.tag_name
             );
+            println!("  asset: {}", asset.name);
             Ok(Resolved {
                 url: asset.browser_download_url.clone(),
                 size: Some(asset.size),
@@ -295,28 +296,38 @@ async fn resolve_pumpkin(client: &Client) -> Result<Resolved> {
             })
         }
         None => eyre::bail!(
-            "Pumpkin publishes no release binaries (the Pumpkin-MC/Pumpkin repo has no \
-             releases; nightly binaries are GitHub Actions artifacts that require auth). \
-             Build from source (https://github.com/Pumpkin-MC/Pumpkin) and place the \
-             binary at servers/pumpkin/<version>/{}",
+            "no Pumpkin release asset for {}/{}: the Pumpkin-MC/Pumpkin nightly release \
+             only ships X64/ARM64 binaries for Linux/macOS/Windows. Build from source \
+             (https://github.com/Pumpkin-MC/Pumpkin) and place the binary at \
+             servers/pumpkin/<version>/{}",
+            std::env::consts::ARCH,
+            std::env::consts::OS,
             if cfg!(target_os = "windows") { "pumpkin.exe" } else { "pumpkin" }
         ),
     }
 }
 
+/// Pumpkin's asset arch/OS labels for this host (e.g. `X64-Windows`); None when
+/// this platform has no upstream binary.
+fn pumpkin_target() -> Option<(String, String)> {
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "X64",
+        "aarch64" => "ARM64",
+        _ => return None,
+    };
+    let os = match std::env::consts::OS {
+        "windows" => "Windows",
+        "linux" => "Linux",
+        "macos" => "macOS",
+        _ => return None,
+    };
+    Some((arch.to_string(), os.to_string()))
+}
+
 fn platform_matches(name: &str) -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        name.contains("Windows")
-    }
-    #[cfg(target_os = "linux")]
-    {
-        name.contains("Linux")
-    }
-    #[cfg(target_os = "macos")]
-    {
-        name.contains("macOS") || name.contains("Darwin")
-    }
+    pumpkin_target()
+        .map(|(arch, os)| name.contains(&arch) && name.contains(&os))
+        .unwrap_or(false)
 }
 
 // --- verification ---
