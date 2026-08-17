@@ -2,7 +2,9 @@ mod config;
 mod diskio;
 mod harness;
 mod hardware;
+mod history;
 mod metrics;
+mod provision;
 mod rcon;
 mod reporter;
 mod server;
@@ -39,6 +41,10 @@ enum Commands {
     Compare(CompareArgs),
     /// Generate markdown report from JSON
     Report(ReportArgs),
+    /// Provision and inspect server jars (multi-version layout servers/<type>/<version>/)
+    Servers(ServersArgs),
+    /// Inspect versioned report history (results/history/)
+    History(HistoryArgs),
 }
 
 #[derive(Parser)]
@@ -62,6 +68,11 @@ struct RunArgs {
     /// Server port
     #[arg(long, default_value_t = 25565)]
     port: u16,
+
+    /// Server version (resolves servers/<type>/<version>/server.jar;
+    /// falls back to the legacy servers/<type>/server.jar layout)
+    #[arg(long, default_value = "26.2")]
+    version: String,
 
     /// Number of iterations per scenario
     #[arg(short, long, default_value_t = 5)]
@@ -100,6 +111,43 @@ struct ReportArgs {
     file: String,
 }
 
+#[derive(Parser)]
+struct HistoryArgs {
+    #[command(subcommand)]
+    command: HistoryCommand,
+}
+
+#[derive(Subcommand)]
+enum HistoryCommand {
+    /// List past runs sorted by time (newest first) with key metrics
+    List,
+}
+
+#[derive(Parser)]
+struct ServersArgs {
+    #[command(subcommand)]
+    command: ServersCommand,
+}
+
+#[derive(Subcommand)]
+enum ServersCommand {
+    /// Download a server jar into servers/<type>/<version>/server.jar
+    Download {
+        /// Server type
+        #[arg(value_enum)]
+        server: ServerType,
+        /// Server version (e.g. 26.2)
+        version: String,
+        /// Skip the network; copy from the NEUTRON_BENCH_SERVERS_FALLBACK cache dir
+        #[arg(long)]
+        offline: bool,
+    },
+    /// List downloaded server jars
+    List,
+    /// Show presence/validity of server jars
+    Status,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -122,6 +170,7 @@ async fn main() -> Result<()> {
 
                 harness::run_scenario(
                     args.server,
+                    &args.version,
                     args.size,
                     *scenario,
                     &args.host,
@@ -144,6 +193,20 @@ async fn main() -> Result<()> {
         Commands::Report(args) => {
             reporter::generate_markdown(&args.file)?;
         }
+        Commands::Servers(args) => match args.command {
+            ServersCommand::Download {
+                server,
+                version,
+                offline,
+            } => {
+                provision::download(server, &version, offline).await?;
+            }
+            ServersCommand::List => provision::list()?,
+            ServersCommand::Status => provision::status()?,
+        },
+        Commands::History(args) => match args.command {
+            HistoryCommand::List => history::list()?,
+        },
     }
 
     Ok(())

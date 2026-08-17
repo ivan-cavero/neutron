@@ -24,10 +24,17 @@ cargo build --release
 > tests/benchmarks/Cargo.toml` fails: rustup picks up the root toolchain
 > (stable) and azalea's build script aborts with "requires nightly Rust".
 
-Server jars are **gitignored** — download them yourself (see `servers/README.md`).
-The harness looks for `servers/<type>/server.jar` (vanilla/paper/folia) and
-`servers/pumpkin/pumpkin` (or `.exe` on Windows); if missing it bails out with
-a clear error before starting the benchmark.
+Server jars are **gitignored** — provision them with the harness itself:
+
+```bash
+cargo run --release -p neutron-bench -- servers download vanilla 26.2
+cargo run --release -p neutron-bench -- servers list
+```
+
+Jars land in the multi-version layout `servers/<type>/<version>/server.jar`
+(`servers/pumpkin/<version>/pumpkin`). The legacy single-jar layout
+(`servers/<type>/server.jar`) still works. If a jar is missing, `neutron-bench
+run` bails out naming the missing file and the exact download command.
 
 ## Quick start
 
@@ -75,11 +82,11 @@ tests/benchmarks/
 │           ├── reporter.rs       # JSON + Markdown output
 │           └── hardware.rs       # Hardware detection
 │
-├── servers/                      # Server binaries (gitignored)
-│   ├── vanilla/server.jar
-│   ├── paper/server.jar
-│   ├── folia/server.jar
-│   └── pumpkin/pumpkin
+├── servers/                      # Server binaries (gitignored, multi-version)
+│   ├── vanilla/26.2/server.jar     #   via `servers download <type> <version>`
+│   ├── paper/26.2/server.jar
+│   ├── folia/26.2/server.jar
+│   └── pumpkin/<version>/pumpkin
 │
 ├── results/                      # Output: JSON + Markdown
 └── logs/                         # Per-run logs
@@ -92,6 +99,7 @@ tests/benchmarks/
 ```bash
 neutron-bench run \
   --server <vanilla|paper|folia|pumpkin> \
+  --version <26.2> \
   --size <small|medium|large> \
   [--scenario <join-storm|distributed|movement|spread|chunk-gen>] \
   [--host 127.0.0.1] \
@@ -107,6 +115,7 @@ neutron-bench run \
 | Parameter | Default | Description |
 | --- | --- | --- |
 | `--server` | *(required)* | Server type |
+| `--version` | `26.2` | Server version (resolves `servers/<type>/<version>/server.jar`) |
 | `--size` | *(required)* | Size: small(10), medium(100), large(1000) |
 | `--scenario` | all | Specific scenario to run |
 | `--runs` | 5 | Iterations per scenario |
@@ -115,6 +124,19 @@ neutron-bench run \
 
 `--results-dir` and `--log-dir` are resolved relative to the workspace root
 (`tests/benchmarks/`); absolute paths are used as-is.
+
+### `neutron-bench servers`
+
+```bash
+neutron-bench servers download <vanilla|paper|folia|pumpkin> <version> [--offline]
+neutron-bench servers list
+neutron-bench servers status
+```
+
+Downloads into `servers/<type>/<version>/server.jar` from the official sources
+(Mojang version manifest for vanilla; PaperMC downloads service for paper/folia;
+GitHub releases for pumpkin). `--offline` (or an unreachable host) copies from
+the `NEUTRON_BENCH_SERVERS_FALLBACK` cache dir instead. See `servers/README.md`.
 
 ### `neutron-bench compare`
 
@@ -197,22 +219,22 @@ Summary table + per-run detail, written to `results/<id>.md`.
 ## Servers
 
 ### vanilla
-- **Binary:** `servers/vanilla/server.jar`
-- **Runtime:** `java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui`
+- **Binary:** `servers/vanilla/<version>/server.jar` (legacy: `servers/vanilla/server.jar`)
+- **Runtime:** `$JAVA_HOME/bin/java -Xms2G -Xmx2G -XX:+AlwaysPreTouch -jar server.jar nogui` (Java 25 for 26.x)
 - **Config:** auto-generated `server.properties`
 
 ### paper
-- **Binary:** `servers/paper/server.jar`
+- **Binary:** `servers/paper/<version>/server.jar`
 - **Runtime:** same JVM args as vanilla
 - **Notes:** includes spark for TPS. Rate limit ~15/s → bots with throttle.
 
 ### folia
-- **Binary:** `servers/folia/server.jar`
+- **Binary:** `servers/folia/<version>/server.jar`
 - **Runtime:** same JVM args
 - **Notes:** threaded regions for scale.
 
 ### pumpkin
-- **Binary:** `servers/pumpkin/pumpkin` (or `.exe`)
+- **Binary:** `servers/pumpkin/<version>/pumpkin` (or `.exe`)
 - **Runtime:** native, no JVM
 - **Config:** auto-generated `config.toml`
 

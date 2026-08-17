@@ -17,6 +17,7 @@ use sysinfo::System;
 /// Run a single benchmark scenario.
 pub async fn run_scenario(
     server_type: ServerType,
+    version: &str,
     size: Size,
     scenario: Scenario,
     host: &str,
@@ -85,6 +86,7 @@ pub async fn run_scenario(
         // Start server
         let mut proc = server::start(
             server_type,
+            version,
             &server_dir,
             &run_id,
             bot_count,
@@ -260,10 +262,13 @@ pub async fn run_scenario(
     let aggregate = build_aggregate(&run_details, scenario);
 
     let output = serde_json::json!({
+        "schema_version": 1,
+        "neutron_bench_version": env!("CARGO_PKG_VERSION"),
+        "timestamp": timestamp,
         "benchmark_id": benchmark_id,
         "server": {
             "type": server_label,
-            "version": "26.2",
+            "version": version,
         },
         "scenario": scenario_label,
         "size": size_label,
@@ -297,6 +302,13 @@ pub async fn run_scenario(
         results_path.display(),
         md_path.display()
     );
+
+    // Versioned history report: results/history/<server>-<version>-<scenario>-<size>-<runs>-<timestamp>.json
+    let history_name = crate::history::report_filename(
+        server_label, version, scenario_label, size_label, runs, &timestamp,
+    );
+    let history_path = crate::history::write_report(&history_name, &output)?;
+    println!("  History: {}", history_path.display());
 
     Ok(())
 }

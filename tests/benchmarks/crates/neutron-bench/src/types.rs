@@ -85,4 +85,18 @@ impl ServerType {
     pub fn is_java(self) -> bool {
         matches!(self, ServerType::Vanilla | ServerType::Paper | ServerType::Folia)
     }
+
+    /// File name of the server binary in the managed `servers/` layout.
+    pub fn binary_name(self) -> &'static str {
+        match self {
+            ServerType::Vanilla | ServerType::Paper | ServerType::Folia => "server.jar",
+            ServerType::Pumpkin => {
+                if cfg!(target_os = "windows") {
+                    "pumpkin.exe"
+                } else {
+                    "pumpkin"
+                }
+            }
+        }
+    }
 }
