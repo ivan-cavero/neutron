@@ -89,6 +89,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R1 B1 (finalize): DONE — 4 commits on ivan-cavero/server-worldgen: 6444286 (tick interval 20 TPS), 89550c4 (e2e join harness, zero decode errors), 7d45404 (status_ping.py), 2199b05 (REVIEW.md). `cargo test --workspace` 241/241 EXIT=0. → **B1 blind critic launched**.
 - R2 A2 (builder, bench-refactor): in flight (versioned report history + compare over history).
 - R2 A2 (builder): DONE — commits c0876c6 (history.rs, versioned reports under results/history/) + 16fb597 (compare over history, per-metric deltas + winners). 6 tests green, real runs produced history entries (vanilla-26.2-join-storm-small-1-*.json), ws_root anchoring verified from any cwd. → **A2 blind critic launched**.
+- R1 B1 CRITIC: **PASS** — all 6 criteria met (boot Done marker 0.0s, status ping valid, real join to Play + chunks, independent TPS 20.00 no drift, 241/241 tests, REVIEW.md honest). Refutation found ONE real defect (doesn't fail bar as written): **disconnect state leak** — `run_reader` `?` on read error skips `remove_player`; RST leaves dead players in map → status ping reports stale `online: 4` with zero clients. → **B1b fix builder launched** (reproduce → fix → re-verify, both clean + forced disconnect).
 
 ## Open questions for the human
 
