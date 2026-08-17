@@ -2,6 +2,7 @@ mod config;
 mod diskio;
 mod harness;
 mod hardware;
+mod history;
 mod metrics;
 mod provision;
 mod rcon;
@@ -42,6 +43,8 @@ enum Commands {
     Report(ReportArgs),
     /// Provision and inspect server jars (multi-version layout servers/<type>/<version>/)
     Servers(ServersArgs),
+    /// Inspect versioned report history (results/history/)
+    History(HistoryArgs),
 }
 
 #[derive(Parser)]
@@ -106,6 +109,18 @@ struct CompareArgs {
 struct ReportArgs {
     /// JSON file to generate report from
     file: String,
+}
+
+#[derive(Parser)]
+struct HistoryArgs {
+    #[command(subcommand)]
+    command: HistoryCommand,
+}
+
+#[derive(Subcommand)]
+enum HistoryCommand {
+    /// List past runs sorted by time (newest first) with key metrics
+    List,
 }
 
 #[derive(Parser)]
@@ -188,6 +203,9 @@ async fn main() -> Result<()> {
             }
             ServersCommand::List => provision::list()?,
             ServersCommand::Status => provision::status()?,
+        },
+        Commands::History(args) => match args.command {
+            HistoryCommand::List => history::list()?,
         },
     }
 
