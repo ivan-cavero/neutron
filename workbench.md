@@ -98,6 +98,8 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R2 A2 CRITIC #2 (tight scope): **PASS** — hand-verified real-history math: startup Δ −3687.8 (−21.1%) winner correct; join p50 0.0 unmeasured → Δ N/A no winner; TPS/CPS all-unmeasured sections skipped; crafted pairs (regression/improvement/absent-field/near-tie) all correct, no panics. A2 DONE (3 rounds incl. fix).
 - R3 A3 (builder, bench-refactor): in flight — exit-101 bevy_log panic fix, root gate wrapper, times measured.
 - R3 A3: first launch died on stream interruption (2 min in, no changes; tree clean) → **fallback relaunched** (3cb4f881).
+- R1 B1b CRITIC (fallback): **PASS** — fix minimal (+9/-2), RST repro live: online 0 → join → 1 → taskkill /F → cleanup fires → 0; rapid cycle clean; 241/241 tests; tree clean at 272e30b. **B1 (server review) fully DONE.**
+- R3 B2 (builder, server-worldgen): in flight — fresh 26.2 reference extraction (424242/12345/777) + baseline re-measure (region_parity/clay_overlap/lush_pale_parity). Resume-from-disk design (jars/worlds gitignored; if wall hits, next builder continues from disk).
 
 ## Open questions for the human
 
