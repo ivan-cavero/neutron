@@ -1,591 +1,515 @@
-//! E2E test for the Neutron server.
+//! E2E test for the Neutron server — Minecraft 26.2 (protocol 776).
 //!
-//! Starts the server, connects a raw TCP client, performs the login handshake,
-//! receives chunks, simulates movement, and reports timing metrics.
+//! Two modes:
+//!   e2e-test join [--port N] [--duration SECS] [--spawn <server-binary>]
+//!       Full protocol-level login: handshake -> login -> configuration ->
+//!       play. Reaches the Play state and receives real level-chunk data.
+//!       Reports timing metrics and a keepalive-cadence TPS estimate.
+//!   e2e-test status [--port N]
+//!       Server-list status ping (26.2), prints raw bytes + decoded JSON.
 //!
-//! Usage:
-//!   cargo run --manifest-path tests/e2e-server/Cargo.toml [-- <server-path>]
+//! Uses the `neutron-protocol` crate for framing and the typed Handshake /
+//! LoginStart packets; packet IDs are the 26.2 values from the server's
+//! `protocol_ids` module.
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use neutron_protocol::codec::MinecraftCodec;
+use neutron_protocol::login::{Handshake, LoginStart};
+use neutron_protocol::types::{read_varint, write_varint};
 use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+// 26.2 protocol version and packet IDs (mirror crates/neutron-server/src/protocol_ids.rs).
+const PROTOCOL_VERSION: i32 = 776;
+
+const CFG_SB_SELECT_KNOWN_PACKS: u32 = 0x07;
+const CFG_SB_FINISH: u32 = 0x03;
+
+const PLAY_LOGIN: u32 = 0x31;
+const PLAY_KEEP_ALIVE: u32 = 0x2C;
+const PLAY_LEVEL_CHUNK: u32 = 0x2D;
+const PLAY_POSITION: u32 = 0x48;
+const PLAY_CENTER_CHUNK: u32 = 0x5E;
+const PLAY_CHUNK_BATCH_START: u32 = 0x0C;
+const PLAY_CHUNK_BATCH_FINISHED: u32 = 0x0B;
+const PLAY_SYSTEM_CHAT: u32 = 0x79;
+
+const SB_KEEP_ALIVE: u32 = 0x1C;
+const SB_MOVE_POS: u32 = 0x1E;
+const SB_ACCEPT_TELEPORT: u32 = 0x00;
+
 // ============================================================================
-// VarInt helpers (inline, no external dep)
+// Raw framing helpers (uncompressed; the server runs compression_threshold=-1)
 // ============================================================================
-
-fn write_varint(buf: &mut BytesMut, value: i32) {
-    let mut val = value as u32;
-    loop {
-        let mut byte = (val & 0x7F) as u8;
-        val >>= 7;
-        if val != 0 {
-            byte |= 0x80;
-        }
-        buf.put_u8(byte);
-        if val == 0 {
-            break;
-        }
-    }
-}
-
-fn read_varint(buf: &mut Bytes) -> Result<i32, String> {
-    let mut result: i32 = 0;
-    let mut shift: u32 = 0;
-    loop {
-        if !buf.has_remaining() {
-            return Err("insufficient bytes for VarInt".into());
-        }
-        let byte = buf.get_u8();
-        result |= ((byte & 0x7F) as i32) << shift;
-        if byte & 0x80 == 0 {
-            break;
-        }
-        shift += 7;
-        if shift >= 35 {
-            return Err("VarInt too long".into());
-        }
-    }
-    Ok(result)
-}
-
-fn varint_size(value: i32) -> usize {
-    let mut val = value as u32;
-    let mut size = 0;
-    loop {
-        size += 1;
-        val >>= 7;
-        if val == 0 {
-            break;
-        }
-    }
-    size
-}
 
 fn write_string(buf: &mut BytesMut, s: &str) {
-    let bytes = s.as_bytes();
-    write_varint(buf, bytes.len() as i32);
-    buf.put_slice(bytes);
+    write_varint(buf, s.len() as i32).unwrap();
+    buf.put_slice(s.as_bytes());
 }
 
-#[allow(dead_code)]
-fn read_string(buf: &mut Bytes) -> Result<String, String> {
-    let len = read_varint(buf)? as usize;
-    if len > 32767 {
-        return Err(format!("string too long: {}", len));
-    }
-    if buf.remaining() < len {
-        return Err(format!("insufficient bytes for string: need {}, have {}", len, buf.remaining()));
-    }
-    let mut out = vec![0u8; len];
-    buf.copy_to_slice(&mut out);
-    String::from_utf8(out).map_err(|e| e.to_string())
+fn hexdump(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect::<Vec<_>>().join(" ")
 }
 
 // ============================================================================
-// Raw packet framing (no compression — server uses compression_threshold=-1)
-// ============================================================================
-
-/// A decoded raw packet.
-#[derive(Debug)]
-struct RawPacket {
-    id: u32,
-    payload: Bytes,
-}
-
-/// Encode a packet with length-delimited framing (uncompressed).
-fn encode_packet(packet_id: u32, payload: &[u8]) -> BytesMut {
-    let id_size = varint_size(packet_id as i32);
-    let total_size = id_size + payload.len();
-    let mut buf = BytesMut::with_capacity(total_size + 8);
-    write_varint(&mut buf, total_size as i32);
-    write_varint(&mut buf, packet_id as i32);
-    buf.put_slice(payload);
-    buf
-}
-
-/// Try to decode one raw packet from the buffer.
-/// Returns Ok(Some(packet)) on success, Ok(None) if incomplete.
-fn decode_packet(buf: &mut Bytes) -> Result<Option<RawPacket>, String> {
-    if !buf.has_remaining() {
-        return Ok(None);
-    }
-
-    let mut peek = buf.clone();
-    let length = match read_varint(&mut peek) {
-        Ok(v) => v,
-        Err(_) => return Ok(None),
-    };
-
-    if length < 0 {
-        return Err("negative packet length".into());
-    }
-
-    let length = length as usize;
-    let length_varint_size = varint_size(length as i32);
-
-    if buf.remaining() < length_varint_size + length {
-        return Ok(None);
-    }
-
-    // Consume the length VarInt
-    let _ = read_varint(buf)?;
-
-    // Read packet ID
-    let packet_id = read_varint(buf)? as u32;
-
-    // Read payload
-    let overhead = varint_size(packet_id as i32);
-    if length < overhead {
-        return Err("packet too short for header".into());
-    }
-    let payload_len = length - overhead;
-    if buf.remaining() < payload_len {
-        return Err(format!("payload truncated: need {}, have {}", payload_len, buf.remaining()));
-    }
-    let payload = buf.copy_to_bytes(payload_len);
-
-    Ok(Some(RawPacket {
-        id: packet_id,
-        payload,
-    }))
-}
-
-// ============================================================================
-// Test metrics
+// Metrics
 // ============================================================================
 
 #[derive(Debug, Default)]
-struct TestMetrics {
-    server_started: bool,
-    startup_duration: Option<Duration>,
+struct Metrics {
     login_success: bool,
     join_game_received: bool,
-    chunks_received: usize,
-    first_chunk_time: Option<Duration>,
-    first_chunk_size: usize,
     registry_data_count: usize,
     sync_position_received: bool,
+    center_chunk: Option<(i32, i32)>,
+    chunks_received: usize,
+    first_chunk: Option<(Duration, usize)>,
     keepalive_responded: usize,
+    keepalive_intervals: Vec<Duration>,
+    keepalive_last: Option<Instant>,
     position_packets_sent: usize,
+    packets_by_window: Vec<usize>,
+    packets_in_window: usize,
     errors: Vec<String>,
-    total_duration: Option<Duration>,
+    chat_messages: Vec<String>,
+    unknown_packets: std::collections::BTreeMap<u32, usize>,
+}
+
+impl Metrics {
+    fn tps_from_keepalives(&self) -> Option<f64> {
+        if self.keepalive_intervals.is_empty() {
+            return None;
+        }
+        // Server sends a keepalive every 600 ticks.
+        let sum: f64 = self
+            .keepalive_intervals
+            .iter()
+            .map(|d| d.as_secs_f64())
+            .sum();
+        let n = self.keepalive_intervals.len() as f64;
+        Some(600.0 / (sum / n))
+    }
 }
 
 // ============================================================================
-// Server process management
+// Client session
 // ============================================================================
 
-fn find_server_binary() -> String {
-    // Try common build output paths
-    let candidates = if cfg!(target_os = "windows") {
-        vec![
-            "target/debug/neutron-server.exe",
-            "target/release/neutron-server.exe",
-        ]
-    } else {
-        vec![
-            "target/debug/neutron-server",
-            "target/release/neutron-server",
-        ]
+fn run_join_session(stream: &mut TcpStream, duration: Duration) -> Result<Metrics, String> {
+    let mut metrics = Metrics::default();
+    let codec = MinecraftCodec::new();
+    let session_start = Instant::now();
+    let mut window_start = Instant::now();
+
+    // --- Handshake (next_state = 2, login) ---
+    let hs = Handshake {
+        protocol_version: PROTOCOL_VERSION,
+        server_address: "127.0.0.1".to_string(),
+        server_port: 25565,
+        next_state: 2,
     };
-
-    // Check from workspace root (tests/e2e-server is relative to it)
-    let workspace_root = std::env::current_dir()
-        .ok()
-        .and_then(|p| {
-            // If we're in tests/e2e-server, go up two levels
-            let p_str = p.to_string_lossy().to_string();
-            if p_str.contains("tests/e2e-server") || p_str.contains("tests\\e2e-server") {
-                p.parent()?.parent().map(|s| s.to_path_buf())
-            } else {
-                Some(p)
-            }
-        })
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
-
-    for candidate in &candidates {
-        let path = workspace_root.join(candidate);
-        if path.exists() {
-            return path.to_string_lossy().to_string();
-        }
-    }
-
-    // Fallback: let the user know
-    eprintln!("WARNING: server binary not found, trying default path");
-    candidates[0].to_string()
-}
-
-fn start_server(server_path: &str) -> Result<Child, String> {
-    eprintln!("[e2e] Starting server: {}", server_path);
-
-    let child = Command::new(server_path)
-        .args(["--port", "25565", "--view-distance", "3"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("failed to start server: {}", e))?;
-
-    Ok(child)
-}
-
-fn wait_for_server_ready(child: &mut Child) -> Result<Duration, String> {
-    use std::io::BufRead;
-
-    let start = Instant::now();
-    let stdout = child.stdout.as_mut().ok_or("no stdout")?;
-    let reader = std::io::BufReader::new(stdout);
-
-    for line in reader.lines() {
-        let line = line.map_err(|e| format!("read error: {}", e))?;
-        eprintln!("[server] {}", line);
-
-        if line.contains("Done") && line.contains('!') {
-            let elapsed = start.elapsed();
-            eprintln!("[e2e] Server ready in {:.2}s", elapsed.as_secs_f64());
-            return Ok(elapsed);
-        }
-
-        // Timeout after 30 seconds
-        if start.elapsed() > Duration::from_secs(30) {
-            return Err("server did not start within 30 seconds".into());
-        }
-    }
-
-    Err("server process ended without 'Done' message".into())
-}
-
-// ============================================================================
-// Main test logic
-// ============================================================================
-
-fn run_test() -> Result<TestMetrics, String> {
-    let mut metrics = TestMetrics::default();
-    let test_start = Instant::now();
-
-    // --- Step 1: Start the server ---
-    let server_path = find_server_binary();
-    let mut server = start_server(&server_path)?;
-
-    let startup_duration = wait_for_server_ready(&mut server)?;
-    metrics.server_started = true;
-    metrics.startup_duration = Some(startup_duration);
-
-    // --- Step 2: Connect via TCP ---
-    eprintln!("[e2e] Connecting to localhost:25565...");
-    let connect_start = Instant::now();
-    let mut stream = std::net::TcpStream::connect("127.0.0.1:25565")
-        .map_err(|e| format!("TCP connect failed: {}", e))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(10)))
-        .map_err(|e| e.to_string())?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|e| e.to_string())?;
-    eprintln!(
-        "[e2e] Connected in {:.1}ms",
-        connect_start.elapsed().as_secs_f64() * 1000.0
-    );
-
-    // --- Step 3: Send Handshake ---
-    let protocol_version: i32 = 858; // Minecraft 26.2
     let mut hs_payload = BytesMut::new();
-    write_varint(&mut hs_payload, protocol_version);
-    write_string(&mut hs_payload, "localhost");
-    hs_payload.put_u16(25565);
-    write_varint(&mut hs_payload, 2); // next_state = Login
+    hs.encode(&mut hs_payload).map_err(|e| e.to_string())?;
+    send_frame(stream, &codec, 0x00, &hs_payload)?;
+    println!("[tx] Handshake protocol={PROTOCOL_VERSION} next_state=2");
 
-    let handshake = encode_packet(0x00, &hs_payload);
-    stream
-        .write_all(&handshake)
-        .map_err(|e| format!("send handshake failed: {}", e))?;
-    eprintln!("[e2e] Sent Handshake (protocol={})", protocol_version);
-
-    // --- Step 4: Send LoginStart ---
-    let test_uuid = Uuid::new_v4();
+    // --- LoginStart ---
+    let uuid = Uuid::new_v4();
+    let ls = LoginStart {
+        name: "SmokeBot".to_string(),
+        uuid: Some(uuid),
+    };
     let mut ls_payload = BytesMut::new();
-    write_string(&mut ls_payload, "TestBot");
-    ls_payload.put_slice(test_uuid.as_bytes());
+    ls.encode(&mut ls_payload).map_err(|e| e.to_string())?;
+    send_frame(stream, &codec, 0x00, &ls_payload)?;
+    println!("[tx] LoginStart username=SmokeBot uuid={uuid}");
 
-    let login_start = encode_packet(0x00, &ls_payload);
-    stream
-        .write_all(&login_start)
-        .map_err(|e| format!("send LoginStart failed: {}", e))?;
-    eprintln!("[e2e] Sent LoginStart (username=TestBot, uuid={})", test_uuid);
+    let login_start = Instant::now();
+    let mut phase = "login";
+    let mut input_buf = BytesMut::with_capacity(1 << 20);
 
-    // --- Step 5: Read packets ---
-    let mut read_buf = BytesMut::with_capacity(65536);
-    let mut state = "login"; // login -> play
-    let login_start_time = Instant::now();
-
-    // Read loop
     loop {
-        // Check test timeout
-        if test_start.elapsed() > Duration::from_secs(30) {
-            metrics.errors.push("test timeout (30s)".into());
+        if session_start.elapsed() > duration {
+            println!("[e2e] session duration reached, ending test");
             break;
         }
 
-        // Check if we've collected enough data
-        if metrics.chunks_received >= 10 && metrics.position_packets_sent >= 10 {
-            eprintln!("[e2e] Collected enough data, ending test");
-            break;
-        }
-
-        // Read from TCP
-        let old_len = read_buf.len();
-        read_buf.resize(old_len + 8192, 0);
-        match stream.read(&mut read_buf[old_len..]) {
+        // Read available bytes (non-blocking with short timeout so position
+        // packets keep flowing even when the server is quiet).
+        stream
+            .set_read_timeout(Some(Duration::from_millis(200)))
+            .map_err(|e| e.to_string())?;
+        let old_len = input_buf.len();
+        input_buf.resize(old_len + 64 * 1024, 0);
+        match stream.read(&mut input_buf[old_len..]) {
             Ok(0) => {
                 metrics.errors.push("server closed connection".into());
                 break;
             }
             Ok(n) => {
-                read_buf.truncate(old_len + n);
+                input_buf.truncate(old_len + n);
+                metrics.packets_in_window += 1;
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock
-                || e.kind() == std::io::ErrorKind::TimedOut =>
-            {
-                // Timeout — send a position packet to keep things moving
-                send_position_packet(&mut stream, &mut metrics)?;
-                continue;
+            Err(ref e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut => {
+                // read() timed out: discard the zero-fill that resize() added so
+                // the decode loop never sees fake bytes (they decoded as a
+                // zero-length frame -> spurious "packet too short for header").
+                input_buf.truncate(old_len);
             }
             Err(e) => {
-                metrics.errors.push(format!("read error: {}", e));
+                metrics.errors.push(format!("read error: {e}"));
                 break;
             }
         }
 
-        // Decode packets from buffer
+        // Decode as many complete packets as are buffered.
         loop {
-            let raw_bytes: Bytes = read_buf.split_to(read_buf.len()).into();
-            let mut raw_buf = raw_bytes.clone();
-
-            match decode_packet(&mut raw_buf) {
-                Ok(Some(packet)) => {
+            let raw: Bytes = input_buf.split_to(input_buf.len()).into();
+            let mut rest = raw.clone();
+            match codec.decode(&mut rest) {
+                Ok(Some(pkt)) => {
                     process_packet(
-                        &packet,
-                        &mut stream,
-                        &mut state,
+                        &pkt,
+                        stream,
+                        &codec,
+                        &mut phase,
                         &mut metrics,
-                        &login_start_time,
+                        &login_start,
                     )?;
-
-                    // Put remaining bytes back
-                    if raw_buf.has_remaining() {
-                        let remaining = raw_buf.to_vec();
-                        read_buf.clear();
-                        read_buf.extend_from_slice(&remaining);
+                    if rest.has_remaining() {
+                        input_buf.clear();
+                        input_buf.extend_from_slice(&rest);
                     }
                 }
                 Ok(None) => {
-                    // Incomplete frame — put all bytes back
-                    read_buf.clear();
-                    read_buf.extend_from_slice(&raw_bytes);
+                    input_buf.clear();
+                    input_buf.extend_from_slice(&raw);
                     break;
                 }
                 Err(e) => {
-                    metrics.errors.push(format!("decode error: {}", e));
+                    metrics.errors.push(format!("decode error: {e}"));
+                    if metrics.errors.len() <= 5 {
+                        let dump: Vec<String> = raw
+                            .iter()
+                            .take(80)
+                            .map(|b| format!("{b:02x}"))
+                            .collect();
+                        println!(
+                            "[e2e] !!! decode error #{} phase={phase} elapsed={:.1}s buf_len={} raw={}",
+                            metrics.errors.len(),
+                            session_start.elapsed().as_secs_f64(),
+                            raw.len(),
+                            dump.join(" ")
+                        );
+                    }
                     break;
                 }
             }
         }
 
-        // Send position packets periodically (every ~100ms)
-        if metrics.position_packets_sent < 20 {
-            send_position_packet(&mut stream, &mut metrics)?;
+        // Report per-10s packet window.
+        if window_start.elapsed() >= Duration::from_secs(10) {
+            metrics.packets_by_window.push(metrics.packets_in_window);
+            metrics.packets_in_window = 0;
+            window_start = Instant::now();
+            println!(
+                "[e2e] 10s window packet count: {}",
+                metrics.packets_by_window.last().copied().unwrap_or(0)
+            );
         }
+
+        // Send a position packet every ~200ms.
+        send_position_packet(stream, &codec, &mut metrics)?;
+        std::thread::sleep(Duration::from_millis(200));
     }
-
-    // --- Step 6: Report ---
-    metrics.total_duration = Some(test_start.elapsed());
-
-    // Kill the server
-    let _ = server.kill();
 
     Ok(metrics)
 }
 
-fn process_packet(
-    packet: &RawPacket,
-    stream: &mut std::net::TcpStream,
-    state: &mut &str,
-    metrics: &mut TestMetrics,
-    login_start_time: &Instant,
+fn send_frame(
+    stream: &mut TcpStream,
+    codec: &MinecraftCodec,
+    id: u32,
+    payload: &[u8],
 ) -> Result<(), String> {
-    match *state {
-        "login" => match packet.id {
+    let mut buf = BytesMut::with_capacity(payload.len() + 8);
+    codec.encode(id, payload, &mut buf).map_err(|e| e.to_string())?;
+    stream
+        .write_all(&buf)
+        .map_err(|e| format!("send packet 0x{id:02x} failed: {e}"))
+}
+
+fn process_packet(
+    pkt: &neutron_protocol::packet::RawPacket,
+    stream: &mut TcpStream,
+    codec: &MinecraftCodec,
+    phase: &mut &str,
+    metrics: &mut Metrics,
+    login_start: &Instant,
+) -> Result<(), String> {
+    match *phase {
+        "login" => match pkt.id {
             0x02 => {
-                // LoginSuccess
-                eprintln!(
-                    "[e2e] Received LoginSuccess (login took {:.1}ms)",
-                    login_start_time.elapsed().as_secs_f64() * 1000.0
+                // LoginFinished -> send LoginAcknowledged (0x03, empty).
+                println!(
+                    "[rx] LoginFinished (login took {:.1}ms)",
+                    login_start.elapsed().as_secs_f64() * 1000.0
                 );
                 metrics.login_success = true;
-                *state = "play";
+                send_frame(stream, codec, 0x03, &[])?;
+                println!("[tx] LoginAcknowledged -> configuration");
+                *phase = "configuration";
+            }
+            _ => unknown(metrics, pkt.id, pkt.payload.len()),
+        },
+        "configuration" => match pkt.id {
+            0x0E => {
+                // SelectKnownPacks -> reply with count 0.
+                println!("[rx] SelectKnownPacks");
+                let mut buf = BytesMut::new();
+                write_varint(&mut buf, 0).map_err(|e| e.to_string())?;
+                send_frame(stream, codec, CFG_SB_SELECT_KNOWN_PACKS, &buf)?;
+                println!("[tx] SelectKnownPacks (none)");
+            }
+            0x07 => {
+                metrics.registry_data_count += 1;
+                println!("[rx] RegistryData #{}", metrics.registry_data_count);
             }
             0x03 => {
-                // SetCompression
-                let mut payload = packet.payload.clone();
-                let threshold = read_varint(&mut payload)?;
-                eprintln!("[e2e] Server requested compression (threshold={})", threshold);
-                // For this test we don't handle compression — just note it
-                if threshold >= 0 {
-                    metrics.errors.push(format!(
-                        "server enabled compression (threshold={}), test may not work correctly",
-                        threshold
-                    ));
-                }
+                // FinishConfiguration -> reply, enter Play.
+                println!("[rx] FinishConfiguration");
+                send_frame(stream, codec, CFG_SB_FINISH, &[])?;
+                println!("[tx] FinishConfiguration -> play");
+                *phase = "play";
             }
-            _ => {
-                eprintln!(
-                    "[e2e] Unexpected login packet: 0x{:02X} ({} bytes)",
-                    packet.id,
-                    packet.payload.len()
-                );
-            }
+            0x0C => println!("[rx] UpdateFeatures"),
+            0x0D => println!("[rx] UpdateTags"),
+            _ => unknown(metrics, pkt.id, pkt.payload.len()),
         },
-        "play" => match packet.id {
-            0x2B => {
-                // JoinGame
-                let mut payload = packet.payload.clone();
-                if payload.remaining() >= 4 {
-                    let entity_id = payload.get_i32();
-                    eprintln!("[e2e] Received JoinGame (entity_id={})", entity_id);
-                } else {
-                    eprintln!("[e2e] Received JoinGame (truncated)");
-                }
+        "play" => match pkt.id {
+            PLAY_LOGIN => {
+                let mut payload = pkt.payload.clone();
+                let entity_id = payload.get_i32();
+                println!("[rx] PlayLogin (entity_id={entity_id})");
                 metrics.join_game_received = true;
             }
-            0x5D => {
-                // RegistryData
-                metrics.registry_data_count += 1;
-                eprintln!(
-                    "[e2e] Received RegistryData #{}",
-                    metrics.registry_data_count
+            PLAY_KEEP_ALIVE => {
+                let mut payload = pkt.payload.clone();
+                let keepalive_id = payload.get_i64();
+                let now = Instant::now();
+                if let Some(last) = metrics.keepalive_last {
+                    metrics.keepalive_intervals.push(now.duration_since(last));
+                }
+                metrics.keepalive_last = Some(now);
+                let mut resp = BytesMut::with_capacity(8);
+                resp.put_i64(keepalive_id);
+                send_frame(stream, codec, SB_KEEP_ALIVE, &resp)?;
+                metrics.keepalive_responded += 1;
+                println!(
+                    "[rx] KeepAlive id={keepalive_id} -> responded (n={})",
+                    metrics.keepalive_responded
                 );
             }
-            0x54 => {
-                // SetDefaultSpawnPosition
-                eprintln!("[e2e] Received SetDefaultSpawnPosition");
-            }
-            0x36 => {
-                // PlayerAbilities
-                eprintln!("[e2e] Received PlayerAbilities");
-            }
-            0x50 => {
-                // SetCenterChunk
-                eprintln!("[e2e] Received SetCenterChunk");
-            }
-            0x40 => {
-                // SynchronizePlayerPosition
-                let mut payload = packet.payload.clone();
-                if payload.remaining() >= 24 {
-                    let x = payload.get_f64();
-                    let y = payload.get_f64();
-                    let z = payload.get_f64();
-                    eprintln!(
-                        "[e2e] Received SynchronizePlayerPosition ({:.1}, {:.1}, {:.1})",
-                        x, y, z
+            PLAY_LEVEL_CHUNK => {
+                let mut payload = pkt.payload.clone();
+                let cx = payload.get_i32();
+                let cz = payload.get_i32();
+                let size = pkt.payload.len();
+                if metrics.chunks_received == 0 {
+                    metrics.first_chunk = Some((login_start.elapsed(), size));
+                    println!(
+                        "[rx] FIRST LevelChunk ({cx},{cz}) {} bytes after {:.1}ms",
+                        size,
+                        login_start.elapsed().as_secs_f64() * 1000.0
                     );
-                } else {
-                    eprintln!("[e2e] Received SynchronizePlayerPosition");
                 }
+                metrics.chunks_received += 1;
+                if metrics.chunks_received % 20 == 0 {
+                    println!("[rx] ... {size} bytes LevelChunk ({cx},{cz}) (total {})", metrics.chunks_received);
+                }
+            }
+            PLAY_POSITION => {
+                let mut payload = pkt.payload.clone();
+                let x = payload.get_f64();
+                let y = payload.get_f64();
+                let z = payload.get_f64();
+                println!("[rx] SynchronizePlayerPosition ({x:.1},{y:.1},{z:.1})");
                 metrics.sync_position_received = true;
+                // Acknowledge the teleport.
+                let mut buf = BytesMut::new();
+                write_varint(&mut buf, 1).map_err(|e| e.to_string())?;
+                send_frame(stream, codec, SB_ACCEPT_TELEPORT, &buf)?;
             }
-            0x27 => {
-                // ChunkDataAndUpdateLight
-                let chunk_data_len = packet.payload.len();
-                let mut payload = packet.payload.clone();
-                if payload.remaining() >= 8 {
-                    let chunk_x = payload.get_i32();
-                    let chunk_z = payload.get_i32();
-                    if metrics.chunks_received == 0 {
-                        metrics.first_chunk_time = Some(login_start_time.elapsed());
-                        metrics.first_chunk_size = chunk_data_len;
-                        eprintln!(
-                            "[e2e] Received FIRST chunk at ({}, {}) after {:.1}ms ({} bytes)",
-                            chunk_x,
-                            chunk_z,
-                            login_start_time.elapsed().as_secs_f64() * 1000.0,
-                            chunk_data_len,
-                        );
-                    }
-                    metrics.chunks_received += 1;
-                    if metrics.chunks_received % 10 == 0 {
-                        eprintln!("[e2e]   ... {} chunks received so far (last chunk {} bytes)", metrics.chunks_received, chunk_data_len);
-                    }
-                }
+            PLAY_CENTER_CHUNK => {
+                let mut payload = pkt.payload.clone();
+                let cx = read_varint(&mut payload).map_err(|e| e.to_string())?;
+                let cz = read_varint(&mut payload).map_err(|e| e.to_string())?;
+                metrics.center_chunk = Some((cx, cz));
+                println!("[rx] SetCenterChunk ({cx},{cz})");
             }
-            0x67 => {
-                // SystemChatMessage
-                let mut payload = packet.payload.clone();
+            PLAY_CHUNK_BATCH_START => println!("[rx] ChunkBatchStart"),
+            PLAY_CHUNK_BATCH_FINISHED => {
+                let mut payload = pkt.payload.clone();
+                let count = read_varint(&mut payload).unwrap_or(0);
+                println!("[rx] ChunkBatchFinished count={count}");
+            }
+            PLAY_SYSTEM_CHAT => {
+                // Network NBT: TAG_String (0x08) + u16 len + utf8 + u8 overlay.
+                let mut payload = pkt.payload.clone();
                 if payload.has_remaining() {
-                    // Read the length-prefixed JSON string
-                    let len = read_varint(&mut payload).unwrap_or(0) as usize;
+                    let tag = payload.get_u8();
+                    let len = payload.get_u16() as usize;
                     if payload.remaining() >= len {
-                        let mut msg_bytes = vec![0u8; len];
-                        payload.copy_to_slice(&mut msg_bytes);
-                        if let Ok(msg) = String::from_utf8(msg_bytes) {
-                            eprintln!("[e2e] Server chat: {}", msg);
+                        let bytes = payload.copy_to_bytes(len);
+                        if let Ok(msg) = String::from_utf8(bytes.to_vec()) {
+                            println!("[rx] SystemChat: {msg}");
+                            metrics.chat_messages.push(msg);
+                        } else {
+                            println!("[rx] SystemChat (tag={tag}, non-utf8)");
                         }
                     }
                 }
             }
-            0x26 => {
-                // KeepAlive — respond immediately
-                let mut payload = packet.payload.clone();
-                if payload.remaining() >= 8 {
-                    let keepalive_id = payload.get_i64();
-                    let response = encode_packet(0x18, &keepalive_id.to_be_bytes());
-                    stream
-                        .write_all(&response)
-                        .map_err(|e| format!("send KeepAliveResponse failed: {}", e))?;
-                    metrics.keepalive_responded += 1;
-                    eprintln!(
-                        "[e2e] Responded to KeepAlive #{} (id={})",
-                        metrics.keepalive_responded, keepalive_id
-                    );
-                }
-            }
-            _ => {
-                eprintln!(
-                    "[e2e] Play packet: 0x{:02X} ({} bytes)",
-                    packet.id,
-                    packet.payload.len()
-                );
-            }
+            _ => unknown(metrics, pkt.id, pkt.payload.len()),
         },
         _ => {}
     }
-
     Ok(())
 }
 
+fn unknown(metrics: &mut Metrics, id: u32, size: usize) {
+    *metrics.unknown_packets.entry(id).or_insert(0) += 1;
+    if size < 4096 {
+        println!("[rx] packet 0x{id:02X} ({size} bytes)");
+    }
+}
+
 fn send_position_packet(
-    stream: &mut std::net::TcpStream,
-    metrics: &mut TestMetrics,
+    stream: &mut TcpStream,
+    codec: &MinecraftCodec,
+    metrics: &mut Metrics,
 ) -> Result<(), String> {
-    // Send PlayerPosition (0x17) — simulate walking forward
-    let z = metrics.position_packets_sent as f64 * 1.0; // walk along Z axis
+    let z = metrics.position_packets_sent as f64 * 1.0;
     let mut payload = BytesMut::with_capacity(25);
-    payload.put_f64(0.0); // x
-    payload.put_f64(65.0); // y
-    payload.put_f64(z); // z
-    payload.put_u8(1); // on_ground = true
-
-    let packet = encode_packet(0x17, &payload);
-    stream
-        .write_all(&packet)
-        .map_err(|e| format!("send PlayerPosition failed: {}", e))?;
+    payload.put_f64(0.5);
+    payload.put_f64(65.0);
+    payload.put_f64(z);
+    payload.put_u8(1); // on ground
+    send_frame(stream, codec, SB_MOVE_POS, &payload)?;
     metrics.position_packets_sent += 1;
-
-    // Rate limit: ~80ms between position packets
-    std::thread::sleep(Duration::from_millis(80));
-
     Ok(())
+}
+
+// ============================================================================
+// Server process management (spawn mode)
+// ============================================================================
+
+fn start_server(path: &str, port: u16) -> Result<Child, String> {
+    Command::new(path)
+        .args(["--port", &port.to_string(), "--view-distance", "3"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to start server: {e}"))
+}
+
+fn wait_for_server_ready(child: &mut Child) -> Result<Duration, String> {
+    use std::io::BufRead;
+    let start = Instant::now();
+    let stdout = child.stdout.as_mut().ok_or("no stdout")?;
+    let reader = std::io::BufReader::new(stdout);
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("read error: {e}"))?;
+        if line.contains("Done") && line.contains('!') {
+            return Ok(start.elapsed());
+        }
+        if start.elapsed() > Duration::from_secs(30) {
+            return Err("server did not print Done within 30s".into());
+        }
+    }
+    Err("server process ended without 'Done' message".into())
+}
+
+// ============================================================================
+// Status ping mode
+// ============================================================================
+
+fn run_status_ping(port: u16) -> Result<(), String> {
+    let codec = MinecraftCodec::new();
+    let mut stream =
+        TcpStream::connect(("127.0.0.1", port)).map_err(|e| format!("connect: {e}"))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .map_err(|e| e.to_string())?;
+
+    let mut hs_payload = BytesMut::new();
+    write_varint(&mut hs_payload, PROTOCOL_VERSION).map_err(|e| e.to_string())?;
+    write_string(&mut hs_payload, "127.0.0.1");
+    hs_payload.put_u16(port);
+    write_varint(&mut hs_payload, 1).map_err(|e| e.to_string())?; // status
+    let mut frame = BytesMut::new();
+    codec
+        .encode(0x00, &hs_payload, &mut frame)
+        .map_err(|e| e.to_string())?;
+    println!("[tx] handshake (status) raw={}", hexdump(&frame));
+    stream.write_all(&frame).map_err(|e| e.to_string())?;
+
+    let mut req = BytesMut::new();
+    codec.encode(0x00, &[], &mut req).map_err(|e| e.to_string())?;
+    println!("[tx] status request     raw={}", hexdump(&req));
+    stream.write_all(&req).map_err(|e| e.to_string())?;
+
+    let resp = read_frame(&mut stream, &codec)?;
+    println!("[rx] status response    id=0x{:02x} raw={}", resp.0, hexdump(&resp.1));
+    let mut payload = resp.1.clone();
+    let len = read_varint(&mut payload).map_err(|e| e.to_string())? as usize;
+    let raw_json = payload.copy_to_bytes(len);
+    let json = String::from_utf8(raw_json.to_vec()).map_err(|e| e.to_string())?;
+    println!("     decoded JSON: {json}");
+
+    let ping_payload = 0x2A5E_DEAD_BEEFi64.to_be_bytes();
+    let mut ping = BytesMut::new();
+    codec
+        .encode(0x01, &ping_payload, &mut ping)
+        .map_err(|e| e.to_string())?;
+    println!("[tx] status ping        raw={}", hexdump(&ping));
+    stream.write_all(&ping).map_err(|e| e.to_string())?;
+
+    let pong = read_frame(&mut stream, &codec)?;
+    println!("[rx] pong               id=0x{:02x} raw={}", pong.0, hexdump(&pong.1));
+    if pong.0 != 0x01 || &pong.1[..] != &ping_payload[..] {
+        return Err("pong mismatch".into());
+    }
+    println!("     payload match: 0x2a5edeadbeef");
+    println!("STATUS PING OK");
+    Ok(())
+}
+
+fn read_frame(stream: &mut TcpStream, codec: &MinecraftCodec) -> Result<(u32, Bytes), String> {
+    let mut buf = BytesMut::new();
+    loop {
+        let mut chunk = [0u8; 8192];
+        match stream.read(&mut chunk) {
+            Ok(0) => return Err("EOF".into()),
+            Ok(n) => buf.extend_from_slice(&chunk[..n]),
+            Err(ref e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut =>
+            {
+                continue;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+        let mut rest = buf.clone().into();
+        if let Ok(Some(pkt)) = codec.decode(&mut rest) {
+            return Ok((pkt.id, pkt.payload));
+        }
+    }
 }
 
 // ============================================================================
@@ -593,72 +517,135 @@ fn send_position_packet(
 // ============================================================================
 
 fn main() {
-    eprintln!("========================================");
-    eprintln!("  Neutron E2E Test");
-    eprintln!("========================================");
-    eprintln!();
+    let args: Vec<String> = std::env::args().collect();
+    let mode = args.get(1).map(|s| s.as_str()).unwrap_or("join");
+    let mut port: u16 = 25565;
+    let mut duration = Duration::from_secs(45);
+    let mut spawn: Option<String> = None;
 
-    match run_test() {
-        Ok(metrics) => {
-            eprintln!();
-            eprintln!("========================================");
-            eprintln!("  TEST RESULTS");
-            eprintln!("========================================");
-            eprintln!();
-            eprintln!("Server started:      {}", metrics.server_started);
-            if let Some(d) = metrics.startup_duration {
-                eprintln!("Startup time:        {:.2}s", d.as_secs_f64());
+    let mut i = 2;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--port" => {
+                i += 1;
+                port = args[i].parse().unwrap_or(25565);
             }
-            eprintln!("Login success:       {}", metrics.login_success);
-            eprintln!("JoinGame received:   {}", metrics.join_game_received);
-            eprintln!("RegistryData packets: {}", metrics.registry_data_count);
-            eprintln!("SyncPosition recv:   {}", metrics.sync_position_received);
-            eprintln!("Chunks received:     {}", metrics.chunks_received);
-            if let Some(d) = metrics.first_chunk_time {
-                eprintln!("Time to first chunk: {:.1}ms", d.as_secs_f64() * 1000.0);
+            "--duration" => {
+                i += 1;
+                duration = Duration::from_secs(args[i].parse().unwrap_or(45));
             }
-            eprintln!(
-                "First chunk size:    {} bytes",
-                metrics.first_chunk_size
-            );
-            eprintln!(
-                "KeepAlive responses: {}",
-                metrics.keepalive_responded
-            );
-            eprintln!(
-                "Position packets:    {}",
-                metrics.position_packets_sent
-            );
-            if let Some(d) = metrics.total_duration {
-                eprintln!("Total test time:     {:.2}s", d.as_secs_f64());
+            "--spawn" => {
+                i += 1;
+                spawn = Some(args[i].clone());
             }
-            if !metrics.errors.is_empty() {
-                eprintln!();
-                eprintln!("ERRORS:");
-                for err in &metrics.errors {
-                    eprintln!("  - {}", err);
-                }
-            }
-            eprintln!();
+            _ => {}
+        }
+        i += 1;
+    }
 
-            // Determine pass/fail
-            let pass = metrics.server_started
-                && metrics.login_success
-                && metrics.join_game_received
-                && metrics.chunks_received > 0
-                && metrics.sync_position_received;
-
-            if pass {
-                eprintln!("RESULT: PASS");
-                std::process::exit(0);
-            } else {
-                eprintln!("RESULT: FAIL");
-                std::process::exit(1);
+    if mode == "status" {
+        match run_status_ping(port) {
+            Ok(()) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("FATAL: {e}");
+                std::process::exit(2);
             }
         }
+    }
+
+    // Join mode.
+    let mut server: Option<Child> = None;
+    let connect_result = match spawn {
+        Some(path) => {
+            eprintln!("[e2e] spawning server: {path}");
+            let mut child = start_server(&path, port).expect("start server");
+            match wait_for_server_ready(&mut child) {
+                Ok(d) => eprintln!("[e2e] server Done in {:.2}s", d.as_secs_f64()),
+                Err(e) => {
+                    let _ = child.kill();
+                    eprintln!("FATAL: {e}");
+                    std::process::exit(2);
+                }
+            }
+            server = Some(child);
+            TcpStream::connect(("127.0.0.1", port))
+        }
+        None => {
+            eprintln!("[e2e] connecting to existing server on 127.0.0.1:{port}");
+            TcpStream::connect(("127.0.0.1", port))
+        }
+    };
+
+    let mut stream = match connect_result {
+        Ok(s) => s,
         Err(e) => {
-            eprintln!("FATAL: {}", e);
+            eprintln!("FATAL: connect: {e}");
             std::process::exit(2);
+        }
+    };
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .ok();
+
+    eprintln!("[e2e] session duration: {:?}", duration);
+    match run_join_session(&mut stream, duration) {
+        Ok(m) => {
+            report(&m);
+            if let Some(mut child) = server {
+                let _ = child.kill();
+            }
+            let pass = m.login_success
+                && m.join_game_received
+                && m.chunks_received > 0
+                && m.sync_position_received
+                && m.errors.is_empty();
+            if pass {
+                println!("RESULT: PASS");
+                std::process::exit(0);
+            }
+            println!("RESULT: FAIL");
+            std::process::exit(1);
+        }
+        Err(e) => {
+            eprintln!("FATAL: {e}");
+            if let Some(mut child) = server {
+                let _ = child.kill();
+            }
+            std::process::exit(2);
+        }
+    }
+}
+
+fn report(m: &Metrics) {
+    println!("\n========================================");
+    println!("  E2E TEST RESULTS (26.2)");
+    println!("========================================");
+    println!("Login success:          {}", m.login_success);
+    println!("PlayLogin received:     {}", m.join_game_received);
+    println!("RegistryData packets:   {}", m.registry_data_count);
+    println!("SyncPosition received:  {}", m.sync_position_received);
+    println!("Center chunk:           {:?}", m.center_chunk);
+    println!("Chunks received:        {}", m.chunks_received);
+    if let Some((t, size)) = m.first_chunk {
+        println!("Time to first chunk:    {:.1}ms", t.as_secs_f64() * 1000.0);
+        println!("First chunk size:       {size} bytes");
+    }
+    println!("KeepAlive responses:    {}", m.keepalive_responded);
+    if let Some(tps) = m.tps_from_keepalives() {
+        println!("TPS (keepalive cadence): {tps:.2}");
+    }
+    println!("Position packets sent:  {}", m.position_packets_sent);
+    println!("Packets per 10s window: {:?}", m.packets_by_window);
+    if !m.chat_messages.is_empty() {
+        println!("Server chat:            {:?}", m.chat_messages);
+    }
+    if !m.unknown_packets.is_empty() {
+        println!("Unknown/unhandled pkts: {:#x?}", m.unknown_packets);
+    }
+    if !m.errors.is_empty() {
+        println!("ERRORS:");
+        for e in &m.errors {
+            println!("  - {e}");
         }
     }
 }

@@ -2,7 +2,7 @@
 name = "e2e-server"
 version = "0.1.0"
 edition = "2021"
-description = "E2E test: connects a raw TCP client to the Neutron server"
+description = "E2E test: raw TCP client (26.2) against the Neutron server"
 
 [workspace]
 
@@ -11,6 +11,6 @@ name = "e2e-test"
 path = "main.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
 bytes = "1"
 uuid = { version = "1", features = ["v4"] }
+neutron-protocol = { path = "../../crates/neutron-protocol" }
