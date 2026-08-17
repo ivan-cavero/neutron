@@ -1,32 +1,76 @@
-# Benchmarks reorganization — gauntlet workbench
+# Neutron — dual-track gauntlet workbench
 
-**Goal**: reorganize/refactor the project's benchmark setup: move `bench/` out of the root, add server provisioning (auto-download + local fallback), add a versioned report history, decouple tools from bench jars, fix the slow/broken build.
+> Live round log. LEAD: pi (main checkout). Two parallel tracks in Orca worktrees.
+> Bar is untouchable; builders never grade themselves; critics are fresh per round.
 
-**Bar (verbatim)**:
-1. `bench/` no longer exists in the repo root; everything lives in `tests/benchmarks/`, documented in AGENTS.md §4.
-2. `cargo test --workspace` green in the root workspace AND the benchmarks workspace (or a documented combined gate running both); no regression in the 59 worldgen tests.
-3. `neutron-bench servers download <type> <version>` provisions jars (auto + local fallback) into a central managed dir; zero tools reference `bench/servers` (`grep -r "bench/servers" tools/` = 0).
-4. Every run writes a timestamped, versioned report into `tests/benchmarks/results/history/`; `compare` works over the history.
-5. The benchmarks workspace builds in release from the repo root (toolchain resolved — the current azalea nightly panic disappears); build time measured before/after.
+## Goal
 
-**Budget**: 4 pieces, ≤3 rounds each, 1 smoothing pass. Standard.
+1. **Track A (bench-refactor)**: refactor + improve the benchmark harness — fast,
+   reliable multi-version server provisioning (jar download + local fallback),
+   versioned report history, and a build/run that isn't painfully slow.
+2. **Track B (server-worldgen)**: review the neutron server (test it properly) and
+   continue world generation parity work (run-046 continuation).
 
-**Baseline (measured by LEAD, pre-loop)**:
-- `cargo build --release --manifest-path bench/Cargo.toml` from root: **FAILS** (azalea build.rs panics: requires nightly; rust-toolchain.toml not picked up from root cwd). 1:01 min elapsed to failure.
-- Execution not measurable: `bench/servers/` contained only README.md (no jars).
-- After P1: benchmarks release build works from `tests/benchmarks/` cwd (9.55s with warm cache, 52 MB binary); root build from root still fails on azalea toolchain unless cd'd (documented cwd-based build).
+## Bar (verbatim)
 
-| Unit | Piece | Round | Verdict | Evidence | Artifact |
-|------|-------|-------|---------|----------|----------|
-| P1 | Relayout bench/ → tests/benchmarks/ | 1 | **PASS** | critic: worldgen 59/59 (378s), release build fresh binary, 32 renames, docs clean grep | commit 9f8b3e4 |
-| P2 | Server provisioning (download + fallback, central dir, ref-extract decoupled) | 1 | pending | | |
-| P3 | Versioned report history + compare over history | 1 | pending | | |
-| P4 | Perf: root build works, build time improved, startup measured | 1 | pending | | |
+**Track A** (from previous workbench P1-P4 + user additions):
+1. `bench/` no longer exists in the repo root; everything lives in `tests/benchmarks/`.
+2. `cargo test --workspace` green in root workspace AND benchmarks workspace; no
+   regression in the 59 worldgen tests.
+3. `neutron-bench servers download <type> <version>` provisions jars (auto-download
+   from Mojang manifest / Paper API + local fallback) into a central managed dir with
+   a **multi-version layout**; zero tools reference `bench/servers` (`grep -r "bench/servers" tools/` = 0).
+4. Every run writes a timestamped, versioned report into `tests/benchmarks/results/history/`;
+   `compare` works over the history.
+5. Benchmarks workspace builds in release from the repo root (toolchain resolved);
+   build time measured before/after; benchmark wall-clock budget documented.
+
+**Track B** (run-046 bar, human decision R43 — mechanism parity):
+- Same seeds/streams/algorithms as vanilla. Deterministic phases → 100% block match
+  multi-seed; vegetation/sculk → same RNG stream 1:1. **Do not edit measurement
+  examples/tests to pass.**
+- U5 AC: clay 424242 → ~497 (lush/pale missing ≤20%); border diffs ≥30% down on
+  12345; REGION 424242 ≥97.28%, 12345 ≥97.75%; **777 no regression** (ratchet);
+  tests 59/59.
+- Server: boots, joinable, serves real chunks, TPS stable (smoke evidence).
+
+## Budget
+
+3 rounds/unit max, 2 tracks in parallel, 1 smoothing pass per track, then merge+push.
+Stop: bar met, or 2 consecutive rounds with no improvement, or user says stop.
+
+## Parallelism / ownership map
+
+| Track | Worktree (branch) | Files owned | Builder | Critic |
+| --- | --- | --- | --- | --- |
+| A | `C:/Users/ivang/orca/workspaces/neutron/bench-refactor` (`ivan-cavero/bench-refactor`) | `tests/benchmarks/**` | gauntlet-builder | gauntlet-critic (fresh) |
+| B | `C:/Users/ivang/orca/workspaces/neutron/server-worldgen` (`ivan-cavero/server-worldgen`) | `crates/neutron-server/**`, `crates/neutron-worldgen/**` | gauntlet-builder | gauntlet-critic (fresh) |
+| LEAD | main checkout | `STATE.md`, `workbench.md`, `runs/` | — | — |
+
+Rules: one writer per file; A and B touch disjoint dirs; lead merges branches into
+main and pushes incrementally. `tools/` = human-owned, never touched.
+
+## Units
+
+| Unit | Scope | Verdict | Evidence | Artifact |
+| --- | --- | --- | --- | --- |
+| A1 | Multi-version server provisioning (`servers download <type> <version>`, Mojang/Paper API + local fallback, central dir, ref-extract decoupled) | — | | |
+| A2 | Versioned report history + `compare` over history | — | | |
+| A3 | Perf: root build works, build/runtime time before/after | — | | |
+| B1 | Server review + bot smoke test (boot, join, chunks, TPS) | — | | |
+| B2 | Reference extraction (Java 25) + baseline re-measure (424242/12345/777) | — | | |
+| B3 | Worldgen: 777 regression isolate + lush/pale recall ≥80% | — | | |
 
 ## Round log
-- R1 P1: builder timeout waiting on azalea release build (30 min) → LEAD killed orphans (7 neutron_server @300% CPU), fixed pre-existing libc build break (server.rs:175 used libc::kill without dep), rebuilt (9.55s warm), critic blind PASS 6/6.
-- R1 Wave 2 (parallel worktrees): FAILED — harness worktree isolation did not bind children to their worktrees (all 3 wrote to the main checkout; 0 files in the worktrees). P2 produced non-compiling code on main, P3/P4 interleaved. LEAD stopped the workflow, stashed the mess (stash@{0}), removed worktrees. Lesson: P2/P3 share main.rs → SERIALIZE. Relaunching serial, no worktrees, strict per-piece file ownership.
-- R2 P2: in progress (serial).
+
+- R0 (LEAD): audit §2.5 — repo clean @ c566ece, in sync with origin/main. No stash
+  (workbench claim stale). `tools/nbt-ref/` has NO reference worlds → run-046 numbers
+  unverifiable, flagged. No jars, Java 21 only → Java 25 installed via winget
+  (Temurin 25.0.4.7, user-approved). No target dirs (cold builds everywhere — the
+  "slow benchmarks" baseline). Orca worktrees created:
+  `bench-refactor` + `server-worldgen` (branch `ivan-cavero/*`). Workbench rewritten.
+- R1: launching A1 builder + B1 builder in parallel (async).
 
 ## Open questions for the human
+
 - (none)
