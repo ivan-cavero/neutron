@@ -1,35 +1,33 @@
-# examples/ — F2d parity probes
+# examples/ — parity & verification probes
 
-Not the public API. Each was launched in a run to isolate a gap against vanilla
-(seed 12345, often chunk 6,-2).
+Not the public API. These compare neutron-worldgen against vanilla (seed 12345,
+often chunk 6,-2) and feed the runs' parity bar.
 
-`Cargo.toml` sets `autoexamples = false`. Only the examples listed there compile
-(`block_parity`, `dump_ms`, `sculk_cave`, `parity_diag`, `chunk_check`,
-`gap_diag`). The rest stay on disk as evidence.
+`Cargo.toml` sets `autoexamples = false` — only the examples listed there
+compile. The ones that survive are cited by `runs/` or AGENTS.md; one-off
+investigation probes were deleted (recover from git history if needed).
 
 ```bash
-cargo run --release -p neutron-worldgen --example block_parity
+cargo run --release -p neutron-worldgen --example region_parity
 ```
 
-## Still useful
+## The parity bar (used by runs)
 
 | Example | Purpose |
 | --- | --- |
-| `block_parity` | Block-name match vs vanilla NBT |
-| `dump_ms` | Mineshaft piece tree |
-| `sculk_cave` | ChargeCursor overlay on real cave |
-| `parity_diag` / `gap_diag` | Extra/miss by block type |
-| `chunk_check` | Sanity of a loose chunk |
+| `region_parity` | Full chunk region parity vs vanilla |
+| `clay_overlap` | Clay placement overlap |
+| `lush_pale_parity` | Lush caves / pale garden placement |
+| `parity_multi` / `block_parity` | Multi-seed / block-name parity |
+| `density_shape`, `density_at` | Density function shape checks |
+| `gap_blocks`, `marker_stats`, `list_full`, `multi_base` | Gap / marker analysis |
+| `carver_many`, `sculk_count`, `sculk_overlap` | Carver / sculk counters |
 
-## Historical (do not delete: run evidence)
+## Probe support (used by worldgen-probe)
 
-- **Noise / density:** `noise_check`, `density_*`, `debug_final*`, `blended_*`, `shift_check`, `router_check`
-- **Carvers:** `carver_*`
-- **Biomes:** `biome_*`, `van_biome_at`
-- **Ores / andesite:** `andesite_*`, `r12_counts`
-- **Sculk:** `sculk_*` (except `sculk_cave`)
-- **Vegetation:** `veg_pos`, `tree_gap`
-- **Chunk structure:** `chunk_blocks`, `chunk_struct*`, `nbt_dump`
+| Example | Purpose |
+| --- | --- |
+| `sculk_cave`, `sculk_replay`, `sculk_veintrace` (+ `sculk_vanworld_world` helper) | Sculk differential flow: dump ↔ probe |
+| `feature_index_probe` | FeatureSorter index ground truth (ProbeFeatureOrder) |
 
-If an example doesn't compile, fix it or leave a note in the run that used it.
-They are not "cleaned up" so the `runs/run-0xx.md` history stays reproducible.
+See `tools/README.md` for the tool index and `runs/` for how each was used.
