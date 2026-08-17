@@ -15,6 +15,53 @@ pub(crate) fn metric_value(data: &Value, path: &str) -> Option<f64> {
     cur.as_f64()
 }
 
+/// Tolerance below which values are treated as equal / as unmeasured.
+const EPS: f64 = 1e-9;
+
+/// A value counts as a real measurement only when present and non-zero.
+/// A 0.0 or absent field means the metric wasn't actually measured (e.g. no
+/// bots joined), so it can never win against a real measurement.
+fn is_measured(v: Option<f64>) -> bool {
+    v.map_or(false, |x| x.abs() > EPS)
+}
+
+/// Index of the run that wins a metric, if any.
+/// A metric is only eligible to win when EVERY run has a real measurement;
+/// one missing/zero value makes the whole comparison unreliable. Equal values
+/// (within EPS) are a tie, not a win, so no index is returned.
+fn winner_index(vals: &[Option<f64>], lower_better: bool) -> Option<usize> {
+    if vals.iter().any(|v| !is_measured(*v)) {
+        return None;
+    }
+    let best = vals
+        .iter()
+        .flatten()
+        .copied()
+        .reduce(|a, b| if lower_better { a.min(b) } else { a.max(b) })?;
+    let mut winners: Vec<usize> = Vec::new();
+    for (i, v) in vals.iter().enumerate() {
+        if let Some(x) = v {
+            if (x - best).abs() <= EPS {
+                winners.push(i);
+            }
+        }
+    }
+    match winners.len() {
+        1 => winners.into_iter().next(),
+        _ => None, // tie (or degenerate): nobody wins
+    }
+}
+
+/// Delta string vs baseline; N/A when either side was not really measured.
+fn delta_str(baseline: Option<f64>, v: Option<f64>) -> String {
+    match (baseline, v) {
+        (Some(b), Some(x)) if is_measured(Some(b)) && is_measured(Some(x)) => {
+            format!("Δ {:+.1} ({:+.1}%)", x - b, (x - b) / b * 100.0)
+        }
+        _ => "Δ N/A".to_string(),
+    }
+}
+
 /// Format benchmark results as Markdown.
 pub fn format_markdown(data: &Value) -> String {
     let server_type = data["server"]["type"].as_str().unwrap_or("unknown");
@@ -358,30 +405,20 @@ fn println_deltas(labels: &[String], results: &[Value]) {
     println!("\n## Per-metric deltas (vs baseline {})", labels[0]);
     for (label, path, lower_better) in metrics {
         let vals: Vec<Option<f64>> = results.iter().map(|d| metric_value(d, path)).collect();
-        if vals.iter().all(|v| v.is_none()) {
+        if vals.iter().all(|v| !is_measured(*v)) {
             continue;
         }
         let baseline = vals[0];
-        let best = vals
-            .iter()
-            .flatten()
-            .copied()
-            .reduce(|a, b| if lower_better { a.min(b) } else { a.max(b) });
+        let winner = winner_index(&vals, lower_better);
         println!("{}:", label);
         for (i, (l, v)) in labels.iter().zip(&vals).enumerate() {
             let val = v.map(|x| format!("{:.1}", x)).unwrap_or_else(|| "N/A".to_string());
             if i == 0 {
-                println!("  {:<30} {:<10} (baseline)", l, val);
+                let w = if winner == Some(0) { "  <= winner" } else { "" };
+                println!("  {:<30} {:<10} (baseline){}", l, val, w);
             } else {
-                let delta = match (baseline, v) {
-                    (Some(b), Some(x)) if b != 0.0 => {
-                        format!("Δ {:+.1} ({:+.1}%)", x - b, (x - b) / b * 100.0)
-                    }
-                    (Some(b), Some(x)) => format!("Δ {:+.1}", x - b),
-                    _ => "Δ N/A".to_string(),
-                };
-                let winner = if *v == best { "  <= winner" } else { "" };
-                println!("  {:<30} {:<10} {:<20}{}", l, val, delta, winner);
+                let w = if winner == Some(i) { "  <= winner" } else { "" };
+                println!("  {:<30} {:<10} {:<20}{}", l, val, delta_str(baseline, *v), w);
             }
         }
     }
@@ -449,6 +486,50 @@ mod tests {
         assert_eq!(metric_value(&data, "aggregate.join.p50"), None); // null
         assert_eq!(metric_value(&data, "disk_io.write_mb_s"), Some(42.0));
         assert_eq!(metric_value(&data, "aggregate.missing"), None);
+    }
+
+    #[test]
+    fn winner_missing_vs_real_marks_nobody() {
+        // Lower-is-better: run 1 has real join data, run 2 has 0.0 (0 bots
+        // joined) — the missing side must never win.
+        assert_eq!(winner_index(&[Some(6432.0), Some(0.0)], true), None);
+        // An absent field (None) is just as missing as a literal 0.0.
+        assert_eq!(winner_index(&[Some(6432.0), None], true), None);
+        // Higher-is-better too: 0.0 TPS can't win over a real TPS.
+        assert_eq!(winner_index(&[Some(0.0), Some(123.4)], false), None);
+        // Baseline missing, real value present: still no winner.
+        assert_eq!(winner_index(&[None, Some(1200.0)], true), None);
+        // Delta vs a missing side is N/A, not a -100% "win".
+        assert_eq!(delta_str(Some(6432.0), Some(0.0)), "Δ N/A");
+        assert_eq!(delta_str(Some(0.0), Some(6432.0)), "Δ N/A");
+        assert_eq!(delta_str(None, Some(6432.0)), "Δ N/A");
+    }
+
+    #[test]
+    fn winner_tie_marks_nobody() {
+        // Identical values are a tie, not a win.
+        assert_eq!(winner_index(&[Some(500.0), Some(500.0)], true), None);
+        assert_eq!(winner_index(&[Some(0.0), Some(0.0)], false), None);
+        // Within epsilon counts as a tie too.
+        assert_eq!(winner_index(&[Some(500.0), Some(500.0 + 1e-12)], true), None);
+    }
+
+    #[test]
+    fn winner_improvement_marks_the_right_side() {
+        // Lower-is-better: run 2 got faster (join p50 dropped).
+        assert_eq!(winner_index(&[Some(6432.0), Some(1200.0)], true), Some(1));
+        // Higher-is-better: run 2 improved (TPS up).
+        assert_eq!(winner_index(&[Some(90.0), Some(140.0)], false), Some(1));
+        // Real-vs-real deltas still show a percentage.
+        assert_eq!(delta_str(Some(6432.0), Some(1200.0)), "Δ -5232.0 (-81.3%)");
+    }
+
+    #[test]
+    fn winner_regression_marks_baseline() {
+        // Lower-is-better: run 2 regressed, so the baseline row wins.
+        assert_eq!(winner_index(&[Some(6432.0), Some(8100.0)], true), Some(0));
+        // Higher-is-better: run 2 regressed (TPS dropped), baseline wins.
+        assert_eq!(winner_index(&[Some(140.0), Some(90.0)], false), Some(0));
     }
 
     #[test]
