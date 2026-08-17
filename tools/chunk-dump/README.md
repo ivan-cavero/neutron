@@ -18,4 +18,4 @@ cargo run --release -p chunk-dump -- <region.mca> <local_cx> <local_cz> [--dump-
 
 ## Related
 
-- `vanilla-hash` reads the same region files to hash chunks in bulk.
+- `ref-extract` reads the same region files to hash chunks in bulk.

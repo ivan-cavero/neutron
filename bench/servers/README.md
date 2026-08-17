@@ -1,6 +1,6 @@
 # bench/servers — server jars for reference extraction
 
-`vanilla-hash extract` (and `extract-all` for multi-seed batches) boot these jars to
+`ref-extract extract` (and `extract-all` for multi-seed batches) boot these jars to
 generate reference worlds. The jars are **gitignored** — download them yourself:
 
 | File | Source |
@@ -10,4 +10,4 @@ generate reference worlds. The jars are **gitignored** — download them yoursel
 | `server-folia.jar` | <https://papermc.io/downloads/folia> (26.x build) |
 
 Only `server-vanilla.jar` is required; paper/folia are optional and are
-selected via `vanilla-hash extract-all --servers vanilla,paper,folia`.
+selected via `ref-extract extract-all --servers vanilla,paper,folia`.

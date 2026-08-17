@@ -77,7 +77,7 @@ cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
 cargo run --release -p neutron-worldgen --example region_parity -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example clay_overlap -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example lush_pale_parity -- 424242 0 0 1 <region_dir>
-cargo run --release -p vanilla-hash -- extract-all  # multi-seed reference extraction (vanilla/paper/folia)
+cargo run --release -p ref-extract -- extract-all  # multi-seed reference extraction (vanilla/paper/folia)
 ```
 
 ## 4. Project structure
@@ -94,8 +94,8 @@ tools/
   chunk-dump/         # dump chunk NBT from .mca regions (debug)
   mc-decompiler/      # download + decompile server jars (vineflower, own workspace)
   nbt-ref/            # vanilla reference worlds (runtimes gitignored)
-  vanilla-hash/       # extract reference chunk hashes from vanilla/paper/folia servers
-  vanilla-parity/     # generate neutron chunk hashes + stats (compare via vanilla-hash)
+  ref-extract/       # extract reference chunk hashes from vanilla/paper/folia servers
+  neutron-hash/      # generate neutron chunk hashes + stats (compare via ref-extract)
   worldgen-probe/     # Java probes vs vanilla jar (worldgen internals; .class gitignored)
 tests/e2e-server/     # bot E2E
 runs/                 # run history (run-NNN.md) + README with template
@@ -117,7 +117,7 @@ docs/prompts/         # phase prompt templates (from ROADMAP.md)
 - **Metrics**: startup `Done (Xs)!` regex · join timestamps · cps via Chunky (vanilla/
   Paper) or own counter · TPS via spark/endpoint · RAM RSS by OS.
 - **Reference worlds**: `tools/nbt-ref/vanilla-fresh-*` (gitignored, re-extract with
-  `vanilla-hash extract-all`/pregen scripts).
+  `ref-extract extract-all`/pregen scripts).
 
 ## 5.5 Parallel agents & concurrency
 

@@ -14,83 +14,60 @@ serde = { version = "1", features = ["derive"] }
 [dev-dependencies]
 neutron-world = { path = "../neutron-world" }
 
-# Default examples (parity probes). Historical run probes stay on disk
-# under examples/ but are not built unless named here.
+# Parity/verification examples (the bar). One-off investigation probes were
+# deleted; recover from git history if needed. With autoexamples=false only
+# these are built.
 [[example]]
 name = "block_parity"
 
 [[example]]
-name = "surface_diag"
-
-[[example]]
-name = "dump_ms"
-
-[[example]]
-name = "sculk_cave"
-
-[[example]]
-name = "sculk_pos"
-
-[[example]]
-name = "sculk_replay"
-
-[[example]]
-name = "sculk_vanworld"
-
-[[example]]
-name = "idx_probe"
-
-[[example]]
-name = "sculk_veintrace"
-
-[[example]]
-name = "biomecheck_tmp"
-
-[[example]]
-name = "parity_diag"
-
-[[example]]
-name = "chunk_check"
-
-[[example]]
-name = "gap_diag"
-
-[[example]]
-name = "tree_gap"
-
-[[example]]
-name = "feature_index_probe"
-
-[[example]]
-name = "dump_van_tree"
-
-[[example]]
-name = "compare_worlds"
-
-[[example]]
-name = "border_analysis"
-
-[[example]]
-name = "lush_pale_parity"
-
-[[example]]
-name = "lush_pale_diag"
-
-[[example]]
-name = "clay_probe"
-
-[[example]]
-name = "clay_rng_probe"
+name = "carver_many"
 
 [[example]]
 name = "clay_overlap"
 
 [[example]]
+name = "density_at"
+
+[[example]]
+name = "density_shape"
+
+[[example]]
+name = "feature_index_probe"
+
+[[example]]
+name = "gap_blocks"
+
+[[example]]
+name = "list_full"
+
+[[example]]
+name = "lush_pale_parity"
+
+[[example]]
+name = "marker_stats"
+
+[[example]]
+name = "multi_base"
+
+[[example]]
+name = "parity_multi"
+
+[[example]]
 name = "region_parity"
 
 [[example]]
-name = "t3_diag"
+name = "sculk_cave"
 
 [[example]]
-name = "aquifer_diag"
+name = "sculk_count"
+
+[[example]]
+name = "sculk_overlap"
+
+[[example]]
+name = "sculk_replay"
+
+[[example]]
+name = "sculk_veintrace"
 

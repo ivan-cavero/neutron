@@ -10,7 +10,7 @@ the ground truth that neutron-worldgen must reproduce byte-for-byte.
   (bundler). Also the classpath target for `worldgen-probe`.
 - `vanilla1/libraries/` — Mojang runtime libraries (gitignored).
 - `vanilla1/world/` — generated reference world: regions, `level.dat`, POI,
-  entities. This is what `vanilla-hash` hashes and what the worldgen examples
+  entities. This is what `ref-extract` hashes and what the worldgen examples
   (`region_parity`, `clay_overlap`, `lush_pale_parity`) read.
 
 ## Re-extracting
@@ -23,10 +23,10 @@ The whole directory is gitignored and re-creatable:
 # 3. The world lands in world/dimensions/minecraft/overworld/region/
 ```
 
-For multi-seed reference *hashes* (not worlds), use `vanilla-hash extract-all`
+For multi-seed reference *hashes* (not worlds), use `ref-extract extract-all`
 instead — it boots throwaway servers and hashes the chunks, no committed worlds.
 
 ## Related
 
-- `vanilla-hash` — hash extraction + comparison against these worlds.
+- `ref-extract` — hash extraction + comparison against these worlds.
 - `chunk-dump` — inspect a single chunk's NBT from these region files.
