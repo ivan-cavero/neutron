@@ -93,6 +93,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R2 A2 CRITIC: **PASS** — 5/5 criteria (versioned history schema, compare over history, history list, real run → history entry, builds green). Two blemishes flagged (live): missing metrics (0.0) marked winner over real measurements; ties get winner marker. → **A2 R2 fix builder launched** (winner logic: missing/absent values never win, ties no winner, unit tests).
 - R2 A2 FIX: DONE — commit 519bc2e (reporter.rs +97/-16: EPS, is_measured, winner_index, delta_str; 4 new tests; 10 passed; re-run compare shows blemishes gone, real winners intact). → **A2 R2 critic launched**.
 - R1 B1b FIX: DONE — commit 272e30b (connection.rs: read error → break, cleanup always runs; both cleanup paths confirmed in log before timeout). LEAD committed the builder's artifact + inspected diff (matches prescribed fix). → **B1b critic launched** (reproduce RST disconnect, 241 tests).
+- R1 B1b CRITIC #1: died on tool typo (`rea`). Resume unavailable → **fallback critic relaunched** (5c9cf5ed).
 
 ## Open questions for the human
 
