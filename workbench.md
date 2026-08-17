@@ -69,7 +69,19 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
   (Temurin 25.0.4.7, user-approved). No target dirs (cold builds everywhere — the
   "slow benchmarks" baseline). Orca worktrees created:
   `bench-refactor` + `server-worldgen` (branch `ivan-cavero/*`). Workbench rewritten.
-- R1: launching A1 builder + B1 builder in parallel (async).
+- R1 A1 (builder, bench-refactor): DONE — commit 36c13a4, clean tree. Real downloads
+  verified: vanilla 26.2 (sha256 cdacdfb2…, 60,894,273 B, valid jar), paper 26.2 build
+  112 STABLE (sha256 matches API), folia 26.2 build 4 BETA (matches API). Live finding:
+  PaperMC v2 API sunset → fill.papermc.io/v3. Offline fallback via
+  NEUTRON_BENCH_SERVERS_FALLBACK (10s connect/600s total timeouts). `servers list/status`,
+  `run --version` resolution + legacy fallback, grep bench/servers = 0. Build: 8m52s cold,
+  ~9s warm. Pumpkin: no release binaries → honest actionable error. → **critic launched**.
+- R1 B1 (builder, server-worldgen): TIMED OUT at 30 min mid-investigation (join1 client
+  decode errors — server bug vs harness?). Uncommitted on disk: tick.rs, worldgen
+  micro-opts (zero gain → must revert), tests/e2e-server/ harness + status_ping.py.
+  Resume unavailable (no recovery identity) → **fallback builder relaunched** (aa2d4953,
+  90 min budget) with on-disk state.
+- R1 B1 (fallback): in flight.
 
 ## Open questions for the human
 
