@@ -82,6 +82,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
   Resume unavailable (no recovery identity) → **fallback builder relaunched** (aa2d4953,
   90 min budget) with on-disk state.
 - R1 B1 (fallback): in flight.
+- R1 A1 CRITIC: **FAIL** — 5/6 criteria MET with live evidence (re-downloaded vanilla, sha1 vs Mojang manifest match; paper/folia sha256 vs live API match; fallback/timeouts/hostile inputs all clean). Criterion 1 fails on **pumpkin leg**: downloads ARM64 binary on x86_64 host (PE machine 0xaa64 verified); "no releases" error message is false (nightly release with X64+ARM64 assets exists). Bonus find: `run` exits 101 on pre-existing azalea/bevy_log logger panic in bot crate (not provisioning; scope for A3). → **A1 R2 builder launched** (arch-aware asset selection + honest error text).
 
 ## Open questions for the human
 
