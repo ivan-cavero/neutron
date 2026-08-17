@@ -205,7 +205,10 @@ fn main() -> Result<()> {
         }
         fs::write(output_path, &json)
             .with_context(|| format!("Failed to write {}", output_path.display()))?;
-        println!("\nNeutron reference data saved to {}", output_path.display());
+        println!(
+            "\nNeutron reference data saved to {}",
+            output_path.display()
+        );
         println!(
             "Compare against a vanilla reference with: cargo run -p vanilla-hash -- compare \\
              --left <vanilla-reference.json> --right {}",
@@ -571,7 +574,9 @@ fn pack_heightmap(heights: &[i16]) -> Vec<i64> {
 
 /// Convert a BlockId to its Minecraft resource location.
 fn block_id_to_name(id: u16) -> &'static str {
-    BlockId::from_u16(id).map(|b| b.block_name()).unwrap_or("minecraft:unknown")
+    BlockId::from_u16(id)
+        .map(|b| b.block_name())
+        .unwrap_or("minecraft:unknown")
 }
 
 /// Convert a BiomeId to its Minecraft resource location.

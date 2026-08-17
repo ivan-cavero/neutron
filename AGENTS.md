@@ -77,7 +77,7 @@ cargo run --release -p neutron-server -- --seed 12345 --view-distance 8
 cargo run --release -p neutron-worldgen --example region_parity -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example clay_overlap -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example lush_pale_parity -- 424242 0 0 1 <region_dir>
-tools/vanilla-hash/generate-all.sh  # multi-seed reference extraction (vanilla/paper/folia)
+cargo run --release -p vanilla-hash -- extract-all  # multi-seed reference extraction (vanilla/paper/folia)
 ```
 
 ## 4. Project structure
@@ -117,7 +117,7 @@ docs/prompts/         # phase prompt templates (from ROADMAP.md)
 - **Metrics**: startup `Done (Xs)!` regex · join timestamps · cps via Chunky (vanilla/
   Paper) or own counter · TPS via spark/endpoint · RAM RSS by OS.
 - **Reference worlds**: `tools/nbt-ref/vanilla-fresh-*` (gitignored, re-extract with
-  `generate-all.sh`/pregen scripts).
+  `vanilla-hash extract-all`/pregen scripts).
 
 ## 5.5 Parallel agents & concurrency
 

@@ -49,7 +49,10 @@ fn main() {
     let dump = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "tools/worldgen-probe/cave-98-43-23.txt".to_string());
-    let seed: i64 = std::env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or(1);
+    let seed: i64 = std::env::args()
+        .nth(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1);
 
     // Dump covers chunks 5..7 x -3..-1 → region center (6,-2) radius 1.
     let mut region = RegionBuf::new(6, -2, 1);
@@ -62,7 +65,11 @@ fn main() {
         }
         let p: Vec<&str> = line.split_whitespace().collect();
         if p[0] == "origin" {
-            origin = (p[1].parse().unwrap(), p[2].parse().unwrap(), p[3].parse().unwrap());
+            origin = (
+                p[1].parse().unwrap(),
+                p[2].parse().unwrap(),
+                p[3].parse().unwrap(),
+            );
             continue;
         }
         let x: i32 = p[0].parse().unwrap();

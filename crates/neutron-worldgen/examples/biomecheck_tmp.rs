@@ -10,7 +10,10 @@ fn main() {
     let mut out = String::new();
     for cz in -3i32..=-1 {
         for cx in 5i32..=7 {
-            let data = region.get_chunk(cx.rem_euclid(32), cz.rem_euclid(32)).unwrap().unwrap();
+            let data = region
+                .get_chunk(cx.rem_euclid(32), cz.rem_euclid(32))
+                .unwrap()
+                .unwrap();
             let nbt = read_nbt(&data).unwrap();
             let sections = match compound_get(&nbt.compound, "sections") {
                 Some(Tag::List(List::Compound(l))) => l,
@@ -22,7 +25,9 @@ fn main() {
                     Some(Tag::Int(y)) => *y,
                     _ => continue,
                 };
-                let Some(Tag::Compound(bio)) = compound_get(sec, "biomes") else { continue };
+                let Some(Tag::Compound(bio)) = compound_get(sec, "biomes") else {
+                    continue;
+                };
                 let Some(Tag::List(List::String(pal))) = compound_get(bio, "palette") else {
                     continue;
                 };
@@ -39,14 +44,21 @@ fn main() {
                     for qy in 0..4i32 {
                         for qz in 0..4i32 {
                             for qx in 0..4i32 {
-                                out.push_str(&format!("{} {} {}\n", cx * 4 + qx, y_sec * 4 + qy, cz * 4 + qz));
+                                out.push_str(&format!(
+                                    "{} {} {}\n",
+                                    cx * 4 + qx,
+                                    y_sec * 4 + qy,
+                                    cz * 4 + qz
+                                ));
                             }
                         }
                     }
                     continue;
                 }
                 let bits = ((pal.len() - 1).ilog2() + 1) as u32;
-                let Some(Tag::LongArray(data)) = compound_get(bio, "data") else { continue };
+                let Some(Tag::LongArray(data)) = compound_get(bio, "data") else {
+                    continue;
+                };
                 let longs: Vec<i64> = data.to_vec();
                 let epl = 64 / bits;
                 let mask = (1u64 << bits) - 1;
@@ -58,7 +70,12 @@ fn main() {
                         let qy = (i / 16) as i32;
                         let qz = ((i % 16) / 4) as i32;
                         let qx = (i % 4) as i32;
-                        out.push_str(&format!("{} {} {}\n", cx * 4 + qx, y_sec * 4 + qy, cz * 4 + qz));
+                        out.push_str(&format!(
+                            "{} {} {}\n",
+                            cx * 4 + qx,
+                            y_sec * 4 + qy,
+                            cz * 4 + qz
+                        ));
                     }
                 }
             }

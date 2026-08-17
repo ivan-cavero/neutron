@@ -3,7 +3,12 @@
 fn main() {
     let list = neutron_worldgen::feature_catalog::features_per_step_at(9);
     for (i, f) in list.iter().enumerate() {
-        if f.contains("forest") || f.contains("tree") || f.contains("litter") || f.contains("mushroom") || i < 5 {
+        if f.contains("forest")
+            || f.contains("tree")
+            || f.contains("litter")
+            || f.contains("mushroom")
+            || i < 5
+        {
             println!("{i:3} {f}");
         }
     }

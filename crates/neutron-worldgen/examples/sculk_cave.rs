@@ -90,7 +90,12 @@ fn load_van_3x3() -> std::collections::HashMap<(i32, i32), Vec<String>> {
     out
 }
 
-fn van_at(van: &std::collections::HashMap<(i32, i32), Vec<String>>, x: i32, y: i32, z: i32) -> &str {
+fn van_at(
+    van: &std::collections::HashMap<(i32, i32), Vec<String>>,
+    x: i32,
+    y: i32,
+    z: i32,
+) -> &str {
     let cx = x.div_euclid(16);
     let cz = z.div_euclid(16);
     let Some(chunk) = van.get(&(cx, cz)) else {
@@ -167,9 +172,7 @@ fn main() {
                 compared += 1;
                 let nn = name(region.get(x, y, z));
                 if nn != vn {
-                    *ore_mismatch
-                        .entry(format!("{vn}->{nn}"))
-                        .or_insert(0u32) += 1;
+                    *ore_mismatch.entry(format!("{vn}->{nn}")).or_insert(0u32) += 1;
                 }
             }
         }
@@ -178,7 +181,9 @@ fn main() {
     for y in (oy - 15)..=(oy + 15) {
         for z in (oz - 15)..=(oz + 15) {
             for x in (ox - 15)..=(ox + 15) {
-                *van_names.entry(van_at(&van, x, y, z).to_string()).or_insert(0u32) += 1;
+                *van_names
+                    .entry(van_at(&van, x, y, z).to_string())
+                    .or_insert(0u32) += 1;
             }
         }
     }

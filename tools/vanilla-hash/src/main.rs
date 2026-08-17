@@ -84,6 +84,36 @@ enum Commands {
         #[arg(long)]
         right: PathBuf,
     },
+
+    /// Extract reference data for multiple seeds × server types (batch).
+    ///
+    /// Writes one `<server>-<seed>-<mode>.json` per combination into the
+    /// output directory. Replaces the old generate-all.sh/.ps1 scripts.
+    ExtractAll {
+        /// Seeds to extract (default: 12345 67890 11111 99999 42).
+        #[arg(long)]
+        seeds: Vec<i64>,
+
+        /// Server types (repeatable; default: vanilla).
+        #[arg(long, value_enum)]
+        servers: Vec<ServerType>,
+
+        /// Output directory (default: tools/vanilla-hash/hashes).
+        #[arg(long)]
+        output_dir: Option<PathBuf>,
+
+        /// Base directory containing server jars (default: bench/servers).
+        #[arg(long)]
+        servers_dir: Option<PathBuf>,
+
+        /// Timeout in seconds to wait for server startup.
+        #[arg(long, default_value_t = 120)]
+        startup_timeout: u64,
+
+        /// What to hash from each chunk.
+        #[arg(long, value_enum, default_value_t = HashMode::Blocks)]
+        hash_mode: HashMode,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq)]
@@ -173,6 +203,21 @@ fn main() -> Result<()> {
             hash_mode,
         ),
         Some(Commands::Compare { left, right }) => cmd_compare(left, right),
+        Some(Commands::ExtractAll {
+            seeds,
+            servers,
+            output_dir,
+            servers_dir,
+            startup_timeout,
+            hash_mode,
+        }) => cmd_extract_all(
+            seeds,
+            servers,
+            output_dir,
+            servers_dir,
+            startup_timeout,
+            hash_mode,
+        ),
         None => {
             // Default: show help
             Cli::parse_from(["vanilla-hash", "--help"]);
@@ -320,6 +365,60 @@ fn cmd_extract(
         reference.total_chunks,
         output.display()
     );
+    Ok(())
+}
+
+/// Extract reference data for every seed × server combination, one JSON per pair.
+fn cmd_extract_all(
+    seeds: Vec<i64>,
+    servers: Vec<ServerType>,
+    output_dir: Option<PathBuf>,
+    servers_dir: Option<PathBuf>,
+    startup_timeout: u64,
+    hash_mode: HashMode,
+) -> Result<()> {
+    let seeds = if seeds.is_empty() {
+        vec![12345, 67890, 11111, 99999, 42]
+    } else {
+        seeds
+    };
+    let servers = if servers.is_empty() {
+        vec![ServerType::Vanilla]
+    } else {
+        servers
+    };
+
+    let repo_root = find_repo_root()?;
+    let servers_dir = servers_dir.unwrap_or_else(|| repo_root.join("bench").join("servers"));
+    let output_dir = output_dir
+        .unwrap_or_else(|| repo_root.join("tools").join("vanilla-hash").join("hashes"));
+    fs::create_dir_all(&output_dir)
+        .with_context(|| format!("Failed to create {}", output_dir.display()))?;
+
+    println!("=== Reference Data Generation ===");
+    println!("Seeds: {:?}", seeds);
+    println!("Servers: {:?}", servers);
+    println!("Output: {}", output_dir.display());
+    println!();
+
+    for server in &servers {
+        for &seed in &seeds {
+            let output = output_dir.join(format!("{}-{}-{}.json", server, seed, hash_mode));
+            println!("--- Generating: server={} seed={} ---", server, seed);
+            cmd_extract(
+                seed,
+                server.clone(),
+                output,
+                4, // radius (unused)
+                Some(servers_dir.clone()),
+                startup_timeout,
+                false,
+                None,
+                hash_mode.clone(),
+            )?;
+            println!();
+        }
+    }
     Ok(())
 }
 

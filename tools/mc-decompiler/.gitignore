@@ -1,0 +1,3 @@
+# Vineflower decompiler jar — download from https://github.com/Vineflower/vineflower/releases
+# and place it at vendor/vineflower.jar (setup: `mc-decompiler setup` checks for it).
+vendor/

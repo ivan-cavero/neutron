@@ -33,8 +33,8 @@ fn main() {
                     if b == neutron_worldgen::surface::BlockId::Air {
                         continue;
                     }
-                    let name = neutron_worldgen::surface::vanilla_name(b)
-                        .trim_start_matches("minecraft:");
+                    let name =
+                        neutron_worldgen::surface::vanilla_name(b).trim_start_matches("minecraft:");
                     s.push_str(&format!("{x} {y} {z} {name}\n"));
                 }
             }
@@ -76,8 +76,10 @@ fn main() {
     let pgate = sculk::probe_patch_gate_origin(ox0, oz0, seed, 1, &g.state);
     let mut ps = String::new();
     for &(x, y, z, ok) in &pgate {
-        ps.push_str(&format!("{x} {y} {z} {ok}
-"));
+        ps.push_str(&format!(
+            "{x} {y} {z} {ok}
+"
+        ));
     }
     std::fs::write("tools/worldgen-probe/patch-gate-96--32.txt", ps).expect("write patch gate");
 
