@@ -84,6 +84,7 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 - R1 B1 (fallback): in flight.
 - R1 A1 CRITIC: **FAIL** — 5/6 criteria MET with live evidence (re-downloaded vanilla, sha1 vs Mojang manifest match; paper/folia sha256 vs live API match; fallback/timeouts/hostile inputs all clean). Criterion 1 fails on **pumpkin leg**: downloads ARM64 binary on x86_64 host (PE machine 0xaa64 verified); "no releases" error message is false (nightly release with X64+ARM64 assets exists). Bonus find: `run` exits 101 on pre-existing azalea/bevy_log logger panic in bot crate (not provisioning; scope for A3). → **A1 R2 builder launched** (arch-aware asset selection + honest error text).
 - R2 A1 (builder, bench-refactor): DONE — commit 3b7b0ff (provision.rs, +31/-20). Arch-aware `pumpkin_target()` (ARCH+OS → asset labels), honest error text, explicit version→nightly mapping. LEAD spot-check: pumpkin.exe PE machine = **0x8664 (AMD64) ✓**. → **fresh R2 critic launched**.
+- R1 B1 (fallback #1): TIMED OUT at 30 min again (timeout param not propagated; 90 min requested). But bars #1-4 PROVEN on disk: Done marker, status ping, join root-cause (PROBE bug — zero-fill buffer, not server), 21 real chunks, TPS fix sleep→interval = 20.01 (19.99-20.02 under load). Worldgen experiment reverted cleanly. → **FINALIZE fallback launched** (test suite + REVIEW.md + commits; warm builds).
 
 ## Open questions for the human
 
