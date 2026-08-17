@@ -15,29 +15,29 @@ Cargo.toml.orig
 .cargo/credentials
 .cargo/credentials.toml
 
-# ----- Bench harness -----
-bench/target/
-bench/Cargo.lock
-bench/test-vanilla/
-bench/test-paper/
-bench/test-folia/
-bench/test-pumpkin/
-bench/test-server/
-bench/logs/
-bench/results/**
-!bench/results/.gitkeep
+# ----- Bench harness (tests/benchmarks/, own workspace) -----
+tests/benchmarks/target/
+tests/benchmarks/Cargo.lock
+tests/benchmarks/test-vanilla/
+tests/benchmarks/test-paper/
+tests/benchmarks/test-folia/
+tests/benchmarks/test-pumpkin/
+tests/benchmarks/test-server/
+tests/benchmarks/logs/
+tests/benchmarks/results/**
+!tests/benchmarks/results/.gitkeep
 # Keep human-written parity notes if needed:
-!bench/results/parity-report-*.md
-!bench/results/simulation-parity-check.md
-bench/servers/**/*.jar
-bench/servers/**/*.exe
-bench/servers/**/*.zip
-bench/servers/pumpkin/pumpkin
-bench/libraries/
-bench/versions/
-bench/eula.txt
-bench/**/world/
-bench/**/logs/
+!tests/benchmarks/results/parity-report-*.md
+!tests/benchmarks/results/simulation-parity-check.md
+tests/benchmarks/servers/**/*.jar
+tests/benchmarks/servers/**/*.exe
+tests/benchmarks/servers/**/*.zip
+tests/benchmarks/servers/pumpkin/pumpkin
+tests/benchmarks/libraries/
+tests/benchmarks/versions/
+tests/benchmarks/eula.txt
+tests/benchmarks/**/world/
+tests/benchmarks/**/logs/
 
 # ----- Minecraft server junk (any path) -----
 **/world/

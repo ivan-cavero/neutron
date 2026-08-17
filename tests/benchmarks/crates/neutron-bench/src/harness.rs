@@ -4,7 +4,6 @@ use chrono::Local;
 use eyre::{Result, WrapErr};
 use neutron_bot::scenarios::{self, ScenarioConfig};
 use std::fs;
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use crate::hardware;
@@ -40,11 +39,15 @@ pub async fn run_scenario(
         server_label, size_label, scenario_label, timestamp
     );
 
-    let results_path = PathBuf::from(results_dir).join(format!("{}.json", benchmark_id));
-    let log_path = PathBuf::from(log_dir);
+    // Anchor output dirs to the benchmarks workspace root (absolute args replace,
+    // relative args resolve under tests/benchmarks/).
+    let results_dir = crate::ws_root().join(results_dir);
+    let log_path = crate::ws_root().join(log_dir);
 
-    fs::create_dir_all(results_dir)
-        .wrap_err_with(|| format!("creating results dir: {}", results_dir))?;
+    let results_path = results_dir.join(format!("{}.json", benchmark_id));
+
+    fs::create_dir_all(&results_dir)
+        .wrap_err_with(|| format!("creating results dir: {}", results_dir.display()))?;
     fs::create_dir_all(&log_path)
         .wrap_err_with(|| format!("creating log dir: {}", log_path.display()))?;
 
@@ -70,7 +73,7 @@ pub async fn run_scenario(
 
     for run_idx in 0..runs {
         let run_id = format!("{}-run{}", benchmark_id, run_idx);
-        let server_dir = PathBuf::from(format!("bench/test-{}", server_label));
+        let server_dir = crate::ws_root().join(format!("test-{}", server_label));
 
         println!(
             "  Run {}/{}: starting {} server...",

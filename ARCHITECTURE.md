@@ -235,7 +235,7 @@ D0-D4 flow, automated, SLA ≤ 7 days after a Mojang release:
 - Own profiling endpoint (spark equivalent: TPS, tick durations min/max/avg/p99, CPU, memory,
   disk).
 - Integrated bench CLI (`neutron bench ...`) to measure without external bots when possible.
-- Every benchmark published in `bench/results/` (see BENCHMARKS.md).
+- Every benchmark published in `tests/benchmarks/results/` (see BENCHMARKS.md).
 
 ## 12. Security
 

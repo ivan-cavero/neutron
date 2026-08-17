@@ -123,7 +123,7 @@ neutron/
 │  ├─ neutron-sim/          # light / redstone / fluids / spawn (tests, not wired)
 │  └─ neutron-bench-server/ # criterion
 ├─ tools/                   # golden-data · parity-check · vanilla-extract · java-probe
-├─ bench/                   # separate workspace: bots + reference jars
+├─ tests/benchmarks/        # separate workspace: bots + reference jars (nightly)
 ├─ runs/                    # run history (run-NNN.md)
 ├─ docs/prompts/            # phase prompts for pi
 └─ docs/                    # ADRs and notes

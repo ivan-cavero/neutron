@@ -11,8 +11,16 @@ mod types;
 
 use clap::{Parser, Subcommand};
 use eyre::Result;
+use std::path::PathBuf;
 
 use types::{Scenario, ServerType, Size};
+
+/// Benchmarks workspace root (`tests/benchmarks/`): `CARGO_MANIFEST_DIR` is
+/// `crates/neutron-bench`, the workspace root is two levels up. Paths are anchored
+/// here so the binary behaves the same regardless of the caller's cwd.
+pub fn ws_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
 
 #[derive(Parser)]
 #[command(name = "neutron-bench")]
@@ -71,12 +79,12 @@ struct RunArgs {
     #[arg(long, default_value_t = 60)]
     duration: u64,
 
-    /// Results output directory
-    #[arg(long, default_value = "bench/results")]
+    /// Results output directory (relative to the benchmarks workspace root)
+    #[arg(long, default_value = "results")]
     results_dir: String,
 
-    /// Log output directory
-    #[arg(long, default_value = "bench/logs")]
+    /// Log output directory (relative to the benchmarks workspace root)
+    #[arg(long, default_value = "logs")]
     log_dir: String,
 }
 

@@ -4,7 +4,7 @@
 
 ## 1. Filosofía
 
-1. Un benchmark sin metodología es marketing. Publicamos: hardware, software, versiones, comandos, datos crudos (`bench/results/*.json`) y tabla markdown autogenerada.
+1. Un benchmark sin metodología es marketing. Publicamos: hardware, software, versiones, comandos, datos crudos (`tests/benchmarks/results/*.json`) y tabla markdown autogenerada.
 2. **Misma máquina, misma seed, mismo procedimiento** para vanilla, Paper, Folia y Pumpkin. Sin "condiciones especiales" por servidor.
 3. Baselines verificados de la comunidad se citan con fuente y se REPRODUCEN en nuestra máquina antes de usarlos como referencia.
 4. El benchmark es un artefacto de CI: si una PR regresiona una métrica clave, la PR no entra.
@@ -13,8 +13,8 @@
 
 El benchmark harness está escrito completamente en **Rust** (nightly, requerido por azalea).
 
-```
-bench/
+```text
+tests/benchmarks/
 ├── Cargo.toml                    # Workspace
 ├── rust-toolchain.toml           # nightly
 ├── crates/
@@ -44,7 +44,7 @@ bench/
 
 **Uso:**
 ```bash
-cd bench && cargo build --release
+cd tests/benchmarks && cargo build --release
 
 # Todos los escenarios para vanilla, 10 bots
 ./target/release/neutron-bench run --server vanilla --size small
@@ -130,7 +130,7 @@ cd bench && cargo build --release
 
 ## 9. Cómo agregar un nuevo escenario
 
-1. Crear `bench/crates/neutron-bot/src/scenarios/mi_escenario.rs`
+1. Crear `tests/benchmarks/crates/neutron-bot/src/scenarios/mi_escenario.rs`
 2. Agregar variante a `Scenario` en `types.rs`
 3. Agregar función de lanzamiento en `client.rs`
 4. Agregar caso en `harness.rs` y `main.rs`

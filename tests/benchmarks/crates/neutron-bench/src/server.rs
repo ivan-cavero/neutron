@@ -57,17 +57,15 @@ pub fn start(
     let log_file = fs::File::create(&log_path)
         .wrap_err_with(|| format!("creating log file: {}", log_path.display()))?;
 
-    // Resolve bench directory (where servers/ lives)
-    let bench_dir = std::env::current_dir()
-        .wrap_err("getting current directory")?
-        .join("bench");
+    // Resolve benchmarks workspace root (where servers/ lives)
+    let bench_dir = crate::ws_root();
 
     let child = match server_type {
         ServerType::Vanilla | ServerType::Paper | ServerType::Folia => {
             let jar_name = "server.jar";
             let jar_path = server_dir.join(jar_name);
             if !jar_path.exists() {
-                // Try bench/servers/<type>/server.jar
+                // Try tests/benchmarks/servers/<type>/server.jar
                 let bench_jar = bench_dir.join("servers").join(server_type.label()).join(jar_name);
                 if bench_jar.exists() {
                     fs::copy(&bench_jar, &jar_path)?;

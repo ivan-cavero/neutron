@@ -6,8 +6,8 @@
     "**/versions/**": true,
     "tools/nbt-ref/vanilla1/world/**": true,
     "tools/vanilla-extract/server-classes/**": true,
-    "bench/target/**": true,
-    "bench/results/**": true,
+    "tests/benchmarks/target/**": true,
+    "tests/benchmarks/results/**": true,
     "**/node_modules/**": true
   },
   "files.exclude": {
@@ -18,15 +18,15 @@
     "tools/nbt-ref/vanilla1/versions": true,
     "tools/java-probe/libs": true,
     "tools/java-probe/bin": true,
-    "bench/target": true,
-    "bench/libraries": true
+    "tests/benchmarks/target": true,
+    "tests/benchmarks/libraries": true
   },
   "search.exclude": {
     "**/target/**": true,
     "tools/vanilla-extract/server-classes/**": true,
     "tools/nbt-ref/vanilla1/world/**": true,
-    "bench/results/**": true,
-    "bench/target/**": true
+    "tests/benchmarks/results/**": true,
+    "tests/benchmarks/target/**": true
   },
   "git.ignoreLimitWarning": true
 }

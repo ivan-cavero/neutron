@@ -78,6 +78,8 @@ cargo run --release -p neutron-worldgen --example region_parity -- 424242 0 0 1 
 cargo run --release -p neutron-worldgen --example clay_overlap -- 424242 0 0 1 <region_dir>
 cargo run --release -p neutron-worldgen --example lush_pale_parity -- 424242 0 0 1 <region_dir>
 cargo run --release -p ref-extract -- extract-all  # multi-seed reference extraction (vanilla/paper/folia)
+# benchmarks (own workspace at tests/benchmarks/, pinned to nightly in its own rust-toolchain.toml):
+cd tests/benchmarks && cargo build --release   # rustup resolves the toolchain from cwd, so build from inside the dir
 ```
 
 ## 4. Project structure
@@ -98,6 +100,7 @@ tools/
   neutron-hash/      # generate neutron chunk hashes + stats (compare via ref-extract)
   worldgen-probe/     # Java probes vs vanilla jar (worldgen internals; .class gitignored)
 tests/e2e-server/     # bot E2E
+tests/benchmarks/     # benchmark harness, OWN workspace (nightly for azalea) — not part of the root workspace
 runs/                 # run history (run-NNN.md) + README with template
 docs/prompts/         # phase prompt templates (from ROADMAP.md)
 ```
@@ -175,7 +178,7 @@ roles to their own tools — the roles are what matter, not the names.
   a 47-file commit is un-bisectable. If a unit is WIP and unproven, commit it on a
   branch or label it clearly in the message (e.g. "WIP: ...").
 - Always run `cargo test --workspace` before committing.
-- **Never commit**: `target/`, `bench/results/` dumps, vanilla runtimes
+- **Never commit**: `target/`, `tests/benchmarks/results/` dumps, vanilla runtimes
   (`tools/nbt-ref/vanilla-*/`), jars, decompiled sources (`tools/mc-decompiler/output/`),
   `tools/worldgen-probe/bin/` (compiled `.class`), `logs/`, `tmp*`.
 - A PASS in a run file requires blind-critic evidence. Builder-verified work is labeled
