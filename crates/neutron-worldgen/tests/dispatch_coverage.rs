@@ -164,6 +164,39 @@ fn resolve_placed(
     }
 }
 
+/// Resolve a feature reference that may be a string id OR an inline placed
+/// object (`{"feature": ..., "placement": [...]}` — used by
+/// `random_boolean_selector`/`random_selector` children, e.g. `lush_caves_clay`).
+fn collect_feature_ref(
+    value: &Value,
+    placed_of: &str,
+    out: &mut Vec<(String, Value)>,
+    seen_placed: &mut HashSet<String>,
+    issues: &mut Vec<String>,
+) {
+    if let Some(id) = value.as_str() {
+        collect_configured(id, placed_of, out, seen_placed, issues);
+        return;
+    }
+    if !value.is_object() {
+        issues.push(format!("{placed_of}: invalid feature ref (not a string or object)"));
+        return;
+    }
+    // Inline placed feature object: resolve its inner feature, then collect
+    // the placed object itself (matches `place_feature_ref` at runtime).
+    match value.get("feature") {
+        Some(inner) if inner.is_string() => {
+            collect_configured(inner.as_str().unwrap(), placed_of, out, seen_placed, issues)
+        }
+        Some(inner) if inner.is_object() => {
+            // Inline configured feature directly in the placed object.
+            collect_selector_children(placed_of, inner, out, seen_placed, issues);
+            out.push((placed_of.to_string(), inner.clone()));
+        }
+        _ => issues.push(format!("{placed_of}: inline placed object without a feature field")),
+    }
+}
+
 /// Push selector children onto `out` via their feature refs
 /// (`random_selector`, `simple_random_selector`, `random_boolean_selector`).
 fn collect_selector_children(
@@ -179,30 +212,30 @@ fn collect_selector_children(
         "random_selector" => {
             if let Some(features) = config["features"].as_array() {
                 for f in features {
-                    if let Some(id) = f["feature"].as_str() {
-                        collect_configured(id, placed_of, out, seen_placed, issues);
+                    if let Some(feature) = f.get("feature") {
+                        collect_feature_ref(feature, placed_of, out, seen_placed, issues);
                     }
                 }
             }
-            if let Some(def) = config["default"].as_str() {
-                collect_configured(def, placed_of, out, seen_placed, issues);
+            if let Some(def) = config.get("default") {
+                collect_feature_ref(def, placed_of, out, seen_placed, issues);
             }
         }
         "simple_random_selector" => {
             if let Some(features) = config["features"].as_array() {
                 for f in features {
-                    if let Some(id) = f["feature"].as_str() {
-                        collect_configured(id, placed_of, out, seen_placed, issues);
+                    if let Some(feature) = f.get("feature") {
+                        collect_feature_ref(feature, placed_of, out, seen_placed, issues);
                     }
                 }
             }
         }
         "random_boolean_selector" => {
-            if let Some(id) = config["feature_true"].as_str() {
-                collect_configured(id, placed_of, out, seen_placed, issues);
+            if let Some(feature) = config.get("feature_true") {
+                collect_feature_ref(feature, placed_of, out, seen_placed, issues);
             }
-            if let Some(id) = config["feature_false"].as_str() {
-                collect_configured(id, placed_of, out, seen_placed, issues);
+            if let Some(feature) = config.get("feature_false") {
+                collect_feature_ref(feature, placed_of, out, seen_placed, issues);
             }
         }
         _ => {}
