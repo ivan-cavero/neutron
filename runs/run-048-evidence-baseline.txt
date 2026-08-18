@@ -1,0 +1,248 @@
+# run-048 B2 — fresh vanilla 26.2 reference extraction + baseline re-measurement
+# Host: this Linux machine (new PC). Commit: 3e63d5a (run048-worldgen worktree).
+# No code changes. Evidence = raw tool output + timestamps.
+# Date: 2026-08-18 (local +02:00). Java: JBR 25.0.2 (JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/air/jbr).
+# Vanilla jar: servers-ref/server-vanilla.jar -> symlink to
+#   /home/ivan.cavero/Documents/GitHub/neutron/tests/benchmarks/servers/vanilla/26.2/server.jar
+
+###############################################################################
+# 1. REFERENCE EXTRACTION  (ref-extract, fresh absolute tmp dir per seed)
+# Command per seed:
+#   cargo run --release -p ref-extract -- extract --seed <S> --server vanilla \
+#     --hash-mode blocks --output /tmp/refx-<S>/reference.json \
+#     --servers-dir servers-ref --tmp-dir /tmp/refx-<S> --keep-tmp
+# Result dir moved to tools/nbt-ref/vanilla-fresh-<S>/ (gitignored).
+###############################################################################
+
+--- seed 424242 (log /tmp/extract-424242.log) ---
+START 2026-08-18T08:59:24+02:00
+INFO server started successfully elapsed=48.687264353s
+INFO waiting for chunk generation (90s)
+INFO extracted chunk checksums chunk_count=529
+Extracted 529 chunks to /tmp/refx-424242/reference.json
+EXIT=0
+END   2026-08-18T09:01:45+02:00
+
+--- seed 12345 (log /tmp/extract-12345.log) ---
+START 2026-08-18T09:01:57+02:00
+INFO server started successfully elapsed=52.521570253s
+INFO extracted chunk checksums chunk_count=529
+Extracted 529 chunks to /tmp/refx-12345/reference.json
+EXIT=0
+END   2026-08-18T09:04:21+02:00
+
+--- seed 777 (log /tmp/extract-777.log) ---
+START 2026-08-18T09:04:31+02:00
+INFO server started successfully elapsed=53.268359092s
+INFO extracted chunk checksums chunk_count=529
+Extracted 529 chunks to /tmp/refx-777/reference.json
+EXIT=0
+END   2026-08-18T09:06:57+02:00
+
+--- reference.json verification (hash-mode blocks) ---
+seed 424242 mode blocks chunks 529
+seed 12345 mode blocks chunks 529
+seed 777   mode blocks chunks 529
+
+--- extracted dirs + .mca counts ---
+tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region/: 4 files
+  r.0.0.mca r.0.-1.mca r.-1.0.mca r.-1.-1.mca
+tools/nbt-ref/vanilla-fresh-12345/world/dimensions/minecraft/overworld/region/: 4 files
+  r.0.0.mca r.0.-1.mca r.-1.0.mca r.-1.-1.mca
+tools/nbt-ref/vanilla-fresh-777/world/dimensions/minecraft/overworld/region/: 4 files
+  r.0.0.mca r.0.-1.mca r.-1.0.mca r.-1.-1.mca
+Chunk status spot-check (chunk-dump): 424242 (0,0) Status=full; 777 (0,0) Status=full;
+12345 (6,-2) [r.0.-1.mca local 6,30] Status=full; 12345 (0,0) Status=structure_starts
+(all-air proto-chunk -> 12345 center must be (6,-2), see note below).
+
+###############################################################################
+# 2. BASELINE RE-MEASUREMENT (release examples, worktree root)
+# Binary: target/release/examples/<ex> (built via cargo build --release -p neutron-worldgen --examples,
+#   cold build 2026-08-18T09:07:12+02:00 -> 09:07:46, EXIT=0)
+###############################################################################
+
+--- region_parity 424242 center=(0,0) radius=1 (log /tmp/rp-424242.log) ---
+START 2026-08-18T09:08:32+02:00
+seed=424242 center=(0,0) radius=1
+     chunk       ALL      BASE      core    border
+   -1,  -1    96.91%    97.82%    97.40%    96.83%
+    0,  -1    97.20%    98.03%    97.37%    97.18%
+    1,  -1    97.71%    98.17%    97.69%    97.71%
+   -1,   0    96.87%    97.66%    97.20%    96.82%
+    0,   0    96.92%    97.92%    96.88%    96.93%
+    1,   0    97.77%    98.46%    97.87%    97.75%
+   -1,   1    97.21%    98.10%    97.84%    97.11%
+    0,   1    97.64%    98.53%    98.01%    97.58%
+    1,   1    97.22%    98.19%    97.19%    97.23%
+REGION ALL: 97.27% over 9 chunks
+EXIT=0
+
+--- region_parity 12345 center=(6,-2) radius=1 (log /tmp/rp-12345-6m2.log) ---
+START 2026-08-18T09:20:18+02:00
+seed=12345 center=(6,-2) radius=1
+     chunk       ALL      BASE      core    border
+    5,  -3    98.06%    98.44%    99.14%    97.88%
+    6,  -3    98.10%    98.84%    98.50%    98.03%
+    7,  -3    97.48%    97.85%    97.53%    97.47%
+    5,  -2    98.00%    98.20%    99.02%    97.83%
+    6,  -2    98.17%    99.02%    98.16%    98.17%
+    7,  -2    98.12%    98.50%    98.98%    97.97%
+    5,  -1    96.84%    96.88%    97.91%    96.66%
+    6,  -1    97.62%    98.11%    98.41%    97.49%
+    7,  -1    97.72%    98.23%    98.45%    97.60%
+REGION ALL: 97.79% over 9 chunks
+EXIT=0
+BORDER DIFFS (100 - border%): 2.12 1.97 2.53 2.17 1.83 2.03 3.34 2.51 2.40 = 20.90pp
+CORES: 99.14 98.50 97.53 99.02 98.16 98.98 97.91 98.41 98.45 (avg 98.34)
+
+--- region_parity 12345 center=(0,0) radius=1: INVALID (reference artifact) ---
+Chunk (0,0)..(1,1) in the fresh 12345 reference are all-air proto-chunks
+(Status=minecraft:structure_starts, palette=[air], 2895 bytes) — the vanilla
+server's spawn for seed 12345 is NOT at (0,0), so that area was never fully
+generated. Raw run (log /tmp/rp-12345-00.log) printed REGION ALL 68.81%, but
+that measures neutron-vs-air, not parity. EXCLUDED from baseline. Measurable
+12345 center is (6,-2) (run-046 invocation), where chunks are Status=full.
+
+--- region_parity 777 center=(0,0) radius=1 (log /tmp/rp-777.log) ---
+START 2026-08-18T09:20:18+02:00
+seed=777 center=(0,0) radius=1
+     chunk       ALL      BASE      core    border
+   -1,  -1    91.66%    91.92%    93.45%    91.37%
+    0,  -1    96.22%    96.59%    97.97%    95.93%
+    1,  -1    96.98%    97.37%    97.67%    96.86%
+   -1,   0    97.37%    97.78%    98.53%    97.18%
+    0,   0    99.16%    99.42%    99.46%    99.11%
+    1,   0    97.78%    98.03%    98.63%    97.65%
+   -1,   1    98.58%    98.81%    99.20%    98.47%
+    0,   1    95.80%    96.01%    96.14%    95.75%
+    1,   1    93.07%    93.43%    94.49%    92.84%
+REGION ALL: 96.29% over 9 chunks
+EXIT=0
+
+--- clay_overlap 424242 center=(0,0) (log /tmp/co-424242.log) ---
+START 2026-08-18T09:33:56+02:00
+iso clay 411/vanilla 493 : full overlap 138, xz overlap 66/117
+full generate_chunk: pale_oak_leaves=528 pale_oak_log=273 clay=466
+vanilla: pale_oak_leaves=396 pale_oak_log=167 clay=493
+EXIT=0
+NOTE: clay_overlap.rs hardcodes region dir tools/nbt-ref/vanilla-fresh-424242/
+and takes only seed/cx/cz -> it is a 424242-only example. Runs against other
+seeds read the 424242 reference and are NOT valid measurements (see below).
+
+--- clay_overlap 12345 (6,-2): INVALID (hardcoded 424242 region dir; reads 424242
+reference at chunk (6,-2) which is outside the generated area -> all zeros) ---
+iso clay 675/vanilla 0 : full overlap 0, xz overlap 0/150
+full generate_chunk: pale_oak_leaves=0 pale_oak_log=0 clay=675
+vanilla: pale_oak_leaves=0 pale_oak_log=0 clay=0
+
+--- clay_overlap 777 (0,0): INVALID (same hardcode; numbers are 424242's world
+at (0,0), not 777's) ---
+iso clay 0/vanilla 493 : full overlap 0, xz overlap 0/0
+full generate_chunk: pale_oak_leaves=0 pale_oak_log=0 clay=0
+vanilla: pale_oak_leaves=396 pale_oak_log=167 clay=493
+
+--- lush_pale_parity 424242 center=(0,0) radius=1 (log /tmp/lpp-424242.log) ---
+START 2026-08-18T09:33:56+02:00
+chunk (-1,-1) center biome id=34
+chunk (0,-1) center biome id=34
+chunk (1,-1) center biome id=34
+chunk (-1,0) center biome id=34
+chunk (0,0) center biome id=34
+chunk (1,0) center biome id=34
+chunk (-1,1) center biome id=34
+chunk (0,1) center biome id=34
+chunk (1,1) center biome id=34
+seed=424242 center=(0,0) radius=1 chunks=9
+vanilla lush/pale cells: 19947
+neutron lush/pale cells: 20574
+lush/pale MISSING (vanilla block != neutron): 9369
+lush/pale WRONG (neutron placed where != vanilla): 9996
+lush/pale recall: 53.03% (missing 46.97%)
+missing by vanilla block:
+    2521  minecraft:pale_oak_leaves
+    2079  minecraft:clay
+    1271  minecraft:pale_oak_log
+     954  minecraft:moss_block
+     559  minecraft:pale_moss_block
+     534  minecraft:pale_hanging_moss
+     491  minecraft:cave_vines_plant
+     243  minecraft:cave_vines
+     196  minecraft:pale_moss_carpet
+     183  minecraft:moss_carpet
+     129  minecraft:big_dripleaf_stem
+     106  minecraft:big_dripleaf
+      69  minecraft:azalea
+      34  minecraft:flowering_azalea
+EXIT=0
+
+--- lush_pale_parity 12345 center=(6,-2) radius=1 (log /tmp/lpp-12345.log) ---
+START 2026-08-18T09:45:33+02:00
+chunk (5,-3) center biome id=34
+chunk (6,-3) center biome id=34
+chunk (7,-3) center biome id=34
+chunk (5,-2) center biome id=34
+chunk (6,-2) center biome id=34
+chunk (7,-2) center biome id=34
+chunk (5,-1) center biome id=0
+chunk (6,-1) center biome id=34
+chunk (7,-1) center biome id=34
+seed=12345 center=(6,-2) radius=1 chunks=9
+vanilla lush/pale cells: 13140
+neutron lush/pale cells: 14336
+lush/pale MISSING (vanilla block != neutron): 210
+lush/pale WRONG (neutron placed where != vanilla): 1406
+lush/pale recall: 98.40% (missing 1.60%)
+missing by vanilla block:
+     129  minecraft:clay
+      23  minecraft:moss_carpet
+      19  minecraft:cave_vines_plant
+      12  minecraft:moss_block
+       9  minecraft:cave_vines
+       6  minecraft:flowering_azalea
+       5  minecraft:azalea
+       4  minecraft:big_dripleaf
+       3  minecraft:big_dripleaf_stem
+EXIT=0
+
+--- lush_pale_parity 777 center=(0,0) radius=1 (log /tmp/lpp-777.log) ---
+START 2026-08-18T09:45:33+02:00
+chunk (-1,-1) center biome id=18
+chunk (0,-1) center biome id=18
+chunk (1,-1) center biome id=18
+chunk (-1,0) center biome id=6
+chunk (0,0) center biome id=6
+chunk (1,0) center biome id=33
+chunk (-1,1) center biome id=33
+chunk (0,1) center biome id=33
+chunk (1,1) center biome id=33
+seed=777 center=(0,0) radius=1 chunks=9
+vanilla lush/pale cells: 0
+neutron lush/pale cells: 37
+lush/pale MISSING (vanilla block != neutron): 0
+lush/pale WRONG (neutron placed where != vanilla): 37
+missing by vanilla block:
+EXIT=0
+NOTE: no lush caves biome at 777 (0,0) (biomes 6/18/33), so recall is
+undefined (0 vanilla cells); neutron still placed 37 lush/pale cells where
+vanilla has none.
+
+###############################################################################
+# 3. TESTS (verification only)
+# cargo test -p neutron-worldgen  (log /tmp/test-worldgen.log)
+# START 2026-08-18T10:00:00+02:00
+# test result: ok. 59 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+# finished in 373.13s ; EXIT=0 ; END 2026-08-18T10:06:48+02:00
+###############################################################################
+
+# SUMMARY (measured on fresh references; compare against run-046 claims)
+# seed/center     REGION ALL   bar/claim            measured
+# 424242 (0,0)    97.27%       >=97.28% (run-045)   AT BAR (0.01pp under claim; fresh ref differs slightly: vanilla clay 493 vs old 497)
+# 12345 (6,-2)    97.79%       >=97.75% (run-045)   MEETS BAR
+#    border diffs 20.90pp      >=30% down vs 20.89pp baseline -> 20.90pp = ~0% down (requirement NOT met)
+#    cores avg    98.34%
+# 777 (0,0)       96.29%       ~99.4% baseline, run-046 claimed 96.29% -> regression CONFIRMED (96.29% reproduced)
+# clay 424242:    clay=466 (vanilla 493), leaves 528/396, log 273/167  (bar: clay ~497, lush/pale missing <=20%)
+#   missing by vanilla block in 3x3: clay 2079 / 493-ish -> recall 53.03% (bar >=80 NOT met; run-046 claimed 62.94%)
+# 12345 (6,-2) lush/pale recall: 98.40% (missing 210/13140)
+# 777 (0,0) lush/pale: no vanilla cells; neutron 37 wrong placements
+# tests: 59/59 pass

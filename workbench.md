@@ -1,8 +1,97 @@
 # Neutron — dual-track gauntlet workbench
 
-> Live round log. LEAD: pi (main checkout). Two parallel tracks in Orca worktrees.
+> Live round log. LEAD: pi (main checkout). Two parallel tracks in native git worktrees.
 > Bar is untouchable; builders never grade themselves; critics are fresh per round.
-> **SESSION PAUSED 17 Aug 2026 (user leaving; resume on another PC) — see runs/run-047.md RESUME BOUNDARY.**
+> **ACTIVE 18 Aug 2026 — run-048 on new PC (Linux). run-047 history below.**
+
+## Run 048 (active) — resume: A3 (bench perf) + B2/B3 (worldgen parity)
+
+Bar: verbatim in `runs/run-048.md`. Budget: 3 rounds/unit, A3 ∥ B2, B3 after B2,
+1 smoothing per track, merge+push. Ownership: A3 = `tests/benchmarks/**`;
+B2/B3 = `crates/neutron-*/**` + `tools/nbt-ref/` (gitignored); LEAD = STATE/workbench/runs.
+Worktrees: `wt-bench` (run048-bench), `wt-worldgen` (run048-worldgen) — both off 3e63d5a.
+
+| Unit | Round | Verdict | Evidence | Artifact |
+| --- | --- | --- | --- | --- |
+| A3 bench perf (101 fix, root gate, times) | — | ⏳ not started | | |
+| B2 refs + baseline (424242/12345/777) | — | ⏳ not started | | |
+| B3 777 regression + lush/pale ≥80% | — | ⏳ after B2 | | |
+
+## Round log (run 048)
+
+- R0 (LEAD audit §2.5): repo clean @ 3e63d5a, main == origin/main. STATE.md claims
+  match git (all PASSED work merged). run-046 numbers still unverifiable (no reference
+  worlds on disk — `tools/nbt-ref/` has only README.md + stale `vanilla1/` server dir
+  from an old run). Java 25 present as JBR 25.0.2 (JetBrains) — will test against the
+  vanilla jar before installing Adoptium. Bench release target warm in main checkout
+  (built 17 Aug 15:33). Worktrees created. run-048.md written. Builds (bench release +
+  ref-extract) launched in background. → provisioning in flight.
+- R0 (env provision): bench release build 27.6s warm, ref-extract 16.2s. Vanilla 26.2
+  jar downloaded (60,894,273 B, sha verified). JBR 25.0.2 boots vanilla 26.2 (Done
+  marker + chunks saved) → **no Adoptium install needed**. Builders A3 + B2 launched
+  in parallel (async).
+- R1 B2 (builder): **run died on model API 502** mid-debug (ref-extract java spawn
+  failing: "stdout closed" instantly on tmp-dir reuse with --keep-tmp; orphaned java
+  held world/session.lock → retry collided). LEAD root-caused live: extraction WORKS
+  from a fresh tmp dir (424242 → 529 chunks, EXIT 0, 50.4s boot). **B2 resumed**
+  (9b947c38) with fresh-tmp recipe + cleanup instructions. A3 still running.
+- R1 A3 (builder): **hit 30-min harness timeout** mid-investigation. Findings on disk:
+  exit-101 panic = bevy_log GLOBAL subscriber conflict (bot 1 sets it, bots 2-10
+  error); deeper: even bot-1 never connects (azalea `.start()` silent death). WIP
+  (uncommitted): port plumbing config.rs/harness.rs/server.rs (server-port +
+  query.port). **A3 resumed** (0458c6f4) with timebox: commit WIP → fix 101
+  (priority) → 20-min timebox on azalea connectivity (else document as open item) →
+  root gate + measured times.
+- R1 A3 (resumed): port plumbing committed (3e13bfe). Breakthrough: bots now
+  connect — azalea login → config state (ClientInformation sent, bench-0..7
+  visible in debug log). 101 fix + connectivity fix in flight (bot crate
+  client.rs/lib.rs/Cargo.toml uncommitted).
+- R1 A3 (builder): **DONE (builder-verified)** — 5 commits (3e13bfe port plumbing,
+  144b288 exit-101 fix = init global logger once + disable bevy_log LogPlugin in
+  bot Apps, a77dc86 raise bot join timeouts for MC 26.2 config phase, 12de2d9
+  root-gate ./bench wrapper + README + logger idempotency test, 09bd272 docs).
+  Acceptance run REAL: server ready 44s, join-storm 10/10 bots connected
+  (p50=26041ms — high but connecting), run completes, results JSON + history
+  entry written, NO exit 101. Cold build 21.31s (379% CPU), root gate EXIT=0.
+  Evidence: /tmp/bench-evidence/*.log. → **A3 blind critic launched** (239b4fb6).
+- R1 A3 CRITIC: **PASS** — 5/5 verified live: tests 14/14 (incl.
+  init_logging_is_idempotent); 101 fix principled (OnceLock + LogPlugin disable,
+  grep exit(0)/catch_unwind = 0); real run BENCH_EXIT=0, 10/10 bots
+  (p50=6755ms), results written, ~2m58s; root gate ./bench test + run --help
+  from root on nightly 1.100.0; times real (cold 12:45.65, warm 21.31s, run
+  3m25s documented); tree clean. Nits: 2 warnings (unused mut,
+  SubscriberInitExt import), try_init err discarded (OK — OnceLock). **A3 DONE.**
+  → **A4 smoothing launched** (5f06e9b9) on run048-bench.
+- R1 A4 SMOOTHER: DONE — 3 harmonization commits (cc59594 README working-dir
+  clarity, 522ecae bench wrapper help + sane failures, 0067fe2 warning fixes).
+  Bot crate warning-free; remaining 10 warnings pre-existing at 3e63d5a.
+  **TRACK A MERGED to main (ff cc59594)**; runs/run-048.md reconciled (LEAD
+  version + A3/B2 results, 5d90620). Root workspace smoke test running
+  (cargo test --workspace on merged main).
+- R1 B2 (resumed builder 9b947c38): **DONE (builder-verified)** — references
+  extracted for all 3 seeds (529 chunks each, reference.json present; 12345 spawn
+  at (6,-2), its (0,0) chunk is a proto-chunk). Baseline measured (raw in
+  baseline-evidence.txt → runs/run-048-evidence-baseline.txt):
+  REGION 424242 (0,0) 97.27% (bar ≥97.28%, 0.01pp under); 12345 (6,-2) 97.79%
+  (≥97.75% ✓) but border diffs 20.90pp (≥30%-down NOT met); **777 (0,0) 96.29% —
+  regression reproduced EXACTLY**; clay 424242 = 466 (vanilla 493); lush_pale
+  424242 recall 53.03% (run-046 claimed 62.94% — claim was optimistic); lush_pale
+  12345 98.40%; tests 59/59. Excluded (documented): 12345 (0,0) proto-chunks;
+  clay hardcodes 424242. → **B2 blind critic launched** (98008157).
+- R1 B2 CRITIC: **PASS** — every criterion verified from scratch: 3 seeds × 529
+  chunks, reference.json timestamps cross-checked to sub-second vs extraction
+  logs; region_parity 424242 re-run → 97.27% byte-identical (all 9 chunks);
+  lush_pale recall 53.03% byte-identical; exclusions independently verified
+  (12345 (0,0) proto-chunk via chunk-dump; clay hardcodes 424242 at
+  clay_overlap.rs:110); 0 commits on branch; tests 59/59 (55s). Nit: evidence
+  file + servers-ref/ not gitignored (not code). **B2 DONE.** → **B3 builder
+  launched** (cc25f22d) with verified baseline + run-046 context.
+
+---
+
+## Run 047 (closed) — dual-track: benchmarks refactor + server review/worldgen
+
+> **SESSION PAUSED 17 Aug 2026 (user leaving; resume on another PC) — see runs/run-047.md RESUME B
 
 ## Goal
 
