@@ -1,0 +1,311 @@
+//! Dispatch coverage: every configured_feature type reachable from the
+//! overworld FeatureSorter must be handled by the generator — or explicitly
+//! whitelisted as a *known* gap.
+//!
+//! Why this exists (D0-D4 detection, see runs/README.md "Detection rules"):
+//! a Mojang version bump usually adds new configured_feature types, and an
+//! unimplemented type currently falls through `dispatch_configured`'s `_ =>`
+//! arm as a silent no-op. This test turns that silence into a red test at D2,
+//! naming the exact feature and type to port. A whitelist entry is a *confessed
+//! gap* (with reason), not a free pass: the whitelist must match the found set
+//! exactly, so both new and removed types fail loudly.
+//!
+//! Classification scheme (verified against the generator source):
+//! - `HANDLED`     — has a real dispatch arm in `feature_dispatch.rs`
+//!   (`dispatch_configured`) or is placed with dedicated seeds elsewhere
+//!   (`sculk_patch` → sculk module).
+//! - `STEP6_BATCH` — the step-6 ore/disk/magma batch in `features.rs`
+//!   (`apply_underground_ores_origin`). Gated on `step == UNDERGROUND_ORES`:
+//!   a user of these types at any other step is an orphan.
+//! - `KNOWN_NO_OP` — real vanilla features with NO implementation. Each entry
+//!   names the type + configured id and carries the reason. `multiface_growth`
+//!   is only implemented for `sculk_vein` (sculk module); every other user
+//!   must be confessed here.
+
+use std::collections::{BTreeSet, HashSet};
+
+use serde_json::Value;
+
+use neutron_worldgen::feature_catalog::{
+    self, load_configured_feature, load_placed_feature, step,
+};
+
+/// Types with a dispatch arm in `feature_dispatch.rs` (or sculk module).
+const HANDLED: &[&str] = &[
+    "simple_block",
+    "tree",
+    "random_selector",
+    "sculk_patch", // placed by the sculk module with dedicated seeds
+    "vegetation_patch",
+    "waterlogged_vegetation_patch",
+    "spring_feature",
+    "block_column",
+    "simple_random_selector",
+    "random_boolean_selector",
+];
+
+/// Types implemented only by the step-6 batch (`features.rs`). The test gates
+/// them on `step == UNDERGROUND_ORES`; any other step is an orphan.
+const STEP6_BATCH: &[&str] = &["ore", "scattered_ore", "disk", "underwater_magma"];
+
+/// Types *not* implemented anywhere, keyed by `(type, configured id)` with the
+/// reason. Every entry = a real vanilla feature the generator silently omits
+/// today. Update the list AND the reason when a type is ported; the test fails
+/// if the found set drifts.
+const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
+    // Amethyst geodes — not ported (B4 backlog, documented in STATE.md).
+    ("geode", "amethyst_geode", "geodes not ported"),
+    // Bamboo culms with podzol base — not ported.
+    ("bamboo", "bamboo_no_podzol", "bamboo not ported"),
+    ("bamboo", "bamboo_some_podzol", "bamboo not ported"),
+    // Blue ice replaces in frozen ocean — not ported.
+    ("blue_ice", "blue_ice", "blue ice not ported"),
+    // Desert wells — not ported.
+    ("desert_well", "desert_well", "desert well not ported"),
+    // disk at step 4: the step-6 batch never sees it (ice patches on frozen
+    // surfaces are outside its gate).
+    ("disk", "ice_patch", "step-4 disk outside the step-6 batch"),
+    // Infested stone ore at step 7 (mountain/peak biomes): the step-6 batch
+    // never sees it.
+    ("ore", "ore_infested", "step-7 infested ore outside the step-6 batch"),
+    // Dripstone / speleothem clusters — not ported.
+    ("speleothem_cluster", "dripstone_cluster", "speleothem not ported"),
+    ("speleothem_cluster", "sulfur_spike_cluster", "speleothem not ported"),
+    // Forest rocks (cobblestone blobs) — not ported.
+    ("block_blob", "forest_rock", "forest rock not ported"),
+    // Fossil structures (two variants) — not ported.
+    ("fossil", "fossil_coal", "fossils not ported"),
+    ("fossil", "fossil_diamonds", "fossils not ported"),
+    // Step-10 top-layer freeze (ice + snow in frozen biomes) — not ported.
+    ("freeze_top_layer", "freeze_top_layer", "top-layer freeze not ported"),
+    // Ice spikes — not ported.
+    ("spike", "ice_spike", "ice spike not ported"),
+    // Icebergs — not ported.
+    ("iceberg", "iceberg_blue", "icebergs not ported"),
+    ("iceberg", "iceberg_packed", "icebergs not ported"),
+    // Kelp — not ported.
+    ("kelp", "kelp", "kelp not ported"),
+    // Lava lakes (underground + surface) — not ported.
+    ("lake", "lake_lava", "lava lake not ported"),
+    // Large dripstone — not ported.
+    ("large_dripstone", "large_dripstone", "large dripstone not ported"),
+    // Dungeons — not ported.
+    ("monster_room", "monster_room", "dungeons not ported"),
+    // Rooted dirt + hanging roots under azalea / sulfur spring trees.
+    ("root_system", "rooted_azalea_tree", "root system not ported"),
+    ("root_system", "rooted_sulfur_spring", "root system not ported"),
+    // Sea pickles — not ported.
+    ("sea_pickle", "sea_pickle", "sea pickle not ported"),
+    // Seagrass (all heights) — not ported.
+    ("seagrass", "seagrass_mid", "seagrass not ported"),
+    ("seagrass", "seagrass_short", "seagrass not ported"),
+    ("seagrass", "seagrass_slightly_less_short", "seagrass not ported"),
+    ("seagrass", "seagrass_tall", "seagrass not ported"),
+    // Sulfur pools (feature sequence) — not ported.
+    ("sequence", "sulfur_pool", "sulfur pool not ported"),
+    // Cave vines on walls — not ported.
+    ("vines", "vines", "vines not ported"),
+    // Multiface growth is ONLY implemented for sculk_vein (sculk module);
+    // glowing lichen in lush caves is a silent no-op today.
+    ("multiface_growth", "glow_lichen", "lichen not ported (B4 backlog)"),
+];
+
+fn strip_mc(s: &str) -> &str {
+    s.strip_prefix("minecraft:").unwrap_or(s)
+}
+
+/// Resolve a feature reference (placed or configured id, or inline object) and
+/// collect every configured feature reachable from it, recursing through
+/// nested placed features and selector children.
+fn collect_configured(
+    ref_id: &str,
+    placed_of: &str,
+    out: &mut Vec<(String, Value)>,
+    seen_placed: &mut HashSet<String>,
+    issues: &mut Vec<String>,
+) {
+    // Prefer configured (matches `place_placed_feature_step`); the id may also
+    // be a nested placed feature (selector children) — recurse then.
+    if let Some(cfg) = load_configured_feature(ref_id) {
+        out.push((ref_id.to_string(), cfg));
+        return;
+    }
+    if let Some(_placed) = load_placed_feature(ref_id) {
+        if seen_placed.insert(ref_id.to_string()) {
+            resolve_placed(ref_id, out, seen_placed, issues);
+        }
+        return;
+    }
+    issues.push(format!("{placed_of} -> {ref_id} (unresolved feature reference)"));
+}
+
+fn resolve_placed(
+    placed_id: &str,
+    out: &mut Vec<(String, Value)>,
+    seen_placed: &mut HashSet<String>,
+    issues: &mut Vec<String>,
+) {
+    let Some(placed) = load_placed_feature(placed_id) else {
+        issues.push(format!("placed_feature `{placed_id}` missing from data tree"));
+        return;
+    };
+    let feature = &placed["feature"];
+    match feature.as_str() {
+        Some(id) => collect_configured(id, placed_id, out, seen_placed, issues),
+        None => {
+            // Inline configured feature object.
+            if feature.is_object() {
+                collect_selector_children(placed_id, feature, out, seen_placed, issues);
+                out.push((placed_id.to_string(), feature.clone()));
+            } else {
+                issues.push(format!("placed_feature `{placed_id}`: no feature field"));
+            }
+        }
+    }
+}
+
+/// Push selector children onto `out` via their feature refs
+/// (`random_selector`, `simple_random_selector`, `random_boolean_selector`).
+fn collect_selector_children(
+    placed_of: &str,
+    cfg: &Value,
+    out: &mut Vec<(String, Value)>,
+    seen_placed: &mut HashSet<String>,
+    issues: &mut Vec<String>,
+) {
+    let ty = strip_mc(cfg["type"].as_str().unwrap_or(""));
+    let config = &cfg["config"];
+    match ty {
+        "random_selector" => {
+            if let Some(features) = config["features"].as_array() {
+                for f in features {
+                    if let Some(id) = f["feature"].as_str() {
+                        collect_configured(id, placed_of, out, seen_placed, issues);
+                    }
+                }
+            }
+            if let Some(def) = config["default"].as_str() {
+                collect_configured(def, placed_of, out, seen_placed, issues);
+            }
+        }
+        "simple_random_selector" => {
+            if let Some(features) = config["features"].as_array() {
+                for f in features {
+                    if let Some(id) = f["feature"].as_str() {
+                        collect_configured(id, placed_of, out, seen_placed, issues);
+                    }
+                }
+            }
+        }
+        "random_boolean_selector" => {
+            if let Some(id) = config["feature_true"].as_str() {
+                collect_configured(id, placed_of, out, seen_placed, issues);
+            }
+            if let Some(id) = config["feature_false"].as_str() {
+                collect_configured(id, placed_of, out, seen_placed, issues);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collect every (step, placed_id, configured_id, type) reachable from the
+/// overworld FeatureSorter, plus resolution issues.
+fn sweep() -> (Vec<(i32, String, String, String)>, Vec<String>) {
+    let mut all = Vec::new();
+    let mut issues = Vec::new();
+    for step_idx in step::RAW_GENERATION..=step::TOP_LAYER_MODIFICATION {
+        for placed_id in feature_catalog::features_per_step_at(step_idx) {
+            let mut cfgs = Vec::new();
+            let mut seen_placed = HashSet::new();
+            resolve_placed(placed_id, &mut cfgs, &mut seen_placed, &mut issues);
+            for (cfg_id, cfg) in cfgs {
+                let ty = strip_mc(cfg["type"].as_str().unwrap_or("")).to_string();
+                all.push((step_idx, placed_id.clone(), cfg_id, ty));
+            }
+        }
+    }
+    all.sort_by(|a, b| (&a.2, &a.3).cmp(&(&b.2, &b.3)));
+    all.dedup();
+    (all, issues)
+}
+
+#[test]
+fn overworld_sorter_dispatch_coverage() {
+    let (all, issues) = sweep();
+
+    // Integrity: every reference must resolve (nothing dangles).
+    assert!(
+        issues.is_empty(),
+        "data integrity failures (26.2 data tree):\n  {}",
+        issues.join("\n  ")
+    );
+
+    let handled: BTreeSet<&str> = HANDLED.iter().copied().collect();
+    let batch: BTreeSet<&str> = STEP6_BATCH.iter().copied().collect();
+    let no_op: BTreeSet<(&str, &str)> = KNOWN_NO_OP
+        .iter()
+        .map(|(t, c, _)| (*t, *c))
+        .collect();
+    let mut found_no_op: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut orphans: Vec<(i32, &str, &str, &str)> = Vec::new();
+
+    for (step_idx, placed_id, cfg_id, ty) in &all {
+        let config_id = strip_mc(cfg_id.as_str());
+        // 1. Confessed gaps match exactly (type, configured id).
+        if no_op.contains(&(ty.as_str(), config_id)) {
+            found_no_op.insert((ty.clone(), config_id.to_string()));
+            continue;
+        }
+        // 2. sculk_vein plants via the sculk module with dedicated seeds.
+        if ty == "multiface_growth" && config_id == "sculk_vein" {
+            continue;
+        }
+        // 3. Step-6 batch (features.rs) — only at UNDERGROUND_ORES.
+        if batch.contains(ty.as_str()) && *step_idx == step::UNDERGROUND_ORES {
+            continue;
+        }
+        // 4. Dispatch arms.
+        if handled.contains(ty.as_str()) {
+            continue;
+        }
+        orphans.push((*step_idx, placed_id, config_id, ty));
+    }
+
+    assert!(
+        orphans.is_empty(),
+        "configured feature types with NO dispatch and NO whitelist entry \
+         (26.2 overworld sorter). Port them or add to KNOWN_NO_OP with a reason:\n  {}",
+        orphans
+            .iter()
+            .map(|(s, p, c, t)| format!("step={s} placed={p} configured={c} type={t}"))
+            .collect::<Vec<_>>()
+            .join("\n  ")
+    );
+
+    // Whitelist drift: addition AND removal must fail (both are changes).
+    let expected: BTreeSet<(String, String)> = no_op
+        .iter()
+        .map(|(t, c)| (t.to_string(), c.to_string()))
+        .collect();
+    assert_eq!(
+        found_no_op, expected,
+        "KNOWN_NO_OP whitelist drift: {} (update the list and the reason)",
+        if found_no_op.is_empty() && !expected.is_empty() {
+            "features vanished — confirm removal and update KNOWN_NO_OP"
+        } else {
+            "new no-op feature appeared — port it or confess the gap"
+        }
+    );
+
+    println!(
+        "dispatch coverage: {} reachable configured features; {} dispatched types, \
+         {} step-6 batch types, {} confessed no-ops ({} whitelist entries)",
+        all.len(),
+        handled.len(),
+        batch.len(),
+        found_no_op.len(),
+        no_op.len(),
+    );
+    println!("confessed gaps: {}", found_no_op.len());
+}

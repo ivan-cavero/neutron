@@ -25,5 +25,11 @@ fn main() -> anyhow::Result<()> {
             commands::search::run(&query, version.as_deref())
         }
         args::Command::Show { version, class } => commands::show::run(&version, &class),
+        args::Command::ExtractData {
+            version,
+            jar,
+            output,
+            target,
+        } => commands::extract_data::run(&version, jar.as_deref(), output.as_deref(), target.as_deref()),
     }
 }

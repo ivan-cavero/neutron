@@ -2,15 +2,21 @@
 
 > Read this first every session. Answers: where are we, what is the bar, what is the next action.
 > History lives in `runs/` — this file only holds the current state.
-> **Updated 18 Aug 2026** — run-048 active on PC-2 (Linux); session paused for PC switch.
-> Resume boundary + full detail: `runs/run-048.md`. **PUSH BLOCKED on this PC (no GitHub creds).**
+> **Updated 18 Aug 2026 (21:0x +02:00)** — run-048 resumed on THIS PC (Windows).
+> B3 was re-derived on `main` by the **parallel worldgen agent** (user-confirmed);
+> measurements re-run by the LEAD session (see below). **PUSH STILL BLOCKED**
+> (main is 3 commits AHEAD of origin/main). Resume boundary: `runs/run-048.md`.
+> D0-D4 detection infra built this session (extract-data + dispatch coverage
+> test, see below) — commit pending.
 
 ## Current phase
 
 **run-048 (dual-track)**: Track A = benchmarks harness perf — **DONE** (A1-A3 PASS +
-smoothing, merged to main). Track B = worldgen parity — B2 baseline PASS, B3 builder
-DONE with strong numbers but **recall bar NOT met**; B3 critic IN FLIGHT (verdict
-pending on the machine where it launched).
+smoothing, merged to main). Track B = worldgen parity — B2 baseline PASS; B3 builder
+work **re-derived on main** on this PC (commits 7fcfd06, e72a87e, 355c3d5, user
+confirmed = parallel worldgen agent). **No blind-critic verdict exists on this PC**
+(PC-2's async critic run did not travel) → B3 remains OPEN per process; LEAD
+re-measured live today: **recall 57.14 % — bar ≥80 % still NOT met** (details below).
 
 ## Bars (unchanged)
 
@@ -35,60 +41,114 @@ pending on the machine where it launched).
 | --- | --- | --- |
 | B1 server review + B1b disconnect fix | ✅ PASS (run-047) | merged in main |
 | B2 fresh 26.2 references + baseline (424242/12345/777) | ✅ PASS (blind critic) | `runs/run-048-evidence-baseline.txt` |
-| B3 777 regression + lush/pale recall ≥80% | 🔨 builder DONE, **critic IN FLIGHT**; **bar NOT met (recall 57.43%)** | branch `run048-worldgen` @ eec1d1d (6 commits) |
-| B4 smoothing | ⏳ after B3 closes | — |
+| B3 777 regression + lush/pale recall ≥80% | 🔨 builder DONE on THIS PC (main 355c3d5, 3 commits); **critic PENDING (none on this PC)**; **bar NOT met (recall 57.14%)** | commits 7fcfd06/e72a87e/355c3d5 (main, NOT pushed) |
+| B4 vegetation gap closure | ⏳ next | design in workbench R4 log |
 
-## B3 results (builder-verified, critic verdict pending)
+## B3 results (LEAD re-measured on THIS PC, main @ 355c3d5 — builder claims not blindly verified)
 
-- **777 "regression" root-caused**: the ~99.4% historical claim was never reproducible
-  (pre-U5 dc71940 = 96.32% vs fresh ref). Real bug fixed: `climate_at_block` used
-  `peaksAndValleys` on ridge noise; vanilla 26.2 uses RAW ridge noise (probe −0.8113).
-  → **777 96.29 → 98.29%**, lifts every seed.
-- Lush/pale mechanism ports: vegetation_patch Java HashSet order, random_offset x,y,z,
-  env_scan drop semantics, FeatureSorter indices 1:1. **Recall 53.03 → 57.43% (bar ≥80% NOT met).**
-- Final: 424242 **97.36%** (≥97.28 ✓) · 12345 **97.81%** (≥97.75 ✓) · 777 **98.29%** (ratchet ✓) ·
-  clay 411/493 · tests 59/59 + workspace green.
-- Residual gap (B3 R2 target): trees 3338 + clay 1914 missing — claimed
-  terrain/scheduler-coupled (free-height acceptance + tree RNG consumption depend on exact
-  terrain + neighbor-first decoration order; ring-first experiment was worse 54.45%).
-- Evidence: `runs/run-048-evidence-B3.txt`, `/tmp/rp-{424242,12345,777}-final.txt` (this PC).
+- **777 regression root-caused** (e72a87e): `climate_at_block` used `peaksAndValleys`
+  on ridge noise; vanilla 26.2 uses RAW ridge noise (probe −0.8113). → 777
+  96.29 → **98.31 %**, lifts every seed. Also fixed: `random_offset` sampling order
+  (xz,xz,y) and `vegetation_patch` Java HashSet order (355c3d5, `JavaBlockPosSet`).
+- **Live measurements (LEAD ran the examples, 20:0x +02:00, fresh refs on disk)**:
+  424242 **97.36 %** (≥97.28 ✓) · 12345 **97.81 %** (≥97.75 ✓) · 777 **98.31 %**
+  (ratchet ✓; "~99.4 %" historical claim still NOT reproducible). Lush/pale recall
+  **57.14 %** (PC-2's 57.43 % claim NOT reproducible here — close but different).
+  clay 411/497 · tests 241/241 (15 suites, LEAD re-ran).
+- **Residual gap (B4 design)**: 8 572 lush/pale cells missing in 424242 3×3:
+  pale_oak_leaves 2178 + pale_oak_log 1190 (trees ~39 %), clay 1965, moss_block 983,
+  pale_hanging_moss 519, cave_vines_plant+head 730, moss carpets 377, big_dripleaf
+  220, azalea 109. Two root-cause families found:
+  1. **Dispatch no-ops**: `minecraft:multiface_growth` (glow_lichen),
+     `minecraft:root_system` (rooted_azalea_tree), `minecraft:vines`
+     (classic_vines_cave_feature) fall into `_ => {}` silence.
+  2. **RNG-stream desync within features**: center-chunk counts ≈ vanilla
+     (leaves 392 vs 396, clay_overlap example) but 3×3 positions ≠ → trees/patches
+     accept at different attempts, shifting the stream for later attempts.
+     Order experiments (ring-first) are noise until this is fixed.
+- Evidence: live example outputs in this session (region_parity ×3, lush_pale_parity,
+  clay_overlap); `runs/run-048-evidence-B3.txt` (PC-2) does NOT exist on this PC.
 
-## RESUME BOUNDARY (next PC — read first)
+## D0-D4 detection infra (built 18 Aug 2026, this session — PRE-COMMIT)
 
-1. **Push is BLOCKED on PC-2 (this Linux box)**: no GitHub creds (HTTPS needs token, SSH
-   key not registered, no gh CLI). Local-only commits: `main` @ **e3f52de**, branch
-   `run048-worldgen` @ **eec1d1d** (NOT pushed). On the next PC: push or re-apply.
-   If you continue on a PC WITHOUT these commits, re-derive from `runs/run-048.md` +
-   `runs/run-048-evidence-B3.txt` + the workbench round log.
-2. **B3 critic verdict is on PC-2** (async run 44205f88, session dir
-   /tmp/pi-subagents-uid-1000/async-subagent-runs/44205f88-*): if you're on PC-2, read it
-   (`subagent status` or the completion archive). Else, re-derive: re-run the 3
-   region_parity examples + lush_pale_parity 424242 against the on-disk references and
-   apply the same bar (ratchet + recall ≥80% → expect FAIL on recall).
-3. **Runtime data does NOT travel** (gitignored): references (`tools/nbt-ref/vanilla-fresh-*`),
-   jars (`tests/benchmarks/servers/vanilla/26.2/server.jar`), `target/`. Re-provision on the
-   next PC: B2 recipe in `runs/run-048.md` (ref-extract with fresh tmp dir per seed +
-   `--servers-dir` with `server-vanilla.jar`; Java 25 = JBR 25.0.2 works, no Adoptium needed).
-4. **Next actions**:
-   - Capture/re-derive the B3 critic verdict.
-   - B3 R2: attack the residual lush/pale gap (trees + clay, neighbor-first decoration
-     order hypothesis; ring-first already tried = worse). Ratchet all 3 seeds every round.
-   - B4 smoothing → merge `run048-worldgen` into main → push → update workbench + STATE.
-5. **Ownership**: LEAD owns STATE/workbench/runs/. A3 branch `run048-bench` is MERGED into
-   main (clean). `tools/` = human-owned — the probe commits (e3f52de) are investigation
-   artifacts (user-approved).
+Two pieces from the B4/version-bump design are now REAL, not paper (user asked
+to build them):
+
+1. **`mc-decompiler extract-data <version>`** (tools/, human-approved): extracts
+   `data/minecraft/worldgen/**` JSON from a server JAR (bundler-safe, in-memory,
+   no `.extracted` litter) and semantically diffs it against
+   `crates/neutron-worldgen/src/data/worldgen`. Evidence (run on this PC):
+   - vs **26.2** jar: 963 files extracted; **MATCH 654, CHANGED 0, JAR-ONLY 309
+     (carvers/structure/template_pool/presets — not ported by design),
+     CRATE-ONLY 1** (`noise_settings_overworld.json` — jar path is
+     `noise_settings/overworld.json`; rename in the crate, semantically equal).
+     → crate data is 100% in sync with the 26.2 jar.
+   - vs **26.3-snapshot-8** jar (already on disk): **CHANGED 302, JAR-ONLY 703
+     (incl. new biome `dappled_forest`), CRATE-ONLY 227** → the D0-D4 T2
+     detection works end-to-end.
+2. **Dispatch coverage test** (`crates/neutron-worldgen/tests/dispatch_coverage.rs`):
+   every placed → configured feature reachable from the overworld FeatureSorter
+   must dispatch, be in the step-6 batch (`features.rs`), or be whitelisted.
+   First run found **43 orphans / 23 types**; after verification against the
+   source: 14 types implemented (10 dispatch + 4 batch), **30 confessed no-ops
+   whitelisted with reasons** (geode, bamboo, disk@step4 ice_patch,
+   ore_infested@step7, speleothem_cluster, block_blob, fossil, freeze_top_layer,
+   spike, iceberg, kelp, lake, large_dripstone, monster_room, root_system,
+   sea_pickle, seagrass, sequence/sulfur_pool, vines, multiface_growth@glow_lichen…).
+   **GREEN** (`cargo test --workspace` 242/242). A new feature type in 26.3 →
+   red at D2 naming the exact feature.
+   - Bonus findings (real gaps the test surfaced): `ice_patch` (disk) at step 4
+     and `ore_infested` at step 7 are OUTSIDE the step-6 batch — new entries in
+     the confessed-gaps list with reasons.
+
+Update the whitelist + reason whenever a type is ported; the test fails on
+whitelist drift (both additions and removals).
+
+## RESUME BOUNDARY (current machine — read first)
+
+1. **Push is BLOCKED on this machine (no GitHub creds)**: local `main` @ **355c3d5** is
+   3 commits AHEAD of `origin/main` (ddb9e7c): 7fcfd06 (perf tests + parallel examples),
+   e72a87e (raw ridge noise + random_offset), 355c3d5 (vegetation_patch HashSet).
+   PC-2's branch `run048-worldgen` @ eec1d1d and its B3 evidence file are NOT here —
+   the work was re-derived on main by the parallel worldgen agent.
+2. **B3 critic verdict does not exist on this machine** (PC-2 async run 44205f88 did not
+   travel). LEAD re-derived the measurements live on 18 Aug 20:0x +02:00 (region_parity
+   ×3 + lush_pale_parity + clay_overlap + full test suite) → **expect FAIL on recall**
+   (57.14 % < 80 %); ratchet ✓ (777 98.31 % > 96.29 baseline).
+3. **Parallel worldgen agent is ACTIVE on this repo right now** (user-confirmed). Uncommitted
+   (at 20:11 +02:00): `crates/neutron-worldgen/Cargo.toml` +
+   `crates/neutron-worldgen/examples/feature_index_probe.rs`. **Do not touch
+   `crates/neutron-worldgen/` until the agent commits**; ask the human who owns what.
+4. **Runtime data is on disk on THIS machine** (gitignored): references
+   `tools/nbt-ref/vanilla-fresh-{424242,12345,777}/` (529 chunks each, verified by B2
+   critic), jar at `tests/benchmarks/servers/vanilla/26.2/server.jar`. Re-provision on any
+   other PC with the B2 recipe in `runs/run-048.md`.
+5. **Next actions**:
+   - Wait for/coordinate with the parallel worldgen agent (its commit will move main).
+   - B4 (vegetation gap): (a) dispatch-coverage test — every biome → placed → configured
+     feature type must dispatch or be whitelisted (would have caught the 3 no-ops); (b) port
+     the 3 no-op types (multiface_growth/glow_lichen, root_system, vines); (c) RNG-stream
+     diagnostic via probes (compare RNG consumed per attempt; find first divergent attempt);
+     (d) refine `block_column` cave_vine (`prioritize_tip`, weighted provider order).
+     Ratchet all 3 seeds every round. Ring-first/order experiments are noise until (c) lands.
+   - When ready: push 3 commits + B4 → update workbench + STATE.
+6. **Ownership**: LEAD owns STATE/workbench/runs/. Worldgen source = parallel agent (in
+   flight). `tools/` = human-owned. `tests/benchmarks/**` = Track A (closed).
 
 ## Worldgen measurement status
 
-- References on disk (PC-2): `tools/nbt-ref/vanilla-fresh-{424242,12345,777}/` (529 chunks
-  each, hash-mode blocks, verified by B2 critic). 12345 spawn center = (6,-2); its (0,0)
-  chunk is an air proto-chunk (invalid measurement target).
+- References on disk (THIS PC): `tools/nbt-ref/vanilla-fresh-{424242,12345,777}/` (529
+  chunks each, hash-mode blocks, verified by B2 critic). 12345 spawn center = (6,-2); its
+  (0,0) chunk is an air proto-chunk (invalid measurement target).
 - Baseline (B2 PASS): REGION 424242 97.27% · 12345 97.79% · 777 96.29% · recall 53.03% ·
-  clay 466 (vanilla 493). After B3: 97.36 / 97.81 / 98.29 / 57.43% / 411.
+  clay 466 (vanilla 493).
+- **Now (LEAD re-measured 18 Aug, main 355c3d5)**: 424242 **97.36%** · 12345 **97.81%** ·
+  777 **98.31%** · recall **57.14%** · clay **411** (vanilla 497). All region bars ✓,
+  recall/clay bars ✗.
 
 ## System status
 
-- **Tests**: 241 passed root workspace (47 protocol, 7 world, 24 server, 65 sim, 39 world, 59 worldgen) — verified on merged main after Track A.
+- **Tests**: 242 passed root workspace (47 protocol, 7 integration, 24 server, 65 sim, 39 world, 59 worldgen, 1 dispatch_coverage) — verified 18 Aug after D0-D4 infra.
 - **Server**: `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8` (B1 PASS in run-047).
 - **F3**: FASE A ✅ B ✅ C ✅ D pending (not started).
 
@@ -101,7 +161,7 @@ pending on the machine where it launched).
 | run-045 | lush/pale dispatch | recall 11→49.6%; cross-chunk model isolated |
 | run-046 | cross-chunk input model | U1 PASS; U5 R3 (777 regression, recall 62.94% claim — unverified) |
 | run-047 | dual-track benchmarks + server/worldgen | A1/A2 PASS, B1/B1b PASS (merged); A3/B2/B3 pending |
-| run-048 | resume on new PC | **ACTIVE — PAUSED for PC switch** |
+| run-048 | resume on new PC | **ACTIVE** — Track A DONE; B2 PASS; B3 re-derived on main (parallel agent), critic pending, recall 57.14% bar NOT met; B4 next |
 
 ## Key docs
 
@@ -109,6 +169,6 @@ pending on the machine where it launched).
 - `ROADMAP.md` — phases, bars, prompt templates in `docs/prompts/`
 - `workbench.md` — live round log for the active run
 - `runs/run-048.md` — current run file with RESUME BOUNDARY + B2 recipe
-- `runs/run-048-evidence-baseline.txt`, `runs/run-048-evidence-B3.txt` — B2/B3 evidence
+- `runs/run-048-evidence-baseline.txt` — B2 evidence (B3 evidence file exists only on PC-2)
 - `crates/neutron-worldgen/WORLDGEN.md`, `WORLDGEN-PIPELINE.md`
 - `crates/neutron-server/REVIEW.md` — server review evidence

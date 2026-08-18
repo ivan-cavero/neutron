@@ -2,20 +2,23 @@
 
 > Live round log. LEAD: pi (main checkout). Two parallel tracks in native git worktrees.
 > Bar is untouchable; builders never grade themselves; critics are fresh per round.
-> **ACTIVE 18 Aug 2026 — run-048 on new PC (Linux). run-047 history below.**
+> **ACTIVE 18 Aug 2026 — run-048 continued on THIS PC (Windows); parallel worldgen
+> agent active on `crates/neutron-worldgen/` (user-confirmed). run-047 history below.**
 
 ## Run 048 (active) — resume: A3 (bench perf) + B2/B3 (worldgen parity)
 
 Bar: verbatim in `runs/run-048.md`. Budget: 3 rounds/unit, A3 ∥ B2, B3 after B2,
 1 smoothing per track, merge+push. Ownership: A3 = `tests/benchmarks/**`;
 B2/B3 = `crates/neutron-*/**` + `tools/nbt-ref/` (gitignored); LEAD = STATE/workbench/runs.
-Worktrees: `wt-bench` (run048-bench), `wt-worldgen` (run048-worldgen) — both off 3e63d5a.
+**NOTE (R4 audit): B3 was re-derived directly on `main` by the parallel worldgen agent —
+the `run048-worldgen` worktree/branch does not exist on this PC.**
 
 | Unit | Round | Verdict | Evidence | Artifact |
 | --- | --- | --- | --- | --- |
-| A3 bench perf (101 fix, root gate, times) | — | ⏳ not started | | |
-| B2 refs + baseline (424242/12345/777) | — | ⏳ not started | | |
-| B3 777 regression + lush/pale ≥80% | — | ⏳ after B2 | | |
+| A3 bench perf (101 fix, root gate, times) | R1 | ✅ PASS (blind critic 239b4fb6) | workbench R1 log below | 3e13bfe..12de2d9 + smoothing, merged to main |
+| B2 refs + baseline (424242/12345/777) | R1 | ✅ PASS (blind critic 98008157) | `runs/run-048-evidence-baseline.txt` | — |
+| B3 777 regression + lush/pale ≥80% | R3 (this PC) | 🔨 re-derived on main (parallel agent); **FAIL on recall** (57.14% < 80%, LEAD re-measured); blind critic PENDING | commits 7fcfd06/e72a87e/355c3d5 (NOT pushed) | main @ 355c3d5 |
+| B4 vegetation gap closure | ⏳ next | — | design: R4 log entry below | — |
 
 ## Round log (run 048)
 
@@ -115,6 +118,50 @@ Worktrees: `wt-bench` (run048-bench), `wt-worldgen` (run048-worldgen) — both o
   clay_overlap.rs:110); 0 commits on branch; tests 59/59 (55s). Nit: evidence
   file + servers-ref/ not gitignored (not code). **B2 DONE.** → **B3 builder
   launched** (cc25f22d) with verified baseline + run-046 context.
+- R3 (parallel worldgen agent, THIS PC — user-confirmed ownership): B3 re-derived
+  directly on `main` (3 commits, NOT pushed): 7fcfd06 ([profile.test] opt-level=3 —
+  workspace tests 13.5min+ → 1m18s; region_parity/lush_pale examples parallel,
+  byte-identical output), e72a87e (raw ridge noise fix for `climate_at_block` +
+  random_offset xz,xz,y order — claimed 424242 97.33%, recall 55.85%), 355c3d5
+  (vegetation_patch Java HashSet order port `JavaBlockPosSet` — claimed 424242
+  97.36%, 12345 97.81%, 777 98.31%, recall 57.14%). No blind critic on this PC.
+- R4 (LEAD audit §2.5, this session): STATE/workbench/run-048 were stale (claimed
+  PC-2 branch `run048-worldgen` @ eec1d1d + recall 57.43% + critic in flight —
+  none exist here). Verified git (main @ 355c3d5, clean at first check) and
+  **re-measured everything live** (release examples, refs on disk): 424242
+  **97.36%** ✓ · 12345 **97.81%** ✓ · 777 **98.31%** ✓ (ratchet) · lush/pale recall
+  **57.14%** (bar ≥80% NOT met) · clay 411/497 · tests 241/241 (15 suites).
+  Gap analysis (B4 design): 8 572 missing cells → trees (leaves 2178 + log 1190) +
+  clay 1965 = 62%; **3 dispatch no-ops** (multiface_growth/glow_lichen,
+  root_system/rooted_azalea_tree, vines/classic_vines); **RNG-stream desync**
+  evidence (center-chunk leaf counts ≈ vanilla 392 vs 396 but 3×3 positions ≠ →
+  variable RNG consumption on accept/reject shifts later attempts). STATE.md +
+  workbench + run-048 updated (append-only). Push still blocked.
+- R4 (20:11 +02:00): parallel agent working RIGHT NOW — uncommitted
+  `crates/neutron-worldgen/Cargo.toml` + `examples/feature_index_probe.rs`.
+  NOT touched (AGENTS.md §5.5). Wait for its commit before B4 builders touch the crate.
+- R5 (21:0x +02:00, LEAD + human authorization): **D0-D4 detection infra built**
+  (the "detect any change on version bump" stack from STATE B4 design):
+  - `mc-decompiler extract-data <version>` (tools/ — human explicitly asked me to
+    build it): extracts `data/minecraft/worldgen/**` (bundler-safe, in-memory) +
+    semantic diff vs the crate tree. LIVE evidence (this PC, jars on disk):
+    **26.2 → MATCH 654 / CHANGED 0 / JAR-ONLY 309 / CRATE-ONLY 1**
+    (`noise_settings_overworld.json` rename vs jar `noise_settings/overworld.json`)
+    = crate data 100% in sync; **26.3-snapshot-8 → CHANGED 302, JAR-ONLY 703
+    (new biome `dappled_forest`), CRATE-ONLY 227** = detection works end-to-end.
+  - `crates/neutron-worldgen/tests/dispatch_coverage.rs`: every sorter-reachable
+    configured feature must dispatch / be step-6 batch / be whitelisted. First run
+    found 43 orphans in 23 types; verified against source → 14 implemented
+    (10 dispatch + 4 batch), **30 gaps confessed with reasons**; test GREEN.
+    Real findings the test surfaced: `ice_patch` (disk) at step 4 + `ore_infested`
+    at step 7 are outside the step-6 batch (new known gaps); the 3 B4 no-ops
+    (glow_lichen/root_system/vines) now covered by the whitelist, so any NEW
+    type in 26.3 → red at D2 naming the feature.
+  - Verification: `cargo test --workspace` **242/242 green** (incl. new test);
+    mc-decompiler workspace builds+tests green. Docs updated (README tools list,
+    runs/README D0-D4 template + history, STATE §D0-D4 infra). Parallel agent's
+    uncommitted files untouched. Commit + push attempt next (push still likely
+    blocked — no creds).
 
 ---
 

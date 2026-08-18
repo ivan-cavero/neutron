@@ -48,4 +48,20 @@ pub enum Command {
     },
     /// Show a specific class
     Show { version: String, class: String },
+    /// Extract the vanilla worldgen datapack (JSON) from a server version and
+    /// diff it against the crate data tree (version-bump data detection)
+    ExtractData {
+        /// Version (e.g., "26.2", "1.21.4")
+        version: String,
+        /// Path to server.jar (optional if already downloaded)
+        #[arg(short, long)]
+        jar: Option<PathBuf>,
+        /// Output directory (default: output/<version>/datapack)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Crate data tree to diff against
+        /// (default: crates/neutron-worldgen/src/data/worldgen)
+        #[arg(long)]
+        target: Option<PathBuf>,
+    },
 }

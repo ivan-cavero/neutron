@@ -4,7 +4,7 @@ A Minecraft Java Edition server reimplemented from scratch in Rust. Multi-platfo
 (Windows/Linux/macOS x86-64/ARM64), 1:1 vanilla parity, secure-by-construction
 WASM/Lua plugins, and `main` always on the latest Minecraft version.
 
-**Status**: PRE-ALPHA · worldgen F2d active (mechanism parity, run-046) · playable 26.2 server
+**Status**: PRE-ALPHA · worldgen F2d active (mechanism parity, run-048) · playable 26.2 server
 
 ## What this project is
 
@@ -122,7 +122,7 @@ neutron/
 │  ├─ neutron-server/       # playable binary: login + chunks
 │  ├─ neutron-sim/          # light / redstone / fluids / spawn (tests, not wired)
 │  └─ neutron-bench-server/ # criterion
-├─ tools/                   # golden-data · parity-check · vanilla-extract · java-probe
+├─ tools/                   # mc-decompiler · worldgen-probe · ref-extract · neutron-hash · chunk-dump · nbt-ref (human-owned)
 ├─ tests/benchmarks/        # separate workspace: bots + reference jars (nightly)
 ├─ runs/                    # run history (run-NNN.md)
 ├─ docs/prompts/            # phase prompts for pi

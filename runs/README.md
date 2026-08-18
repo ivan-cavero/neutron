@@ -55,11 +55,59 @@ PASS / FAIL (partial) / BLOCKED
 4. Gauntlet Loop: builder → blind critic (`subagent`, clean context) → fix → repeat.
 5. Update `workbench.md` (live round log) and `STATE.md` (state, not history) when done.
 
+## Version bump run (D0-D4) — Mojang releases a new version
+
+> Trigger: a Mojang release (webhook/CI on D0). Goal: `main` on the new version in
+> ≤ 7 days with parity re-measured. Same gauntlet discipline as any run: bar +
+> ratchet + blind critic. The plan lives in `ROADMAP.md` §4 + `ARCHITECTURE.md` §10;
+> this template is the operational checklist.
+
+```markdown
+# Run NNN — D0-D4 for Minecraft <X.Y>
+## Objective
+main on <X.Y>, parity re-measured, old-version data intact.
+## Bar
+- Parity suite green on the NEW version's references (ratchet on all seeds).
+- No fixes from the old version regressed silently (diff review).
+## Tasks
+### T1 — D1: code diff vs previous version
+- `cargo run -p mc-decompiler -- download <X.Y>` + `decompile <X.Y>`
+- `cargo run -p mc-decompiler -- diff <X.Y> <prev>` (full + per-class: worldgen, redstone, protocol)
+- Evidence: diff output; list of changed classes to port.
+### T2 — D1b: worldgen DATA diff (detection of data-only changes)
+- Re-extract `worldgen/**` JSON + `biome_params.bin` from the new jar
+  (tool: mc-decompiler `extract-data` once it exists — today: manual, see STATE gap B4)
+- Diff vs `crates/neutron-worldgen/src/data/worldgen/`:
+  new/removed/changed biome, configured_feature, placed_feature, noise settings.
+- Evidence: `diff -r` output; count of changed features.
+### T3 — D2: ports + codegen
+- Port changed classes (dispatch coverage test must stay green: every biome →
+  placed → configured feature type dispatches or is whitelisted).
+### T4 — D3: re-provision references (versioned!)
+- `tools/nbt-ref/vanilla-fresh-<X.Y>-<seed>/` for all bar seeds (B2 recipe in the
+  previous run file). Old-version refs stay on disk untouched (never delete).
+- Re-run determinism spot-check (7 runs of one seed, border noise map) — cheap, 6 min.
+### T5 — D4: full parity suite + release
+- All parity examples + probes + `cargo test --workspace` + benchmarks.
+- Evidence: one report file per suite, pushed with the bump commit.
+## Result
+PASS (all bars, blind critic) / FAIL (list gaps) / BLOCKED
+```
+
+**Detection rules (what must fail loudly on a bump):**
+- Dispatch coverage test: a new configured-feature type → red test at D2, not at D4.
+- Data integrity test: any placed/configured JSON reference that does not resolve → red.
+- FeatureSorter indices: re-verified against the jar probe (they change silently).
+- Golden hashes per version: parity suite re-run against NEW refs only; old refs are
+  the regression check (same seed, old version, old parity must still hold).
+
 ## History
 
 | Run | Phase | Result | Date |
 | --- | --- | --- | --- |
-| run-046 | F2d cross-chunk input model | **ACTIVE** — R3 committed 91862d4, critic pending | 16 Aug 2026 |
+| run-048 | F2d resume: benchmarks + worldgen | **ACTIVE** — A-track DONE; B2 PASS; B3 re-derived on main (parallel agent), recall 57.14% (bar NOT met); B4 next | 18 Aug 2026 |
+| run-047 | dual-track: benchmarks refactor + server review | A1/A2 PASS, B1/B1b PASS (merged); A3/B2/B3 → run-048 | 17 Aug 2026 |
+| run-046 | F2d cross-chunk input model | U1 PASS; U5 R3 (777 regression, recall 62.94% claim — unverified) | 16 Aug 2026 |
 | run-045 | F2d lush/pale dispatch | recall 11→49.6%; 424242 97.28%; cross-chunk model isolated | 16 Aug 2026 |
 | run-044 | F2d mechanism parity | ✅ T1-T3 PASS (blind critic); T4 → run-045 | 15-16 Aug 2026 |
 | run-043 | F2d R43 | new bar: mechanism parity (human gate); vanilla1 reference poisoned | 15 Aug 2026 |
