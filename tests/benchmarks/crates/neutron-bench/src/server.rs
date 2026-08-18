@@ -24,6 +24,7 @@ pub fn start(
     max_players: usize,
     seed: &str,
     log_dir: &Path,
+    port: u16,
 ) -> Result<ServerProcess> {
     // Resolve to absolute paths for cross-platform compatibility
     let server_dir = if server_dir.is_absolute() {
@@ -42,15 +43,15 @@ pub fn start(
     // Generate server config
     match server_type {
         ServerType::Vanilla => {
-            crate::config::write_server_properties(&server_dir, max_players, seed, run_id)?;
+            crate::config::write_server_properties(&server_dir, max_players, seed, run_id, port)?;
         }
         ServerType::Paper | ServerType::Folia => {
-            crate::config::write_server_properties(&server_dir, max_players, seed, run_id)?;
+            crate::config::write_server_properties(&server_dir, max_players, seed, run_id, port)?;
             // Enable spark HTTP for TPS measurement
             crate::config::write_paper_global(&server_dir)?;
         }
         ServerType::Pumpkin => {
-            crate::config::write_pumpkin_config(&server_dir, max_players, seed, run_id)?;
+            crate::config::write_pumpkin_config(&server_dir, max_players, seed, run_id, port)?;
         }
     }
 

@@ -92,6 +92,7 @@ pub async fn run_scenario(
             bot_count,
             seed,
             &log_path,
+            port,
         )
         .wrap_err_with(|| format!("starting {} server", server_label))?;
 
