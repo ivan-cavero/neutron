@@ -80,7 +80,7 @@ impl Default for BotState {
 }
 
 /// Azalea event handler for benchmark bots.
-async fn bench_handler(bot: Client, event: Event, mut state: BotState) -> eyre::Result<()> {
+async fn bench_handler(bot: Client, event: Event, state: BotState) -> eyre::Result<()> {
     match event {
         Event::Spawn => {
             let now = SystemTime::now()

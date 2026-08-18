@@ -19,7 +19,6 @@ use std::sync::OnceLock;
 pub fn init_logging() {
     static ONCE: OnceLock<()> = OnceLock::new();
     ONCE.get_or_init(|| {
-        use bevy_log::tracing_subscriber::util::SubscriberInitExt;
         use bevy_log::tracing_subscriber::EnvFilter;
         let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
         let _ = bevy_log::tracing_subscriber::fmt()
