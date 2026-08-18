@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+# Root-gate wrapper for the benchmarks workspace (tests/benchmarks/).
+#
+# tests/benchmarks is its OWN Cargo workspace pinned to nightly, and rustup
+# resolves the toolchain from the CURRENT DIRECTORY, not from --manifest-path.
+# Running cargo from the repo root with --manifest-path picks up the root's
+# stable toolchain and azalea aborts with "requires nightly Rust". This
+# wrapper cds into tests/benchmarks/ first so the right toolchain is used.
+#
+# Usage (from the repo root):
+#   ./bench build            # cargo build --release inside tests/benchmarks/
+#   ./bench test             # cargo test --workspace inside tests/benchmarks/
+#   ./bench run --server vanilla --size small --scenario join-storm --runs 1
+#                            # run neutron-bench (auto-builds on first use)
+# JAVA_HOME must point at a Java 25+ JRE for `run` (the harness boots servers).
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+BENCH="$ROOT/tests/benchmarks"
+BIN="$BENCH/target/release/neutron-bench"
+
+case "${1:-}" in
+  build)
+    shift
+    (cd "$BENCH" && cargo build --release "$@")
+    ;;
+  test)
+    shift
+    (cd "$BENCH" && cargo test --workspace "$@")
+    ;;
+  run)
+    shift
+    if [ ! -x "$BIN" ]; then
+      echo "neutron-bench not built yet; running cargo build --release (cold build ~13 min)..." >&2
+      (cd "$BENCH" && cargo build --release)
+    fi
+    (cd "$BENCH" && exec "$BIN" "$@")
+    ;;
+  *)
+    echo "usage: $0 build|test|run [-- <neutron-bench args>]" >&2
+    exit 2
+    ;;
+esac

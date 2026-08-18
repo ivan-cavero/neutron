@@ -27,3 +27,16 @@ pub fn init_logging() {
             .try_init();
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Regression: the previous setup let every bot App install the global
+    // logger/subscriber, so the 2nd..Nth init panicked (exit 101) or errored.
+    #[test]
+    fn init_logging_is_idempotent() {
+        init_logging();
+        init_logging(); // second call must not panic
+    }
+}

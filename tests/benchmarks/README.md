@@ -24,6 +24,22 @@ cargo build --release
 > tests/benchmarks/Cargo.toml` fails: rustup picks up the root toolchain
 > (stable) and azalea's build script aborts with "requires nightly Rust".
 
+### Root gate: `./bench` wrapper
+
+To build/test/run the benchmarks workspace **from the repo root**, use the
+`bench` wrapper (it `cd`s into `tests/benchmarks/` first so rustup resolves
+the nightly toolchain from the right directory):
+
+```bash
+./bench build                              # cargo build --release
+./bench test                               # cargo test --workspace
+./bench run --server vanilla --size small --scenario join-storm --runs 1
+```
+
+`bench run` auto-builds the binary on first use and then execs
+`neutron-bench` with the remaining args. `JAVA_HOME` must point at a Java
+25+ JRE for `run` (the harness boots the server itself).
+
 Server jars are **gitignored** — provision them with the harness itself:
 
 ```bash
