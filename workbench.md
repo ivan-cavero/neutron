@@ -68,6 +68,35 @@ Worktrees: `wt-bench` (run048-bench), `wt-worldgen` (run048-worldgen) — both o
   **TRACK A MERGED to main (ff cc59594)**; runs/run-048.md reconciled (LEAD
   version + A3/B2 results, 5d90620). Root workspace smoke test running
   (cargo test --workspace on merged main).
+- R1 (LEAD): **merge smoke test GREEN** — 241/241 on merged main (47 protocol,
+  7 world, 24 server, 65 sim, 39 world, 59 worldgen), all ok. Committed
+  workbench + baseline evidence (4a41f5b). **Push BLOCKED: no GitHub creds**
+  (HTTPS needs token, SSH key not registered, no gh CLI) — OPEN for human.
+- R2 B3 (builder cc25f22d): **30-min timeout hit** mid-diagnosis (lush/pale
+  per-chunk tool written, lushdiag-424242.txt). LEAD read the gaps:
+  **big_dripleaf neu=0 everywhere (feature absent)**, cave_vines under,
+  pale_hanging_moss over-generated (wrong≈neu), clay/moss wrong positions.
+  **Resumed** (e111a02b) with plan: commit WIP first, port features in vanilla
+  order, ratchet 3 seeds per change.
+- R2 B3 (resumed): committed WIP 1e0a30a (diagnostic + gap analysis); now
+  investigating tree geometry (tree_bases/tree_draws/bio_dump diag examples,
+  untracked) — pale_oak_log/leaves missing+wrong. Still active.
+- R2 B3 (builder): ratchet after biome fix — 424242 97.36% (bar ✓), 12345
+  97.81% (✓), **777 98.29% (+2.0pp vs 96.29 baseline)**; lush recall 54.17→
+  57.43%. Full workspace tests green (15 suites, 0 failed).
+- R3 B3 (builder, resumed twice): **DONE (builder-verified)** — 6 commits
+  (1e0a30a..eec1d1d). Root cause of 777 "regression": the ~99.4% historical
+  claim is NOT reproducible (pre-U5 dc71940 = 96.32% vs fresh ref); real bug =
+  biome source applied peaksAndValleys to ridge noise, vanilla uses RAW
+  (probe −0.8113) → 777 96.29→98.29%, lifts all seeds. Lush/pale ports:
+  vegetation_patch Java HashSet order, random_offset x,y,z, env_scan drop,
+  FeatureSorter indices 1:1. Final: 424242 97.36% ✓ · 12345 97.81% ✓ · 777
+  98.29% ratchet ✓ · **recall 57.43% (bar ≥80% NOT met)** · clay 411/493 ·
+  59/59 + workspace green. Residual gap: trees 3338 + clay 1914 missing,
+  claimed terrain/scheduler-coupled (ring-first experiment worse 54.45%).
+  Evidence: runs/run-048-evidence-B3.txt + /tmp/rp-*-final.txt. → **B3 blind
+  critic launched** (44205f88) — expects FAIL on recall, checks ratchet/biome/
+  no-tampering honestly.
 - R1 B2 (resumed builder 9b947c38): **DONE (builder-verified)** — references
   extracted for all 3 seeds (529 chunks each, reference.json present; 12345 spawn
   at (6,-2), its (0,0) chunk is a proto-chunk). Baseline measured (raw in

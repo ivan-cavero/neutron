@@ -142,6 +142,8 @@ public class ProbePaleFlow {
             if (!(waterOk && biomeOk && wouldSurvive)) {
                 continue;
             }
+            int preLogs = countBlock(blocks, Blocks.PALE_OAK_LOG);
+            int preLeaves = countBlock(blocks, Blocks.PALE_OAK_LEAVES);
             // RandomSelectorFeature: 0.1 creaking / 0.9 checked, default checked.
             int beforeDraw = nextBits;
             float f1 = rng.nextFloat();
@@ -183,7 +185,9 @@ public class ProbePaleFlow {
                 throw t;
             }
             System.out.println("draw " + (d + 1) + " PLACED chosen=" + chosen + " f1=" + f1
-                    + " f2=" + f2 + " ok=" + ok + " consumed=" + (nextBits - beforeDraw));
+                    + " f2=" + f2 + " ok=" + ok + " consumed=" + (nextBits - beforeDraw)
+                    + " deltaLogs=" + (countBlock(blocks, Blocks.PALE_OAK_LOG) - preLogs)
+                    + " deltaLeaves=" + (countBlock(blocks, Blocks.PALE_OAK_LEAVES) - preLeaves));
             // Debug the real would_survive predicate on the first draw only.
             if (d == 0) {
                 for (var mod : chosenHolder.value().placement()) {
@@ -219,6 +223,8 @@ public class ProbePaleFlow {
         // Final pale oak trees in the simulated world (trunk bases 2x2).
         int logs = 0;
         Map<String, Integer> treeBases = new HashMap<>();
+        Map<Integer, Integer> perTreeLog = new HashMap<>();
+        Map<Integer, Integer> perTreeLeaf = new HashMap<>();
         for (Map.Entry<BlockPos, BlockState> e : blocks.entrySet()) {
             BlockPos p = e.getKey();
             if (e.getValue().is(Blocks.PALE_OAK_LOG)) {
@@ -235,6 +241,15 @@ public class ProbePaleFlow {
             }
         }
         System.out.println("simulated pale_oak_log=" + logs + " trunkBases=" + treeBases.keySet());
+        System.out.println("PER-TREE: " + perTreeLog);
+    }
+
+    static int countBlock(Map<BlockPos, BlockState> blocks, Block b) {
+        int n = 0;
+        for (BlockState st : blocks.values()) {
+            if (st.is(b)) n++;
+        }
+        return n;
     }
 
     static void bindSupportsVegetationTags() throws Exception {
