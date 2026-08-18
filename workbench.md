@@ -276,3 +276,10 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
 ## Open questions for the human
 
 - (none)
+- R5 (B4 builder session 19 Aug 23:00-00:45, this PC): tree-type bug + T5 categorization + order derivation (partial) + T4 ports + diagnostics.
+  - **T5 categorization** (subagent, read-only): per-seed mismatches categorized — TREES ~2390 (desync), FEATURE-veg ~808, CLAY ~473, SCULK 456, ORE ~393, CARVER 162, SURFACE ~123. Root cause found: BlockId lacked birch/spruce/jungle/acacia/mangrove/cherry log+leaves → every non-oak tree placed OAK blocks.
+  - **Tree-type bug FIXED** (8775d20): 12 new BlockIds (101-112) + protocol ids + is_log/is_air_or_leaves/valid_tree_pos. **777 98.31 → 98.58% (+0.27pp)**. 424242 97.32%, 12345 97.81% unchanged.
+  - **Climate verified exact** (c78c1cf): neon climate targets match vanilla at (4,y,4) seed 424242. biome source is NOT the divergence source; surface mismatches are desync trees.
+  - **T3 order (partial, 2 subagents)**: for (0,0) seed 424242: (7,6) tree at **draw 8** (NOT 13 — parent's MARKER-A assumption wrong: free-height rejections consume height RNG, shifting stream). Before-neighbors of (0,0): **(-1,0) and (0,-1) only**. `vanilla_spawn` order measured WORSE (54.40%) — full 9-chunk order derivation incomplete (subagents timed out). Water filter fix (correct OCEAN_FLOOR) measured WORSE alone (-0.52pp) — must be applied WITH the full order (order+filter are a package). The root mechanism: the before-neighbors' plant spillover at draw positions → water-filter reject → no tree RNG → stream aligned. Without the order, the neutron terrain lacks the spillover → filter rejects differently → stream desyncs.
+  - **T4 ports** (7 types, whitelist 27→19): vines, root_system, sea_pickle+seagrass+kelp (3→6 entries), block_blob, blue_ice. All ratchet green, recall 57.50%.
+  - **deco_stream_probe**: climate/surface/column/trunks + skip-tree-draws gate (T3 tooling). Verified: climate targets EXACT match; terrain (stone/dirt) matches; surface mismatches are desync trees.

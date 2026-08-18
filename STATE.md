@@ -2,7 +2,7 @@
 
 > Read this first every session. Answers: where are we, what is the bar, what is the next action.
 > History lives in `runs/` — this file only holds the current state.
-> **Updated 18 Aug 2026 (21:2x +02:00)** — run-048 resumed on THIS PC (Windows).
+> **Updated 19 Aug 2026 (00:45 +02:00)** — run-048 continued: B4 tree-type fix + order derivation + T4 ports.
 > B3 was re-derived on `main` by the **parallel worldgen agent** (user-confirmed);
 > measurements re-run by the LEAD session (see below). **PUSH UNBLOCKED** —
 > `git push` succeeded 18 Aug 21:2x: main == origin/main @ **c8468a6** (4 commits
@@ -107,40 +107,30 @@ whitelist drift (both additions and removals).
 
 ## RESUME BOUNDARY (current machine — read first)
 
-1. **Push is UNBLOCKED (correction, 18 Aug 21:2x)**: `git push origin main` succeeded
-   (`ddb9e7c..c8468a6`). main == origin/main, 0/0 ahead/behind. The stale "no GitHub
-   creds" claim from earlier sessions is obsolete on this machine.
-   Contents pushed: 7fcfd06 (perf tests + parallel examples), e72a87e (raw ridge noise
-   + random_offset), 355c3d5 (vegetation_patch HashSet) — the parallel agent's B3
-   commits — and c8468a6 (D0-D4 detection infra: extract-data + dispatch coverage).
-   **Working tree**: 3 files still uncommitted (parallel agent's WIP):
-   `crates/neutron-worldgen/Cargo.toml`, `examples/feature_index_probe.rs`, `src/tree.rs` —
-   not touched (AGENTS.md §5.5).
+1. **Push UNBLOCKED**: `git push origin main` succeeded (up to 63d3e3b). main == origin/main, 0/0 ahead/behind. Contents pushed: all commits up to the T4 blue_ice port + vanilla_spawn experiment + deco_stream_probe + tree-type fix + T4 ports. Working tree: CLEAN.
 2. **B3 critic verdict does not exist on this machine** (PC-2 async run 44205f88 did not
    travel). LEAD re-derived the measurements live on 18 Aug 20:0x +02:00 (region_parity
    ×3 + lush_pale_parity + clay_overlap + full test suite) → **expect FAIL on recall**
    (57.14 % < 80 %); ratchet ✓ (777 98.31 % > 96.29 baseline).
-3. **Parallel worldgen agent is ACTIVE on this repo right now** (user-confirmed). Uncommitted
-   (at 20:11 +02:00): `crates/neutron-worldgen/Cargo.toml` +
-   `crates/neutron-worldgen/examples/feature_index_probe.rs`. **Do not touch
-   `crates/neutron-worldgen/` until the agent commits**; ask the human who owns what.
-4. **Runtime data is on disk on THIS machine** (gitignored): references
+3. **Runtime data is on disk on THIS machine** (gitignored): references
    `tools/nbt-ref/vanilla-fresh-{424242,12345,777}/` (529 chunks each, verified by B2
-   critic), jar at `tests/benchmarks/servers/vanilla/26.2/server.jar`. Re-provision on any
-   other PC with the B2 recipe in `runs/run-048.md`.
+   critic). Jar at `tools/mc-decompiler/jars/server-26.2.jar` (60,894,273 B). Re-provision
+   on any other PC with the B2 recipe in `runs/run-048.md`.
 5. **Next actions**:
-   - Wait for/coordinate with the parallel worldgen agent (its commit will move main).
-   - B4 (vegetation gap): (a) dispatch-coverage test — every biome → placed → configured
-     feature type must dispatch or be whitelisted (would have caught the 3 no-ops); (b) port
-     the 3 no-op types (multiface_growth/glow_lichen, root_system, vines); (c) RNG-stream
-     diagnostic via probes (compare RNG consumed per attempt; find first divergent attempt);
-     (d) refine `block_column` cave_vine (`prioritize_tip`, weighted provider order).
-     Ratchet all 3 seeds every round. Ring-first/order experiments are noise until (c) lands.
-   - **PUSH DONE 18 Aug 21:2x** (4 commits to origin/main, incl. D0-D4 infra
-     c8468a6) — remaining: B4 (vegetation gap) → port the 30 confessed no-ops,
-     then the dispatch-coverage whitelist shrinks; update workbench + STATE after.
-6. **Ownership**: LEAD owns STATE/workbench/runs/. Worldgen source = parallel agent (in
-   flight). `tools/` = human-owned. `tests/benchmarks/**` = Track A (closed).
+   - **T3 order**: complete the full 9-chunk vanilla decoration order (the subagent got
+     partial for (0,0) — (-1,0),(0,-1) before (0,0) only; the other 8 chunks' orders
+     need derivation). This is THE lever for the tree desync (39% of the 8,572 gap).
+   - **T3c**: apply the order + the water filter fix (column_water_depth with correct
+     OCEAN_FLOOR) TOGETHER — they are a package. Measure recall (target: +5pp toward 80%).
+   - **T3d**: clay gap (411 vs 497) — currently terrain-coupled; investigate with order fixed.
+   - **T4 remaining**: desert_well, ice_spike, speleothem×2, fossil×2, freeze_top_layer,
+     large_dripstone, monster_room, lake_lava, sulfur_pool, ice_patch, ore_infested
+     (whitelist 19 → ~5). Measure each (recall risk: glow_lichen was -0.81pp).
+   - **T5**: the dominant terrain mismatches — the order fix is the primary lever; the
+     tree-type bug is DONE (+0.27pp 777). Climate is exact. The remaining families
+     (clay, sculk, ores, carvers) are terrain-coupled.
+6. **Ownership**: LEAD owns STATE/workbench/runs/. Worldgen source = builder-owned.
+   `tools/` = human-owned. `tests/benchmarks/**` = Track A (closed).
 
 ## Worldgen measurement status
 
@@ -149,13 +139,13 @@ whitelist drift (both additions and removals).
   (0,0) chunk is an air proto-chunk (invalid measurement target).
 - Baseline (B2 PASS): REGION 424242 97.27% · 12345 97.79% · 777 96.29% · recall 53.03% ·
   clay 466 (vanilla 493).
-- **Now (LEAD re-measured 18 Aug, main 355c3d5)**: 424242 **97.36%** · 12345 **97.81%** ·
-  777 **98.31%** · recall **57.14%** · clay **411** (vanilla 497). All region bars ✓,
-  recall/clay bars ✗.
+- **Now (19 Aug, main 63d3e3b)**: 424242 **97.32%** · 12345 **97.81%** · 777 **98.58%**
+  (tree-type fix +0.27pp) · recall **57.50%** · clay **411** (vanilla 497). All region
+  bars ✓, recall/clay bars ✗. Coverage: 168 features, 17 dispatched, 19 confessed.
 
 ## System status
 
-- **Tests**: 242 passed root workspace (47 protocol, 7 integration, 24 server, 65 sim, 39 world, 59 worldgen, 1 dispatch_coverage) — verified 18 Aug after D0-D4 infra.
+- **Tests**: 243 passed root workspace (47 protocol, 7 integration, 24 server, 65 sim, 39 world, 59 worldgen, 1 dispatch_coverage) — verified 19 Aug.
 - **Server**: `cargo run --release -p neutron-server -- --seed 12345 --view-distance 8` (B1 PASS in run-047).
 - **F3**: FASE A ✅ B ✅ C ✅ D pending (not started).
 
@@ -168,7 +158,7 @@ whitelist drift (both additions and removals).
 | run-045 | lush/pale dispatch | recall 11→49.6%; cross-chunk model isolated |
 | run-046 | cross-chunk input model | U1 PASS; U5 R3 (777 regression, recall 62.94% claim — unverified) |
 | run-047 | dual-track benchmarks + server/worldgen | A1/A2 PASS, B1/B1b PASS (merged); A3/B2/B3 pending |
-| run-048 | resume on new PC | **ACTIVE** — Track A DONE; B2 PASS; B3 re-derived on main (parallel agent), critic pending, recall 57.14% bar NOT met; B4 next |
+| run-048 | resume on new PC | **ACTIVE** — Track A DONE; B2 PASS; B3 re-derived, tree-type fix (+0.27pp 777), order partial (T3a-b), T4 ports (whitelist 19), recall 57.50% bar NOT met; B4 in progress |
 
 ## Key docs
 
