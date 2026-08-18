@@ -109,6 +109,98 @@ fn main() {
     });
 
     let gen = ChunkGenerator::new(seed);
+    // NEUTRON_DECO_SURFACE=1: diff the surface columns (vanilla vs neutron)
+    // for the center chunk; print the mismatch columns + biomes.
+    if std::env::var("NEUTRON_DECO_SURFACE").is_ok() {
+        let Some(van) = load_vanilla_blocks(&region_dir, cx, cz) else {
+            eprintln!("no vanilla blocks");
+            return;
+        };
+        let chunk = gen.generate_chunk_cached(cx, cz, &mut neutron_worldgen::NoiseCache::new());
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut n = 0usize;
+        for lz in 0..16i32 {
+            for lx in 0..16i32 {
+                // find the top solid in vanilla and neutron
+                let mut vy = wb;
+                for y in (wb..wb + 384).rev() {
+                    let bi = ((y - wb) * 256 + lz * 16 + lx) as usize;
+                    if van[bi] != BlockId::Air.as_u16() {
+                        vy = y;
+                        break;
+                    }
+                }
+                let mut ny = wb;
+                for y in (wb..wb + 384).rev() {
+                    let b = chunk.block_at(lx as u32, y, lz as u32);
+                    if b != BlockId::Air {
+                        ny = y;
+                        break;
+                    }
+                }
+                let vb = BlockId::from_u16(van[((vy - wb) * 256 + lz * 16 + lx) as usize])
+                    .unwrap_or(BlockId::Air);
+                let nb = chunk.block_at(lx as u32, ny, lz as u32);
+                if vb != nb || (vy - ny).abs() > 1 {
+                    let vbi = neutron_worldgen::biome_source::biome_id_at_block(
+                        &gen.state,
+                        cx * 16 + lx,
+                        vy,
+                        cz * 16 + lz,
+                    );
+                    let nbi = neutron_worldgen::biome_source::biome_id_at_block(
+                        &gen.state,
+                        cx * 16 + lx,
+                        ny,
+                        cz * 16 + lz,
+                    );
+                    println!(
+                        "({},{}) van={}@{vy} neu={}@{ny} vbiome={vbi} nbiome={nbi}",
+                        cx * 16 + lx,
+                        cz * 16 + lz,
+                        neutron_worldgen::surface::vanilla_name(vb),
+                        neutron_worldgen::surface::vanilla_name(nb),
+                    );
+                    n += 1;
+                }
+            }
+        }
+        eprintln!("surface mismatches: {n}");
+        return;
+    }
+    // NEUTRON_DECO_COL=lx,lz: print the neutron column blocks.
+    if let Ok(c) = std::env::var("NEUTRON_DECO_COL") {
+        let mut it = c.split(',');
+        let lx: i32 = it.next().unwrap().parse().unwrap();
+        let lz: i32 = it.next().unwrap().parse().unwrap();
+        let chunk = gen.generate_chunk_cached(cx, cz, &mut neutron_worldgen::NoiseCache::new());
+        let Some(van) = load_vanilla_blocks(&region_dir, cx, cz) else { return; };
+        for y in 95..120 {
+            let vb = BlockId::from_u16(van[((y - neutron_worldgen::generator::WORLD_BOTTOM) * 256 + lz * 16 + lx) as usize]).unwrap_or(BlockId::Air);
+            let nb = chunk.block_at(lx as u32, y, lz as u32);
+            println!("y={y} van={} neu={}", neutron_worldgen::surface::vanilla_name(vb), neutron_worldgen::surface::vanilla_name(nb));
+        }
+        return;
+    }
+    // NEUTRON_DECO_CLIMATE=1: print the neutron climate targets at (1,y,1)
+    // for y in 56..=104 step 4 (compare vs ProbeClimateTarget).
+    if std::env::var("NEUTRON_DECO_CLIMATE").is_ok() {
+        for y in (56..=104).step_by(4) {
+            let qy = y >> 2;
+            let t = neutron_worldgen::biome_manager::climate_at(
+                &gen.state,
+                (1 << 2),
+                (qy << 2),
+                (1 << 2),
+            );
+            let id = neutron_worldgen::biome_source::biome_id_at_block(&gen.state, 4, y, 4);
+            println!(
+                "y={y} t={} h={} c={} e={} d={} w={} biome_id={id}",
+                t.temperature, t.humidity, t.continentalness, t.erosion, t.depth, t.weirdness
+            );
+        }
+        return;
+    }
     // Optional: print the vanilla trunk bases (2x2 NW-corner candidates) for
     // the center chunk (the ground truth for the draw->tree mapping.
     if std::env::var("NEUTRON_DECO_TRUNKS").is_ok() {

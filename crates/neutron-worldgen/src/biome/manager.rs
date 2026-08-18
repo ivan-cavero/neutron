@@ -158,7 +158,7 @@ pub fn biome_id_at_block(state: &WorldgenState, x: i32, y: i32, z: i32) -> u8 {
     noise_biome_at_quart(state, qx, qy, qz)
 }
 
-fn climate_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> crate::biome_source::ClimateTarget {
+pub fn climate_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> crate::biome_source::ClimateTarget {
     let mut env = DensityEnv::new(x, y, z, state.noises.noises());
     climate_at_block(
         &mut env,
