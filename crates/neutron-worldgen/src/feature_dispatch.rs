@@ -919,6 +919,48 @@ fn dispatch_configured(
                 }
             }
         }
+        "minecraft:block_blob" => {
+            // BlockBlobFeature.place (forest_rock): scan down until the block
+            // below is placeable (forest_rock_can_place_on); 3 blobs of the
+            // configured state (mossy_cobblestone).
+            let Some(state) = cfg["config"]["state"]["Name"]
+                .as_str()
+                .and_then(BlockId::from_name)
+            else {
+                return;
+            };
+            let mut bx = x;
+            let mut oy = y;
+            let mut bz = z;
+            while oy > WORLD_BOTTOM + 3
+                && !is_in_tag(region.get(bx, oy - 1, bz), "#minecraft:forest_rock_can_place_on")
+            {
+                oy -= 1;
+            }
+            if oy <= WORLD_BOTTOM + 3 {
+                return;
+            }
+            for _ in 0..3 {
+                let xr = rng.next_int(2);
+                let yr = rng.next_int(2);
+                let zr = rng.next_int(2);
+                let tr = (xr + yr + zr) as f32 * 0.333 + 0.5;
+                for dx in -xr..=xr {
+                    for dy in -yr..=yr {
+                        for dz in -zr..=zr {
+                            let d2 = (dx * dx + dy * dy + dz * dz) as f32;
+                            if d2 <= tr * tr {
+                                region.set(bx + dx, oy + dy, bz + dz, state);
+                            }
+                        }
+                    }
+                }
+                // origin.offset(-1 + nextInt(2), -nextInt(2), -1 + nextInt(2))
+                bx += -1 + rng.next_int(2);
+                oy -= rng.next_int(2);
+                bz += -1 + rng.next_int(2);
+            }
+        }
         "minecraft:ore" | "minecraft:scattered_ore" => {
             // step 6 ores still use features.rs batch
         }

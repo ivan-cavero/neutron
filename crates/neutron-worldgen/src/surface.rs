@@ -112,6 +112,7 @@ pub enum BlockId {
     TallSeagrass = 115,
     Kelp = 116,
     KelpPlant = 117,
+    MossyCobblestone = 118,
 }
 
 impl BlockId {
@@ -222,6 +223,7 @@ impl BlockId {
             115 => Some(Self::TallSeagrass),
             116 => Some(Self::Kelp),
             117 => Some(Self::KelpPlant),
+            118 => Some(Self::MossyCobblestone),
             _ => None,
         }
     }
@@ -338,6 +340,7 @@ impl BlockId {
             Self::TallSeagrass => "minecraft:tall_seagrass",
             Self::Kelp => "minecraft:kelp",
             Self::KelpPlant => "minecraft:kelp_plant",
+            Self::MossyCobblestone => "minecraft:mossy_cobblestone",
         }
     }
 
@@ -446,6 +449,7 @@ impl BlockId {
             "tall_seagrass" => Some(Self::TallSeagrass),
             "kelp" => Some(Self::Kelp),
             "kelp_plant" => Some(Self::KelpPlant),
+            "mossy_cobblestone" => Some(Self::MossyCobblestone),
             _ => None,
         }
     }
@@ -555,6 +559,7 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::TallSeagrass => "minecraft:tall_seagrass",
         BlockId::Kelp => "minecraft:kelp",
         BlockId::KelpPlant => "minecraft:kelp_plant",
+        BlockId::MossyCobblestone => "minecraft:mossy_cobblestone",
     }
 }
 

@@ -112,6 +112,7 @@ pub fn block_state_id(internal: u16) -> i32 {
         115 => 2256,  // tall_seagrass
         116 => 15062, // kelp
         117 => 15088, // kelp_plant
+        118 => 3368,  // mossy_cobblestone
         _ => 1,      // unknown -> stone
     }
 }

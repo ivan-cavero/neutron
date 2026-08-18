@@ -45,6 +45,7 @@ const HANDLED: &[&str] = &[
     "sea_pickle",
     "seagrass",
     "kelp",
+    "block_blob",
 ];
 
 /// Types implemented only by the step-6 batch (`features.rs`). The test gates
@@ -86,8 +87,6 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
         "sulfur_spike_cluster",
         "speleothem not ported",
     ),
-    // Forest rocks (cobblestone blobs) — not ported.
-    ("block_blob", "forest_rock", "forest rock not ported"),
     // Fossil structures (two variants) — not ported.
     ("fossil", "fossil_coal", "fossils not ported"),
     ("fossil", "fossil_diamonds", "fossils not ported"),
