@@ -326,7 +326,9 @@ pub fn launch_bots(
 
 pub fn launch_join_storm(host: &str, port: u16, count: usize) -> Arc<BenchCollector> {
     let batch_size = if count > 200 { 50 } else if count > 50 { 25 } else { count };
-    launch_bots(host, port, count, batch_size, Duration::from_secs(10), BotMode::JoinOnly)
+    // MC 26.2's config phase (registries/tags) takes ~30s when bots join
+    // concurrently; 10s killed every bot before Spawn fired (0/10 connected).
+    launch_bots(host, port, count, batch_size, Duration::from_secs(90), BotMode::JoinOnly)
 }
 
 pub fn launch_distributed(host: &str, port: u16, count: usize) -> Arc<BenchCollector> {
@@ -347,7 +349,7 @@ pub fn launch_distributed(host: &str, port: u16, count: usize) -> Arc<BenchColle
         };
         let host = host.to_string();
         let handle = std::thread::spawn(move || {
-            run_bot_thread(&host, port, state, Duration::from_secs(10));
+            run_bot_thread(&host, port, state, Duration::from_secs(90));
         });
         handles.push(handle);
         if i + 1 < count {
@@ -402,7 +404,7 @@ pub fn launch_spread(host: &str, port: u16, count: usize) -> Arc<BenchCollector>
             };
             let host = host.to_string();
             let handle = std::thread::spawn(move || {
-                run_bot_thread(&host, port, state, Duration::from_secs(15));
+                run_bot_thread(&host, port, state, Duration::from_secs(90));
             });
             handles.push(handle);
             std::thread::sleep(Duration::from_millis(10));
