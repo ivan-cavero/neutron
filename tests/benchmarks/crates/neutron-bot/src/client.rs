@@ -4,6 +4,7 @@
 //! Supports: join, movement, spread, chunk-gen, sustained-load.
 
 use azalea::prelude::*;
+use azalea::app::PluginGroup;
 use bevy_ecs::prelude::Component;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -235,6 +236,7 @@ async fn run_stress_move(bot: &Client, state: &BotState, duration_secs: u64) {
 
 /// Run a single bot in its own thread with its own tokio runtime.
 fn run_bot_thread(host: &str, port: u16, state: BotState, timeout: Duration) {
+    crate::init_logging();
     let host = host.to_string();
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async move {
@@ -242,7 +244,12 @@ fn run_bot_thread(host: &str, port: u16, state: BotState, timeout: Duration) {
         let addr = format!("{}:{}", host, port);
         let _ = tokio::time::timeout(timeout, async {
             ClientBuilder::new_without_plugins()
-                .add_plugins(azalea::DefaultPlugins)
+                // bevy_log's LogPlugin installs the *global* logger/subscriber;
+                // with one App per bot thread only the first can win (exit 101
+                // panic on older bevy_log, broken bots on newer). We init the
+                // global logger once in crate::init_logging() and disable the
+                // plugin here.
+                .add_plugins(azalea::DefaultPlugins.build().disable::<bevy_log::LogPlugin>())
                 .add_plugins(azalea::bot::BotPlugin)
                 .add_plugins(azalea::pathfinder::PathfinderPlugin)
                 .add_plugins(azalea::container::ContainerPlugin)
