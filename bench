@@ -12,6 +12,7 @@
 #   ./bench test             # cargo test --workspace inside tests/benchmarks/
 #   ./bench run --server vanilla --size small --scenario join-storm --runs 1
 #                            # run neutron-bench (auto-builds on first use)
+#   ./bench help             # show usage
 # JAVA_HOME must point at a Java 25+ JRE for `run` (the harness boots servers).
 set -eu
 
@@ -19,7 +20,28 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BENCH="$ROOT/tests/benchmarks"
 BIN="$BENCH/target/release/neutron-bench"
 
+usage() {
+  echo "usage: $0 build|test|run|help" >&2
+  echo "  build|test [cargo args]  cargo build --release / test --workspace in tests/benchmarks/" >&2
+  echo "  run [neutron-bench args] exec neutron-bench (auto-builds on first use)" >&2
+  echo "  help                     show this help" >&2
+}
+
+if [ ! -d "$BENCH" ]; then
+  echo "error: benchmarks workspace not found at $BENCH" >&2
+  echo "  ./bench must live at the repo root, next to tests/benchmarks/" >&2
+  exit 1
+fi
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "error: cargo not found on PATH (is rustup installed?)" >&2
+  exit 1
+fi
+
 case "${1:-}" in
+  help)
+    usage
+    exit 0
+    ;;
   build)
     shift
     (cd "$BENCH" && cargo build --release "$@")
@@ -37,7 +59,7 @@ case "${1:-}" in
     (cd "$BENCH" && exec "$BIN" "$@")
     ;;
   *)
-    echo "usage: $0 build|test|run [-- <neutron-bench args>]" >&2
+    usage
     exit 2
     ;;
 esac
