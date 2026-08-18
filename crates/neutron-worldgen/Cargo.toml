@@ -71,11 +71,3 @@ name = "sculk_replay"
 [[example]]
 name = "sculk_veintrace"
 
-# TEMP: B3 R2 tree diagnostics (re-enabled for the residual lush/pale gap
-# investigation; remove when done).
-[[example]]
-name = "tmp_tree_gap_pale"
-
-[[example]]
-name = "tmp_pale_biome_diag"
-
