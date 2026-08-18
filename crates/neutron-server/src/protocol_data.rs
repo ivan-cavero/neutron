@@ -93,6 +93,8 @@ pub fn block_state_id(internal: u16) -> i32 {
         83 => 447,
         84 => 15,
         85 => 6996,
+        99 => 8517, // glow_lichen (26.2 Block.getId default state)
+        100 => 8389, // vine
         _ => 1, // unknown -> stone
     }
 }

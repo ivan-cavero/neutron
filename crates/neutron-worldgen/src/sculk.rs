@@ -439,7 +439,7 @@ fn valid_growth_dirs(can_floor: bool, can_ceiling: bool, can_wall: bool) -> Vec<
     v
 }
 
-fn shuffle_dirs_list(rng: &mut FeatureRandom, dirs: &[(i32, i32, i32)]) -> Vec<(i32, i32, i32)> {
+pub(crate) fn shuffle_dirs_list(rng: &mut FeatureRandom, dirs: &[(i32, i32, i32)]) -> Vec<(i32, i32, i32)> {
     let mut d = dirs.to_vec();
     let mut i = d.len();
     while i > 1 {

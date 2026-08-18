@@ -42,6 +42,8 @@ const HANDLED: &[&str] = &[
     "block_column",
     "simple_random_selector",
     "random_boolean_selector",
+    "vines",
+    "root_system",
 ];
 
 /// Types implemented only by the step-6 batch (`features.rs`). The test gates
@@ -91,9 +93,6 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     ("large_dripstone", "large_dripstone", "large dripstone not ported"),
     // Dungeons — not ported.
     ("monster_room", "monster_room", "dungeons not ported"),
-    // Rooted dirt + hanging roots under azalea / sulfur spring trees.
-    ("root_system", "rooted_azalea_tree", "root system not ported"),
-    ("root_system", "rooted_sulfur_spring", "root system not ported"),
     // Sea pickles — not ported.
     ("sea_pickle", "sea_pickle", "sea pickle not ported"),
     // Seagrass (all heights) — not ported.
@@ -103,11 +102,11 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     ("seagrass", "seagrass_tall", "seagrass not ported"),
     // Sulfur pools (feature sequence) — not ported.
     ("sequence", "sulfur_pool", "sulfur pool not ported"),
-    // Cave vines on walls — not ported.
-    ("vines", "vines", "vines not ported"),
     // Multiface growth is ONLY implemented for sculk_vein (sculk module);
-    // glowing lichen in lush caves is a silent no-op today.
-    ("multiface_growth", "glow_lichen", "lichen not ported (B4 backlog)"),
+    // glow_lichen is ported but MEASURED as a recall regression (-0.81pp:
+    // cave-terrain coupling shifts the lush-caves features) — reverted,
+    // stays a confessed gap until the terrain parity improves.
+    ("multiface_growth", "glow_lichen", "lichen reverted: recall regression"),
 ];
 
 fn strip_mc(s: &str) -> &str {

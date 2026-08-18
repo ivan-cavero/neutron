@@ -93,6 +93,8 @@ pub enum BlockId {
     RootedDirt = 96,
     PaleHangingMoss = 97,
     CreakingHeart = 98,
+    GlowLichen = 99,
+    Vine = 100,
 }
 
 impl BlockId {
@@ -183,6 +185,9 @@ impl BlockId {
             95 => Some(Self::HangingRoots),
             96 => Some(Self::RootedDirt),
             97 => Some(Self::PaleHangingMoss),
+            98 => Some(Self::CreakingHeart),
+            99 => Some(Self::GlowLichen),
+            100 => Some(Self::Vine),
             _ => None,
         }
     }
@@ -280,6 +285,8 @@ impl BlockId {
             Self::RootedDirt => "minecraft:rooted_dirt",
             Self::PaleHangingMoss => "minecraft:pale_hanging_moss",
             Self::CreakingHeart => "minecraft:creaking_heart",
+            Self::GlowLichen => "minecraft:glow_lichen",
+            Self::Vine => "minecraft:vine",
         }
     }
 
@@ -369,6 +376,8 @@ impl BlockId {
             "rooted_dirt" => Some(Self::RootedDirt),
             "pale_hanging_moss" => Some(Self::PaleHangingMoss),
             "creaking_heart" => Some(Self::CreakingHeart),
+            "glow_lichen" => Some(Self::GlowLichen),
+            "vine" => Some(Self::Vine),
             _ => None,
         }
     }
@@ -459,6 +468,8 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::RootedDirt => "minecraft:rooted_dirt",
         BlockId::PaleHangingMoss => "minecraft:pale_hanging_moss",
         BlockId::CreakingHeart => "minecraft:creaking_heart",
+        BlockId::GlowLichen => "minecraft:glow_lichen",
+        BlockId::Vine => "minecraft:vine",
     }
 }
 

@@ -248,7 +248,7 @@ fn size_at_height(size: &FeatureSizeCfg, tree_height: i32, yo: i32) -> i32 {
     }
 }
 
-fn valid_tree_pos(b: BlockId) -> bool {
+pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
     // TreeFeature.validTreePos: isAir || REPLACEABLE_BY_TREES (not fluids).
     // 26.2 tag values with a BlockId here: leaves, pale_moss_carpet,
     // short_grass, hanging_roots, leaf_litter, water. Blocks without a

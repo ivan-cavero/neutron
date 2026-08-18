@@ -731,6 +731,44 @@ fn is_in_tag(b: BlockId, tag: &str) -> bool {
                 || b == BlockId::Gravel
                 || b == BlockId::Sand
         }
+        "sand" => matches!(b, BlockId::Sand | BlockId::RedSand),
+        "terracotta" => matches!(
+            b,
+            BlockId::Terracotta
+                | BlockId::WhiteTerracotta
+                | BlockId::OrangeTerracotta
+                | BlockId::BrownTerracotta
+                | BlockId::BlackTerracotta
+                | BlockId::YellowTerracotta
+                | BlockId::RedTerracotta
+                | BlockId::LightGrayTerracotta
+        ),
+        // substrate_overworld = dirt/grass/podzol/coarse_dirt/mycelium/
+        // rooted_dirt/moss_block/pale_moss_block/mud (26.2).
+        "substrate_overworld" => {
+            is_in_tag(b, "#minecraft:dirt")
+                || is_in_tag(b, "#minecraft:moss_blocks")
+                || is_in_tag(b, "#minecraft:grass_blocks")
+                || is_in_tag(b, "#minecraft:mud")
+        }
+        "azalea_grows_on" => {
+            is_in_tag(b, "#minecraft:substrate_overworld")
+                || is_in_tag(b, "#minecraft:sand")
+                || is_in_tag(b, "#minecraft:terracotta")
+                || b == BlockId::Snow
+                || b == BlockId::PowderSnow
+        }
+        "azalea_root_replaceable" => {
+            is_in_tag(b, "#minecraft:base_stone_overworld")
+                || is_in_tag(b, "#minecraft:substrate_overworld")
+                || is_in_tag(b, "#minecraft:terracotta")
+                || b == BlockId::RedSand
+                || b == BlockId::Clay
+                || b == BlockId::Gravel
+                || b == BlockId::Sand
+                || b == BlockId::Snow
+                || b == BlockId::PowderSnow
+        }
         _ => false,
     }
 }
@@ -779,6 +817,12 @@ fn dispatch_configured(
         "minecraft:multiface_growth" => {
             // sculk_vein handled by sculk module
         }
+        "minecraft:vines" => {
+            place_vines(rng, region, x, y, z);
+        }
+        "minecraft:root_system" => {
+            place_root_system(rng, region, state, x, y, z, cfg);
+        }
         "minecraft:ore" | "minecraft:scattered_ore" => {
             // step 6 ores still use features.rs batch
         }
@@ -820,6 +864,123 @@ fn dispatch_configured(
         }
         _ => {
             // unknown type — no-op (log in future)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// B4 ports: multiface_growth (glow_lichen), vines, root_system
+// ---------------------------------------------------------------------------
+
+/// `VinesFeature.place` (26.2): origin must be empty; attaches to the first
+/// acceptable neighbor among all directions except DOWN (isAcceptableNeighbour
+/// = solid face or vine). No RNG consumed.
+fn place_vines(rng: &mut FeatureRandom, region: &mut RegionBuf, x: i32, y: i32, z: i32) {
+    let _ = rng;
+    if region.get(x, y, z) != BlockId::Air {
+        return;
+    }
+    for &(dx, dy, dz) in &[(0, 1, 0), (0, 0, -1), (1, 0, 0), (0, 0, 1), (-1, 0, 0)] {
+        let nb = region.get(x + dx, y + dy, z + dz);
+        if blocks_motion(nb) || nb == BlockId::Vine {
+            region.set(x, y, z, BlockId::Vine);
+            break;
+        }
+    }
+}
+
+/// `RootSystemFeature.place` (26.2): azalea tree + rooted_dirt columns +
+/// hanging roots. Origin must be air; scans up the column for a valid tree
+/// position (allowed_tree_position + spaceForTree + solid below); if the tree
+/// places, fills rooted_dirt from the origin up and scatters hanging roots.
+fn place_root_system(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    state: Option<&WorldgenState>,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+) {
+    if region.get(x, y, z) != BlockId::Air {
+        return;
+    }
+    let c = &cfg["config"];
+    let max_height = c["root_column_max_height"].as_i64().unwrap_or(100) as i32;
+    let required_space = c["required_vertical_space_for_tree"].as_i64().unwrap_or(3) as i32;
+    let allowed_water = c["allowed_vertical_water_for_tree"].as_i64().unwrap_or(2) as i32;
+    let root_radius = c["root_radius"].as_i64().unwrap_or(3) as i32;
+    let root_attempts = c["root_placement_attempts"].as_i64().unwrap_or(20) as i32;
+    let hang_radius = c["hanging_root_radius"].as_i64().unwrap_or(3) as i32;
+    let hang_span = c["hanging_roots_vertical_span"].as_i64().unwrap_or(2) as i32;
+    let hang_attempts = c["hanging_root_placement_attempts"].as_i64().unwrap_or(20) as i32;
+
+    let mut ty = y;
+    let mut placed = false;
+    'col: for _ in 0..max_height {
+        ty += 1;
+        if ty > WORLD_TOP {
+            break;
+        }
+        // level.getHeight(WORLD_SURFACE) < ty -> fail (surface below the scan).
+        let ws = heightmap_top(region, x, z, HeightmapKind::WorldSurface).map(|h| h + 1).unwrap_or(-1);
+        if ws < ty {
+            break;
+        }
+        // allowed_tree_position: any_of(air, replaceable_by_trees) at pos AND
+        // azalea_grows_on at below.
+        let here = region.get(x, ty, z);
+        let pos_ok = here == BlockId::Air || crate::tree::valid_tree_pos(here);
+        let below_ok = is_in_tag(region.get(x, ty - 1, z), "#minecraft:azalea_grows_on");
+        if !pos_ok || !below_ok {
+            continue;
+        }
+        // spaceForTree: required_space air/water above.
+        let mut space_ok = true;
+        for i in 1..=required_space {
+            let b = region.get(x, ty + i, z);
+            if b != BlockId::Air && !(b == BlockId::Water && i <= allowed_water) {
+                space_ok = false;
+                break;
+            }
+        }
+        if !space_ok {
+            continue;
+        }
+        let below = region.get(x, ty - 1, z);
+        if below == BlockId::Lava || !blocks_motion(below) {
+            continue;
+        }
+        // Place the tree (azalea_tree is a tree config; inline placed feature).
+        if let Some(feat) = c["feature"]["feature"].as_str() {
+            if let Some(tcfg) = feature_catalog::load_configured_feature(feat) {
+                dispatch_configured(rng, region, state, x, ty, z, &tcfg, step::VEGETAL_DECORATION);
+            }
+        }
+        // placeDirt: rooted_dirt columns from the origin up to the tree base.
+        for cy in y..ty {
+            for _ in 0..root_attempts {
+                let rx = x + rng.next_int(root_radius) - rng.next_int(root_radius);
+                let rz = z + rng.next_int(root_radius) - rng.next_int(root_radius);
+                if is_in_tag(region.get(rx, cy, rz), "#minecraft:azalea_root_replaceable") {
+                    region.set(rx, cy, rz, BlockId::RootedDirt);
+                }
+            }
+        }
+        placed = true;
+        break 'col;
+    }
+    if placed {
+        // placeRoots: hanging roots scattered around the origin.
+        for _ in 0..hang_attempts {
+            let rx = x + rng.next_int(hang_radius) - rng.next_int(hang_radius);
+            let ry = y + rng.next_int(hang_span) - rng.next_int(hang_span);
+            let rz = z + rng.next_int(hang_radius) - rng.next_int(hang_radius);
+            if region.get(rx, ry, rz) == BlockId::Air
+                && blocks_motion(region.get(rx, ry + 1, rz))
+            {
+                region.set(rx, ry, rz, BlockId::HangingRoots);
+            }
         }
     }
 }
