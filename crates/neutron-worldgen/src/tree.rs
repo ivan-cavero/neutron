@@ -250,6 +250,10 @@ fn size_at_height(size: &FeatureSizeCfg, tree_height: i32, yo: i32) -> i32 {
 
 fn valid_tree_pos(b: BlockId) -> bool {
     // TreeFeature.validTreePos: isAir || REPLACEABLE_BY_TREES (not fluids).
+    // 26.2 tag values with a BlockId here: leaves, pale_moss_carpet,
+    // short_grass, hanging_roots, leaf_litter, water. Blocks without a
+    // BlockId (ferns, tall_grass, flowers, vines, ...) read back as Air
+    // (RegionBuf.get), which is free — matching the tag.
     matches!(
         b,
         BlockId::Air
@@ -258,6 +262,9 @@ fn valid_tree_pos(b: BlockId) -> bool {
             | BlockId::PaleOakLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
+            | BlockId::PaleMossCarpet
+            | BlockId::HangingRoots
+            | BlockId::Water
     )
 }
 
@@ -1197,10 +1204,15 @@ mod tests {
         assert!(valid_tree_pos(BlockId::DarkOakLeaves));
         assert!(valid_tree_pos(BlockId::ShortGrass));
         assert!(valid_tree_pos(BlockId::LeafLitter));
-        assert!(!valid_tree_pos(BlockId::Water));
+        // 26.2 replaceable_by_trees tag includes pale_moss_carpet,
+        // hanging_roots and water (swamp trees).
+        assert!(valid_tree_pos(BlockId::PaleMossCarpet));
+        assert!(valid_tree_pos(BlockId::HangingRoots));
+        assert!(valid_tree_pos(BlockId::Water));
         assert!(!valid_tree_pos(BlockId::Snow));
         assert!(!valid_tree_pos(BlockId::GrassBlock));
         assert!(!valid_tree_pos(BlockId::OakLog));
+        assert!(!valid_tree_pos(BlockId::PaleMossBlock));
         assert!(is_free(BlockId::OakLog));
         assert!(is_free(BlockId::DarkOakLog));
     }
