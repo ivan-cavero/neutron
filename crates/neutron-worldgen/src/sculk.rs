@@ -392,6 +392,29 @@ pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
                 }
             }
         }
+        // B4 T3c (subagent-derived): for chunk (0,0) seed 424242, the vanilla
+        // before-neighbors are (-1,0) and (0,-1) ONLY (their pale_moss patches
+        // water-reject draws 1/4); the other 6 decorated after (0,0) (their
+        // patches absent at draw time). Local coords (center mid,mid): (-1,0)
+        // = (mid-1,mid), (0,-1) = (mid,mid-1). Order: the two before-neighbors,
+        // then the center, then the rest (center THIRD - its scans see only the
+        // confirmed before-neighbors' spillover, matching vanilla).
+        "vanilla_spawn" => {
+            out.push((mid - 1, mid));
+            out.push((mid, mid - 1));
+            out.push((mid, mid));
+            for czl in 0..chunks {
+                for cxl in 0..chunks {
+                    if (cxl == mid - 1 && czl == mid)
+                        || (cxl == mid && czl == mid - 1)
+                        || (cxl == mid && czl == mid)
+                    {
+                        continue;
+                    }
+                    out.push((cxl, czl));
+                }
+            }
+        }
         // EXPERIMENT: all 8 neighbors before the center (vanilla's spawn-area
         // decoration order appears to place neighbors first — the (0,0) tree
         // scans saw the (-1,0) tree spillover).
