@@ -1290,7 +1290,9 @@ fn parse_heightmap_kind(name: &str) -> HeightmapKind {
     }
 }
 
-/// `BlockState.blocksMotion`: isSolid except cobweb / bamboo_sapling (not in palette).
+/// `BlockState.blocksMotion` = `isSolid` (except cobweb / bamboo_sapling,
+/// not in palette). Plants (grass, carpet, vines, hanging moss, azalea),
+/// fluids, snow and veins are NOT solid.
 fn blocks_motion(b: BlockId) -> bool {
     !matches!(
         b,
@@ -1302,6 +1304,14 @@ fn blocks_motion(b: BlockId) -> bool {
             | BlockId::SculkVein
             | BlockId::Snow
             | BlockId::PowderSnow
+            | BlockId::PaleMossCarpet
+            | BlockId::MossCarpet
+            | BlockId::CaveVines
+            | BlockId::CaveVinesPlant
+            | BlockId::PaleHangingMoss
+            | BlockId::HangingRoots
+            | BlockId::Azalea
+            | BlockId::FloweringAzalea
     )
 }
 
@@ -1334,6 +1344,11 @@ fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Opt
 }
 
 /// `WORLD_SURFACE` first-available minus `OCEAN_FLOOR` first-available.
+/// OCEAN_FLOOR = highest motion-blocking (solid) block; plants and fluids do
+/// not count (SurfaceWaterDepthFilter uses the OCEAN_FLOOR heightmap). The
+/// old "non-air non-fluid" floor counted short_grass/carpet as floor, making
+/// the depth 0 where vanilla sees 1 -> trees accepted where vanilla rejects
+/// (the pale_garden draw-1 desync root cause).
 fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
     let mut surface = None;
     let mut floor = None;

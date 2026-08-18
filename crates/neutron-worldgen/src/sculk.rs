@@ -386,6 +386,20 @@ pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
                 }
             }
         }
+        // EXPERIMENT: all 8 neighbors before the center (vanilla's spawn-area
+        // decoration order appears to place neighbors first — the (0,0) tree
+        // scans saw the (-1,0) tree spillover).
+        "ring_first" => {
+            for czl in 0..chunks {
+                for cxl in 0..chunks {
+                    if cxl == mid && czl == mid {
+                        continue;
+                    }
+                    out.push((cxl, czl));
+                }
+            }
+            out.push((mid, mid));
+        }
         _ => {
             out.push((mid, mid));
             for czl in 0..chunks {
