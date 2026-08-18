@@ -961,6 +961,62 @@ fn dispatch_configured(
                 bz += -1 + rng.next_int(2);
             }
         }
+        "minecraft:blue_ice" => {
+            // BlueIceFeature.place (26.2): origin must be water at or below
+            // sea level (63); a non-DOWN neighbor must be packed_ice;
+            // place blue_ice at origin + 200 spread attempts.
+            if y > 63 {
+                return;
+            }
+            if region.get(x, y, z) != BlockId::Water && region.get(x, y - 1, z) != BlockId::Water {
+                return;
+            }
+            let mut found = false;
+            for &(dx, dy, dz) in &[
+                (0, 1, 0),
+                (0, 0, -1),
+                (1, 0, 0),
+                (0, 0, 1),
+                (-1, 0, 0),
+            ] {
+                if region.get(x + dx, y + dy, z + dz) == BlockId::PackedIce {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                return;
+            }
+            region.set(x, y, z, BlockId::BlueIce);
+            for _ in 0..200 {
+                let y_off = rng.next_int(5) - rng.next_int(6);
+                let mut xz_diff = 3;
+                if y_off < 2 {
+                    xz_diff += y_off / 2;
+                }
+                if xz_diff >= 1 {
+                    let bx = x + rng.next_int(xz_diff) - rng.next_int(xz_diff);
+                    let bz = z + rng.next_int(xz_diff) - rng.next_int(xz_diff);
+                    let by = y + y_off;
+                    let b = region.get(bx, by, bz);
+                    if b == BlockId::Air || b == BlockId::Water || b == BlockId::PackedIce || b == BlockId::Ice {
+                        for &(dx, dy, dz) in &[
+                            (0, 1, 0),
+                            (0, -1, 0),
+                            (0, 0, -1),
+                            (1, 0, 0),
+                            (0, 0, 1),
+                            (-1, 0, 0),
+                        ] {
+                            if region.get(bx + dx, by + dy, bz + dz) == BlockId::BlueIce {
+                                region.set(bx, by, bz, BlockId::BlueIce);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         "minecraft:ore" | "minecraft:scattered_ore" => {
             // step 6 ores still use features.rs batch
         }

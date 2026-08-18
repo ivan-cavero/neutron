@@ -46,6 +46,7 @@ const HANDLED: &[&str] = &[
     "seagrass",
     "kelp",
     "block_blob",
+    "blue_ice",
 ];
 
 /// Types implemented only by the step-6 batch (`features.rs`). The test gates
@@ -62,8 +63,6 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     // Bamboo culms with podzol base — not ported.
     ("bamboo", "bamboo_no_podzol", "bamboo not ported"),
     ("bamboo", "bamboo_some_podzol", "bamboo not ported"),
-    // Blue ice replaces in frozen ocean — not ported.
-    ("blue_ice", "blue_ice", "blue ice not ported"),
     // Desert wells — not ported.
     ("desert_well", "desert_well", "desert well not ported"),
     // disk at step 4: the step-6 batch never sees it (ice patches on frozen
