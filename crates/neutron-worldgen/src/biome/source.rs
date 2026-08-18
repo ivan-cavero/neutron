@@ -198,7 +198,9 @@ pub fn climate_at_block(
     let c = quantize_coord(cont_raw);
     let e = quantize_coord(eros_raw);
     let d = quantize_coord(depth_raw);
-    let w = quantize_coord(peaks_and_valleys(ridge_raw));
+    // B3: vanilla 26.2 uses RAW ridge noise for the climate target (probe -0.8113),
+    // NOT peaksAndValleys(ridge) — the old form was the 777-regression root cause.
+    let w = quantize_coord(ridge_raw);
     ClimateTarget::from_quantized(t, h, c, e, d, w)
 }
 

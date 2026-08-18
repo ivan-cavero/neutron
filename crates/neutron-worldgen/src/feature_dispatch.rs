@@ -279,12 +279,14 @@ pub(crate) fn place_placed_feature_step(
                         }
                     }
                     "minecraft:random_offset" => {
+                        // Java RandomOffsetPlacement.getPositions samples in order
+                        // scatterX (xz_spread), scatterY (y_spread), scatterZ (xz_spread).
                         let ox = sample_int_provider(rng, &m["xz_spread"]);
-                        let oz = sample_int_provider(rng, &m["xz_spread"]);
                         let oy = sample_int_provider(rng, &m["y_spread"]);
+                        let oz = sample_int_provider(rng, &m["xz_spread"]);
                         x += ox;
-                        z += oz;
                         y += oy;
+                        z += oz;
                     }
                     "minecraft:environment_scan" => {
                         // EnvironmentScanPlacement: scan from current y in
