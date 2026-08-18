@@ -2,12 +2,13 @@
 
 > Read this first every session. Answers: where are we, what is the bar, what is the next action.
 > History lives in `runs/` — this file only holds the current state.
-> **Updated 18 Aug 2026 (21:0x +02:00)** — run-048 resumed on THIS PC (Windows).
+> **Updated 18 Aug 2026 (21:2x +02:00)** — run-048 resumed on THIS PC (Windows).
 > B3 was re-derived on `main` by the **parallel worldgen agent** (user-confirmed);
-> measurements re-run by the LEAD session (see below). **PUSH STILL BLOCKED**
-> (main is 3 commits AHEAD of origin/main). Resume boundary: `runs/run-048.md`.
-> D0-D4 detection infra built this session (extract-data + dispatch coverage
-> test, see below) — commit pending.
+> measurements re-run by the LEAD session (see below). **PUSH UNBLOCKED** —
+> `git push` succeeded 18 Aug 21:2x: main == origin/main @ **c8468a6** (4 commits
+> pushed: 7fcfd06/e72a87e/355c3d5 B3 + c8468a6 D0-D4 infra; the earlier "no creds"
+> block is obsolete — creds are configured on this machine). Resume boundary:
+> `runs/run-048.md`. D0-D4 detection infra committed (see below).
 
 ## Current phase
 
@@ -106,11 +107,15 @@ whitelist drift (both additions and removals).
 
 ## RESUME BOUNDARY (current machine — read first)
 
-1. **Push is BLOCKED on this machine (no GitHub creds)**: local `main` @ **355c3d5** is
-   3 commits AHEAD of `origin/main` (ddb9e7c): 7fcfd06 (perf tests + parallel examples),
-   e72a87e (raw ridge noise + random_offset), 355c3d5 (vegetation_patch HashSet).
-   PC-2's branch `run048-worldgen` @ eec1d1d and its B3 evidence file are NOT here —
-   the work was re-derived on main by the parallel worldgen agent.
+1. **Push is UNBLOCKED (correction, 18 Aug 21:2x)**: `git push origin main` succeeded
+   (`ddb9e7c..c8468a6`). main == origin/main, 0/0 ahead/behind. The stale "no GitHub
+   creds" claim from earlier sessions is obsolete on this machine.
+   Contents pushed: 7fcfd06 (perf tests + parallel examples), e72a87e (raw ridge noise
+   + random_offset), 355c3d5 (vegetation_patch HashSet) — the parallel agent's B3
+   commits — and c8468a6 (D0-D4 detection infra: extract-data + dispatch coverage).
+   **Working tree**: 3 files still uncommitted (parallel agent's WIP):
+   `crates/neutron-worldgen/Cargo.toml`, `examples/feature_index_probe.rs`, `src/tree.rs` —
+   not touched (AGENTS.md §5.5).
 2. **B3 critic verdict does not exist on this machine** (PC-2 async run 44205f88 did not
    travel). LEAD re-derived the measurements live on 18 Aug 20:0x +02:00 (region_parity
    ×3 + lush_pale_parity + clay_overlap + full test suite) → **expect FAIL on recall**
@@ -131,7 +136,9 @@ whitelist drift (both additions and removals).
      diagnostic via probes (compare RNG consumed per attempt; find first divergent attempt);
      (d) refine `block_column` cave_vine (`prioritize_tip`, weighted provider order).
      Ratchet all 3 seeds every round. Ring-first/order experiments are noise until (c) lands.
-   - When ready: push 3 commits + B4 → update workbench + STATE.
+   - **PUSH DONE 18 Aug 21:2x** (4 commits to origin/main, incl. D0-D4 infra
+     c8468a6) — remaining: B4 (vegetation gap) → port the 30 confessed no-ops,
+     then the dispatch-coverage whitelist shrinks; update workbench + STATE after.
 6. **Ownership**: LEAD owns STATE/workbench/runs/. Worldgen source = parallel agent (in
    flight). `tools/` = human-owned. `tests/benchmarks/**` = Track A (closed).
 

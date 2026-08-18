@@ -160,8 +160,13 @@ the `run048-worldgen` worktree/branch does not exist on this PC.**
   - Verification: `cargo test --workspace` **242/242 green** (incl. new test);
     mc-decompiler workspace builds+tests green. Docs updated (README tools list,
     runs/README D0-D4 template + history, STATE §D0-D4 infra). Parallel agent's
-    uncommitted files untouched. Commit + push attempt next (push still likely
-    blocked — no creds).
+    uncommitted files untouched.
+  - **PUSH: SUCCESS** (21:2x +02:00) — `git push origin main` OK
+    (`ddb9e7c..c8468a6`); main == origin/main 0/0. The historical "no creds"
+    block is obsolete (creds configured on this machine). Pushed: B3 commits
+    7fcfd06/e72a87e/355c3d5 (parallel agent) + c8468a6 (this infra). STATE.md
+    push-blocked claim corrected (append-only). Agent's WIP (Cargo.toml,
+    feature_index_probe.rs, tree.rs) remains uncommitted on disk, untouched.
 
 ---
 
