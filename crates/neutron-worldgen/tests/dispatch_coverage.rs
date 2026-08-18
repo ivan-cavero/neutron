@@ -26,9 +26,7 @@ use std::collections::{BTreeSet, HashSet};
 
 use serde_json::Value;
 
-use neutron_worldgen::feature_catalog::{
-    self, load_configured_feature, load_placed_feature, step,
-};
+use neutron_worldgen::feature_catalog::{self, load_configured_feature, load_placed_feature, step};
 
 /// Types with a dispatch arm in `feature_dispatch.rs` (or sculk module).
 const HANDLED: &[&str] = &[
@@ -69,17 +67,33 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     ("disk", "ice_patch", "step-4 disk outside the step-6 batch"),
     // Infested stone ore at step 7 (mountain/peak biomes): the step-6 batch
     // never sees it.
-    ("ore", "ore_infested", "step-7 infested ore outside the step-6 batch"),
+    (
+        "ore",
+        "ore_infested",
+        "step-7 infested ore outside the step-6 batch",
+    ),
     // Dripstone / speleothem clusters — not ported.
-    ("speleothem_cluster", "dripstone_cluster", "speleothem not ported"),
-    ("speleothem_cluster", "sulfur_spike_cluster", "speleothem not ported"),
+    (
+        "speleothem_cluster",
+        "dripstone_cluster",
+        "speleothem not ported",
+    ),
+    (
+        "speleothem_cluster",
+        "sulfur_spike_cluster",
+        "speleothem not ported",
+    ),
     // Forest rocks (cobblestone blobs) — not ported.
     ("block_blob", "forest_rock", "forest rock not ported"),
     // Fossil structures (two variants) — not ported.
     ("fossil", "fossil_coal", "fossils not ported"),
     ("fossil", "fossil_diamonds", "fossils not ported"),
     // Step-10 top-layer freeze (ice + snow in frozen biomes) — not ported.
-    ("freeze_top_layer", "freeze_top_layer", "top-layer freeze not ported"),
+    (
+        "freeze_top_layer",
+        "freeze_top_layer",
+        "top-layer freeze not ported",
+    ),
     // Ice spikes — not ported.
     ("spike", "ice_spike", "ice spike not ported"),
     // Icebergs — not ported.
@@ -90,7 +104,11 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     // Lava lakes (underground + surface) — not ported.
     ("lake", "lake_lava", "lava lake not ported"),
     // Large dripstone — not ported.
-    ("large_dripstone", "large_dripstone", "large dripstone not ported"),
+    (
+        "large_dripstone",
+        "large_dripstone",
+        "large dripstone not ported",
+    ),
     // Dungeons — not ported.
     ("monster_room", "monster_room", "dungeons not ported"),
     // Sea pickles — not ported.
@@ -98,7 +116,11 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     // Seagrass (all heights) — not ported.
     ("seagrass", "seagrass_mid", "seagrass not ported"),
     ("seagrass", "seagrass_short", "seagrass not ported"),
-    ("seagrass", "seagrass_slightly_less_short", "seagrass not ported"),
+    (
+        "seagrass",
+        "seagrass_slightly_less_short",
+        "seagrass not ported",
+    ),
     ("seagrass", "seagrass_tall", "seagrass not ported"),
     // Sulfur pools (feature sequence) — not ported.
     ("sequence", "sulfur_pool", "sulfur pool not ported"),
@@ -106,7 +128,11 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     // glow_lichen is ported but MEASURED as a recall regression (-0.81pp:
     // cave-terrain coupling shifts the lush-caves features) — reverted,
     // stays a confessed gap until the terrain parity improves.
-    ("multiface_growth", "glow_lichen", "lichen reverted: recall regression"),
+    (
+        "multiface_growth",
+        "glow_lichen",
+        "lichen reverted: recall regression",
+    ),
 ];
 
 fn strip_mc(s: &str) -> &str {
@@ -135,7 +161,9 @@ fn collect_configured(
         }
         return;
     }
-    issues.push(format!("{placed_of} -> {ref_id} (unresolved feature reference)"));
+    issues.push(format!(
+        "{placed_of} -> {ref_id} (unresolved feature reference)"
+    ));
 }
 
 fn resolve_placed(
@@ -145,7 +173,9 @@ fn resolve_placed(
     issues: &mut Vec<String>,
 ) {
     let Some(placed) = load_placed_feature(placed_id) else {
-        issues.push(format!("placed_feature `{placed_id}` missing from data tree"));
+        issues.push(format!(
+            "placed_feature `{placed_id}` missing from data tree"
+        ));
         return;
     };
     let feature = &placed["feature"];
@@ -178,7 +208,9 @@ fn collect_feature_ref(
         return;
     }
     if !value.is_object() {
-        issues.push(format!("{placed_of}: invalid feature ref (not a string or object)"));
+        issues.push(format!(
+            "{placed_of}: invalid feature ref (not a string or object)"
+        ));
         return;
     }
     // Inline placed feature object: resolve its inner feature, then collect
@@ -192,7 +224,9 @@ fn collect_feature_ref(
             collect_selector_children(placed_of, inner, out, seen_placed, issues);
             out.push((placed_of.to_string(), inner.clone()));
         }
-        _ => issues.push(format!("{placed_of}: inline placed object without a feature field")),
+        _ => issues.push(format!(
+            "{placed_of}: inline placed object without a feature field"
+        )),
     }
 }
 
@@ -275,10 +309,7 @@ fn overworld_sorter_dispatch_coverage() {
 
     let handled: BTreeSet<&str> = HANDLED.iter().copied().collect();
     let batch: BTreeSet<&str> = STEP6_BATCH.iter().copied().collect();
-    let no_op: BTreeSet<(&str, &str)> = KNOWN_NO_OP
-        .iter()
-        .map(|(t, c, _)| (*t, *c))
-        .collect();
+    let no_op: BTreeSet<(&str, &str)> = KNOWN_NO_OP.iter().map(|(t, c, _)| (*t, *c)).collect();
     let mut found_no_op: BTreeSet<(String, String)> = BTreeSet::new();
     let mut orphans: Vec<(i32, &str, &str, &str)> = Vec::new();
 
@@ -321,7 +352,8 @@ fn overworld_sorter_dispatch_coverage() {
         .map(|(t, c)| (t.to_string(), c.to_string()))
         .collect();
     assert_eq!(
-        found_no_op, expected,
+        found_no_op,
+        expected,
         "KNOWN_NO_OP whitelist drift: {} (update the list and the reason)",
         if found_no_op.is_empty() && !expected.is_empty() {
             "features vanished — confirm removal and update KNOWN_NO_OP"

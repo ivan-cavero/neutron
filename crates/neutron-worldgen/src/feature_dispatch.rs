@@ -382,6 +382,21 @@ pub(crate) fn place_placed_feature_step(
             continue;
         }
         let mut tree_placed = false;
+        // NEUTRON_DECO_SKIP_TREE_DRAWS=N (diagnostic): reject the first N
+        // draws at the feature gate (no tree RNG consumed) — simulates the
+        // "draws rejected by decoration-time terrain" hypothesis for the
+        // vanilla-stream derivation (deco_stream_probe).
+        if let Some(skip) = std::env::var("NEUTRON_DECO_SKIP_TREE_DRAWS")
+            .ok()
+            .and_then(|s| s.parse::<i32>().ok())
+        {
+            if draw_no <= skip {
+                if trace_trees {
+                    eprintln!("[trace]   draw {draw_no} SKIP (x={x},z={z},y={y})");
+                }
+                continue;
+            }
+        }
         if let Some(ref cfg) = configured {
             dispatch_configured(rng, region, Some(state), x, y, z, cfg, gen_step);
             tree_placed = true;
@@ -923,7 +938,9 @@ fn place_root_system(
             break;
         }
         // level.getHeight(WORLD_SURFACE) < ty -> fail (surface below the scan).
-        let ws = heightmap_top(region, x, z, HeightmapKind::WorldSurface).map(|h| h + 1).unwrap_or(-1);
+        let ws = heightmap_top(region, x, z, HeightmapKind::WorldSurface)
+            .map(|h| h + 1)
+            .unwrap_or(-1);
         if ws < ty {
             break;
         }
@@ -954,7 +971,16 @@ fn place_root_system(
         // Place the tree (azalea_tree is a tree config; inline placed feature).
         if let Some(feat) = c["feature"]["feature"].as_str() {
             if let Some(tcfg) = feature_catalog::load_configured_feature(feat) {
-                dispatch_configured(rng, region, state, x, ty, z, &tcfg, step::VEGETAL_DECORATION);
+                dispatch_configured(
+                    rng,
+                    region,
+                    state,
+                    x,
+                    ty,
+                    z,
+                    &tcfg,
+                    step::VEGETAL_DECORATION,
+                );
             }
         }
         // placeDirt: rooted_dirt columns from the origin up to the tree base.
@@ -976,9 +1002,7 @@ fn place_root_system(
             let rx = x + rng.next_int(hang_radius) - rng.next_int(hang_radius);
             let ry = y + rng.next_int(hang_span) - rng.next_int(hang_span);
             let rz = z + rng.next_int(hang_radius) - rng.next_int(hang_radius);
-            if region.get(rx, ry, rz) == BlockId::Air
-                && blocks_motion(region.get(rx, ry + 1, rz))
-            {
+            if region.get(rx, ry, rz) == BlockId::Air && blocks_motion(region.get(rx, ry + 1, rz)) {
                 region.set(rx, ry, rz, BlockId::HangingRoots);
             }
         }
@@ -1149,7 +1173,10 @@ impl JavaBlockPosSet {
             self.buckets = vec![Vec::new(); 16];
         }
         let bi = (Self::hash(x, y, z) as usize) & (self.capacity - 1);
-        if self.buckets[bi].iter().any(|&(a, b, c)| a == x && b == y && c == z) {
+        if self.buckets[bi]
+            .iter()
+            .any(|&(a, b, c)| a == x && b == y && c == z)
+        {
             return; // duplicate: no add, no size change
         }
         self.buckets[bi].push((x, y, z));

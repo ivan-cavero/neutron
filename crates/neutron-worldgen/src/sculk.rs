@@ -229,7 +229,14 @@ pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
     for (pos, &(cxl, czl)) in origin_order.iter().enumerate() {
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
-        apply_sculk_origin(region, state, ox0, oz0, &origin_order[pos + 1..], &mut faces);
+        apply_sculk_origin(
+            region,
+            state,
+            ox0,
+            oz0,
+            &origin_order[pos + 1..],
+            &mut faces,
+        );
     }
 }
 
@@ -358,8 +365,7 @@ fn is_ore_family(b: BlockId) -> bool {
 pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
-    let order = std::env::var("NEUTRON_SCULK_ORIGIN_ORDER")
-        .unwrap_or_else(|_| "center_row".into());
+    let order = std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "center_row".into());
     match order.as_str() {
         "row" => {
             for czl in 0..chunks {
@@ -439,7 +445,10 @@ fn valid_growth_dirs(can_floor: bool, can_ceiling: bool, can_wall: bool) -> Vec<
     v
 }
 
-pub(crate) fn shuffle_dirs_list(rng: &mut FeatureRandom, dirs: &[(i32, i32, i32)]) -> Vec<(i32, i32, i32)> {
+pub(crate) fn shuffle_dirs_list(
+    rng: &mut FeatureRandom,
+    dirs: &[(i32, i32, i32)],
+) -> Vec<(i32, i32, i32)> {
     let mut d = dirs.to_vec();
     let mut i = d.len();
     while i > 1 {
@@ -614,11 +623,7 @@ fn place_sculk_patch(
         let here = region.get(x, y, z);
         let spread = can_spread_from(region, x, y, z);
         if !spread {
-            if dump
-                && y >= -40
-                && y < -8
-                && matches!(here, BlockId::Air | BlockId::Water)
-            {
+            if dump && y >= -40 && y < -8 && matches!(here, BlockId::Air | BlockId::Water) {
                 let mut nbs = Vec::new();
                 for &(dx, dy, dz) in &DIRS {
                     nbs.push(region.get(x + dx, y + dy, z + dz));
@@ -766,10 +771,10 @@ fn run_patch(
             }
             if std::env::var_os("NEUTRON_SCULK_STEPS").is_some()
                 && (attempt < 8
-                || attempt == 15
-                || attempt == 31
-                || attempt == 63
-                || std::env::var_os("NEUTRON_SCULK_ALL_TICKS").is_some())
+                    || attempt == 15
+                    || attempt == 31
+                    || attempt == 63
+                    || std::env::var_os("NEUTRON_SCULK_ALL_TICKS").is_some())
             {
                 let mut sc = 0u32;
                 let mut vn = 0u32;
@@ -849,9 +854,7 @@ fn run_patch(
             // Vanilla still executes all spread_attempts after the cursor
             // list becomes empty. There are no further RNG draws in that
             // case, but the differential harness needs all 64 snapshots.
-            if cursors.is_empty()
-                && std::env::var_os("NEUTRON_SCULK_TICK_DUMPS").is_none()
-            {
+            if cursors.is_empty() && std::env::var_os("NEUTRON_SCULK_TICK_DUMPS").is_none() {
                 break;
             }
             if std::env::var_os("NEUTRON_SCULK_DUMP_PATCH").is_some()
@@ -1385,7 +1388,10 @@ fn on_discharged(region: &mut RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z:
     // SculkVeinBlock.onDischarged: strip faces toward sculk; clear if no faces
     if let Some(c) = crate::multiface_spreader::trace_coord() {
         if (x, y, z) == c {
-            eprintln!("TRACE live_discharge ({x},{y},{z}) mask={:?}", faces.get(&(x, y, z)));
+            eprintln!(
+                "TRACE live_discharge ({x},{y},{z}) mask={:?}",
+                faces.get(&(x, y, z))
+            );
         }
     }
     if region.get(x, y, z) != BlockId::SculkVein {
@@ -1517,9 +1523,7 @@ fn is_face_sturdy_at(
     face: usize,
 ) -> bool {
     match region.get(x, y, z) {
-        BlockId::SculkVein => {
-            faces.get(&(x, y, z)).copied().unwrap_or(0) & (1u8 << face) != 0
-        }
+        BlockId::SculkVein => faces.get(&(x, y, z)).copied().unwrap_or(0) & (1u8 << face) != 0,
         BlockId::SculkSensor | BlockId::SculkShrieker => face == 0 || face == 1,
         b => is_collision_full_block(b),
     }
@@ -1549,8 +1553,9 @@ fn non_corner_neighbours() -> Vec<(i32, i32, i32)> {
 
 /// Diagnostic override for the deep_dark biome gate (parity experiments feed
 /// the vanilla chunk's real 3D biomes here). `None` → neutron's biome source.
-static BIOME_GATE_OVERRIDE: std::sync::RwLock<Option<std::sync::Arc<dyn Fn(i32, i32, i32) -> bool + Send + Sync>>> =
-    std::sync::RwLock::new(None);
+static BIOME_GATE_OVERRIDE: std::sync::RwLock<
+    Option<std::sync::Arc<dyn Fn(i32, i32, i32) -> bool + Send + Sync>>,
+> = std::sync::RwLock::new(None);
 
 /// Install a diagnostic deep_dark gate override (parity experiments only).
 pub fn set_biome_gate_override(
@@ -1782,7 +1787,9 @@ pub fn probe_run_patch(
     let mut faces = FaceMap::new();
     let mut rng = FeatureRandom::new(seed);
     rng.reset_draw_count();
-    run_patch(&mut rng, region, &mut faces, origin.0, origin.1, origin.2, &cfg);
+    run_patch(
+        &mut rng, region, &mut faces, origin.0, origin.1, origin.2, &cfg,
+    );
     let draws = rng.draw_count();
     let mut sculk = 0u32;
     let mut vein = 0u32;

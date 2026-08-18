@@ -71,3 +71,6 @@ name = "sculk_replay"
 [[example]]
 name = "sculk_veintrace"
 
+[[example]]
+name = "deco_stream_probe"
+

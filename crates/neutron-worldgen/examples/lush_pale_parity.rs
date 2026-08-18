@@ -136,7 +136,10 @@ fn main() {
                     let mut cache = NoiseCache::new();
                     let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
                     let cid = neutron_worldgen::biome_source::biome_id_at_block(
-                        &gen.state, ccx * 16 + 8, 64, ccz * 16 + 8,
+                        &gen.state,
+                        ccx * 16 + 8,
+                        64,
+                        ccz * 16 + 8,
                     );
                     (ccx, ccz, chunk, cid)
                 }));
@@ -148,36 +151,36 @@ fn main() {
             continue;
         };
         println!("chunk ({ccx},{ccz}) center biome id={cid}");
-            let wb = neutron_worldgen::generator::WORLD_BOTTOM;
-            let wt = neutron_worldgen::generator::WORLD_TOP;
-            for y in wb..wt {
-                for z in 0..16u32 {
-                    for x in 0..16u32 {
-                        let b = chunk.block_at(x, y, z);
-                        let nn = vanilla_name(b);
-                        let vn = van
-                            .get(&(x as u8, y, z as u8))
-                            .map(|s| s.as_str())
-                            .unwrap_or("minecraft:air");
-                        let v_lp = is_lush_pale(vn);
-                        let n_lp = is_lush_pale(nn);
-                        if v_lp {
-                            total_van += 1;
-                        }
-                        if n_lp {
-                            total_neu += 1;
-                        }
-                        if v_lp && nn != vn {
-                            total_missing += 1;
-                            *by_block.entry(vn.to_string()).or_insert(0) += 1;
-                        }
-                        if n_lp && nn != vn {
-                            total_wrong += 1;
-                        }
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let wt = neutron_worldgen::generator::WORLD_TOP;
+        for y in wb..wt {
+            for z in 0..16u32 {
+                for x in 0..16u32 {
+                    let b = chunk.block_at(x, y, z);
+                    let nn = vanilla_name(b);
+                    let vn = van
+                        .get(&(x as u8, y, z as u8))
+                        .map(|s| s.as_str())
+                        .unwrap_or("minecraft:air");
+                    let v_lp = is_lush_pale(vn);
+                    let n_lp = is_lush_pale(nn);
+                    if v_lp {
+                        total_van += 1;
+                    }
+                    if n_lp {
+                        total_neu += 1;
+                    }
+                    if v_lp && nn != vn {
+                        total_missing += 1;
+                        *by_block.entry(vn.to_string()).or_insert(0) += 1;
+                    }
+                    if n_lp && nn != vn {
+                        total_wrong += 1;
                     }
                 }
             }
-            chunks += 1;
+        }
+        chunks += 1;
     }
     println!("seed={seed} center=({cx},{cz}) radius={radius} chunks={chunks}");
     println!("vanilla lush/pale cells: {total_van}");

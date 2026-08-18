@@ -93,7 +93,10 @@ fn main() {
     let gen = ChunkGenerator::new(seed);
     let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
     println!("seed={seed} center=({cx},{cz}) radius={radius}");
-    println!("{:>10} {:>9} {:>9} {:>9} {:>9}", "chunk", "ALL", "BASE", "core", "border");
+    println!(
+        "{:>10} {:>9} {:>9} {:>9} {:>9}",
+        "chunk", "ALL", "BASE", "core", "border"
+    );
     // Generate the radius² chunks in parallel (each with its own noise cache),
     // then compare serially in deterministic order. Output is byte-identical to
     // the serial loop — only wall-clock changes. `gen` is borrowed by the
@@ -101,19 +104,18 @@ fn main() {
     let coords: Vec<(i32, i32)> = (cz - radius..=cz + radius)
         .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
         .collect();
-    let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
-        std::thread::scope(|s| {
-            let gen = &gen;
-            let mut handles = Vec::with_capacity(coords.len());
-            for &(ccx, ccz) in &coords {
-                handles.push(s.spawn(move || {
-                    let mut cache = NoiseCache::new();
-                    let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
-                    (ccx, ccz, chunk)
-                }));
-            }
-            handles.into_iter().map(|h| h.join().unwrap()).collect()
-        });
+    let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> = std::thread::scope(|s| {
+        let gen = &gen;
+        let mut handles = Vec::with_capacity(coords.len());
+        for &(ccx, ccz) in &coords {
+            handles.push(s.spawn(move || {
+                let mut cache = NoiseCache::new();
+                let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
+                (ccx, ccz, chunk)
+            }));
+        }
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
     let mut tot = [0u64; 8];
     let mut chunks = 0u64;
     for (ccx, ccz, chunk) in generated {
@@ -121,50 +123,50 @@ fn main() {
             println!("{ccx:>5},{ccz:>4}     missing");
             continue;
         };
-            let wb = neutron_worldgen::generator::WORLD_BOTTOM;
-            let wt = neutron_worldgen::generator::WORLD_TOP;
-            let mut all = [0u64; 2];
-            let mut base = [0u64; 2];
-            let mut core = [0u64; 2];
-            let mut border = [0u64; 2];
-            for y in wb..wt {
-                for z in 0..16u32 {
-                    for x in 0..16u32 {
-                        let b = chunk.block_at(x, y, z);
-                        let nn = vanilla_name(b);
-                        let vn = van
-                            .get(&(x as u8, y, z as u8))
-                            .map(|s| s.as_str())
-                            .unwrap_or("minecraft:air");
-                        let m = (nn == vn) as u64;
-                        all[m as usize] += 1;
-                        if !is_vegetation_name(vn) {
-                            base[m as usize] += 1;
-                        }
-                        let d = (x as i32)
-                            .min(15 - x as i32)
-                            .min(z as i32)
-                            .min(15 - z as i32);
-                        if d >= 5 {
-                            core[m as usize] += 1;
-                        } else {
-                            border[m as usize] += 1;
-                        }
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let wt = neutron_worldgen::generator::WORLD_TOP;
+        let mut all = [0u64; 2];
+        let mut base = [0u64; 2];
+        let mut core = [0u64; 2];
+        let mut border = [0u64; 2];
+        for y in wb..wt {
+            for z in 0..16u32 {
+                for x in 0..16u32 {
+                    let b = chunk.block_at(x, y, z);
+                    let nn = vanilla_name(b);
+                    let vn = van
+                        .get(&(x as u8, y, z as u8))
+                        .map(|s| s.as_str())
+                        .unwrap_or("minecraft:air");
+                    let m = (nn == vn) as u64;
+                    all[m as usize] += 1;
+                    if !is_vegetation_name(vn) {
+                        base[m as usize] += 1;
+                    }
+                    let d = (x as i32)
+                        .min(15 - x as i32)
+                        .min(z as i32)
+                        .min(15 - z as i32);
+                    if d >= 5 {
+                        core[m as usize] += 1;
+                    } else {
+                        border[m as usize] += 1;
                     }
                 }
             }
-            for i in 0..2 {
-                tot[i] += all[i];
-            }
-            chunks += 1;
-            let pct = |a: [u64; 2]| 100.0 * a[1] as f64 / (a[0] + a[1]) as f64;
-            println!(
-                "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
-                pct(all),
-                pct(base),
-                pct(core),
-                pct(border)
-            );
+        }
+        for i in 0..2 {
+            tot[i] += all[i];
+        }
+        chunks += 1;
+        let pct = |a: [u64; 2]| 100.0 * a[1] as f64 / (a[0] + a[1]) as f64;
+        println!(
+            "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
+            pct(all),
+            pct(base),
+            pct(core),
+            pct(border)
+        );
     }
     if tot[0] + tot[1] > 0 {
         println!(
