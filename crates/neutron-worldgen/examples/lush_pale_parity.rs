@@ -4,7 +4,7 @@ use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
 use neutron_world::nbt::{compound_get, read_nbt};
 use neutron_world::Region;
 use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
-use neutron_worldgen::ChunkGenerator;
+use neutron_worldgen::{ChunkGenerator, NoiseCache};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -111,6 +111,9 @@ fn main() {
     });
 
     let gen = ChunkGenerator::new(seed);
+    // Shared noise cache across the 9 chunk generations (see region_parity.rs:
+    // the 5×5 noise buffers overlap; generate_noise_and_surface is pure, so
+    // results are byte-identical — only wall-clock changes).
     let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
     let mut by_block: HashMap<String, i64> = HashMap::new();
     let mut total_missing = 0i64;
@@ -118,17 +121,33 @@ fn main() {
     let mut total_van = 0i64;
     let mut total_neu = 0i64;
     let mut chunks = 0i64;
-    for dz in -radius..=radius {
-        for dx in -radius..=radius {
-            let (ccx, ccz) = (cx + dx, cz + dz);
-            let Some(van) = load_vanilla(&mut regions, &region_dir, ccx, ccz) else {
-                continue;
-            };
-            let chunk = gen.generate_chunk(ccx, ccz);
-            let cid = neutron_worldgen::biome_source::biome_id_at_block(
-                &gen.state, ccx * 16 + 8, 64, ccz * 16 + 8,
-            );
-            println!("chunk ({ccx},{ccz}) center biome id={cid}");
+    // Generate chunks in parallel (each with its own noise cache), then
+    // accumulate serially in deterministic order. Output is byte-identical to
+    // the serial loop — only wall-clock changes.
+    let coords: Vec<(i32, i32)> = (cz - radius..=cz + radius)
+        .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
+        .collect();
+    let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk, u8)> =
+        std::thread::scope(|s| {
+            let gen = &gen;
+            let mut handles = Vec::with_capacity(coords.len());
+            for &(ccx, ccz) in &coords {
+                handles.push(s.spawn(move || {
+                    let mut cache = NoiseCache::new();
+                    let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
+                    let cid = neutron_worldgen::biome_source::biome_id_at_block(
+                        &gen.state, ccx * 16 + 8, 64, ccz * 16 + 8,
+                    );
+                    (ccx, ccz, chunk, cid)
+                }));
+            }
+            handles.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+    for (ccx, ccz, chunk, cid) in generated {
+        let Some(van) = load_vanilla(&mut regions, &region_dir, ccx, ccz) else {
+            continue;
+        };
+        println!("chunk ({ccx},{ccz}) center biome id={cid}");
             let wb = neutron_worldgen::generator::WORLD_BOTTOM;
             let wt = neutron_worldgen::generator::WORLD_TOP;
             for y in wb..wt {
@@ -159,7 +178,6 @@ fn main() {
                 }
             }
             chunks += 1;
-        }
     }
     println!("seed={seed} center=({cx},{cz}) radius={radius} chunks={chunks}");
     println!("vanilla lush/pale cells: {total_van}");

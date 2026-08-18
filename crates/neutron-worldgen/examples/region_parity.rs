@@ -6,7 +6,7 @@ use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
 use neutron_world::nbt::{compound_get, read_nbt};
 use neutron_world::Region;
 use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
-use neutron_worldgen::ChunkGenerator;
+use neutron_worldgen::{ChunkGenerator, NoiseCache};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -94,16 +94,33 @@ fn main() {
     let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
     println!("seed={seed} center=({cx},{cz}) radius={radius}");
     println!("{:>10} {:>9} {:>9} {:>9} {:>9}", "chunk", "ALL", "BASE", "core", "border");
+    // Generate the radius² chunks in parallel (each with its own noise cache),
+    // then compare serially in deterministic order. Output is byte-identical to
+    // the serial loop — only wall-clock changes. `gen` is borrowed by the
+    // scoped threads (ChunkGenerator is Sync: density nodes are Arc).
+    let coords: Vec<(i32, i32)> = (cz - radius..=cz + radius)
+        .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
+        .collect();
+    let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
+        std::thread::scope(|s| {
+            let gen = &gen;
+            let mut handles = Vec::with_capacity(coords.len());
+            for &(ccx, ccz) in &coords {
+                handles.push(s.spawn(move || {
+                    let mut cache = NoiseCache::new();
+                    let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
+                    (ccx, ccz, chunk)
+                }));
+            }
+            handles.into_iter().map(|h| h.join().unwrap()).collect()
+        });
     let mut tot = [0u64; 8];
     let mut chunks = 0u64;
-    for dz in -radius..=radius {
-        for dx in -radius..=radius {
-            let (ccx, ccz) = (cx + dx, cz + dz);
-            let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
-                println!("{ccx:>5},{ccz:>4}     missing");
-                continue;
-            };
-            let chunk = gen.generate_chunk(ccx, ccz);
+    for (ccx, ccz, chunk) in generated {
+        let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
+            println!("{ccx:>5},{ccz:>4}     missing");
+            continue;
+        };
             let wb = neutron_worldgen::generator::WORLD_BOTTOM;
             let wt = neutron_worldgen::generator::WORLD_TOP;
             let mut all = [0u64; 2];
@@ -148,7 +165,6 @@ fn main() {
                 pct(core),
                 pct(border)
             );
-        }
     }
     if tot[0] + tot[1] > 0 {
         println!(

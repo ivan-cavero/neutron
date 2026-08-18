@@ -12,3 +12,11 @@ members = [
     "tools/neutron-hash",
     "tools/chunk-dump",
 ]
+
+# Tests are dominated by full-chunk worldgen generation (neutron-server,
+# neutron-worldgen). In debug (opt-level 0) a single chunk takes ~60-100s;
+# with optimizations ~1-3s. opt-level 3 here makes `cargo test` ~30-50x
+# faster while the dev build (`cargo build`) stays unoptimized for iteration.
+# debug-assertions stay enabled (test profile default), so no behavior change.
+[profile.test]
+opt-level = 3
