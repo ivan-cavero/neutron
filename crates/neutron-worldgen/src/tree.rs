@@ -185,6 +185,22 @@ pub fn place_tree_from_config(
     ctx.trunks.sort_by_key(|p| p.1);
     ctx.foliage.sort_by_key(|p| p.1);
 
+    // NEUTRON_DECO_TREE_TRACE (diagnostic): print the placed tree blocks.
+    if std::env::var("NEUTRON_DECO_TREE_TRACE").is_ok() {
+        eprintln!(
+            "[tree] origin=({x},{y},{z}) height={} trunks={} foliage={}",
+            tree_height,
+            ctx.trunks.len(),
+            ctx.foliage.len()
+        );
+        for &(tx, ty, tz) in &ctx.trunks {
+            eprintln!("  trunk ({tx},{ty},{tz})");
+        }
+        for &(tx, ty, tz) in &ctx.foliage {
+            eprintln!("  leaf  ({tx},{ty},{tz})");
+        }
+    }
+
     if let Some(decorators) = cfg["decorators"].as_array() {
         apply_decorators(&mut ctx, decorators);
     }
@@ -260,6 +276,12 @@ pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
             | BlockId::PaleOakLeaves
+            | BlockId::BirchLeaves
+            | BlockId::SpruceLeaves
+            | BlockId::JungleLeaves
+            | BlockId::AcaciaLeaves
+            | BlockId::MangroveLeaves
+            | BlockId::CherryLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
             | BlockId::PaleMossCarpet
@@ -271,14 +293,31 @@ pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
 fn is_air_or_leaves(b: BlockId) -> bool {
     matches!(
         b,
-        BlockId::Air | BlockId::OakLeaves | BlockId::DarkOakLeaves | BlockId::PaleOakLeaves
+        BlockId::Air
+            | BlockId::OakLeaves
+            | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLeaves
+            | BlockId::BirchLeaves
+            | BlockId::SpruceLeaves
+            | BlockId::JungleLeaves
+            | BlockId::AcaciaLeaves
+            | BlockId::MangroveLeaves
+            | BlockId::CherryLeaves
     )
 }
 
 fn is_log(b: BlockId) -> bool {
     matches!(
         b,
-        BlockId::OakLog | BlockId::DarkOakLog | BlockId::PaleOakLog
+        BlockId::OakLog
+            | BlockId::DarkOakLog
+            | BlockId::PaleOakLog
+            | BlockId::BirchLog
+            | BlockId::SpruceLog
+            | BlockId::JungleLog
+            | BlockId::AcaciaLog
+            | BlockId::MangroveLog
+            | BlockId::CherryLog
     )
 }
 

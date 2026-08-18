@@ -125,8 +125,9 @@ fn main() {
                         let y = wb + ly;
                         // find the base: lowest log in the column
                         let mut by = y;
-                        while by > wb && blocks[((by - 1 - wb) * 256 + lz * 16 + lx) as usize]
-                            == BlockId::PaleOakLog.as_u16()
+                        while by > wb
+                            && blocks[((by - 1 - wb) * 256 + lz * 16 + lx) as usize]
+                                == BlockId::PaleOakLog.as_u16()
                         {
                             by -= 1;
                         }
@@ -165,6 +166,21 @@ fn main() {
     eprintln!(
         "seed={seed} chunk=({cx},{cz}) placed={placed_id} index={idx} dec={dec} (terrain = vanilla ref)"
     );
+    let count_clay = |region: &RegionBuf| -> usize {
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut n = 0;
+        for y in wb..wb + 384 {
+            for lz in 0..16 {
+                for lx in 0..16 {
+                    if region.get(cx * 16 + lx, y, cz * 16 + lz) == BlockId::Clay {
+                        n += 1;
+                    }
+                }
+            }
+        }
+        n
+    };
+    let before = count_clay(&region);
     neutron_worldgen::feature_dispatch::place_placed_feature(
         &mut rng,
         &mut region,
@@ -173,4 +189,6 @@ fn main() {
         cz * 16,
         &placed_id,
     );
+    let after = count_clay(&region);
+    eprintln!("[clay] before={before} after={after} placed={}", after - before);
 }
