@@ -954,6 +954,64 @@ fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
     }
 }
 
+/// Minimal replica of Java `HashSet<BlockPos>` iteration order, used by
+/// `VegetationPatchFeature.placeGroundPatch` (surface set). Java HashMap:
+/// initial capacity 16, load factor 0.75, capacity doubles when size >
+/// capacity*0.75; bucket = spread(hashCode) & (capacity-1); iteration is
+/// bucket order, insertion order within a bucket. `Vec3i.hashCode()` =
+/// `(y + z*31)*31 + x`. Dedup matters: distributeVegetation consumes RNG once
+/// per unique element.
+struct JavaBlockPosSet {
+    buckets: Vec<Vec<(i32, i32, i32)>>,
+    capacity: usize,
+    size: usize,
+}
+
+impl JavaBlockPosSet {
+    fn new() -> Self {
+        Self {
+            buckets: Vec::new(),
+            capacity: 0,
+            size: 0,
+        }
+    }
+
+    fn hash(x: i32, y: i32, z: i32) -> u32 {
+        // Java int arithmetic wraps mod 2^32; i64 then truncate is identical.
+        let h = ((y as i64 + z as i64 * 31) * 31 + x as i64) as u32;
+        h ^ (h >> 16) // HashMap.hash spread
+    }
+
+    fn insert(&mut self, x: i32, y: i32, z: i32) {
+        if self.buckets.is_empty() {
+            self.capacity = 16; // HashMap first put -> resize() to 16
+            self.buckets = vec![Vec::new(); 16];
+        }
+        let bi = (Self::hash(x, y, z) as usize) & (self.capacity - 1);
+        if self.buckets[bi].iter().any(|&(a, b, c)| a == x && b == y && c == z) {
+            return; // duplicate: no add, no size change
+        }
+        self.buckets[bi].push((x, y, z));
+        self.size += 1;
+        if self.size > self.capacity * 3 / 4 {
+            let new_cap = self.capacity * 2;
+            let mut new_buckets = vec![Vec::new(); new_cap];
+            for bucket in self.buckets.drain(..) {
+                for e in bucket {
+                    let h = Self::hash(e.0, e.1, e.2);
+                    new_buckets[(h as usize) & (new_cap - 1)].push(e);
+                }
+            }
+            self.buckets = new_buckets;
+            self.capacity = new_cap;
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (i32, i32, i32)> + '_ {
+        self.buckets.iter().flatten().copied()
+    }
+}
+
 /// Port of `VegetationPatchFeature.place` (moss patches, pale moss patches).
 ///
 /// `state` is `None` when invoked from a tree decorator (vanilla
@@ -989,7 +1047,7 @@ pub(crate) fn place_vegetation_patch(
     let xr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
     let zr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
 
-    let mut surface_pts: Vec<(i32, i32, i32)> = Vec::new();
+    let mut surface_pts = JavaBlockPosSet::new();
 
     for dx in -xr..=xr {
         let is_x_edge = dx == -xr || dx == xr;
@@ -1056,13 +1114,13 @@ pub(crate) fn place_vegetation_patch(
                 i += 1;
             }
             if placed_any {
-                surface_pts.push((gx0, gy0, gz0));
+                surface_pts.insert(gx0, gy0, gz0);
             }
         }
     }
 
     // distributeVegetation
-    for (sx, sy, sz) in surface_pts {
+    for (sx, sy, sz) in surface_pts.iter() {
         if veg_chance > 0.0 && rng.next_f32() < veg_chance {
             let vx = sx + out_dx;
             let vy = sy + out_dy;
