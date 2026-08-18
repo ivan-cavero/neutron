@@ -107,6 +107,11 @@ pub fn block_state_id(internal: u16) -> i32 {
         110 => 503,  // mangrove_leaves
         111 => 152,  // cherry_log
         112 => 419,  // cherry_leaves
+        113 => 15267, // sea_pickle
+        114 => 2254,  // seagrass
+        115 => 2256,  // tall_seagrass
+        116 => 15062, // kelp
+        117 => 15088, // kelp_plant
         _ => 1,      // unknown -> stone
     }
 }

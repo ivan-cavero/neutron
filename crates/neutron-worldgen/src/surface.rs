@@ -107,6 +107,11 @@ pub enum BlockId {
     MangroveLeaves = 110,
     CherryLog = 111,
     CherryLeaves = 112,
+    SeaPickle = 113,
+    Seagrass = 114,
+    TallSeagrass = 115,
+    Kelp = 116,
+    KelpPlant = 117,
 }
 
 impl BlockId {
@@ -212,6 +217,11 @@ impl BlockId {
             110 => Some(Self::MangroveLeaves),
             111 => Some(Self::CherryLog),
             112 => Some(Self::CherryLeaves),
+            113 => Some(Self::SeaPickle),
+            114 => Some(Self::Seagrass),
+            115 => Some(Self::TallSeagrass),
+            116 => Some(Self::Kelp),
+            117 => Some(Self::KelpPlant),
             _ => None,
         }
     }
@@ -323,6 +333,11 @@ impl BlockId {
             Self::MangroveLeaves => "minecraft:mangrove_leaves",
             Self::CherryLog => "minecraft:cherry_log",
             Self::CherryLeaves => "minecraft:cherry_leaves",
+            Self::SeaPickle => "minecraft:sea_pickle",
+            Self::Seagrass => "minecraft:seagrass",
+            Self::TallSeagrass => "minecraft:tall_seagrass",
+            Self::Kelp => "minecraft:kelp",
+            Self::KelpPlant => "minecraft:kelp_plant",
         }
     }
 
@@ -426,6 +441,11 @@ impl BlockId {
             "mangrove_leaves" => Some(Self::MangroveLeaves),
             "cherry_log" => Some(Self::CherryLog),
             "cherry_leaves" => Some(Self::CherryLeaves),
+            "sea_pickle" => Some(Self::SeaPickle),
+            "seagrass" => Some(Self::Seagrass),
+            "tall_seagrass" => Some(Self::TallSeagrass),
+            "kelp" => Some(Self::Kelp),
+            "kelp_plant" => Some(Self::KelpPlant),
             _ => None,
         }
     }
@@ -530,6 +550,11 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::MangroveLeaves => "minecraft:mangrove_leaves",
         BlockId::CherryLog => "minecraft:cherry_log",
         BlockId::CherryLeaves => "minecraft:cherry_leaves",
+        BlockId::SeaPickle => "minecraft:sea_pickle",
+        BlockId::Seagrass => "minecraft:seagrass",
+        BlockId::TallSeagrass => "minecraft:tall_seagrass",
+        BlockId::Kelp => "minecraft:kelp",
+        BlockId::KelpPlant => "minecraft:kelp_plant",
     }
 }
 

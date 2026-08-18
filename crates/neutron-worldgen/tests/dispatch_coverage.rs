@@ -42,6 +42,9 @@ const HANDLED: &[&str] = &[
     "random_boolean_selector",
     "vines",
     "root_system",
+    "sea_pickle",
+    "seagrass",
+    "kelp",
 ];
 
 /// Types implemented only by the step-6 batch (`features.rs`). The test gates
@@ -100,7 +103,6 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     ("iceberg", "iceberg_blue", "icebergs not ported"),
     ("iceberg", "iceberg_packed", "icebergs not ported"),
     // Kelp — not ported.
-    ("kelp", "kelp", "kelp not ported"),
     // Lava lakes (underground + surface) — not ported.
     ("lake", "lake_lava", "lava lake not ported"),
     // Large dripstone — not ported.
@@ -111,17 +113,6 @@ const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
     ),
     // Dungeons — not ported.
     ("monster_room", "monster_room", "dungeons not ported"),
-    // Sea pickles — not ported.
-    ("sea_pickle", "sea_pickle", "sea pickle not ported"),
-    // Seagrass (all heights) — not ported.
-    ("seagrass", "seagrass_mid", "seagrass not ported"),
-    ("seagrass", "seagrass_short", "seagrass not ported"),
-    (
-        "seagrass",
-        "seagrass_slightly_less_short",
-        "seagrass not ported",
-    ),
-    ("seagrass", "seagrass_tall", "seagrass not ported"),
     // Sulfur pools (feature sequence) — not ported.
     ("sequence", "sulfur_pool", "sulfur pool not ported"),
     // Multiface growth is ONLY implemented for sculk_vein (sculk module);

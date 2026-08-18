@@ -838,6 +838,87 @@ fn dispatch_configured(
         "minecraft:root_system" => {
             place_root_system(rng, region, state, x, y, z, cfg);
         }
+        "minecraft:sea_pickle" => {
+            // SeaPickleFeature.place (26.2): count attempts; x/z =
+            // nextInt(8)-nextInt(8); y = OCEAN_FLOOR first-available; pickle
+            // count = nextInt(4)+1 (state detail, draw consumed); place if
+            // WATER + solid below (canSurvive).
+            let count = cfg["config"]["count"].as_i64().unwrap_or(20) as i32;
+            for _ in 0..count {
+                let px = x + rng.next_int(8) - rng.next_int(8);
+                let pz = z + rng.next_int(8) - rng.next_int(8);
+                let Some(oy) = heightmap_top(region, px, pz, HeightmapKind::OceanFloor) else {
+                    continue;
+                };
+                let py = oy + 1;
+                let _pickles = rng.next_int(4) + 1;
+                if region.get(px, py, pz) == BlockId::Water
+                    && blocks_motion(region.get(px, py - 1, pz))
+                {
+                    region.set(px, py, pz, BlockId::SeaPickle);
+                }
+            }
+        }
+        "minecraft:seagrass" => {
+            // SeagrassFeature.place: x/z = nextInt(8)-nextInt(8); y =
+            // OCEAN_FLOOR; if WATER: tall = nextDouble < probability; place
+            // seagrass (or tall + upper half) if canSurvive.
+            let prob = cfg["config"]["probability"].as_f64().unwrap_or(0.0);
+            let px = x + rng.next_int(8) - rng.next_int(8);
+            let pz = z + rng.next_int(8) - rng.next_int(8);
+            let Some(oy) = heightmap_top(region, px, pz, HeightmapKind::OceanFloor) else {
+                return;
+            };
+            let py = oy + 1;
+            if region.get(px, py, pz) == BlockId::Water {
+                let is_tall = rng.next_f64() < prob;
+                if blocks_motion(region.get(px, py - 1, pz)) {
+                    if is_tall {
+                        if region.get(px, py + 1, pz) == BlockId::Water {
+                            region.set(px, py, pz, BlockId::TallSeagrass);
+                            region.set(px, py + 1, pz, BlockId::TallSeagrass);
+                        }
+                    } else {
+                        region.set(px, py, pz, BlockId::Seagrass);
+                    }
+                }
+            }
+        }
+        "minecraft:kelp" => {
+            // KelpFeature.place: y = OCEAN_FLOOR; if WATER: height =
+            // 1 + nextInt(10); place kelp up the column (top kelp + plants).
+            let Some(oy) = heightmap_top(region, x, z, HeightmapKind::OceanFloor) else {
+                return;
+            };
+            let py = oy + 1;
+            if region.get(x, py, z) == BlockId::Water {
+                let height = 1 + rng.next_int(10);
+                let mut kp = py;
+                for h in 0..=height {
+                    if region.get(x, kp, z) == BlockId::Water
+                        && region.get(x, kp + 1, z) == BlockId::Water
+                        && blocks_motion(region.get(x, kp - 1, z))
+                    {
+                        if h == height {
+                            let _age = rng.next_int(4) + 20;
+                            region.set(x, kp, z, BlockId::Kelp);
+                        } else {
+                            region.set(x, kp, z, BlockId::KelpPlant);
+                        }
+                    } else if h > 0 {
+                        let below = kp - 1;
+                        if blocks_motion(region.get(x, below - 1, z))
+                            && region.get(x, below - 1, z) != BlockId::Kelp
+                        {
+                            let _age = rng.next_int(4) + 20;
+                            region.set(x, below, z, BlockId::Kelp);
+                        }
+                        break;
+                    }
+                    kp += 1;
+                }
+            }
+        }
         "minecraft:ore" | "minecraft:scattered_ore" => {
             // step 6 ores still use features.rs batch
         }
