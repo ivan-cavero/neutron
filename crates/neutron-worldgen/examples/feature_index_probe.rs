@@ -21,4 +21,12 @@ fn main() {
         "trees_plains = {:?}",
         neutron_worldgen::feature_catalog::global_feature_index(9, "trees_plains")
     );
+    println!(
+        "pale_garden_vegetation = {:?}",
+        neutron_worldgen::feature_catalog::global_feature_index(9, "pale_garden_vegetation")
+    );
+    println!(
+        "pale_moss_patch = {:?}",
+        neutron_worldgen::feature_catalog::global_feature_index(9, "pale_moss_patch")
+    );
 }
