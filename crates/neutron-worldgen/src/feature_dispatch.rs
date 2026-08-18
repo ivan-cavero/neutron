@@ -37,7 +37,15 @@ pub fn apply_step_region(
     for (pos, &(cxl, czl)) in order.iter().enumerate() {
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
-        apply_step_origin(region, state, gen_step, ox0, oz0, &order[pos + 1..], primary_biome);
+        apply_step_origin(
+            region,
+            state,
+            gen_step,
+            ox0,
+            oz0,
+            &order[pos + 1..],
+            primary_biome,
+        );
     }
 }
 
@@ -85,7 +93,8 @@ pub(crate) fn apply_step_origin(
     }
     merged.sort_by_key(|(i, _)| *i);
     let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
-    let saved = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+    let saved =
+        crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
     if list.is_empty() {
         // fall back to primary list if no biome matched
         place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &features);
@@ -102,7 +111,12 @@ pub(crate) fn apply_step_origin(
 /// Sampled on the same 4×4×24 quart grid that `generate_noise_and_surface`
 /// stores (one Y quart per section at the section midpoint) via the noise
 /// biome (no voronoi — mirrors vanilla `fillBiomesFromNoise`).
-fn origin_biome_union(region: &RegionBuf, state: &WorldgenState, ox0: i32, oz0: i32) -> Vec<String> {
+fn origin_biome_union(
+    region: &RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+) -> Vec<String> {
     let cxl = (ox0 - region.origin_x) / 16;
     let czl = (oz0 - region.origin_z) / 16;
     let mut names: Vec<String> = Vec::new();
@@ -217,9 +231,12 @@ pub(crate) fn place_placed_feature_step(
         None
     };
     let base_count = placement_count(rng, &placed);
-    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok() && strip(placed_id) == "pale_garden_vegetation";
+    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok()
+        && strip(placed_id) == "pale_garden_vegetation";
     if trace_trees {
-        eprintln!("[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}");
+        eprintln!(
+            "[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}"
+        );
     }
     let mut draw_no = 0;
     for _ in 0..base_count {
@@ -312,8 +329,10 @@ pub(crate) fn place_placed_feature_step(
                     }
                     "minecraft:biome" => {
                         let bname = biome_name_at(state, x, y, z);
-                        let step_list =
-                            feature_catalog::features_at_step(&bname, step_for_id(placed_id, gen_step));
+                        let step_list = feature_catalog::features_at_step(
+                            &bname,
+                            step_for_id(placed_id, gen_step),
+                        );
                         let id = strip(placed_id);
                         if !step_list.iter().any(|f| strip(f) == id) {
                             ok = false;
@@ -563,25 +582,30 @@ fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value
             }
             is_in_tag(b, tag)
         }
-        "minecraft:solid" => {
-            is_solid_block(region.get(x, y, z))
-        }
+        "minecraft:solid" => is_solid_block(region.get(x, y, z)),
         "minecraft:has_sturdy_face" => {
             // HasSturdyFacePredicate: the block at (origin + predicate offset)
             // must have a sturdy face in `direction`. We approximate "sturdy"
             // with is_solid_block (full solid blocks are sturdy on all faces).
             let off = pred["offset"].as_array();
-            let ox = off.and_then(|a| a.first()).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-            let oy = off.and_then(|a| a.get(1)).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-            let oz = off.and_then(|a| a.get(2)).and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let ox = off
+                .and_then(|a| a.first())
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oy = off
+                .and_then(|a| a.get(1))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oz = off
+                .and_then(|a| a.get(2))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
             is_solid_block(region.get(x + ox, y + oy, z + oz))
         }
-        "minecraft:not" => {
-            !pred
-                .get("predicate")
-                .map(|p| eval_block_predicate(region, x, y, z, p))
-                .unwrap_or(false)
-        }
+        "minecraft:not" => !pred
+            .get("predicate")
+            .map(|p| eval_block_predicate(region, x, y, z, p))
+            .unwrap_or(false),
         "minecraft:matching_blocks" => {
             let ox = pred["offset"]
                 .as_array()
@@ -770,7 +794,16 @@ fn dispatch_configured(
             if let Some(features) = cfg["config"]["features"].as_array() {
                 if !features.is_empty() {
                     let idx = rng.next_int(features.len() as i32) as usize;
-                    place_feature_ref(rng, region, state, x, y, z, &features[idx]["feature"], gen_step);
+                    place_feature_ref(
+                        rng,
+                        region,
+                        state,
+                        x,
+                        y,
+                        z,
+                        &features[idx]["feature"],
+                        gen_step,
+                    );
                 }
             }
         }
@@ -847,18 +880,13 @@ fn place_resolved_placed(
                 "minecraft:biome" => match state {
                     Some(st) => {
                         let bname = biome_name_at(st, x, y, z);
-                        let id = placed["feature"]
-                            .as_str()
-                            .map(strip)
-                            .unwrap_or("");
+                        let id = placed["feature"].as_str().map(strip).unwrap_or("");
                         let list =
                             feature_catalog::features_at_step(&bname, step_for_id("", gen_step));
                         list.iter().any(|f| strip(f) == id)
                             || list.iter().any(|f| {
                                 feature_catalog::load_placed_feature(f)
-                                    .and_then(|p| {
-                                        p["feature"].as_str().map(|s| strip(s) == id)
-                                    })
+                                    .and_then(|p| p["feature"].as_str().map(|s| strip(s) == id))
                                     .unwrap_or(false)
                             })
                     }
@@ -919,9 +947,7 @@ fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
             }
             None
         }
-        "minecraft:randomized_int_state_provider" => {
-            block_from_to_place(rng, &v["source"])
-        }
+        "minecraft:randomized_int_state_provider" => block_from_to_place(rng, &v["source"]),
         _ => BlockId::from_name(v.pointer("/state/Name")?.as_str()?),
     }
 }
@@ -1052,17 +1078,21 @@ pub(crate) fn place_vegetation_patch(
 /// block; if requiresBlockBelow the block BELOW must be valid; the origin cell
 /// must be air or a valid block; exactly `rockCount` of the five neighbours
 /// (N/E/S/W/below) must be valid blocks and exactly `holeCount` must be air.
-fn place_spring(rng: &mut FeatureRandom, region: &mut RegionBuf, x: i32, y: i32, z: i32, cfg: &Value) {
+fn place_spring(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+) {
     let _ = rng;
     let c = &cfg["config"];
     let valid = c["valid_blocks"]
         .as_array()
         .map(|arr| {
             arr.iter()
-                .filter_map(|v| {
-                    v.as_str()
-                        .and_then(BlockId::from_name)
-                })
+                .filter_map(|v| v.as_str().and_then(BlockId::from_name))
                 .collect::<Vec<BlockId>>()
         })
         .unwrap_or_default();
@@ -1089,17 +1119,15 @@ fn place_spring(rng: &mut FeatureRandom, region: &mut RegionBuf, x: i32, y: i32,
     let rock_count = c["rock_count"].as_i64().unwrap_or(4) as i32;
     let hole_count = c["hole_count"].as_i64().unwrap_or(1) as i32;
     if rock == rock_count && holes == hole_count {
-        if let Some(st) = c["state"]["Name"]
-            .as_str()
-            .and_then(BlockId::from_name)
-        {
+        if let Some(st) = c["state"]["Name"].as_str().and_then(BlockId::from_name) {
             region.set(x, y, z, st);
         }
     }
 }
 
 /// Port of `BlockColumnFeature.place` (cave vines).
-fn place_block_column(    rng: &mut FeatureRandom,
+fn place_block_column(
+    rng: &mut FeatureRandom,
     region: &mut RegionBuf,
     x: i32,
     y: i32,
