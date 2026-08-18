@@ -40,9 +40,11 @@ the nightly toolchain from the right directory):
 `neutron-bench` with the remaining args. `JAVA_HOME` must point at a Java
 25+ JRE for `run` (the harness boots the server itself).
 
-Server jars are **gitignored** — provision them with the harness itself:
+Server jars are **gitignored** — provision them with the harness itself (from
+`tests/benchmarks/`, which is the workspace root for these commands):
 
 ```bash
+cd tests/benchmarks
 cargo run --release -p neutron-bench -- servers download vanilla 26.2
 cargo run --release -p neutron-bench -- servers list
 ```
