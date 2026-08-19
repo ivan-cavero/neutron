@@ -412,3 +412,19 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   water → la generación real de vanilla da apenas < 0. Hairline ~0.004 voltea
   cientos de celdas de y 0..16 → cuevas sólidas + clay extra.
 - Próximo (run-056): instrumentar la densidad interpolada REAL de vanilla.
+
+## Run 056 (cerrado) — zero water in chunk (0,0); doFill replica inconclusa
+
+- Zero water in todo el chunk (0,0) de Neutron — vanilla tiene 385.
+- ProbeChunkDensity (full chunk cellCountXZ=4, BeardifierMarker por reflection):
+  compilado pero bloqueado por Java 25 module system (illegal access a
+  BeardifierMarker.INSTANCE).
+- getInterpolatedNoiseValue (cellCountXZ=1) da +0.0037 en vanilla Y Neutron
+  (same). La densidad interpolada en (12,1,15) = el mismo valor en ambos.
+  El agua real de vanilla debe venir de una densidad < 0 que el probe no
+  replica — la interpolación del NoiseChunk REAL durante doFill difiere
+  (posiblemente por blending o el grid cellCountXZ > 1 que afecta el
+  slice filling).
+- Próximo: resolver el módulo Java para acceder a BeardifierMarker, o replicar
+  el doFill real sin subclass (usar la misma estrategia que getInterpolatedNoiseValue
+  pero evaluando el grid completo).
