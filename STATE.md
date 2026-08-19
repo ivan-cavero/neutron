@@ -16,10 +16,19 @@ de celdas 4×4×4, todas en secciones de cueva y −48..96): Neutron dice
 lush_caves_clay/moss/vines rechaza los draws → gaps de clay (22%) + moss (~19%) +
 vines (~8%) = 34% del recall. Ver `runs/run-050.md`.
 
-**Próximo (run-051 T1)**: corregir el cave-biome — aislar el error del `depth`
-(gradiente + `overworld/offset`) en las celdas mismatched, corregirlo, y
-verificar con el comparador de biomas (0% mismatch) → re-medir recall
-(objetivo: clay/moss/vines alinean → +15-20pp).
+**run-051 (19 Aug)**: el cave-biome era un FALSO POSITIVO — el comparador de
+run-050 usaba el grid almacenado vs el voronoi; con la comparación correcta
+(voronoi, lo que usa el filtro `minecraft:biome`) hay 0 mismatches. Verificado
+exacto: RNG streams (62 draws de clay idénticos), voronoi, environment_scan,
+feature unions, biome_id_to_name. **El desync real está dentro de
+`place_vegetation_patch`** (xz_radius muestreado 2× vs 1×?, orden del set,
+depth/chances) + el terreno (97.34%). Clay: Neutron coloca +53 células sobre el
+terreno vanilla; generate full 612 vs 435.
+
+**Próximo (run-052 T1)**: diff línea a línea de `place_vegetation_patch` vs
+`VegetationPatchFeature` de vanilla (consumo RNG del xz_radius, orden del set,
+depth, extra_edge/bottom chances), y lo mismo para los trees. Objetivo:
+clay_overlap 192/435 → ~435/435, luego recall.
 
 ## Bars (unchanged)
 

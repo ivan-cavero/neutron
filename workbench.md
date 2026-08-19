@@ -366,3 +366,14 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
 - Commits: refactor decorate_region_origin_major + modos spiral/custom +
   probes (strips + biomes) + pubs. Tmp borrados. Tests 242/242.
 - Próximo: corregir depth/offset del cave-biome (T1), re-medir.
+
+## Run 051 (cerrado) — cave-biome FALSO POSITIVO; desync en vegetation_patch
+
+- Comparador corregido (voronoi, camino completo): 0/250 mismatches. El filtro
+  biome vanilla usa BiomeManager.getBiome (voronoi) — Neutron coincide 100%.
+- RNG streams EXACTOS (62 draws clay idénticos draw a draw). Environment_scan,
+  unions de features y biome_id_to_name verificados.
+- run-050 corregido (falso positivo documentado). El desync real: dentro de
+  place_vegetation_patch (xz_radius 2×, depth/chances, orden del set) + terreno.
+- Probe clay sobre refs: +53 células extra (435→488); generate full clay 612 vs 435.
+- Próximo: diff línea a línea del vegetation_patch vs vanilla.

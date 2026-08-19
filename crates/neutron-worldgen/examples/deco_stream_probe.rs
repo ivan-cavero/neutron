@@ -232,6 +232,48 @@ fn main() {
         }
         return;
     }
+    // NEUTRON_DECO_GRID=1: print neutron climate targets + biome at the same
+    // grid as ProbeCaveGrid (columns x,z in {-16,-8,0,8,16}, y in the cave
+    // range) — for the cave-biome depth diff (run-051).
+    if std::env::var("NEUTRON_DECO_GRID").is_ok() {
+        let cols: [(i32, i32); 25] = [
+            (-16, -16), (-16, -8), (-16, 0), (-16, 8), (-16, 16),
+            (-8, -16), (-8, -8), (-8, 0), (-8, 8), (-8, 16),
+            (0, -16), (0, -8), (0, 0), (0, 8), (0, 16),
+            (8, -16), (8, -8), (8, 0), (8, 8), (8, 16),
+            (16, -16), (16, -8), (16, 0), (16, 8), (16, 16),
+        ];
+        let ys: [i32; 10] = [0, 16, 32, 48, 64, 72, 80, 88, 96, 104];
+        for (x, z) in cols {
+            for y in ys {
+                let zoom = neutron_worldgen::biome_manager::obfuscate_seed(gen.state.seed);
+                let (qx, qy, qz) =
+                    neutron_worldgen::biome_manager::voronoi_quart(zoom, x, y, z);
+                let t = neutron_worldgen::biome_manager::climate_at(
+                    &gen.state,
+                    neutron_worldgen::biome_manager::quart_to_block(qx),
+                    neutron_worldgen::biome_manager::quart_to_block(qy),
+                    neutron_worldgen::biome_manager::quart_to_block(qz),
+                );
+                let id = neutron_worldgen::biome_source::biome_id_at_block(&gen.state, x, y, z);
+                let name = match id {
+                    x if x == neutron_worldgen::biome_source::biome_id::PALE_GARDEN => "pale_garden",
+                    x if x == neutron_worldgen::biome_source::biome_id::LUSH_CAVES => "lush_caves",
+                    x if x == neutron_worldgen::biome_source::biome_id::DEEP_DARK => "deep_dark",
+                    x if x == neutron_worldgen::biome_source::biome_id::PLAINS => "plains",
+                    x if x == neutron_worldgen::biome_source::biome_id::FOREST => "forest",
+                    x if x == neutron_worldgen::biome_source::biome_id::OCEAN => "ocean",
+                    x if x == neutron_worldgen::biome_source::biome_id::DEEP_OCEAN => "deep_ocean",
+                    _ => "?",
+                };
+                println!(
+                    "{x} {z} {y} q={qx},{qy},{qz} d={} t={} h={} c={} e={} w={} biome={name} id={id}",
+                    t.depth, t.temperature, t.humidity, t.continentalness, t.erosion, t.weirdness
+                );
+            }
+        }
+        return;
+    }
     // Optional: print the vanilla trunk bases (2x2 NW-corner candidates) for
     // the center chunk (the ground truth for the draw->tree mapping.
     if std::env::var("NEUTRON_DECO_TRUNKS").is_ok() {
