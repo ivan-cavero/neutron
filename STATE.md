@@ -12,12 +12,14 @@
 
 ## Current phase
 
-**run-048 (dual-track)**: Track A = benchmarks harness perf — **DONE** (A1-A3 PASS +
-smoothing, merged to main). Track B = worldgen parity — B2 baseline PASS; B3 builder
-work **re-derived on main** on this PC (commits 7fcfd06, e72a87e, 355c3d5, user
-confirmed = parallel worldgen agent). **No blind-critic verdict exists on this PC**
-(PC-2's async critic run did not travel) → B3 remains OPEN per process; LEAD
-re-measured live today: **recall 57.14 % — bar ≥80 % still NOT met** (details below).
+**run-049 (B4 parallel, 19 Aug)**: two builders in parallel worktrees — T3 full
+9-chunk vanilla decoration order + water filter (wt-t3, branch b4-t3-order) ∥ T4
+remaining ports, whitelist 19→~5 (wt-t4, branch b4-t4-ports). Baseline re-measured
+live on main @ 8249a67: 424242 97.33% · 12345 97.80% · 777 98.54% · recall 57.96%
+· clay 411/497. Bar still recall ≥80%. See runs/run-049.md.
+
+**run-048 (closed)**: Track A benchmarks DONE. Track B B3 re-derived on main
+(7fcfd06/e72a87e/355c3d5) — recall 57.14% bar NOT met; superseded by run-049.
 
 ## Bars (unchanged)
 

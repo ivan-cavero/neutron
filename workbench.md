@@ -283,3 +283,30 @@ main and pushes incrementally. `tools/` = human-owned, never touched.
   - **T3 order (partial, 2 subagents)**: for (0,0) seed 424242: (7,6) tree at **draw 8** (NOT 13 — parent's MARKER-A assumption wrong: free-height rejections consume height RNG, shifting stream). Before-neighbors of (0,0): **(-1,0) and (0,-1) only**. `vanilla_spawn` order measured WORSE (54.40%) — full 9-chunk order derivation incomplete (subagents timed out). Water filter fix (correct OCEAN_FLOOR) measured WORSE alone (-0.52pp) — must be applied WITH the full order (order+filter are a package). The root mechanism: the before-neighbors' plant spillover at draw positions → water-filter reject → no tree RNG → stream aligned. Without the order, the neutron terrain lacks the spillover → filter rejects differently → stream desyncs.
   - **T4 ports** (7 types, whitelist 27→19): vines, root_system, sea_pickle+seagrass+kelp (3→6 entries), block_blob, blue_ice. All ratchet green, recall 57.50%.
   - **deco_stream_probe**: climate/surface/column/trunks + skip-tree-draws gate (T3 tooling). Verified: climate targets EXACT match; terrain (stone/dirt) matches; surface mismatches are desync trees.
+
+---
+
+## Run 049 (active) — B4 parallel: full 9-chunk order (T3) ∥ remaining T4 ports
+
+Bar: verbatim in `runs/run-049.md`. Budget: 2 rounds/task, parallel worktrees,
+LEAD merges, blind critic on merged result. Ownership: `neutron-wt-t3` (branch
+`b4-t3-order`) = T3 order; `neutron-wt-t4` (branch `b4-t4-ports`) = T4 ports;
+LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
+
+| Unit | Round | Verdict | Evidence | Artifact |
+| --- | --- | --- | --- | --- |
+| T3 full 9-chunk order + water filter | R1 | 🔨 in flight (builder 844d6b68) | — | b4-t3-order |
+| T4 remaining ports (whitelist 19→~5) | R1 | 🔨 in flight (builder 844d6b68) | — | b4-t4-ports |
+
+## Round log (run 049)
+
+- R0 (LEAD audit §2.5): main @ 8249a67 clean. Refs verified on disk
+  (wt-worldgen worktree, 529 chunks × 3 seeds, region mca present). Baseline
+  re-measured live: 424242 **97.33%** · 12345 **97.80%** · 777 **98.54%** ·
+  lush/pale recall **57.96%** · clay 411/497 · tests 241/241 (matches STATE).
+  Stale `tmp_order_probe` Cargo.toml entry (d331ee3, file gitignored) broke
+  `cargo build --examples` → removed (8249a67, same fix as c901340).
+  Worktrees `neutron-wt-t3`/`neutron-wt-t4` created from main; refs + 26.2 jar
+  symlinked in (read-only). run-049 written. Two builders launched in parallel:
+  T3 (full order derivation, rebuild lost tmp_order_probe as gitignored) and
+  T4 (11 ports, measure-each, revert-on-regression per glow_lichen precedent).
