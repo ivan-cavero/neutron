@@ -55,6 +55,28 @@ PASS / FAIL (partial) / BLOCKED
 4. Gauntlet Loop: builder → blind critic (`subagent`, clean context) → fix → repeat.
 5. Update `workbench.md` (live round log) and `STATE.md` (state, not history) when done.
 
+### Worktree creation (cache sharing — run-049 lesson)
+
+Each git worktree has its OWN `target/` (cargo does not share caches across
+worktrees), so a new worktree starts with a COLD build (~15-20 min release) —
+this burned the run-049 first fan-out (30-min default subagent timeout died on
+builds, not on work). Two rules:
+
+1. **Seed the worktree target with hardlinks from main** (instant, no cargo
+   lock contention — cargo replaces files on rebuild, safe with hardlinks):
+   ```bash
+   git worktree add -b <branch> <path>
+   cd <path> && cp -al <main>/target .  # or: cp -al <main>/target target
+   ```
+   Do this BEFORE launching the builder so its first build is warm.
+2. **Pass an explicit budget**: subagent default timeout is 30 min — too short
+   for research-heavy units (order derivation, multi-port rounds). Set
+   `maxRuntimeMs` ≥ 5400000 (90 min) for builders; keep critics at 30-45 min
+   (they verify, they don't build new logic).
+3. (Optional) Refs/jars are gitignored runtime data — symlink them from the
+   main checkout instead of copying (run-049: `ln -sfn <main>/tools/nbt-ref/vanilla-fresh-* <wt>/tools/nbt-ref/`).
+
+
 ## Version bump run (D0-D4) — Mojang releases a new version
 
 > Trigger: a Mojang release (webhook/CI on D0). Goal: `main` on the new version in
