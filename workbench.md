@@ -330,3 +330,18 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
     with the order.
   Relaunched both builders (3580424c) with 90-min budget + continuation
   context (T3: derivation method + validated findings; T4: fresh, measure-each).
+
+- R2 (19 Aug 12:2x): segunda fan-out (3580424c) terminó — AMBOS builders hicieron
+  timeout a los 90 min con trabajo parcial. T3: 3 commits de tooling (water
+  filter OCEAN_FLOOR fix, full step-9 stream mode, strip-center-trees) + análisis
+  profundo del RNG (draw stream vs trunks; hallazgo clave: el strip del center a
+  air elimina el spillover de los before-neighbors que causa los rejects —
+  corregido con strip-center-trees que quita solo logs/leaves del center).
+  T4: sin commits (solo una entrada de ejemplo vacía revertida).
+  LEAD verificación: con after6+center-trees strip (fill=air): 5 rejects de 16
+  draws (1,4,7,10,15) — ratio ~1/4 coincide con el finding del workbench.
+  **PERO: cero commits de paridad en main hoy. El error fue dar tareas gigantes
+  (9 chunks + 11 ports) a los builders.**
+- R2 (corrección): relanzados con tareas ACOTADAS (85725fd4): T3a = derivar
+  SOLO el before-set de (0,0) y verificar draw stream vs vanilla; T4a = portar
+  SOLO 3 features fáciles con medición por-port. Presupuesto 50-90 min.
