@@ -25,10 +25,17 @@ feature unions, biome_id_to_name. **El desync real está dentro de
 depth/chances) + el terreno (97.34%). Clay: Neutron coloca +53 células sobre el
 terreno vanilla; generate full 612 vs 435.
 
-**Próximo (run-052 T1)**: diff línea a línea de `place_vegetation_patch` vs
-`VegetationPatchFeature` de vanilla (consumo RNG del xz_radius, orden del set,
-depth, extra_edge/bottom chances), y lo mismo para los trees. Objetivo:
-clay_overlap 192/435 → ~435/435, luego recall.
+**run-052 (19 Aug)**: el chain de placement está verificado EXACTO línea a
+línea vs vanilla (VegetationPatchFeature: xz_radius 2×, rolls, placeGround,
+distribución del HashSet; tags lush_ground_replaceable/moss_replaceable/
+base_stone; JavaBlockPosSet). El exceso de clay (612 vs 435) está localizado
+en la banda y=0..16 (451 vs 252) con MENOS clay en y=-16 (18 vs 84) → el
+desync está conducido por el TERRENO, hipótesis: el **acuífero** pone menos
+agua en las cuevas de esa banda (más pisos expuestos → más accepts).
+
+**Próximo (run-053 T1)**: comparar el agua/lava en las cuevas (y −16..64)
+Neutron vs refs por banda; fijar el acuífero (`aquifer.rs`) si difiere;
+re-medir clay_overlap 192/435 → ~435/435 y recall.
 
 ## Bars (unchanged)
 

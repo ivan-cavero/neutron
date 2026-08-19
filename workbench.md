@@ -377,3 +377,11 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   place_vegetation_patch (xz_radius 2×, depth/chances, orden del set) + terreno.
 - Probe clay sobre refs: +53 células extra (435→488); generate full clay 612 vs 435.
 - Próximo: diff línea a línea del vegetation_patch vs vanilla.
+
+## Run 052 (cerrado) — chain de placement EXACTO; desync = terreno (acuífero)
+
+- VegetationPatchFeature verificado línea a línea (xz_radius 2×, rolls, ground,
+  distribución HashSet) — coincide. Tags verificados del jar. JavaBlockPosSet ok.
+- Clay 612 vs 435 localizado en y=0..16 (451 vs 252); y=-16: 18 vs 84 (menos).
+- Hipótesis: acuífero con menos agua en cuevas de y 0..16 → más accepts.
+- Próximo (run-053): comparar agua por banda vs refs; fijar aquifer.rs.

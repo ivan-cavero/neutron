@@ -231,8 +231,7 @@ pub(crate) fn place_placed_feature_step(
         None
     };
     let base_count = placement_count(rng, &placed);
-    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok()
-        && strip(placed_id) == "pale_garden_vegetation";
+    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok();
     if trace_trees {
         eprintln!(
             "[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}"
