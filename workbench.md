@@ -395,3 +395,12 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   entra. Cuevas de y 0..16 más sólidas → sin agua + clay extra. El lever =
   paridad de la densidad.
 - Próximo (run-054): diff de final_density vs vanilla en las celdas de agua.
+
+## Run 054 (cerrado) — densidad: raw y probe coinciden; agua real = generación
+
+- Raw final_density y el interpolado del probe (getInterpolatedNoiseValue)
+  coinciden con vanilla (+0.0037 en (12,1,15)). PERO el ref tiene water → el
+  agua viene del acuífero en la generación REAL (densidad < 0), que el probe no
+  replica. Neutron coincide con el probe, no con la generación real.
+- La diferencia: la interpolación del NoiseChunk durante la generación real.
+- Próximo (run-055): instrumentar la densidad interpolada REAL de vanilla.

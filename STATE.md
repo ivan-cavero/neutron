@@ -40,10 +40,17 @@ probe) están correctos. La causa raíz es la **DENSIDAD**: en la celda de agua
 el acuífero ni entra. Cuevas de y 0..16 más sólidas → sin agua + exceso de
 clay/moss. El lever real = paridad de la densidad (el terreno).
 
-**Próximo (run-054 T1)**: comparar final_density Neutron vs vanilla en las
-celdas de agua faltante; aislar el término de la DF tree que difiere (cave
-carving/noodle/aquifer barrier); fijarlo; re-medir agua + clay_overlap +
-recall.
+**run-054 (19 Aug)**: el raw final_density y el interpolado del probe
+(`getInterpolatedNoiseValue`) coinciden con vanilla (+0.0037 en (12,1,15)),
+PERO el ref tiene water ahí → el agua viene del acuífero en la generación REAL
+(densidad < 0), que el probe no replica. Neutron coincide con el probe, no con
+la generación real → la diferencia está en la interpolación del NoiseChunk
+durante la generación real.
+
+**Próximo (run-055 T1)**: instrumentar la densidad interpolada por bloque de la
+generación REAL de vanilla (no el helper del probe); aislar el grid/offset del
+NoiseChunk o el manejo de los markers del noodle; fijarlo; re-medir agua +
+clay_overlap + recall.
 
 ## Bars (unchanged)
 

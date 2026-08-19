@@ -15,7 +15,7 @@ import net.minecraft.world.level.levelgen.synth.NormalNoise;
  */
 public class ProbeInterpDensity {
     public static void main(String[] args) throws Exception {
-        long seed = 12345L;
+        long seed = Long.parseLong(args.length > 0 ? args[0] : "424242");
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
         var lookup = VanillaRegistries.createLookup();
@@ -30,9 +30,7 @@ public class ProbeInterpDensity {
         DensityFunction fd = rs.router().finalDensity();
 
         int[][] pts = {
-            {102, -41, -26}, {96, -41, -24}, {103, -40, -25}, {103, -39, -28},
-            {108, -38, -30}, {98, -38, -24}, {96, -47, -20}, {96, -46, -23},
-            {100, -36, -24}, {96, 64, -32}, {100, 40, -20}
+            {12, 1, 15}, {10, 2, 15}, {8, 3, 14}, {2, 5, 14}, {5, 5, 14}, {1, 5, 15}
         };
         System.out.println("wx,y,wz  singlePoint  noiseChunkInterp  baseSolid?");
         for (int[] p : pts) {
