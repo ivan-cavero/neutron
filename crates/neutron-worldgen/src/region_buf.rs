@@ -9,6 +9,7 @@ use crate::generator::{CHUNK_BLOCK_VOLUME, HEIGHTMAP_SIZE, WORLD_BOTTOM, WORLD_T
 use crate::surface::BlockId;
 
 /// A square of chunks held as one dense block array for feature writes.
+#[derive(Clone)]
 pub struct RegionBuf {
     /// World-space min block X/Z of the region (inclusive).
     pub origin_x: i32,

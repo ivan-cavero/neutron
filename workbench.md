@@ -345,3 +345,24 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
 - R2 (corrección): relanzados con tareas ACOTADAS (85725fd4): T3a = derivar
   SOLO el before-set de (0,0) y verificar draw stream vs vanilla; T4a = portar
   SOLO 3 features fáciles con medición por-port. Presupuesto 50-90 min.
+
+## Run 050 (closed) — orden REFUTADO; cave-biome root cause
+
+- Pull limpio (backup local). Refs 424242 provisionados (spawn (0,0)).
+  Baseline: 97.34% · recall 58.43% · clay 411/435.
+- Scheduler 26.2 decompilado: FEATURES = radius 1 + vecinos a CARVERS; cola FIFO
+  por nivel; orden del spawn = espiral + hash-wavefront (ChunkTracker) →
+  RUN-DEPENDIENTE (PC-2: {(-1,0),(0,-1)}; esta máquina: {1,0;-1,1}).
+- Orden NO es el lever: spiral +0.55pp; search 2-opt convergió en objetivo
+  compartido pero la medición real no se movió (58.46%); centro con before-set
+  exacto 50.9% pero el total empeora. Modelo compartido ≠ independiente (solo
+  el centro coincide).
+- Water filter fix: −0.54pp → revertido (ratchet).
+- **CAUSA RAÍZ**: cave-biomes. 2.43% de celdas 4×4×4 mismatched, TODAS en
+  secciones de cueva (y −48..96): vanilla=lush_caves, Neutron=pale_garden
+  (boundary de depth ~14% de columnas más alto). lush_caves_clay/moss/vines
+  llevan filtro `minecraft:biome` → se rechazan en esas celdas → gaps de
+  clay/moss/vines = 34% del recall. Mecanismo verificado (volumen 6×).
+- Commits: refactor decorate_region_origin_major + modos spiral/custom +
+  probes (strips + biomes) + pubs. Tmp borrados. Tests 242/242.
+- Próximo: corregir depth/offset del cave-biome (T1), re-medir.

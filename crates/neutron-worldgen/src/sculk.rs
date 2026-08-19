@@ -308,7 +308,7 @@ fn is_sculk_family(b: BlockId) -> bool {
 
 /// Vegetal-decoration output (step 9): logs, leaves, grass, saplings,
 /// flowers, vines, moss carpets/blocks.
-fn is_vegetal_family(b: BlockId) -> bool {
+pub fn is_vegetal_family(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::OakLog
@@ -428,6 +428,36 @@ pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
                 }
             }
             out.push((mid, mid));
+        }
+        // EXPERIMENT: the setInitialSpawn square-spiral request order
+        // (MinecraftServer.setInitialSpawn, offsets starting (0,0),(1,0),
+        // (1,1),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1),(1,-1), ...).
+        "spiral" => {
+            let spiral: [(i32, i32); 9] = [
+                (0, 0),
+                (1, 0),
+                (1, 1),
+                (0, 1),
+                (-1, 1),
+                (-1, 0),
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+            ];
+            for (dx, dz) in spiral {
+                out.push((mid + dx, mid + dz));
+            }
+        }
+        "custom" => {
+            // NEUTRON_DECO_CUSTOM_ORDER="dx,dz;dx,dz;..." — explicit origin
+            // order as neighbor offsets relative to the center (order search).
+            let s = std::env::var("NEUTRON_DECO_CUSTOM_ORDER").unwrap_or_default();
+            for p in s.split(';').filter(|p| !p.is_empty()) {
+                let mut it = p.split(',');
+                let dx: i32 = it.next().unwrap().parse().unwrap();
+                let dz: i32 = it.next().unwrap().parse().unwrap();
+                out.push((mid + dx, mid + dz));
+            }
         }
         _ => {
             out.push((mid, mid));

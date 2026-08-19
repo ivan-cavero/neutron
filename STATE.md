@@ -2,24 +2,24 @@
 
 > Read this first every session. Answers: where are we, what is the bar, what is the next action.
 > History lives in `runs/` — this file only holds the current state.
-> **Updated 19 Aug 2026 (00:45 +02:00)** — run-048 continued: B4 tree-type fix + order derivation + T4 ports.
-> B3 was re-derived on `main` by the **parallel worldgen agent** (user-confirmed);
-> measurements re-run by the LEAD session (see below). **PUSH UNBLOCKED** —
-> `git push` succeeded 18 Aug 21:2x: main == origin/main @ **c8468a6** (4 commits
-> pushed: 7fcfd06/e72a87e/355c3d5 B3 + c8468a6 D0-D4 infra; the earlier "no creds"
-> block is obsolete — creds are configured on this machine). Resume boundary:
-> `runs/run-048.md`. D0-D4 detection infra committed (see below).
+> **Updated 19 Aug 2026** — run-050 closed: order hypothesis REFUTED, cave-biome root cause found.
 
 ## Current phase
 
-**run-049 (B4 parallel, 19 Aug)**: two builders in parallel worktrees — T3 full
-9-chunk vanilla decoration order + water filter (wt-t3, branch b4-t3-order) ∥ T4
-remaining ports, whitelist 19→~5 (wt-t4, branch b4-t4-ports). Baseline re-measured
-live on main @ 8249a67: 424242 97.33% · 12345 97.80% · 777 98.54% · recall 57.96%
-· clay 411/497. Bar still recall ≥80%. See runs/run-049.md.
+**run-050 (closed, 19 Aug)**: pull limpio a origin/main; refs 424242 provisionados
+en esta máquina (spawn chunk (0,0)); baseline reproducido (REGION 97.34% · recall
+58.43% · clay 411/435). El plan run-049 (orden como lever) fue **refutado con
+evidencia** — el orden es run-dependiente (PC-2 vs esta máquina) y mueve ±1pp.
+**Causa raíz nueva**: la clasificación de cave-biomes difiere de vanilla (2.43%
+de celdas 4×4×4, todas en secciones de cueva y −48..96): Neutron dice
+`pale_garden` donde vanilla tiene `lush_caves` → el filtro `minecraft:biome` de
+lush_caves_clay/moss/vines rechaza los draws → gaps de clay (22%) + moss (~19%) +
+vines (~8%) = 34% del recall. Ver `runs/run-050.md`.
 
-**run-048 (closed)**: Track A benchmarks DONE. Track B B3 re-derived on main
-(7fcfd06/e72a87e/355c3d5) — recall 57.14% bar NOT met; superseded by run-049.
+**Próximo (run-051 T1)**: corregir el cave-biome — aislar el error del `depth`
+(gradiente + `overworld/offset`) en las celdas mismatched, corregirlo, y
+verificar con el comparador de biomas (0% mismatch) → re-medir recall
+(objetivo: clay/moss/vines alinean → +15-20pp).
 
 ## Bars (unchanged)
 
