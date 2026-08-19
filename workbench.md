@@ -428,3 +428,17 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
 - Próximo: resolver el módulo Java para acceder a BeardifierMarker, o replicar
   el doFill real sin subclass (usar la misma estrategia que getInterpolatedNoiseValue
   pero evaluando el grid completo).
+
+## Run 057 (cerrado en inglés) — cacheAllInCell fix intentado y revertido
+
+- Vanilla envuelve finalDensity+beardifier en `CacheAllInCell`: cachea la
+  densidad en las posiciones RAW del grid de la celda (4x4x8), compute() lee
+  del array por in-cell position. NO es una constante por celda.
+- Intenté implementar "constante por celda" (primer bloque) → REGRESIÓN severa
+  (region 97.34→93.46, recall 58→20.78). Revertido. El valor por-bloque de
+  Neutron ya coincide con el cacheado (ambos +0.0037 en (12,1,15)).
+- La densidad en las celdas de agua es +0.0037 (sólido) en Neutron Y vanilla
+  (probe doFill completo), PERO el ref tiene water. El agua NO viene de la
+  densidad interpolada. Puzzle abierto.
+- ProbeChunkDensity: replica el doFill completo (cellCountXZ=4) con
+  BeardifierMarker via reflection (setAccessible) — da +0.0037.
