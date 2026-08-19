@@ -385,3 +385,13 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
 - Clay 612 vs 435 localizado en y=0..16 (451 vs 252); y=-16: 18 vs 84 (menos).
 - Hipótesis: acuífero con menos agua en cuevas de y 0..16 → más accepts.
 - Próximo (run-053): comparar agua por banda vs refs; fijar aquifer.rs.
+
+## Run 053 (cerrado) — agua faltante = DENSIDAD (no acuífero)
+
+- Agua de cuevas: y -16..32 Neutron 0 vs vanilla 577. Noises del acuífero
+  idénticos (ProbeFluidAt). from_hash_of verificado: MD5+uncrossed reproduce
+  el seed vanilla (ProbeNoiseSeed); SHA-256 rompe el noise → MD5 correcto.
+- Densidad en (12,1,15): 0.0037 > 0 (sólido) vs vanilla agua → el acuífero ni
+  entra. Cuevas de y 0..16 más sólidas → sin agua + clay extra. El lever =
+  paridad de la densidad.
+- Próximo (run-054): diff de final_density vs vanilla en las celdas de agua.

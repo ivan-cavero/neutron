@@ -33,9 +33,17 @@ en la banda y=0..16 (451 vs 252) con MENOS clay en y=-16 (18 vs 84) → el
 desync está conducido por el TERRENO, hipótesis: el **acuífero** pone menos
 agua en las cuevas de esa banda (más pisos expuestos → más accepts).
 
-**Próximo (run-053 T1)**: comparar el agua/lava en las cuevas (y −16..64)
-Neutron vs refs por banda; fijar el acuífero (`aquifer.rs`) si difiere;
-re-medir clay_overlap 192/435 → ~435/435 y recall.
+**run-053 (19 Aug)**: agua de cuevas FALTANTE (y -16..32: 0 vs 577 vanilla) —
+pero los noises del acuífero y el seed `from_hash_of` (MD5, verificado con
+probe) están correctos. La causa raíz es la **DENSIDAD**: en la celda de agua
+(12,1,15) Neutron tiene final_density=0.0037>0 (sólido) vs vanilla abierta →
+el acuífero ni entra. Cuevas de y 0..16 más sólidas → sin agua + exceso de
+clay/moss. El lever real = paridad de la densidad (el terreno).
+
+**Próximo (run-054 T1)**: comparar final_density Neutron vs vanilla en las
+celdas de agua faltante; aislar el término de la DF tree que difiere (cave
+carving/noodle/aquifer barrier); fijarlo; re-medir agua + clay_overlap +
+recall.
 
 ## Bars (unchanged)
 

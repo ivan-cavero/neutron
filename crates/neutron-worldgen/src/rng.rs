@@ -116,8 +116,11 @@ impl Xoroshiro128 {
         (self.next_u64(), self.next_u64())
     }
 
-    /// Java `PositionalRandomFactory.fromHashOf(String name)`:
-    /// `new XoroshiroRandomSource(MD5(name) XOR (seedLo, seedHi))`.
+    /// Java `PositionalRandomFactory.fromHashOf(String name)` — the 26.2
+    /// overworld uses `legacy_random_source = false` -> Xoroshiro factory.
+    /// Empirically (ProbeNoiseSeed) the noise seed matches an MD5-based hash
+    /// XORed with the factory pair (the JBR/JDK `fromHashOf` seeding). Keep the
+    /// MD5 convention that reproduces the vanilla noise values exactly.
     ///
     /// Does NOT consume state. `name` is the raw identifier string
     /// (e.g. `"minecraft:temperature"`, `"octave_-10"`).
