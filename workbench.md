@@ -310,3 +310,23 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   symlinked in (read-only). run-049 written. Two builders launched in parallel:
   T3 (full order derivation, rebuild lost tmp_order_probe as gitignored) and
   T4 (11 ports, measure-each, revert-on-regression per glow_lichen precedent).
+
+- R1 (19 Aug 10:0x): first fan-out 844d6b68 FAILED — both builders hit the 30-min
+  default subagent timeout (release builds + measurements need more). T3 left
+  usable tooling on disk (strip+trunk-compare modes in deco_stream_probe,
+  is_vegetal_family pub) — LEAD fixed a missing `wb` binding, verified it
+  builds, validated the method live, committed as 9689cdc on b4-t3-order.
+  T4 left nothing. LEAD findings from live validation:
+  - trunk-compare matched-count is TRIVIAL (vanilla trunks pre-loaded in the
+    buffer) — the real signal is the DRAW STREAM (accepted (x,z) per draw vs
+    vanilla trunk columns).
+  - probe vs FULL vanilla terrain: (0,0) draw 8 = (11,11), NOT vanilla (7,6)
+    → full terrain is the wrong baseline; the center's own output must be
+    stripped too (its features absent at its draw time).
+  - stripping the 6 after-neighbors does NOT change (0,0)'s stream (their
+    features don't reach its draw positions); stripping all 8 DOES → consistent
+    with before-set {(-1,0),(0,-1)}.
+  - water filter fix (OCEAN_FLOOR = blocks_motion) still unapplied — package
+    with the order.
+  Relaunched both builders (3580424c) with 90-min budget + continuation
+  context (T3: derivation method + validated findings; T4: fresh, measure-each).
