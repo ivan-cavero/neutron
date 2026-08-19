@@ -93,27 +93,27 @@ pub fn block_state_id(internal: u16) -> i32 {
         83 => 447,
         84 => 15,
         85 => 6996,
-        99 => 8517,  // glow_lichen (26.2 Block.getId default state)
-        100 => 8389, // vine
-        101 => 143,  // birch_log
-        102 => 335,  // birch_leaves
-        103 => 140,  // spruce_log
-        104 => 307,  // spruce_leaves
-        105 => 146,  // jungle_log
-        106 => 363,  // jungle_leaves
-        107 => 149,  // acacia_log
-        108 => 391,  // acacia_leaves
-        109 => 161,  // mangrove_log
-        110 => 503,  // mangrove_leaves
-        111 => 152,  // cherry_log
-        112 => 419,  // cherry_leaves
+        99 => 8517,   // glow_lichen (26.2 Block.getId default state)
+        100 => 8389,  // vine
+        101 => 143,   // birch_log
+        102 => 335,   // birch_leaves
+        103 => 140,   // spruce_log
+        104 => 307,   // spruce_leaves
+        105 => 146,   // jungle_log
+        106 => 363,   // jungle_leaves
+        107 => 149,   // acacia_log
+        108 => 391,   // acacia_leaves
+        109 => 161,   // mangrove_log
+        110 => 503,   // mangrove_leaves
+        111 => 152,   // cherry_log
+        112 => 419,   // cherry_leaves
         113 => 15267, // sea_pickle
         114 => 2254,  // seagrass
         115 => 2256,  // tall_seagrass
         116 => 15062, // kelp
         117 => 15088, // kelp_plant
         118 => 3368,  // mossy_cobblestone
-        _ => 1,      // unknown -> stone
+        _ => 1,       // unknown -> stone
     }
 }
 

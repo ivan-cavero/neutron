@@ -933,7 +933,10 @@ fn dispatch_configured(
             let mut oy = y;
             let mut bz = z;
             while oy > WORLD_BOTTOM + 3
-                && !is_in_tag(region.get(bx, oy - 1, bz), "#minecraft:forest_rock_can_place_on")
+                && !is_in_tag(
+                    region.get(bx, oy - 1, bz),
+                    "#minecraft:forest_rock_can_place_on",
+                )
             {
                 oy -= 1;
             }
@@ -972,13 +975,7 @@ fn dispatch_configured(
                 return;
             }
             let mut found = false;
-            for &(dx, dy, dz) in &[
-                (0, 1, 0),
-                (0, 0, -1),
-                (1, 0, 0),
-                (0, 0, 1),
-                (-1, 0, 0),
-            ] {
+            for &(dx, dy, dz) in &[(0, 1, 0), (0, 0, -1), (1, 0, 0), (0, 0, 1), (-1, 0, 0)] {
                 if region.get(x + dx, y + dy, z + dz) == BlockId::PackedIce {
                     found = true;
                     break;
@@ -999,7 +996,11 @@ fn dispatch_configured(
                     let bz = z + rng.next_int(xz_diff) - rng.next_int(xz_diff);
                     let by = y + y_off;
                     let b = region.get(bx, by, bz);
-                    if b == BlockId::Air || b == BlockId::Water || b == BlockId::PackedIce || b == BlockId::Ice {
+                    if b == BlockId::Air
+                        || b == BlockId::Water
+                        || b == BlockId::PackedIce
+                        || b == BlockId::Ice
+                    {
                         for &(dx, dy, dz) in &[
                             (0, 1, 0),
                             (0, -1, 0),
