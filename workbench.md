@@ -404,3 +404,11 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   replica. Neutron coincide con el probe, no con la generación real.
 - La diferencia: la interpolación del NoiseChunk durante la generación real.
 - Próximo (run-055): instrumentar la densidad interpolada REAL de vanilla.
+
+## Run 055 (cerrado) — densidad en el límite 0; hairline de interpolación
+
+- La densidad en las celdas de agua está justo en el límite 0 (raw -0.0063,
+  interp +0.0037). Probe y Neutron dan +0.0037 (sólido) pero el ref tiene
+  water → la generación real de vanilla da apenas < 0. Hairline ~0.004 voltea
+  cientos de celdas de y 0..16 → cuevas sólidas + clay extra.
+- Próximo (run-056): instrumentar la densidad interpolada REAL de vanilla.

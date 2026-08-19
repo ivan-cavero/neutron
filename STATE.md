@@ -47,10 +47,17 @@ PERO el ref tiene water ahí → el agua viene del acuífero en la generación R
 la generación real → la diferencia está en la interpolación del NoiseChunk
 durante la generación real.
 
-**Próximo (run-055 T1)**: instrumentar la densidad interpolada por bloque de la
-generación REAL de vanilla (no el helper del probe); aislar el grid/offset del
-NoiseChunk o el manejo de los markers del noodle; fijarlo; re-medir agua +
-clay_overlap + recall.
+**run-055 (19 Aug)**: la densidad en las celdas de agua está **justo en el
+límite 0** (raw -0.0063, interpolado +0.0037). El probe y Neutron dan +0.0037
+(sólido) pero el ref tiene water → la generación REAL de vanilla da apenas < 0
+(abierta → acuífero la llena). Es un **hairline de interpolación** (~0.004) que
+voltea cientos de celdas de la banda y 0..16 → cuevas sólidas + exceso de
+clay/moss.
+
+**Próximo (run-056 T1)**: instrumentar la densidad interpolada REAL de la
+generación de vanilla (NoiseChunk.getFinalDensity en doFill, no el helper);
+aislar el hairline (grid offset / markers noodle / squeeze·min en la interp);
+fijarlo; re-medir agua + clay_overlap + recall.
 
 ## Bars (unchanged)
 
