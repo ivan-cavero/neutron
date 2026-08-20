@@ -488,7 +488,7 @@ fn sample_count_value(rng: &mut FeatureRandom, v: &Value) -> i32 {
     }
 }
 
-fn sample_int_provider(rng: &mut FeatureRandom, v: &Value) -> i32 {
+pub(crate) fn sample_int_provider(rng: &mut FeatureRandom, v: &Value) -> i32 {
     if let Some(n) = v.as_i64() {
         return n as i32;
     }
@@ -542,7 +542,7 @@ fn sample_int_provider(rng: &mut FeatureRandom, v: &Value) -> i32 {
     }
 }
 
-fn sample_height(rng: &mut FeatureRandom, height: &Value) -> i32 {
+pub(crate) fn sample_height(rng: &mut FeatureRandom, height: &Value) -> i32 {
     let ty = height["type"].as_str().unwrap_or("minecraft:uniform");
     if ty.contains("uniform") {
         let min = resolve_anchor(&height["min_inclusive"]);
@@ -587,7 +587,7 @@ fn resolve_anchor(v: &Value) -> i32 {
     0
 }
 
-fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value) -> bool {
+pub(crate) fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value) -> bool {
     let ty = pred["type"].as_str().unwrap_or("");
     match ty {
         "minecraft:matching_block_tag" => {
@@ -700,12 +700,12 @@ fn supports_vegetation(b: BlockId) -> bool {
 }
 
 /// `BlockState.isSolid()` approximation (mirrors `blocks_motion`).
-fn is_solid_block(b: BlockId) -> bool {
+pub(crate) fn is_solid_block(b: BlockId) -> bool {
     blocks_motion(b)
 }
 
 /// Membership in a block tag (subset used by lush/pale placement predicates).
-fn is_in_tag(b: BlockId, tag: &str) -> bool {
+pub(crate) fn is_in_tag(b: BlockId, tag: &str) -> bool {
     let t = tag.strip_prefix("#minecraft:").unwrap_or(tag);
     match t {
         "air" => b == BlockId::Air,
@@ -788,7 +788,7 @@ fn is_in_tag(b: BlockId, tag: &str) -> bool {
 }
 
 /// Dispatch by configured_feature.type
-fn dispatch_configured(
+pub(crate) fn dispatch_configured(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
     state: Option<&WorldgenState>,
@@ -1018,7 +1018,58 @@ fn dispatch_configured(
             }
         }
         "minecraft:ore" | "minecraft:scattered_ore" => {
-            // step 6 ores still use features.rs batch
+            // Step 6 ores run via the features.rs batch (dedicated seeds).
+            // Any other step (e.g. ore_infested at step 7) places generically.
+            if gen_step != crate::feature_catalog::step::UNDERGROUND_ORES {
+                crate::features::place_ore_from_config(rng, region, x, y, z, cfg);
+            }
+        }
+        "minecraft:disk" => {
+            // Step 6 disks (clay/mud/sand) run via the features.rs batch.
+            // Other steps (e.g. ice_patch at step 4) place generically.
+            if gen_step != crate::feature_catalog::step::UNDERGROUND_ORES {
+                crate::features::place_disk_from_config(rng, region, x, y, z, cfg);
+            }
+        }
+        "minecraft:desert_well" => {
+            crate::feature_ports::place_desert_well(rng, region, x, y, z);
+        }
+        "minecraft:freeze_top_layer" => {
+            if let Some(st) = state {
+                crate::feature_ports::place_freeze_top_layer(region, st, x, y, z);
+            }
+        }
+        "minecraft:spike" => {
+            crate::feature_ports::place_spike(rng, region, x, y, z, cfg);
+        }
+        "minecraft:bamboo" => {
+            crate::feature_ports::place_bamboo(rng, region, x, y, z, cfg);
+        }
+        "minecraft:monster_room" => {
+            crate::feature_ports::place_monster_room(rng, region, x, y, z);
+        }
+        "minecraft:lake" => {
+            crate::feature_ports::place_lake(rng, region, state, x, y, z, cfg);
+        }
+        "minecraft:sequence" => {
+            crate::feature_ports::place_sequence(rng, region, state, x, y, z, cfg, gen_step);
+        }
+        "minecraft:speleothem_cluster" => {
+            crate::feature_ports::place_speleothem_cluster(rng, region, x, y, z, cfg);
+        }
+        "minecraft:large_dripstone" => {
+            crate::feature_ports::place_large_dripstone(rng, region, x, y, z, cfg);
+        }
+        "minecraft:iceberg" => {
+            crate::feature_ports::place_iceberg(rng, region, x, z, cfg);
+        }
+        "minecraft:fossil" => {
+            crate::feature_ports::place_fossil(rng, region, x, y, z, cfg);
+        }
+        "minecraft:geode" => {
+            if let Some(st) = state {
+                crate::feature_ports::place_geode(rng, region, st, x, y, z, cfg);
+            }
         }
         "minecraft:vegetation_patch" | "minecraft:waterlogged_vegetation_patch" => {
             place_vegetation_patch(rng, region, state, x, y, z, cfg, gen_step);
@@ -1188,7 +1239,7 @@ fn place_root_system(
     }
 }
 
-fn place_feature_ref(
+pub(crate) fn place_feature_ref(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
     state: Option<&WorldgenState>,
@@ -1288,7 +1339,7 @@ fn place_resolved_placed(
     }
 }
 
-fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
+pub(crate) fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<BlockId> {
     let ty = v["type"].as_str().unwrap_or("");
     match ty {
         "minecraft:simple_state_provider" => {
@@ -1636,7 +1687,7 @@ fn place_block_column(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum HeightmapKind {
+pub(crate) enum HeightmapKind {
     /// `WORLD_SURFACE` / `WORLD_SURFACE_WG`: Heightmap.NOT_AIR.
     WorldSurface,
     /// `OCEAN_FLOOR` / `OCEAN_FLOOR_WG`: `BlockState.blocksMotion()`.
@@ -1647,7 +1698,7 @@ enum HeightmapKind {
     MotionBlockingNoLeaves,
 }
 
-fn parse_heightmap_kind(name: &str) -> HeightmapKind {
+pub(crate) fn parse_heightmap_kind(name: &str) -> HeightmapKind {
     match name.strip_prefix("minecraft:").unwrap_or(name) {
         "world_surface" | "world_surface_wg" => HeightmapKind::WorldSurface,
         "ocean_floor" | "ocean_floor_wg" => HeightmapKind::OceanFloor,
@@ -1660,7 +1711,7 @@ fn parse_heightmap_kind(name: &str) -> HeightmapKind {
 /// `BlockState.blocksMotion` = `isSolid` (except cobweb / bamboo_sapling,
 /// not in palette). Plants (grass, carpet, vines, hanging moss, azalea),
 /// fluids, snow and veins are NOT solid.
-fn blocks_motion(b: BlockId) -> bool {
+pub(crate) fn blocks_motion(b: BlockId) -> bool {
     !matches!(
         b,
         BlockId::Air
@@ -1701,7 +1752,7 @@ fn heightmap_opaque(b: BlockId, kind: HeightmapKind) -> bool {
 }
 
 /// Highest Y whose block is opaque for `kind`, or None if the column is empty.
-fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Option<i32> {
+pub(crate) fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Option<i32> {
     for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
         if heightmap_opaque(region.get(x, y, z), kind) {
             return Some(y);
@@ -1716,7 +1767,7 @@ fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Opt
 /// old "non-air non-fluid" floor counted short_grass/carpet as floor, making
 /// the depth 0 where vanilla sees 1 -> trees accepted where vanilla rejects
 /// (the pale_garden draw-1 desync root cause).
-fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
+pub(crate) fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
     let mut surface = None;
     let mut floor = None;
     for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
@@ -1735,7 +1786,7 @@ fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
     }
 }
 
-fn biome_name_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> String {
+pub(crate) fn biome_name_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> String {
     biome_id_to_name(biome_id_at_block(state, x, y, z)).to_string()
 }
 

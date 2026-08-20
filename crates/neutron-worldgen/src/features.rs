@@ -926,6 +926,58 @@ fn place_disk(
     }
 }
 
+/// Generic config-driven disk placement (`DiskFeature` at any step, e.g.
+/// `ice_patch` at step 4). Reads `half_height`, `radius` (uniform), the
+/// `state_provider` and the `target` block predicate from the configured-feature
+/// JSON. RNG: one `radius` sample, then per-column state draws (simple
+/// providers consume none) — matches `DiskFeature.place` + `placeColumn`.
+pub(crate) fn place_disk_from_config(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    ox: i32,
+    oy: i32,
+    oz: i32,
+    cfg: &serde_json::Value,
+) {
+    let c = &cfg["config"];
+    let half_height = c["half_height"].as_i64().unwrap_or(1) as i32;
+    let radius = c["radius"].as_i64().map(|n| (n as i32, n as i32)).unwrap_or_else(|| {
+        let min = c["radius"]["min_inclusive"].as_i64().unwrap_or(2) as i32;
+        let max = c["radius"]["max_inclusive"].as_i64().unwrap_or(3) as i32;
+        (min, max)
+    });
+    let r = if radius.1 <= radius.0 {
+        radius.0
+    } else {
+        radius.0 + rng.next_int(radius.1 - radius.0 + 1)
+    };
+    let Some(state) =
+        crate::feature_dispatch::block_from_to_place(rng, &c["state_provider"])
+    else {
+        return;
+    };
+    let top = oy + half_height;
+    let bottom = oy - half_height - 1;
+    for z in (oz - r)..=(oz + r) {
+        for x in (ox - r)..=(ox + r) {
+            let xd = x - ox;
+            let zd = z - oz;
+            if xd * xd + zd * zd > r * r {
+                continue;
+            }
+            for y in (bottom + 1..=top).rev() {
+                if region.index(x, y, z).is_none() {
+                    continue;
+                }
+                if !crate::feature_dispatch::eval_block_predicate(region, x, y, z, &c["target"]) {
+                    continue;
+                }
+                region.set(x, y, z, state);
+            }
+        }
+    }
+}
+
 fn place_disk_column(region: &mut RegionBuf, def: &DiskDef, top: i32, bottom: i32, x: i32, z: i32) {
     for y in (bottom + 1..=top).rev() {
         if y < WORLD_BOTTOM || y >= WORLD_TOP {
@@ -1123,6 +1175,78 @@ fn place_ore_blob(
     if size <= 0 {
         return;
     }
+    let target_fn = |existing: BlockId| target_match(existing, def);
+    place_ore_blob_inner(rng, region, ox, oy, oz, size, def.discard_chance, target_fn);
+}
+
+/// Generic config-driven ore placement (`OreFeature` at any step, e.g.
+/// `ore_infested` at step 7). Reads `size`, `discard_chance_on_air_exposure`
+/// and the ordered `targets` array (state + tag_match predicate) from the
+/// configured-feature JSON, then runs the same blob algorithm as the batch.
+pub(crate) fn place_ore_from_config(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    ox: i32,
+    oy: i32,
+    oz: i32,
+    cfg: &serde_json::Value,
+) {
+    let c = &cfg["config"];
+    let size = c["size"].as_i64().unwrap_or(0) as i32;
+    let discard = c["discard_chance_on_air_exposure"].as_f64().unwrap_or(0.0) as f32;
+    if size <= 0 {
+        return;
+    }
+    // Ordered first-match targets (vanilla iterates targetStates in order).
+    let mut targets: Vec<(BlockId, TargetKind)> = Vec::new();
+    if let Some(arr) = c["targets"].as_array() {
+        for t in arr {
+            let state = t["state"]["Name"]
+                .as_str()
+                .and_then(crate::surface::BlockId::from_name);
+            let Some(state) = state else { continue };
+            let tag = t["target"]["tag"].as_str().unwrap_or("");
+            let kind = match tag {
+                "minecraft:deepslate_ore_replaceables" => TargetKind::DeepslateOre,
+                "minecraft:base_stone_overworld" => TargetKind::BaseStone,
+                _ => TargetKind::StoneOre,
+            };
+            targets.push((state, kind));
+        }
+    }
+    if targets.is_empty() {
+        return;
+    }
+    let target_fn = move |existing: BlockId| -> Option<BlockId> {
+        for (state, kind) in &targets {
+            let hits = match kind {
+                TargetKind::StoneOre => is_stone_ore_replaceable(existing),
+                TargetKind::BaseStone => is_base_stone(existing),
+                TargetKind::DeepslateOre => is_deepslate_ore_replaceable(existing),
+            };
+            if hits {
+                return Some(*state);
+            }
+        }
+        None
+    };
+    place_ore_blob_inner(rng, region, ox, oy, oz, size, discard, target_fn);
+}
+
+/// Shared blob math: `OreFeature.place` + `doPlace` with a target resolver.
+fn place_ore_blob_inner(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    ox: i32,
+    oy: i32,
+    oz: i32,
+    size: i32,
+    discard_chance: f32,
+    target_fn: impl Fn(BlockId) -> Option<BlockId>,
+) {
+    if size <= 0 {
+        return;
+    }
     let angle = rng.next_f32() * PI;
     let f = size as f32 / 8.0;
     // Match Java: Math.sin((double)angle) after float angle
@@ -1241,11 +1365,11 @@ fn place_ore_blob(
                         continue;
                     }
                     let existing = region.get(x, y, z);
-                    let Some(replacement) = target_match(existing, def) else {
+                    let Some(replacement) = target_fn(existing) else {
                         continue;
                     };
                     // OreFeature.canPlaceOre: shouldSkipAirCheck *then* isAdjacentToAir.
-                    if !can_place_ore(region, x, y, z, def.discard_chance, rng) {
+                    if !can_place_ore(region, x, y, z, discard_chance, rng) {
                         continue;
                     }
                     region.set(x, y, z, replacement);

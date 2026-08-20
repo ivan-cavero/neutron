@@ -128,6 +128,23 @@ impl ImprovedNoise {
         Self { p, xo, yo, zo }
     }
 
+    /// Same seeding from a `LegacyRandomSource` (LCG) — used by the geode
+    /// feature (`NormalNoise.create(WorldgenRandom(LegacyRandomSource(seed)))`).
+    pub fn new_legacy(random: &mut crate::legacy_rng::LegacyRandom) -> Self {
+        let xo = random.next_f64() * 256.0;
+        let yo = random.next_f64() * 256.0;
+        let zo = random.next_f64() * 256.0;
+        let mut p = [0u8; 256];
+        for (i, slot) in p.iter_mut().enumerate() {
+            *slot = i as u8;
+        }
+        for i in 0..256usize {
+            let offset = random.next_int((256 - i) as i32) as usize;
+            p.swap(i, i + offset);
+        }
+        Self { p, xo, yo, zo }
+    }
+
     /// 3-arg noise.
     pub fn noise(&self, x: f64, y: f64, z: f64) -> f64 {
         self.noise5(x, y, z, 0.0, 0.0)
@@ -348,6 +365,39 @@ impl PerlinNoise {
         }
     }
 
+    /// Legacy positional construction (`useNewInitialization=true` from a
+    /// `LegacyPositionalRandomFactory`): each octave gets
+    /// `ImprovedNoise(LCG(name.hashCode() ^ factorySeed))`.
+    pub fn create_legacy_positional(
+        first_octave: i32,
+        amplitudes: &[f64],
+        factory_seed: i64,
+    ) -> Self {
+        let octaves = amplitudes.len();
+        let mut noise_levels: Vec<Option<ImprovedNoise>> = (0..octaves).map(|_| None).collect();
+        for i in 0..octaves {
+            if amplitudes[i] == 0.0 {
+                continue;
+            }
+            let octave = first_octave + i as i32;
+            let hash = java_string_hash_code(&format!("octave_{octave}"));
+            let mut octave_rng =
+                crate::legacy_rng::LegacyRandom::new((hash as i64) ^ factory_seed);
+            noise_levels[i] = Some(ImprovedNoise::new_legacy(&mut octave_rng));
+        }
+        let (lowest_freq_input_factor, lowest_freq_value_factor, _) =
+            Self::init_factors(first_octave, amplitudes);
+        let max_value = Self::edge_value(&noise_levels, amplitudes, lowest_freq_value_factor, 2.0);
+        Self {
+            noise_levels,
+            first_octave,
+            amplitudes: amplitudes.to_vec(),
+            lowest_freq_input_factor,
+            lowest_freq_value_factor,
+            max_value,
+        }
+    }
+
     /// `getValue(x, y, z)`.
     pub fn get_value(&self, x: f64, y: f64, z: f64) -> f64 {
         self.get_value5(x, y, z, 0.0, 0.0)
@@ -542,6 +592,37 @@ impl NormalNoise {
         }
     }
 
+    /// NormalNoise seeded from two `LegacyPositionalRandomFactory` seeds
+    /// (geode: `WorldgenRandom(LegacyRandomSource(levelSeed))` forkPositional
+    /// twice).
+    pub fn create_legacy(
+        first_seed: i64,
+        second_seed: i64,
+        first_octave: i32,
+        amplitudes: &[f64],
+    ) -> Self {
+        let first = PerlinNoise::create_legacy_positional(first_octave, amplitudes, first_seed);
+        let second = PerlinNoise::create_legacy_positional(first_octave, amplitudes, second_seed);
+
+        let mut min_octave = i32::MAX;
+        let mut max_octave = i32::MIN;
+        for (i, &a) in amplitudes.iter().enumerate() {
+            if a != 0.0 {
+                min_octave = min_octave.min(i as i32);
+                max_octave = max_octave.max(i as i32);
+            }
+        }
+        let value_factor =
+            (1.0 / 6.0) / (0.1 * (1.0 + 1.0 / ((max_octave - min_octave + 1) as f64)));
+        let max_value = (first.max_value() + second.max_value()) * value_factor;
+        Self {
+            first,
+            second,
+            value_factor,
+            max_value,
+        }
+    }
+
     pub fn get_value(&self, x: f64, y: f64, z: f64) -> f64 {
         let x2 = x * Self::INPUT_FACTOR;
         let y2 = y * Self::INPUT_FACTOR;
@@ -552,6 +633,15 @@ impl NormalNoise {
     pub fn max_value(&self) -> f64 {
         self.max_value
     }
+}
+
+/// Java `String.hashCode` (used by `LegacyPositionalRandomFactory.fromHashOf`).
+pub fn java_string_hash_code(name: &str) -> i32 {
+    let mut h: i32 = 0;
+    for b in name.bytes() {
+        h = h.wrapping_mul(31).wrapping_add(b as i32);
+    }
+    h
 }
 
 /// The overworld base 3D terrain noise

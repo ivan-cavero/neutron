@@ -13,6 +13,9 @@ pub struct FeatureRandom {
     rng: Xoroshiro128,
     /// `next(bits)` calls since last `reset_draw_count` (debug / probes).
     draw_count: u32,
+    /// Marsaglia polar spare for `nextGaussian`.
+    have_next_gaussian: bool,
+    next_next_gaussian: f64,
 }
 
 impl FeatureRandom {
@@ -20,6 +23,8 @@ impl FeatureRandom {
         Self {
             rng: Xoroshiro128::new(seed),
             draw_count: 0,
+            have_next_gaussian: false,
+            next_next_gaussian: 0.0,
         }
     }
 
@@ -110,6 +115,32 @@ impl FeatureRandom {
     /// Unbounded `nextInt()` — low 32 bits of nextLong (via next(32)).
     pub fn next_int32(&mut self) -> i32 {
         self.next_bits(32)
+    }
+
+    /// `RandomSource.nextBoolean()` = `next(1) != 0`.
+    pub fn next_boolean(&mut self) -> bool {
+        self.next_bits(1) != 0
+    }
+
+    /// `RandomSource.nextGaussian()` — Marsaglia polar, cached spare. Each
+    /// call consumes two `nextDouble` on a miss, none on a hit.
+    pub fn next_gaussian(&mut self) -> f64 {
+        if self.have_next_gaussian {
+            self.have_next_gaussian = false;
+            return self.next_next_gaussian;
+        }
+        let (x, y, s) = loop {
+            let x = 2.0 * self.next_f64() - 1.0;
+            let y = 2.0 * self.next_f64() - 1.0;
+            let s = x * x + y * y;
+            if s < 1.0 && s != 0.0 {
+                break (x, y, s);
+            }
+        };
+        let multiplier = (-2.0 * s.ln() / s).sqrt();
+        self.next_next_gaussian = y * multiplier;
+        self.have_next_gaussian = true;
+        x * multiplier
     }
 }
 

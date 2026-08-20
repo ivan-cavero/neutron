@@ -47,72 +47,34 @@ const HANDLED: &[&str] = &[
     "kelp",
     "block_blob",
     "blue_ice",
+    // run-058 T4 ports: every former KNOWN_NO_OP entry now has a dispatch arm
+    // in feature_dispatch.rs (impl in feature_ports.rs / features.rs).
+    "desert_well",
+    "disk", // generic arm; step-6 disks still run via the features.rs batch
+    "ore",
+    "scattered_ore", // generic arm; step-6 ores still run via the batch
+    "speleothem_cluster",
+    "fossil",
+    "freeze_top_layer",
+    "spike",
+    "iceberg",
+    "lake",
+    "large_dripstone",
+    "monster_room",
+    "sequence",
+    "bamboo",
+    "geode",
 ];
 
 /// Types implemented only by the step-6 batch (`features.rs`). The test gates
 /// them on `step == UNDERGROUND_ORES`; any other step is an orphan.
-const STEP6_BATCH: &[&str] = &["ore", "scattered_ore", "disk", "underwater_magma"];
+const STEP6_BATCH: &[&str] = &["underwater_magma"];
 
 /// Types *not* implemented anywhere, keyed by `(type, configured id)` with the
 /// reason. Every entry = a real vanilla feature the generator silently omits
 /// today. Update the list AND the reason when a type is ported; the test fails
 /// if the found set drifts.
 const KNOWN_NO_OP: &[(&str, &str, &str)] = &[
-    // Amethyst geodes — not ported (B4 backlog, documented in STATE.md).
-    ("geode", "amethyst_geode", "geodes not ported"),
-    // Bamboo culms with podzol base — not ported.
-    ("bamboo", "bamboo_no_podzol", "bamboo not ported"),
-    ("bamboo", "bamboo_some_podzol", "bamboo not ported"),
-    // Desert wells — not ported.
-    ("desert_well", "desert_well", "desert well not ported"),
-    // disk at step 4: the step-6 batch never sees it (ice patches on frozen
-    // surfaces are outside its gate).
-    ("disk", "ice_patch", "step-4 disk outside the step-6 batch"),
-    // Infested stone ore at step 7 (mountain/peak biomes): the step-6 batch
-    // never sees it.
-    (
-        "ore",
-        "ore_infested",
-        "step-7 infested ore outside the step-6 batch",
-    ),
-    // Dripstone / speleothem clusters — not ported.
-    (
-        "speleothem_cluster",
-        "dripstone_cluster",
-        "speleothem not ported",
-    ),
-    (
-        "speleothem_cluster",
-        "sulfur_spike_cluster",
-        "speleothem not ported",
-    ),
-    // Fossil structures (two variants) — not ported.
-    ("fossil", "fossil_coal", "fossils not ported"),
-    ("fossil", "fossil_diamonds", "fossils not ported"),
-    // Step-10 top-layer freeze (ice + snow in frozen biomes) — not ported.
-    (
-        "freeze_top_layer",
-        "freeze_top_layer",
-        "top-layer freeze not ported",
-    ),
-    // Ice spikes — not ported.
-    ("spike", "ice_spike", "ice spike not ported"),
-    // Icebergs — not ported.
-    ("iceberg", "iceberg_blue", "icebergs not ported"),
-    ("iceberg", "iceberg_packed", "icebergs not ported"),
-    // Kelp — not ported.
-    // Lava lakes (underground + surface) — not ported.
-    ("lake", "lake_lava", "lava lake not ported"),
-    // Large dripstone — not ported.
-    (
-        "large_dripstone",
-        "large_dripstone",
-        "large dripstone not ported",
-    ),
-    // Dungeons — not ported.
-    ("monster_room", "monster_room", "dungeons not ported"),
-    // Sulfur pools (feature sequence) — not ported.
-    ("sequence", "sulfur_pool", "sulfur pool not ported"),
     // Multiface growth is ONLY implemented for sculk_vein (sculk module);
     // glow_lichen is ported but MEASURED as a recall regression (-0.81pp:
     // cave-terrain coupling shifts the lush-caves features) — reverted,

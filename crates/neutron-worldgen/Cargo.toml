@@ -74,3 +74,9 @@ name = "sculk_veintrace"
 [[example]]
 name = "deco_stream_probe"
 
+
+[[example]]
+name = "step_scan"
+
+[[example]]
+name = "t4_measure"
