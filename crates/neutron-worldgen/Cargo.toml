@@ -83,3 +83,6 @@ name = "neigh"
 [[example]]
 name = "dens9"
 
+[[example]]
+name = "noodle_check"
+
