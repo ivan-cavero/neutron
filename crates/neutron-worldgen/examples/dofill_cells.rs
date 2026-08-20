@@ -5,6 +5,7 @@
 
 use neutron_worldgen::carvers;
 use neutron_worldgen::generator::{ChunkGenerator, WORLD_BOTTOM, WORLD_TOP};
+use neutron_worldgen::mineshaft;
 use neutron_worldgen::region_buf::RegionBuf;
 use neutron_worldgen::surface::{vanilla_name, BlockId};
 
@@ -59,7 +60,7 @@ fn cells(region: &RegionBuf, label: &str, pts: &[(i32, i32, i32)]) {
 
 fn main() {
     let gen = ChunkGenerator::new(424242);
-    let mut region = RegionBuf::new(0, 0, 1);
+    let mut region = RegionBuf::new(0, 0, 2);
     for dz in -1..=1 {
         for dx in -1..=1 {
             let (blocks, heightmap, _) = gen.generate_noise_and_surface(dx, dz);
@@ -90,6 +91,12 @@ fn main() {
     carvers::apply_carvers_region(&mut region, &gen.state);
 
     println!("AFTER carvers");
+    count_chunk(&region, 0, 0);
+    count_chunk(&region, 0, 1);
+    cells(&region, "probe cells", &pts);
+
+    mineshaft::apply_mineshafts_region(&mut region, &gen.state);
+    println!("AFTER mineshafts");
     count_chunk(&region, 0, 0);
     count_chunk(&region, 0, 1);
     cells(&region, "probe cells", &pts);

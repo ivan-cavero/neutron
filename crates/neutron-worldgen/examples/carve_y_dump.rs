@@ -4,9 +4,9 @@
 //!   cargo run --release -p neutron-worldgen --example carve_y_dump
 
 use neutron_worldgen::carvers::{
-    apply_carvers_region, CARVE_CAN_REACH_FAIL, CARVE_EARLY_OUT, CARVE_ELLIPSOIDS,
-    CARVE_ELLIPSOID_HIT, CARVE_EMPTY_RANGE, CARVE_ROOM_CALLS, CARVE_STARTS, CARVE_TARGET_WRITES,
-    CARVE_TUNNEL_STEPS, CARVE_WRITES,
+    apply_carvers_region, CARVE_BAND_CELL, CARVE_BAND_NONE, CARVE_BAND_WRITE, CARVE_CAN_REACH_FAIL,
+    CARVE_EARLY_OUT, CARVE_ELLIPSOIDS, CARVE_ELLIPSOID_HIT, CARVE_EMPTY_RANGE, CARVE_ROOM_CALLS,
+    CARVE_STARTS, CARVE_TARGET_WRITES, CARVE_TUNNEL_STEPS, CARVE_WRITES,
 };
 use neutron_worldgen::generator::{ChunkGenerator, WORLD_BOTTOM, WORLD_TOP};
 use neutron_worldgen::legacy_rng::LegacyRandom;
@@ -463,5 +463,11 @@ fn main() {
     println!(
         "CARVE_EMPTY_RANGE={}",
         CARVE_EMPTY_RANGE.load(Ordering::Relaxed)
+    );
+    println!(
+        "CARVE_BAND (0,0)/(0,1) y[-16,16) cell={} write={} aquifer_none={}",
+        CARVE_BAND_CELL.load(Ordering::Relaxed),
+        CARVE_BAND_WRITE.load(Ordering::Relaxed),
+        CARVE_BAND_NONE.load(Ordering::Relaxed)
     );
 }

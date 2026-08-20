@@ -29,6 +29,10 @@ pub static CARVE_ROOM_CALLS: AtomicU32 = AtomicU32::new(0);
 pub static CARVE_TUNNEL_STEPS: AtomicU32 = AtomicU32::new(0);
 pub static CARVE_EARLY_OUT: AtomicU32 = AtomicU32::new(0);
 pub static CARVE_EMPTY_RANGE: AtomicU32 = AtomicU32::new(0);
+/// Ellipsoid cells in chunks (0,0)/(0,1) with y in [-16, 16).
+pub static CARVE_BAND_CELL: AtomicU32 = AtomicU32::new(0);
+pub static CARVE_BAND_NONE: AtomicU32 = AtomicU32::new(0);
+pub static CARVE_BAND_WRITE: AtomicU32 = AtomicU32::new(0);
 /// Set true to bypass canReach (diagnostic only).
 pub static DIAG_SKIP_CAN_REACH: AtomicU32 = AtomicU32::new(0);
 
@@ -523,9 +527,9 @@ fn carve_ellipsoid(
             if xd * xd + zd * zd >= 1.0 {
                 continue;
             }
-            // y from max down to min (iinc -1)
+            // Vanilla WorldCarver.carveEllipsoid: `for (worldY = maxY; worldY > minY; --)`.
             let mut y = max_y;
-            while y >= min_y {
+            while y > min_y {
                 // yd = (y - 0.5 - cy) / vert
                 // bytecode: i2d; ldc 0.5; dsub; dload cy; dsub; dload vert; ddiv
                 let yd = (y as f64 - 0.5 - cy) / vert;
@@ -538,17 +542,28 @@ fn carve_ellipsoid(
                     y -= 1;
                     continue;
                 }
-                // getCarveState: y <= lavaLevel → lava; else the aquifer decides
-                // (WorldCarver.getCarveState → aquifer.computeSubstance(ctx, 0.0)).
-                // Vanilla: density-0 carve lets the aquifer fill water/air — this is
-                // why cave pools exist where the raw terrain density is solid.
+                let in_band = (target_cx == 0 && (target_cz == 0 || target_cz == 1))
+                    && (-16..16).contains(&y);
+                if in_band {
+                    CARVE_BAND_CELL.fetch_add(1, Ordering::Relaxed);
+                }
+                // Vanilla WorldCarver.carveEllipsoid: `for (worldY = maxY; worldY > minY; --)`
+                // so minY itself is not carved. Match that bound below via `y > min_y`.
+                // getCarveState: y <= lavaLevel → lava; else aquifer.computeSubstance(ctx, 0.0).
                 if y <= LAVA_Y {
                     region.set(wx, y, wz, BlockId::Lava);
+                    if in_band {
+                        CARVE_BAND_WRITE.fetch_add(1, Ordering::Relaxed);
+                    }
                 } else if let Some(b) = aquifer.compute_substance(wx, y, wz, 0.0) {
-                    // Null state (solid default, e.g. debug barrier off) → carve nothing.
                     region.set(wx, y, wz, b);
                     CARVE_WRITES.fetch_add(1, Ordering::Relaxed);
                     CARVE_TARGET_WRITES.fetch_add(1, Ordering::Relaxed);
+                    if in_band {
+                        CARVE_BAND_WRITE.fetch_add(1, Ordering::Relaxed);
+                    }
+                } else if in_band {
+                    CARVE_BAND_NONE.fetch_add(1, Ordering::Relaxed);
                 }
                 y -= 1;
             }
@@ -776,8 +791,9 @@ fn carve_ellipsoid_canyon(
             if xd * xd + zd * zd >= 1.0 {
                 continue;
             }
+            // Vanilla: `worldY > minY` (minY itself is not carved).
             let mut y = max_y;
-            while y >= min_y {
+            while y > min_y {
                 let yd = (y as f64 - 0.5 - cy) / vert;
                 // canyon shouldSkip: xd²+zd² * widthFactors[y-minY-1] + yd²/6 >= 1
                 let wi = (y - WORLD_BOTTOM - 1).clamp(0, width_factors.len() as i32 - 1) as usize;

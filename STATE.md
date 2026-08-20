@@ -28,7 +28,7 @@ Benchmarks track: **done**. Server: joinable.
 - Vanilla `computeSubstance(ctx,0.0)` at those cells: **air**, not water. If a carver visits, it would write air.
 - Neutron carvers: 33 starts with Y in [-32,0), but **0 writes** in chunks (0,0)/(0,1) in that band. Writes in those chunks are y[-48,-32) air (deepslate) only. Neighbor chunks *do* get y[-32,0) air. Water=0 from carvers.
 
-Siguiente (un dump, se puede fan-out): (1) Beardifier real vs Marker at those cells; (2) why worm writes miss (0,0)/(0,1) at y[-16,16) while vanilla has cave_air there. Still no feature ports.
+`carveEllipsoid` Y bound now matches vanilla (`worldY > minY`). region 424242 still **97.34%**. `CARVE_BAND_CELL=0`: no ellipsoid even *enters* y[-16,16) in (0,0)/(0,1). Mineshafts add 0 air there. Next: worm path vs vanilla start Y (not aquifer-none). Still no feature ports.
 
 ## Dead (do not reopen without a new two-sided dump)
 
