@@ -87,7 +87,11 @@ public class ProbePaleFlow {
         WorldgenRandom rng = new WorldgenRandom(new XoroshiroRandomSource(seed)) {
             @Override public int next(int bits) {
                 nextBits++;
-                return super.next(bits);
+                int v = super.next(bits);
+                if (System.getenv("PALE_RAW") != null) {
+                    System.out.println("RAW next(" + bits + ")=" + v + " bits=" + nextBits);
+                }
+                return v;
             }
             @Override public int nextInt(int bound) {
                 int v = super.nextInt(bound);
