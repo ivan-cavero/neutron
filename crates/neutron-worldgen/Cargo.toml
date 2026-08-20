@@ -74,7 +74,6 @@ name = "sculk_veintrace"
 [[example]]
 name = "deco_stream_probe"
 
-
 [[example]]
 name = "step_scan"
 
@@ -110,3 +109,15 @@ name = "neu_biome"
 
 [[example]]
 name = "seed_scan"
+
+[[example]]
+name = "water_ref_scan"
+
+[[example]]
+name = "neigh"
+
+[[example]]
+name = "dens9"
+
+[[example]]
+name = "noodle_check"
