@@ -121,3 +121,6 @@ name = "dens9"
 
 [[example]]
 name = "noodle_check"
+
+[[example]]
+name = "raw_density"

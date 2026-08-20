@@ -442,3 +442,25 @@ LEAD = STATE/workbench/runs; refs shared read-only via symlinks.
   densidad interpolada. Puzzle abierto.
 - ProbeChunkDensity: replica el doFill completo (cellCountXZ=4) con
   BeardifierMarker via reflection (setAccessible) — da +0.0037.
+
+## Run 058 (en curso) — romper el estancamiento: ports + árboles + agua en paralelo
+
+- **Auditoría**: leftover tmp_struct en Cargo.toml rompía `cargo test` (revertido, 242/242). Refs en disco: SOLO 424242 (rectángulo 23×8 = 184 chunks, NO 529 como decía STATE.md). Chunk (0,0) en borde -z sin vecino (0,-1).
+- **T2 Ports T4 (MERGEADO 9f862f9)**: 14 features portados (desert_well, ice_patch, ore_infested, speleothem×2, fossil×2, freeze_top_layer, ice_spike, iceberg×2, lake_lava, large_dripstone, monster_room, sulfur_pool, bamboo×2, geode) → whitelist 20→1 (solo glow_lichen). ~3200 líneas (feature_ports.rs + fossil_structures.rs). Tests 242/242. **Sin regresión**: REGION 424242 97.34%, recall 58.43% (+0.93pp vs 57.50%).
+- **T1 Árboles (mergeado 8895bfd, diagnóstico)**: 51 troncos vs 37 vanilla en (0,0) → MÁS árboles, mismo tamaño. Builder concluyó "ref corrupto" (layout biomas ≠ seed 424242) — **REFUTADO por LEAD**: ref fresco 424242 (ref-extract, seed garantizado) casi idéntico al viejo (water 13 vs 9, cave_air 162 ambos, bioma (7,7)=plains en ambos). El desync de árboles es real y sigue abierto (hipótesis: ground-check o stream).
+- **T3 Agua (mergeado d8cee91, diagnóstico)**: el "385 agua" de run-056 era FALSO — el ref tiene ~9-13 agua en (0,0). **HALLAZGO CLAVE**: la densidad noodle caves de Neutron da **+64.0 (cerrado)** vs vanilla **-0.075 (abierto)** en las celdas de agua del ref → el noise noodle tiene el signo opuesto. Ese es EL lever del terreno (cuevas/agua/clay). Fix en curso (builder noodle).
+- **Ratchet**: 424242 97.34% ✓ · 777 98.58% ✓ (sin regresión) · **12345 INVALID** — los refs provisionados con ref-extract (90s) salen TODO proto-chunks (2895 B, Status=structure_starts) para ese seed en esta máquina; re-provision manual con espera larga en curso.
+- **Provisión refs**: 12345/777 provisionados (184 chunks c/u, forma comparable); 424242-fresh (529 chunks, cuadrado completo) generado como test decisivo → ref viejo válido.
+
+## Run 059 (en curso) — REORIENTACIÓN tras audit LEAD (corrige run-058)
+
+- **FALSO POSITIVO**: el "noodle +64 vs -0.075" comparaba seeds distintas
+  (Neutron 424242 vs ProbeNoodle 12345). Probe correcto (seed 424242, mismos pts):
+  vanilla arg2 = +64.00000000 == Neutron. Noodle INOCENTE.
+- **Lever real**: RAW camino A Neutron == vanilla (-0.0063 abierto); la INTERP
+  salta a +0.0037 (solid) en Neutron. El agua real (ref) = densidad < 0 en la
+  generación real de vanilla. Puzzle del agua = INTERP camino A en y 0..16.
+- **Ref test decisivo**: ref fresco 529 chunks cuadrado completo: 13 agua (0,0) ==
+  ref viejo (9) → NO es artefacto de borde. Agua real en (0,1): 95 vs 0 Neutron.
+- **Plan**: T1 árboles (51 vs 37 troncos, ±5% o root cause), T2 interp camino A
+  (probe doFill real hasta abrir (12,1,15)), LEAD merge + ratchet.

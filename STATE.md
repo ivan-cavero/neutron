@@ -209,3 +209,45 @@ whitelist drift (both additions and removals).
 - `runs/run-048-evidence-baseline.txt` — B2 evidence (B3 evidence file exists only on PC-2)
 - `crates/neutron-worldgen/WORLDGEN.md`, `WORLDGEN-PIPELINE.md`
 - `crates/neutron-server/REVIEW.md` — server review evidence
+---
+
+## run-058 (20 Aug) — CORRECCIÓN DE ESTADO (append, no reescribe historia)
+
+**El ref 424242 local NO es 529 chunks**: es un rectángulo 23×8 = 184 chunks (x∈[-11,11], z∈[0,7]); el chunk (0,0) está en el borde -z sin vecino (0,-1). VERIFICADO que el ref es VÁLIDO (seed 424242): ref fresco regenerado (ref-extract, seed garantizado) casi idéntico al viejo en (0,0) — water 13 vs 9, cave_air 162 ambos, bioma (7,7)=plains en ambos. La teoría del builder de árboles ("ref corrupto") quedó REFUTADA.
+
+**El "385 agua" de run-056 era FALSO**: el ref tiene ~9-13 agua en (0,0), no 385.
+
+**HALLAZGO CLAVE (run-058 T3)**: la densidad noodle caves de Neutron da **+64.0 (cerrado)** vs vanilla **-0.075 (abierto)** en las celdas de agua del ref → el noise noodle tiene el signo opuesto (firstOctave=-8, amplitudes=[1.0]). Ese es EL lever del terreno (cuevas/agua/clay). Fix en curso.
+
+**Ratchet run-058**: 424242 97.34% ✓ · 777 98.58% ✓ (sin regresión) · **12345 NO medible** — los refs provisionados en esta máquina (ref-extract 90s Y server manual 300s+) salen proto-chunks (Status=structure_starts, 2895 B) para ese seed; el server no completa la generación. Reintentar con máquina quieta o en otra máquina.
+
+**Merges a main (pusheados)**: 9f862f9 (ports T4, whitelist 20→1) · 8895bfd (árboles, 11 ejemplos diagnóstico) · d8cee91→ecff61c (agua, diagnóstico noodle). Tests 242/242.
+
+**Desync de árboles REAL y abierto**: Neutron 51 troncos vs vanilla 37 en (0,0) (más árboles, mismo tamaño). Hipótesis: ground-check o stream. NO es ref corrupto.
+
+---
+
+## run-059 (20 Aug) — CORRECCIÓN + REORIENTACIÓN (audit LEAD, append)
+
+**FALSO POSITIVO CORREGIDO (audit LEAD con probe vanilla)**: el "hallazgo noodle"
+(+64 vs -0.075, run-058 T3) comparaba Neutron seed 424242 contra ProbeNoodle que
+corre seed **12345 con puntos distintos**. Re-ejecutado correctamente (seed 424242,
+los MISMOS 6 puntos de noodle_check): vanilla arg2 (noodle) = **+64.00000000** —
+IDÉNTICO a Neutron. El noodle es INOCENTE. (ProbeNoodle424242 scratch, tmp-probe/.)
+
+**HALLAZGO REAL (mismo audit)**: el RAW del camino A de Neutron coincide EXACTO con
+vanilla en las celdas de agua (raw_cheese -0.0126, raw_a -0.0063, abierto) — el
+desync aparece SOLO en la INTERPOLACIÓN (Neutron +0.0037 sólido vs vanilla que abre
+la celda y el acuífero la llena). El lever del terreno = la interp del camino A en
+la banda y=0..16, NO el noodle. (raw_density.rs, ejemplo nuevo, seed 424242.)
+
+**Test decisivo agua (cerrado)**: el ref fresco cuadrado completo (/tmp/refx-424242-fresh,
+529 chunks, (0,0) con vecino (0,-1)) tiene 13 agua en (0,0) — casi igual al ref viejo
+(9). El puzzle del agua NO es artefacto del ref cortado: es geografía real de la seed.
+El agua real de la banda y=0..15 está en (0,1): 95 bloques (67 border + 27 interior)
+vs 0 de Neutron. La banda de agua es real y localizada.
+
+**No-ops restantes**: moss/vines/dripleaf/azalea/glow_lichen YA dispatchados — no son
+no-ops. El gap de recall (moss 983, hanging_moss 519, cave_vines 730, dripleaf 220,
+azalea 109) amarra al MISMO lever: la densidad interpolada en y=0..16 (cuevas no
+abiertas → sin bioma lush/pale correcto → features rechazados).
