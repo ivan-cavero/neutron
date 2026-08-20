@@ -74,3 +74,33 @@ name = "sculk_veintrace"
 [[example]]
 name = "deco_stream_probe"
 
+[[example]]
+name = "pale_trunk_count"
+
+[[example]]
+name = "ground_check"
+
+
+[[example]]
+name = "pale_stream_probe"
+
+[[example]]
+name = "dump_pale"
+
+[[example]]
+name = "wd_check"
+
+[[example]]
+name = "dump_terrain"
+
+[[example]]
+name = "ref_biome"
+
+[[example]]
+name = "ref_biome2"
+
+[[example]]
+name = "neu_biome"
+
+[[example]]
+name = "seed_scan"
