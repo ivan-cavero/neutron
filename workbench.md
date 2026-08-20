@@ -1,5 +1,7 @@
 # Neutron — dual-track gauntlet workbench
 
+> **DEPRECATED 20 Aug 2026.** Do not update this file. It is a historical log of
+> the Gauntlet era (run-047/048). Current facts: `STATE.md`. Method: `AGENTS.md` v2.
 > Live round log. LEAD: pi (main checkout). Two parallel tracks in native git worktrees.
 > Bar is untouchable; builders never grade themselves; critics are fresh per round.
 > **ACTIVE 18 Aug 2026 — run-048 continued on THIS PC (Windows); parallel worldgen

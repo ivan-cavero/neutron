@@ -1,0 +1,146 @@
+[21:48:24] [main/INFO]: [STDOUT]: carve_visit=unknown (no ProtoChunk carve); density0 = getCarveState path
+target=(0,0)
+  START source=(-8,-8) idx=0 f=0.1145 caveCount=1
+  START source=(-6,-8) idx=0 f=0.1386 caveCount=0
+  START source=(-4,-8) idx=2 canyon f=0.0007
+  START source=(-3,-8) idx=0 f=0.0015 caveCount=2
+  START source=(-3,-8) idx=1 f=0.0382 caveCount=6
+  START source=(-1,-8) idx=0 f=0.1234 caveCount=11
+  START source=(-2,-7) idx=0 f=0.1231 caveCount=2
+  START source=(-2,-7) idx=2 canyon f=0.0054
+  START source=(0,-7) idx=0 f=0.1279 caveCount=1
+  START source=(1,-7) idx=1 f=0.0044 caveCount=2
+  START source=(8,-7) idx=0 f=0.1311 caveCount=0
+  START source=(-8,-6) idx=1 f=0.0308 caveCount=8
+  START source=(-7,-6) idx=2 canyon f=0.0068
+  START source=(-2,-6) idx=0 f=0.0724 caveCount=1
+  START source=(-2,-6) idx=1 f=0.0015 caveCount=3
+  START source=(0,-6) idx=0 f=0.0299 caveCount=0
+  START source=(4,-6) idx=0 f=0.0560 caveCount=2
+  START source=(-8,-5) idx=1 f=0.0630 caveCount=7
+  START source=(-8,-5) idx=2 canyon f=0.0054
+  START source=(6,-5) idx=0 f=0.0800 caveCount=2
+  START source=(0,-4) idx=1 f=0.0686 caveCount=2
+  START source=(2,-4) idx=0 f=0.1196 caveCount=0
+  START source=(5,-4) idx=0 f=0.1103 caveCount=0
+  START source=(6,-4) idx=1 f=0.0177 caveCount=0
+  START source=(8,-4) idx=0 f=0.0404 caveCount=4
+  START source=(-3,-3) idx=0 f=0.0315 caveCount=2
+  START source=(6,-3) idx=0 f=0.1386 caveCount=2
+  START source=(0,-2) idx=0 f=0.1419 caveCount=0
+  START source=(5,-2) idx=0 f=0.1034 caveCount=2
+  START source=(-8,-1) idx=0 f=0.0964 caveCount=2
+  START source=(-6,-1) idx=0 f=0.0712 caveCount=0
+  START source=(-4,-1) idx=1 f=0.0538 caveCount=4
+  START source=(0,-1) idx=1 f=0.0477 caveCount=2
+  START source=(2,-1) idx=0 f=0.1156 caveCount=0
+  START source=(-2,0) idx=2 canyon f=0.0052
+  START source=(2,0) idx=0 f=0.0018 caveCount=0
+  START source=(-2,1) idx=0 f=0.1154 caveCount=0
+  START source=(4,1) idx=1 f=0.0529 caveCount=2
+  START source=(6,1) idx=0 f=0.0710 caveCount=0
+  START source=(8,1) idx=0 f=0.0991 caveCount=10
+  START source=(-5,2) idx=0 f=0.1034 caveCount=2
+  START source=(0,2) idx=1 f=0.0150 caveCount=7
+  START source=(-6,3) idx=0 f=0.1380 caveCount=0
+  START source=(3,3) idx=0 f=0.0317 caveCount=2
+  START source=(-8,4) idx=0 f=0.0397 caveCount=0
+  START source=(-6,4) idx=1 f=0.0177 caveCount=0
+  START source=(-5,4) idx=0 f=0.1107 caveCount=1
+  START source=(-2,4) idx=0 f=0.1196 caveCount=0
+  START source=(-6,5) idx=0 f=0.0806 caveCount=0
+  START source=(0,5) idx=1 f=0.0331 caveCount=9
+  START source=(8,5) idx=1 f=0.0643 caveCount=0
+  START source=(8,5) idx=2 canyon f=0.0045
+  START source=(-4,6) idx=0 f=0.0549 caveCount=3
+  START source=(2,6) idx=0 f=0.0728 caveCount=0
+  START source=(2,6) idx=1 f=0.0018 caveCount=1
+  START source=(7,6) idx=2 canyon f=0.0068
+  START source=(8,6) idx=1 f=0.0312 caveCount=0
+  START source=(-8,7) idx=0 f=0.1327 caveCount=1
+  START source=(-1,7) idx=1 f=0.0046 caveCount=0
+  START source=(2,7) idx=0 f=0.1233 caveCount=0
+  START source=(2,7) idx=2 canyon f=0.0056
+  START source=(1,8) idx=0 f=0.1230 caveCount=1
+  START source=(3,8) idx=0 f=0.0004 caveCount=0
+  START source=(3,8) idx=1 f=0.0372 caveCount=0
+  START source=(4,8) idx=2 canyon f=0.0007
+  START source=(6,8) idx=0 f=0.1393 caveCount=1
+  START source=(8,8) idx=0 f=0.1131 caveCount=0
+  total_starts=67
+target=(0,1)
+  START source=(-2,-7) idx=0 f=0.1231 caveCount=2
+  START source=(-2,-7) idx=2 canyon f=0.0054
+  START source=(0,-7) idx=0 f=0.1279 caveCount=1
+  START source=(1,-7) idx=1 f=0.0044 caveCount=2
+  START source=(8,-7) idx=0 f=0.1311 caveCount=0
+  START source=(-8,-6) idx=1 f=0.0308 caveCount=8
+  START source=(-7,-6) idx=2 canyon f=0.0068
+  START source=(-2,-6) idx=0 f=0.0724 caveCount=1
+  START source=(-2,-6) idx=1 f=0.0015 caveCount=3
+  START source=(0,-6) idx=0 f=0.0299 caveCount=0
+  START source=(4,-6) idx=0 f=0.0560 caveCount=2
+  START source=(-8,-5) idx=1 f=0.0630 caveCount=7
+  START source=(-8,-5) idx=2 canyon f=0.0054
+  START source=(6,-5) idx=0 f=0.0800 caveCount=2
+  START source=(0,-4) idx=1 f=0.0686 caveCount=2
+  START source=(2,-4) idx=0 f=0.1196 caveCount=0
+  START source=(5,-4) idx=0 f=0.1103 caveCount=0
+  START source=(6,-4) idx=1 f=0.0177 caveCount=0
+  START source=(8,-4) idx=0 f=0.0404 caveCount=4
+  START source=(-3,-3) idx=0 f=0.0315 caveCount=2
+  START source=(6,-3) idx=0 f=0.1386 caveCount=2
+  START source=(0,-2) idx=0 f=0.1419 caveCount=0
+  START source=(5,-2) idx=0 f=0.1034 caveCount=2
+  START source=(-8,-1) idx=0 f=0.0964 caveCount=2
+  START source=(-6,-1) idx=0 f=0.0712 caveCount=0
+  START source=(-4,-1) idx=1 f=0.0538 caveCount=4
+  START source=(0,-1) idx=1 f=0.0477 caveCount=2
+  START source=(2,-1) idx=0 f=0.1156 caveCount=0
+  START source=(-2,0) idx=2 canyon f=0.0052
+  START source=(2,0) idx=0 f=0.0018 caveCount=0
+  START source=(-2,1) idx=0 f=0.1154 caveCount=0
+  START source=(4,1) idx=1 f=0.0529 caveCount=2
+  START source=(6,1) idx=0 f=0.0710 caveCount=0
+  START source=(8,1) idx=0 f=0.0991 caveCount=10
+  START source=(-5,2) idx=0 f=0.1034 caveCount=2
+  START source=(0,2) idx=1 f=0.0150 caveCount=7
+  START source=(-6,3) idx=0 f=0.1380 caveCount=0
+  START source=(3,3) idx=0 f=0.0317 caveCount=2
+  START source=(-8,4) idx=0 f=0.0397 caveCount=0
+  START source=(-6,4) idx=1 f=0.0177 caveCount=0
+  START source=(-5,4) idx=0 f=0.1107 caveCount=1
+  START source=(-2,4) idx=0 f=0.1196 caveCount=0
+  START source=(-6,5) idx=0 f=0.0806 caveCount=0
+  START source=(0,5) idx=1 f=0.0331 caveCount=9
+  START source=(8,5) idx=1 f=0.0643 caveCount=0
+  START source=(8,5) idx=2 canyon f=0.0045
+  START source=(-4,6) idx=0 f=0.0549 caveCount=3
+  START source=(2,6) idx=0 f=0.0728 caveCount=0
+  START source=(2,6) idx=1 f=0.0018 caveCount=1
+  START source=(7,6) idx=2 canyon f=0.0068
+  START source=(8,6) idx=1 f=0.0312 caveCount=0
+  START source=(-8,7) idx=0 f=0.1327 caveCount=1
+  START source=(-1,7) idx=1 f=0.0046 caveCount=0
+  START source=(2,7) idx=0 f=0.1233 caveCount=0
+  START source=(2,7) idx=2 canyon f=0.0056
+  START source=(1,8) idx=0 f=0.1230 caveCount=1
+  START source=(3,8) idx=0 f=0.0004 caveCount=0
+  START source=(3,8) idx=1 f=0.0372 caveCount=0
+  START source=(4,8) idx=2 canyon f=0.0007
+  START source=(6,8) idx=0 f=0.1393 caveCount=1
+  START source=(8,8) idx=0 f=0.1131 caveCount=0
+  START source=(-4,9) idx=0 f=0.0228 caveCount=0
+  START source=(6,9) idx=0 f=0.0477 caveCount=1
+  total_starts=63
+12 1 15 carve_visit=unknown density0_block=minecraft:air
+10 2 15 carve_visit=unknown density0_block=minecraft:air
+8 3 14 carve_visit=unknown density0_block=minecraft:air
+2 5 14 carve_visit=unknown density0_block=minecraft:air
+5 5 14 carve_visit=unknown density0_block=minecraft:air
+1 5 15 carve_visit=unknown density0_block=minecraft:air
+8 3 15 carve_visit=unknown density0_block=minecraft:air
+2 5 15 carve_visit=unknown density0_block=minecraft:air
+5 5 15 carve_visit=unknown density0_block=minecraft:air
+1 6 21 carve_visit=unknown density0_block=minecraft:air
+3 6 23 carve_visit=unknown density0_block=minecraft:air

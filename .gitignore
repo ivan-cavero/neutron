@@ -152,6 +152,8 @@ temp/
 *.old
 *.orig
 tmp_*
+tmp-*
+*.tmp
 nul
 logs/
 

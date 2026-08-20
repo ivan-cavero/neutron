@@ -17,72 +17,20 @@ WASM/Lua plugins, and `main` always on the latest Minecraft version.
 
 ## How AI work happens in this project (READ)
 
-This repo is designed for an agent (pi, opencode or zcode) to work on it with
-**state on disk, not in chat memory**. The method is generic — it works for worldgen,
-redstone, protocol, tools, anything — and scales because each session rebuilds its
-context from files, not from the previous conversation.
+**Fan out closed dumps/ports in parallel; one writer patches after.** Full contract:
+`AGENTS.md` v2. Facts: `STATE.md`. `runs/` and `workbench.md` are archive.
 
-### The method: Gauntlet Loop
+Do not fan-out three “investigate water/trees/clay” agents (same gap). Do not open a
+run file to start work. Bar = vanilla 26.2. Worldgen order: doFill → surface →
+carvers → features.
 
-```
-LEAD → splits the goal into gradeable pieces
-  ├─ BUILDER builds each piece
-  └─ CRITIC (subagent, clean context) inspects the REAL artifact against the bar
-       PASS → next piece · FAIL → the biggest gap → rebuild → repeat
-```
-
-Non-negotiable rules: the **bar** is a real reference (checksum, benchmark, vanilla
-server) that is never edited to make a test pass · the **builder never grades itself** ·
-**ratchet**: every round re-measures ALL seeds, a regression is FAIL · **incremental
-commits**: each proven piece is committed alone, never mega-commits.
-
-### File map (what each file is, who touches it)
-
-| File | What it is | Who reads it | Who writes it | When |
-| --- | --- | --- | --- | --- |
-| `AGENTS.md` | Universal contract: how we work, bar, loop, boundaries, tools | every agent, at start | human + LEAD | when the method changes |
-| `STATE.md` | **Real state** (≤80 lines): phase, single bar, last measurement, next action, gaps | every agent, at start | LEAD, at run close | every run |
-| `workbench.md` | LIVE round log of the active run: current round, per-unit PASS/FAIL | LEAD + whoever supervises | LEAD, after each round | every round |
-| `runs/run-NNN.md` | Evidence of each run: objective, bar, tasks, logs, rounds | blind critic + auditors | LEAD | every run |
-| `runs/README.md` | Run template + PASS discipline + how to launch | LEAD | LEAD | when the template changes |
-| `ROADMAP.md` | Phases + bars + links (index, not prompts) | LEAD | human + LEAD | when the plan changes |
-| `docs/prompts/*.md` | Phase prompts ready to paste into pi | LEAD | LEAD | when launching a phase |
-| `ARCHITECTURE.md` | Server design + verified evidence | whoever designs | human | when the design changes |
-
-**State rules** (against "false state"):
-
-- At session start, **audit STATE.md against real evidence** (git log, runs/, logs):
-  if a claim has no evidence file, re-measure it — don't trust it.
-- State is written by whoever holds the evidence, never copied from someone else's
-  summaries.
-- A PASS requires blind-critic evidence; builder-verified work is labeled
-  "builder-verified", never PASS.
-- **Resume test**: the system works if you can kill the session, resume, and the next
-  agent picks up from disk alone.
-
-### Harness (pi / opencode / zcode)
-
-The primary harness is **pi** (with plugins). `AGENTS.md` is the universal contract:
-all mainstream harnesses read it. The tool names in `AGENTS.md` §7 are pi's
-(`subagent`, `todo`, `ask_user_question`); opencode/zcode map those roles to their own
-tools — the roles matter, not the names. Subagent delegation (builder vs blind critic
-with clean context) and web research (`web_search`/`fetch_content`) work the same in
-all three.
-
-### Multiple agents at once
-
-The repo supports parallel agents with **ownership rules** (AGENTS.md §5.5): each agent
-touches only its own files, shared state (STATE/workbench/runs) is written only by the
-LEAD (append-only), and worktree isolation is preferred. Without these rules, two agents
-in the same tree clobber each other — it happened in Aug 2026 (a parallel agent
-overwrote ARCHITECTURE.md). If you see foreign uncommitted work, don't overwrite it:
-ask who owns it.
-
-### Skills
-
-Load **only the project skills that apply to the task** (e.g. Rust best practices for a
-worldgen task, gauntlet-loop for a run). Don't load skills unrelated to the task. They
-live in the harness's skill directory.
+| File | What it is |
+| --- | --- |
+| `AGENTS.md` | How we work |
+| `STATE.md` | Current numbers + next dump (≤80 lines) |
+| `runs/` | Archive of past attempts |
+| `ROADMAP.md` | Phases |
+| `ARCHITECTURE.md` | Server design |
 
 ---
 

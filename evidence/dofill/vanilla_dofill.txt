@@ -1,0 +1,12 @@
+[21:48:17] [main/INFO]: [STDOUT]: limitation=BeardifierMarker (not structure Beardifier)
+12 1 15 chunk=(0,0) density=+0.003725 solid block=null
+10 2 15 chunk=(0,0) density=+0.004569 solid block=null
+8 3 14 chunk=(0,0) density=+0.005650 solid block=null
+2 5 14 chunk=(0,0) density=+0.004397 solid block=null
+5 5 14 chunk=(0,0) density=+0.004438 solid block=null
+1 5 15 chunk=(0,0) density=+0.003826 solid block=null
+8 3 15 chunk=(0,0) density=+0.005972 solid block=null
+2 5 15 chunk=(0,0) density=+0.005846 solid block=null
+5 5 15 chunk=(0,0) density=+0.005729 solid block=null
+1 6 21 chunk=(0,1) density=+0.005308 solid block=null
+3 6 23 chunk=(0,1) density=+0.006097 solid block=null

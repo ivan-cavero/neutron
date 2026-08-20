@@ -1,0 +1,316 @@
+seed=424242  RegionBuf::new(0,0,1) fill dx,dz in -1..=1 then apply_carvers_region
+WORLD_BOTTOM=-64 cave y_min=WORLD_BOTTOM+8=-56 lava_y=-56
+=== unique starts that can reach target (0,0) or (0,1) ===
+APPLY_RANGE=8  source union cx=-8..=8 cz=-8..=9
+cave y=[-56,180] p=0.15; cave_extra y=[-56,47] p=0.07; canyon y=[10,67] p=0.01
+  START cave source=(-8,-8) pos=(-120,122,-115)
+  START cave_extra source=(-8,-6) pos=(-126,36,-88)
+  START cave_extra source=(-8,-6) pos=(-119,7,-95)
+  START cave_extra source=(-8,-6) pos=(-120,9,-89)
+  START cave_extra source=(-8,-6) pos=(-117,7,-89)
+  START cave_extra source=(-8,-6) pos=(-118,27,-90)
+  START cave_extra source=(-8,-6) pos=(-127,-12,-83)
+  START cave_extra source=(-8,-6) pos=(-122,9,-90)
+  START cave_extra source=(-8,-6) pos=(-113,-10,-91)
+  START cave_extra source=(-8,-5) pos=(-126,-4,-78)
+  START cave_extra source=(-8,-5) pos=(-126,17,-66)
+  START cave_extra source=(-8,-5) pos=(-123,15,-71)
+  START cave_extra source=(-8,-5) pos=(-120,5,-65)
+  START cave_extra source=(-8,-5) pos=(-126,21,-76)
+  START cave_extra source=(-8,-5) pos=(-115,-1,-80)
+  START cave_extra source=(-8,-5) pos=(-119,0,-78)
+  START canyon source=(-8,-5) pos=(-128,50,-70)
+  START cave source=(-8,-1) pos=(-119,48,-6)
+  START cave source=(-8,-1) pos=(-125,61,-7)
+  START cave source=(-8,4) cave_count=0 (no Y)
+  START cave source=(-8,7) pos=(-128,117,122)
+  START canyon source=(-7,-6) pos=(-98,46,-94)
+  START cave source=(-6,-8) cave_count=0 (no Y)
+  START cave source=(-6,-1) cave_count=0 (no Y)
+  START cave source=(-6,3) cave_count=0 (no Y)
+  START cave_extra source=(-6,4) cave_count=0 (no Y)
+  START cave source=(-6,5) cave_count=0 (no Y)
+  START cave source=(-5,2) pos=(-78,127,41)
+  START cave source=(-5,2) pos=(-71,-25,36)
+  START cave source=(-5,4) pos=(-66,127,69)
+  START canyon source=(-4,-8) pos=(-55,25,-125)
+  START cave_extra source=(-4,-1) pos=(-58,-26,-3)
+  START cave_extra source=(-4,-1) pos=(-53,-9,-13)
+  START cave_extra source=(-4,-1) pos=(-60,-12,-9)
+  START cave_extra source=(-4,-1) pos=(-59,-34,-6)
+  START cave source=(-4,6) pos=(-56,62,96)
+  START cave source=(-4,6) pos=(-51,58,109)
+  START cave source=(-4,6) pos=(-58,35,99)
+  START cave source=(-4,9) cave_count=0 (no Y)
+  START cave source=(-3,-8) pos=(-41,88,-114)
+  START cave source=(-3,-8) pos=(-40,-10,-118)
+  START cave_extra source=(-3,-8) pos=(-41,-5,-126)
+  START cave_extra source=(-3,-8) pos=(-37,-19,-114)
+  START cave_extra source=(-3,-8) pos=(-46,-46,-123)
+  START cave_extra source=(-3,-8) pos=(-48,-1,-123)
+  START cave_extra source=(-3,-8) pos=(-42,15,-125)
+  START cave_extra source=(-3,-8) pos=(-39,6,-115)
+  START cave source=(-3,-3) pos=(-48,161,-42)
+  START cave source=(-3,-3) pos=(-41,-45,-37)
+  START cave source=(-2,-7) pos=(-24,107,-98)
+  START cave source=(-2,-7) pos=(-28,143,-111)
+  START canyon source=(-2,-7) pos=(-28,17,-100)
+  START cave source=(-2,-6) pos=(-30,-8,-92)
+  START cave_extra source=(-2,-6) pos=(-29,-44,-82)
+  START cave_extra source=(-2,-6) pos=(-26,8,-86)
+  START cave_extra source=(-2,-6) pos=(-24,-20,-84)
+  START canyon source=(-2,0) pos=(-24,22,0)
+  START cave source=(-2,1) cave_count=0 (no Y)
+  START cave source=(-2,4) cave_count=0 (no Y)
+  START cave source=(-1,-8) pos=(-5,-6,-120)
+  START cave source=(-1,-8) pos=(-14,-9,-113)
+  START cave source=(-1,-8) pos=(-8,149,-128)
+  START cave source=(-1,-8) pos=(-8,-7,-125)
+  START cave source=(-1,-8) pos=(-5,136,-125)
+  START cave source=(-1,-8) pos=(-9,159,-127)
+  START cave source=(-1,-8) pos=(-15,-38,-116)
+  START cave source=(-1,-8) pos=(-14,-35,-114)
+  START cave source=(-1,-8) pos=(-6,28,-115)
+  START cave source=(-1,-8) pos=(-9,80,-128)
+  START cave source=(-1,-8) pos=(-4,140,-115)
+  START cave_extra source=(-1,7) cave_count=0 (no Y)
+  START cave source=(0,-7) pos=(5,142,-99)
+  START cave source=(0,-6) cave_count=0 (no Y)
+  START cave_extra source=(0,-4) pos=(15,6,-60)
+  START cave_extra source=(0,-4) pos=(8,38,-62)
+  START cave source=(0,-2) cave_count=0 (no Y)
+  START cave_extra source=(0,-1) pos=(5,-43,-13)
+  START cave_extra source=(0,-1) pos=(10,-54,-14)
+  START cave_extra source=(0,2) pos=(8,-27,46)
+  START cave_extra source=(0,2) pos=(4,5,37)
+  START cave_extra source=(0,2) pos=(8,-53,40)
+  START cave_extra source=(0,2) pos=(12,5,40)
+  START cave_extra source=(0,2) pos=(9,39,42)
+  START cave_extra source=(0,2) pos=(10,-9,41)
+  START cave_extra source=(0,2) pos=(5,-19,43)
+  START cave_extra source=(0,5) pos=(15,-2,83)
+  START cave_extra source=(0,5) pos=(12,0,89)
+  START cave_extra source=(0,5) pos=(0,28,81)
+  START cave_extra source=(0,5) pos=(12,-10,94)
+  START cave_extra source=(0,5) pos=(12,21,90)
+  START cave_extra source=(0,5) pos=(8,-13,95)
+  START cave_extra source=(0,5) pos=(8,13,92)
+  START cave_extra source=(0,5) pos=(11,-7,86)
+  START cave_extra source=(0,5) pos=(8,-9,83)
+  START cave_extra source=(1,-7) pos=(26,32,-110)
+  START cave_extra source=(1,-7) pos=(27,5,-97)
+  START cave source=(1,8) pos=(16,35,138)
+  START cave source=(2,-4) cave_count=0 (no Y)
+  START cave source=(2,-1) cave_count=0 (no Y)
+  START cave source=(2,0) cave_count=0 (no Y)
+  START cave source=(2,6) cave_count=0 (no Y)
+  START cave_extra source=(2,6) pos=(46,-24,108)
+  START cave source=(2,7) cave_count=0 (no Y)
+  START canyon source=(2,7) pos=(43,60,115)
+  START cave source=(3,3) pos=(61,-44,61)
+  START cave source=(3,3) pos=(54,19,62)
+  START cave source=(3,8) cave_count=0 (no Y)
+  START cave_extra source=(3,8) cave_count=0 (no Y)
+  START cave source=(4,-6) pos=(75,177,-86)
+  START cave source=(4,-6) pos=(69,-1,-86)
+  START cave_extra source=(4,1) pos=(65,-34,26)
+  START cave_extra source=(4,1) pos=(65,-11,23)
+  START canyon source=(4,8) pos=(73,25,131)
+  START cave source=(5,-4) cave_count=0 (no Y)
+  START cave source=(5,-2) pos=(82,127,-23)
+  START cave source=(5,-2) pos=(89,-25,-28)
+  START cave source=(6,-5) pos=(96,43,-78)
+  START cave source=(6,-5) pos=(106,124,-69)
+  START cave_extra source=(6,-4) cave_count=0 (no Y)
+  START cave source=(6,-3) pos=(104,-15,-45)
+  START cave source=(6,-3) pos=(109,96,-42)
+  START cave source=(6,1) cave_count=0 (no Y)
+  START cave source=(6,8) pos=(101,130,138)
+  START cave source=(6,9) pos=(101,104,159)
+  START canyon source=(7,6) pos=(126,46,98)
+  START cave source=(8,-7) cave_count=0 (no Y)
+  START cave source=(8,-4) pos=(128,101,-55)
+  START cave source=(8,-4) pos=(139,31,-52)
+  START cave source=(8,-4) pos=(135,116,-49)
+  START cave source=(8,-4) pos=(128,-25,-59)
+  START cave source=(8,1) pos=(135,165,18)
+  START cave source=(8,1) pos=(143,137,27)
+  START cave source=(8,1) pos=(142,44,21)
+  START cave source=(8,1) pos=(128,-44,29)
+  START cave source=(8,1) pos=(140,66,22)
+  START cave source=(8,1) pos=(135,-14,18)
+  START cave source=(8,1) pos=(142,110,30)
+  START cave source=(8,1) pos=(137,-31,22)
+  START cave source=(8,1) pos=(132,164,16)
+  START cave source=(8,1) pos=(137,171,16)
+  START cave_extra source=(8,5) cave_count=0 (no Y)
+  START canyon source=(8,5) pos=(139,52,90)
+  START cave_extra source=(8,6) cave_count=0 (no Y)
+  START cave source=(8,8) cave_count=0 (no Y)
+
+isStartChunk hits: cave=42 cave_extra=18 canyon=9 (total=69)
+isStart with cave_count=0: cave=20 cave_extra=6
+sampled start instances (caves with Y + canyons): 118
+start Y histogram (sampled instances):
+  y[-32,-16)    starts=10
+  y[-16,0)      starts=23
+  y[0,16)       starts=16
+  y[16,32)      starts=12
+  yelsewhere    starts=57
+  y[-32,0)      starts=33
+start Y 16-high bins:
+  y[-64,-48) n=2
+  y[-48,-32) n=10
+  y[-32,-16) n=10
+  y[-16,0) n=23
+  y[0,16) n=16
+  y[16,32) n=12
+  y[32,48) n=10
+  y[48,64) n=7
+  y[64,80) n=1
+  y[80,96) n=2
+  y[96,112) n=5
+  y[112,128) n=7
+  y[128,144) n=6
+  y[144,160) n=2
+  y[160,176) n=4
+  y[176,192) n=1
+start Y min=-54 max=177
+starts with Y in [-32,0): 33
+    cave_extra source=(-8,-6) pos=(-127,-12,-83)
+    cave_extra source=(-8,-6) pos=(-113,-10,-91)
+    cave_extra source=(-8,-5) pos=(-126,-4,-78)
+    cave_extra source=(-8,-5) pos=(-115,-1,-80)
+    cave source=(-5,2) pos=(-71,-25,36)
+    cave_extra source=(-4,-1) pos=(-58,-26,-3)
+    cave_extra source=(-4,-1) pos=(-53,-9,-13)
+    cave_extra source=(-4,-1) pos=(-60,-12,-9)
+    cave source=(-3,-8) pos=(-40,-10,-118)
+    cave_extra source=(-3,-8) pos=(-41,-5,-126)
+    cave_extra source=(-3,-8) pos=(-37,-19,-114)
+    cave_extra source=(-3,-8) pos=(-48,-1,-123)
+    cave source=(-2,-6) pos=(-30,-8,-92)
+    cave_extra source=(-2,-6) pos=(-24,-20,-84)
+    cave source=(-1,-8) pos=(-5,-6,-120)
+    cave source=(-1,-8) pos=(-14,-9,-113)
+    cave source=(-1,-8) pos=(-8,-7,-125)
+    cave_extra source=(0,2) pos=(8,-27,46)
+    cave_extra source=(0,2) pos=(10,-9,41)
+    cave_extra source=(0,2) pos=(5,-19,43)
+    cave_extra source=(0,5) pos=(15,-2,83)
+    cave_extra source=(0,5) pos=(12,-10,94)
+    cave_extra source=(0,5) pos=(8,-13,95)
+    cave_extra source=(0,5) pos=(11,-7,86)
+    cave_extra source=(0,5) pos=(8,-9,83)
+    cave_extra source=(2,6) pos=(46,-24,108)
+    cave source=(4,-6) pos=(69,-1,-86)
+    cave_extra source=(4,1) pos=(65,-11,23)
+    cave source=(5,-2) pos=(89,-25,-28)
+    cave source=(6,-3) pos=(104,-15,-45)
+    cave source=(8,-4) pos=(128,-25,-59)
+    cave source=(8,1) pos=(135,-14,18)
+    cave source=(8,1) pos=(137,-31,22)
+
+=== BEFORE doFill+surface (no carvers) ===
+  BEFORE chunk (0,0): air=72973 water=0 lava=0
+    y[-32,-16)    air=0      water=0
+    y[-16,0)      air=0      water=0
+    y[0,16)       air=2023   water=0
+    y[16,32)      air=4052   water=0
+    yelsewhere    air=66898  water=0
+    y[-32,0)      air=0      water=0
+  BEFORE chunk (0,1): air=72521 water=0 lava=0
+    y[-32,-16)    air=0      water=0
+    y[-16,0)      air=0      water=0
+    y[0,16)       air=2957   water=0
+    y[16,32)      air=4096   water=0
+    yelsewhere    air=65468  water=0
+    y[-32,0)      air=0      water=0
+
+=== AFTER apply_carvers_region ===
+  AFTER chunk (0,0): air=73322 water=0 lava=0
+    y[-32,-16)    air=0      water=0
+    y[-16,0)      air=0      water=0
+    y[0,16)       air=2023   water=0
+    y[16,32)      air=4052   water=0
+    yelsewhere    air=67247  water=0
+    y[-32,0)      air=0      water=0
+  AFTER chunk (0,1): air=73043 water=0 lava=0
+    y[-32,-16)    air=0      water=0
+    y[-16,0)      air=0      water=0
+    y[0,16)       air=2957   water=0
+    y[16,32)      air=4096   water=0
+    yelsewhere    air=65990  water=0
+    y[-32,0)      air=0      water=0
+
+=== BEFORE vs AFTER delta air/water ===
+  chunk (0,0): air 72973->73322 (d=349), water 0->0 (d=0)
+    y[-32,-16)    dair=0      dwater=0  after_air=0 after_water=0
+    y[-16,0)      dair=0      dwater=0  after_air=0 after_water=0
+    y[0,16)       dair=0      dwater=0  after_air=2023 after_water=0
+    y[16,32)      dair=0      dwater=0  after_air=4052 after_water=0
+    yelsewhere    dair=349    dwater=0  after_air=67247 after_water=0
+    y[-32,0)      dair=0
+  chunk (0,1): air 72521->73043 (d=522), water 0->0 (d=0)
+    y[-32,-16)    dair=0      dwater=0  after_air=0 after_water=0
+    y[-16,0)      dair=0      dwater=0  after_air=0 after_water=0
+    y[0,16)       dair=0      dwater=0  after_air=2957 after_water=0
+    y[16,32)      dair=0      dwater=0  after_air=4096 after_water=0
+    yelsewhere    dair=522    dwater=0  after_air=65990 after_water=0
+    y[-32,0)      dair=0
+
+=== CHANGED blocks after apply_carvers_region (ellipsoid-write proxy) ===
+  whole 3x3 region: changed=3743
+    dest air=3743 water=0 lava=0 other=0
+    y[-32,-16)    writes=580 air=580 water=0 lava=0 other=0
+    y[-16,0)      writes=47 air=47 water=0 lava=0 other=0
+    y[0,16)       writes=19 air=19 water=0 lava=0 other=0
+    y[16,32)      writes=0 air=0 water=0 lava=0 other=0
+    yelsewhere    writes=3097 air=3097 water=0 lava=0 other=0
+    y[-32,0)      writes=627
+    16-high bins (dest air/water/lava/other):
+      y[-64,-48) n=144 air=144 water=0 lava=0 other=0
+      y[-48,-32) n=2835 air=2835 water=0 lava=0 other=0
+      y[-32,-16) n=580 air=580 water=0 lava=0 other=0
+      y[-16,0) n=47 air=47 water=0 lava=0 other=0
+      y[0,16) n=19 air=19 water=0 lava=0 other=0
+      y[48,64) n=91 air=91 water=0 lava=0 other=0
+      y[64,80) n=27 air=27 water=0 lava=0 other=0
+    from: minecraft:deepslate=3610 minecraft:stone=133
+  chunk (0,0): changed=349
+    dest air=349 water=0 lava=0 other=0
+    y[-32,-16)    writes=0 air=0 water=0 lava=0 other=0
+    y[-16,0)      writes=0 air=0 water=0 lava=0 other=0
+    y[0,16)       writes=0 air=0 water=0 lava=0 other=0
+    y[16,32)      writes=0 air=0 water=0 lava=0 other=0
+    yelsewhere    writes=349 air=349 water=0 lava=0 other=0
+    y[-32,0)      writes=0
+    16-high bins (dest air/water/lava/other):
+      y[-48,-32) n=349 air=349 water=0 lava=0 other=0
+    from: minecraft:deepslate=349
+  chunk (0,1): changed=522
+    dest air=522 water=0 lava=0 other=0
+    y[-32,-16)    writes=0 air=0 water=0 lava=0 other=0
+    y[-16,0)      writes=0 air=0 water=0 lava=0 other=0
+    y[0,16)       writes=0 air=0 water=0 lava=0 other=0
+    y[16,32)      writes=0 air=0 water=0 lava=0 other=0
+    yelsewhere    writes=522 air=522 water=0 lava=0 other=0
+    y[-32,0)      writes=0
+    16-high bins (dest air/water/lava/other):
+      y[-48,-32) n=404 air=404 water=0 lava=0 other=0
+      y[48,64) n=91 air=91 water=0 lava=0 other=0
+      y[64,80) n=27 air=27 water=0 lava=0 other=0
+    from: minecraft:deepslate=404 minecraft:stone=118
+changed blocks in chunks (0,0)/(0,1) with y in [-32,0): 0
+
+=== CARVE_* atomics (9 targets in 3x3 region; STARTS counted per target) ===
+CARVE_STARTS=582
+CARVE_WRITES=3743
+CARVE_TARGET_WRITES=3625
+CARVE_ELLIPSOIDS=13359
+CARVE_ELLIPSOID_HIT=218
+CARVE_CAN_REACH_FAIL=1359
+CARVE_ROOM_CALLS=264
+CARVE_TUNNEL_STEPS=13095
+CARVE_EARLY_OUT=12088
+CARVE_EMPTY_RANGE=858

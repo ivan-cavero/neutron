@@ -1,7 +1,11 @@
-# Runs — execution history
+# Runs — archive
 
-> Every run is recorded here: objective, bar, tasks, evidence, outcome. Format: `run-NNN.md`.
-> **This file is the single source of truth for "how to run a run"** (AGENTS.md §6).
+> **20 Aug 2026:** this folder is **history**, not a launch checklist.
+> Do **not** open `run-NNN.md` to start worldgen work. Method: `AGENTS.md` v2.
+> Facts: `STATE.md`. Optional: drop a short evidence note here *after* a dump or a % move.
+>
+> Older runs (001–059) stay as a paper trail of false levers. Format below is
+> what those files used; it is not required for new work.
 
 ## Run template
 

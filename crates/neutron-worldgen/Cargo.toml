@@ -146,3 +146,9 @@ name = "noodle_check"
 
 [[example]]
 name = "raw_density"
+
+[[example]]
+name = "dofill_cells"
+
+[[example]]
+name = "carve_y_dump"
