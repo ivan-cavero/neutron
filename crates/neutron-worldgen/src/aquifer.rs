@@ -138,6 +138,28 @@ pub struct NoiseBasedAquifer<'a> {
 }
 
 impl<'a> NoiseBasedAquifer<'a> {
+    /// Build an aquifer for chunk `(cx, cz)` from a `WorldgenState`.
+    /// Shared by the density fill and the carvers (which must replicate
+    /// `WorldCarver.getCarveState` → `aquifer.computeSubstance(0.0)`).
+    pub fn for_chunk(st: &'a crate::worldgen::WorldgenState, cx: i32, cz: i32) -> Self {
+        NoiseBasedAquifer::create(
+            st.noises.noises(),
+            st.router.barrier.clone(),
+            st.router.fluid_level_floodedness.clone(),
+            st.router.fluid_level_spread.clone(),
+            st.router.lava.clone(),
+            st.router.erosion.clone(),
+            st.router.depth.clone(),
+            st.router.preliminary_surface_level.clone(),
+            st.aquifer_lo,
+            st.aquifer_hi,
+            cx * 16,
+            cz * 16,
+            st.min_y,
+            st.height,
+            GlobalFluidPicker::overworld(st.sea_level),
+        )
+    }
     const SURFACE_SAMPLING_OFFSETS: [(i32, i32); 13] = [
         (0, 0),
         (-2, -1),
@@ -192,12 +214,8 @@ impl<'a> NoiseBasedAquifer<'a> {
         let mut max_preliminary_surface_level = i32::MIN;
         for bz in (from_grid_z(min_grid_z, 0)..=from_grid_z(max_grid_z, 9)).step_by(4) {
             for bx in (from_grid_x(min_grid_x, 0)..=from_grid_x(max_grid_x, 9)).step_by(4) {
-                let v = preliminary_surface_level_at(
-                    env_noises,
-                    &preliminary_surface_level,
-                    bx,
-                    bz,
-                );
+                let v =
+                    preliminary_surface_level_at(env_noises, &preliminary_surface_level, bx, bz);
                 max_preliminary_surface_level = max_preliminary_surface_level.max(v);
             }
         }
@@ -455,12 +473,8 @@ impl<'a> NoiseBasedAquifer<'a> {
         if let Some(&v) = self.surface_cache.get(&(qx, qz)) {
             return v;
         }
-        let v = preliminary_surface_level_at(
-            self.env_noises,
-            &self.preliminary_surface_level,
-            qx,
-            qz,
-        );
+        let v =
+            preliminary_surface_level_at(self.env_noises, &self.preliminary_surface_level, qx, qz);
         self.surface_cache.insert((qx, qz), v);
         v
     }

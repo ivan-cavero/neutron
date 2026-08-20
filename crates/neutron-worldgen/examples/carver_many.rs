@@ -5,6 +5,8 @@ use neutron_worldgen::surface::BlockId;
 use neutron_worldgen::carvers::{apply_carvers_region, CARVE_WRITES};
 use std::sync::atomic::Ordering;
 
+use neutron_worldgen::worldgen::WorldgenState;
+use neutron_worldgen::ChunkGenerator;
 fn test_target(tcx: i32, tcz: i32) -> u32 {
     let mut region = RegionBuf::new(tcx, tcz, 0);
     for y in WORLD_BOTTOM..320 {
@@ -15,7 +17,9 @@ fn test_target(tcx: i32, tcz: i32) -> u32 {
         }
     }
     CARVE_WRITES.store(0, Ordering::Relaxed);
-    apply_carvers_region(&mut region, 12345);
+    let gen = ChunkGenerator::new(12345);
+    let st: &WorldgenState = &gen.state;
+    apply_carvers_region(&mut region, st);
     CARVE_WRITES.load(Ordering::Relaxed)
 }
 

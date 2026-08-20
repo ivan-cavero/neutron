@@ -58,7 +58,8 @@ pub fn decorate_region_origin_major(
             for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
                 for z in 0..16i32 {
                     for x in 0..16i32 {
-                        if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay {
+                        if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay
+                        {
                             clay += 1;
                         }
                     }
@@ -73,7 +74,8 @@ pub fn decorate_region_origin_major(
             for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
                 for z in 0..16i32 {
                     for x in 0..16i32 {
-                        if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay {
+                        if region.get(cx * 16 + x, y, cz * 16 + z) == crate::surface::BlockId::Clay
+                        {
                             clay += 1;
                         }
                     }
@@ -281,7 +283,7 @@ impl ChunkGenerator {
         }
 
         // Classic carvers (caves + canyon).
-        carvers::apply_carvers_region(&mut region, self.state.seed);
+        carvers::apply_carvers_region(&mut region, &self.state);
         // Structure pieces (mineshafts) are part of the CARVERS status — placed
         // once over the region before decoration, visible to every origin.
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
@@ -330,7 +332,7 @@ impl ChunkGenerator {
                 region.put_chunk(cx + dx, cz + dz, &blocks, &heightmap);
             }
         }
-        crate::carvers::apply_carvers_region(&mut region, self.state.seed);
+        crate::carvers::apply_carvers_region(&mut region, &self.state);
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
         crate::features::apply_underground_ores_region(&mut region, self.state.seed);
         region
@@ -443,6 +445,13 @@ impl ChunkGenerator {
                                     &mut marker_state,
                                 );
                                 let final_density = compute(&st.router.final_density, &mut env);
+                                if std::env::var("NEUTRON_TRACE_DENS").is_ok()
+                                    && pos_x == 2
+                                    && pos_y == 5
+                                    && pos_z == 26
+                                {
+                                    eprintln!("TRACE_DENS ({pos_x},{pos_y},{pos_z}) final={final_density:+.6}");
+                                }
 
                                 // Material rules: aquifer first (None = solid default),
                                 // then ore veinifier, else stone.

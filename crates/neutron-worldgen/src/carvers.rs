@@ -9,10 +9,12 @@
 //!
 //! Copyright (c) 2026 Neutron Contributors -- MIT License
 
+use crate::aquifer::NoiseBasedAquifer;
 use crate::generator::WORLD_BOTTOM;
 use crate::legacy_rng::LegacyRandom;
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;
+use crate::worldgen::WorldgenState;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::OnceLock;
 
@@ -95,10 +97,12 @@ struct CaveCfg {
 }
 
 /// Apply cave carvers for every chunk held in `region`.
-pub fn apply_carvers_region(region: &mut RegionBuf, level_seed: i64) {
+pub fn apply_carvers_region(region: &mut RegionBuf, st: &WorldgenState) {
     if !CARVERS_ENABLED {
         return;
     }
+
+    let level_seed = st.seed;
 
     // Biome carvers order (typical overworld biomes):
     // 0: cave, 1: cave_extra_underground, 2: canyon
@@ -120,13 +124,22 @@ pub fn apply_carvers_region(region: &mut RegionBuf, level_seed: i64) {
         for txl in 0..chunks {
             let target_cx = region.origin_x.div_euclid(16) + txl;
             let target_cz = region.origin_z.div_euclid(16) + tzl;
-            apply_carvers_for_target(region, level_seed, target_cx, target_cz, &cave_cfgs);
+            let mut aquifer = NoiseBasedAquifer::for_chunk(st, target_cx, target_cz);
+            apply_carvers_for_target(
+                region,
+                &mut aquifer,
+                level_seed,
+                target_cx,
+                target_cz,
+                &cave_cfgs,
+            );
         }
     }
 }
 
 fn apply_carvers_for_target(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     level_seed: i64,
     target_cx: i32,
     target_cz: i32,
@@ -149,7 +162,7 @@ fn apply_carvers_for_target(
                 }
                 CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
                 carve_from_chunk(
-                    &mut rng, region, source_cx, source_cz, target_cx, target_cz, cfg,
+                    &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz, cfg,
                 );
             }
             // Index 2: canyon (probability 0.01)
@@ -158,7 +171,9 @@ fn apply_carvers_for_target(
                 rng.set_large_feature_seed(level_seed.wrapping_add(2), source_cx, source_cz);
                 if rng.next_f32() <= 0.01 {
                     CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
-                    canyon_from_chunk(&mut rng, region, source_cx, source_cz, target_cx, target_cz);
+                    canyon_from_chunk(
+                        &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz,
+                    );
                 }
             }
         }
@@ -168,6 +183,7 @@ fn apply_carvers_for_target(
 fn carve_from_chunk(
     rng: &mut LegacyRandom,
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     source_cx: i32,
     source_cz: i32,
     target_cx: i32,
@@ -200,6 +216,7 @@ fn carve_from_chunk(
             CARVE_ROOM_CALLS.fetch_add(1, Ordering::Relaxed);
             create_room(
                 region,
+                aquifer,
                 target_cx,
                 target_cz,
                 x,
@@ -221,6 +238,7 @@ fn carve_from_chunk(
             let seed = rng.next_long();
             create_tunnel(
                 region,
+                aquifer,
                 target_cx,
                 target_cz,
                 seed,
@@ -234,7 +252,7 @@ fn carve_from_chunk(
                 pitch,
                 0,
                 branch_count,
-                1.0, // getYScale()
+                1.0,
                 floor_level as f64,
             );
         }
@@ -259,6 +277,7 @@ fn get_thickness(rng: &mut LegacyRandom) -> f32 {
 
 fn create_room(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     target_cx: i32,
     target_cz: i32,
     x: f64,
@@ -274,6 +293,7 @@ fn create_room(
     let vert = horiz * y_scale;
     carve_ellipsoid(
         region,
+        aquifer,
         target_cx,
         target_cz,
         x + 1.0,
@@ -287,6 +307,7 @@ fn create_room(
 
 fn create_tunnel(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     target_cx: i32,
     target_cz: i32,
     seed: i64,
@@ -347,6 +368,7 @@ fn create_tunnel(
             // fork two tunnels and return (no carve at fork step)
             create_tunnel(
                 region,
+                aquifer,
                 target_cx,
                 target_cz,
                 rng.next_long(),
@@ -356,7 +378,7 @@ fn create_tunnel(
                 horiz_mult,
                 vert_mult,
                 rng.next_f32() * 0.5 + 0.5,
-                yaw - 1.5707964, // HALF_PI
+                yaw - 1.5707964,
                 pitch / 3.0,
                 i,
                 branch_count,
@@ -365,6 +387,7 @@ fn create_tunnel(
             );
             create_tunnel(
                 region,
+                aquifer,
                 target_cx,
                 target_cz,
                 rng.next_long(),
@@ -401,6 +424,7 @@ fn create_tunnel(
         CARVE_TUNNEL_STEPS.fetch_add(1, Ordering::Relaxed);
         carve_ellipsoid(
             region,
+            aquifer,
             target_cx,
             target_cz,
             x,
@@ -441,6 +465,7 @@ fn can_reach(
 /// `WorldCarver.carveEllipsoid` restricted to `target` chunk local blocks.
 fn carve_ellipsoid(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     target_cx: i32,
     target_cz: i32,
     cx: f64,
@@ -513,15 +538,18 @@ fn carve_ellipsoid(
                     y -= 1;
                     continue;
                 }
-                // getCarveState: y <= lavaLevel → lava, else air
-                // (full aquifer.computeSubstance deferred; air matches density-phase solid check)
+                // getCarveState: y <= lavaLevel → lava; else the aquifer decides
+                // (WorldCarver.getCarveState → aquifer.computeSubstance(ctx, 0.0)).
+                // Vanilla: density-0 carve lets the aquifer fill water/air — this is
+                // why cave pools exist where the raw terrain density is solid.
                 if y <= LAVA_Y {
                     region.set(wx, y, wz, BlockId::Lava);
-                } else {
-                    region.set(wx, y, wz, BlockId::Air);
+                } else if let Some(b) = aquifer.compute_substance(wx, y, wz, 0.0) {
+                    // Null state (solid default, e.g. debug barrier off) → carve nothing.
+                    region.set(wx, y, wz, b);
+                    CARVE_WRITES.fetch_add(1, Ordering::Relaxed);
+                    CARVE_TARGET_WRITES.fetch_add(1, Ordering::Relaxed);
                 }
-                CARVE_WRITES.fetch_add(1, Ordering::Relaxed);
-                CARVE_TARGET_WRITES.fetch_add(1, Ordering::Relaxed);
                 y -= 1;
             }
         }
@@ -555,6 +583,7 @@ fn should_skip(xd: f64, yd: f64, zd: f64, floor_level: f64) -> bool {
 fn canyon_from_chunk(
     rng: &mut LegacyRandom,
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     source_cx: i32,
     source_cz: i32,
     target_cx: i32,
@@ -579,6 +608,7 @@ fn canyon_from_chunk(
     let seed = rng.next_long();
     do_canyon(
         region,
+        aquifer,
         target_cx,
         target_cz,
         seed,
@@ -604,6 +634,7 @@ fn sample_trapezoid_thickness(rng: &mut LegacyRandom) -> f32 {
 
 fn do_canyon(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     target_cx: i32,
     target_cz: i32,
     seed: i64,
@@ -657,6 +688,7 @@ fn do_canyon(
         // canyon shouldSkip uses widthFactors[y - minY - 1]
         carve_ellipsoid_canyon(
             region,
+            aquifer,
             target_cx,
             target_cz,
             x,
@@ -700,6 +732,7 @@ fn update_vertical_radius(
 
 fn carve_ellipsoid_canyon(
     region: &mut RegionBuf,
+    aquifer: &mut NoiseBasedAquifer<'_>,
     target_cx: i32,
     target_cz: i32,
     cx: f64,
@@ -760,10 +793,11 @@ fn carve_ellipsoid_canyon(
                 }
                 if y <= LAVA_Y {
                     region.set(wx, y, wz, BlockId::Lava);
-                } else {
-                    region.set(wx, y, wz, BlockId::Air);
+                } else if let Some(b) = aquifer.compute_substance(wx, y, wz, 0.0) {
+                    // getCarveState: density-0 lets the aquifer carve water/air.
+                    region.set(wx, y, wz, b);
+                    CARVE_WRITES.fetch_add(1, Ordering::Relaxed);
                 }
-                CARVE_WRITES.fetch_add(1, Ordering::Relaxed);
                 y -= 1;
             }
         }
