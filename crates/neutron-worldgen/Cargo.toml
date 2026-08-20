@@ -90,6 +90,20 @@ name = "ground_check"
 name = "pale_stream_probe"
 
 [[example]]
+name = "pale_idx_scan"
+
+[[example]]
+name = "pale_column_probe"
+
+[[example]]
+name = "pale_window_dump"
+
+[[example]]
+name = "pale_idx_score"
+
+
+
+[[example]]
 name = "dump_pale"
 
 [[example]]

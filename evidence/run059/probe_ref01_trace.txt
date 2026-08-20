@@ -1,0 +1,19 @@
+stripped center step-9 vegetal blocks: 1004
+seed=424242 chunk=(0,1) placed=pale_garden_vegetation index=13 dec=-8735610331508505054
+[trace] chunk=(0,16) placed=minecraft:pale_garden_vegetation count=16
+[trace]   draw 1 ACCEPT x=10 z=31 y=93 tree_feature=true
+[trace]   draw 2 ACCEPT x=7 z=16 y=96 tree_feature=true
+[trace]   draw 3 ACCEPT x=3 z=16 y=99 tree_feature=true
+[trace]   draw 4 ACCEPT x=11 z=30 y=102 tree_feature=true
+[trace]   draw 5 ACCEPT x=6 z=26 y=95 tree_feature=true
+[trace]   draw 6 ACCEPT x=9 z=28 y=101 tree_feature=true
+[trace]   draw 7 ACCEPT x=11 z=19 y=103 tree_feature=true
+[trace]   draw 8 ACCEPT x=8 z=28 y=102 tree_feature=true
+[trace]   draw 9 ACCEPT x=2 z=20 y=96 tree_feature=true
+[trace]   draw 10 ACCEPT x=13 z=16 y=95 tree_feature=true
+[trace]   draw 11 ACCEPT x=11 z=27 y=93 tree_feature=true
+[trace]   draw 12 ACCEPT x=0 z=24 y=96 tree_feature=true
+[trace]   draw 13 ACCEPT x=8 z=21 y=95 tree_feature=true
+[trace]   draw 14 ACCEPT x=1 z=18 y=99 tree_feature=true
+[trace]   draw 15 ACCEPT x=2 z=30 y=96 tree_feature=true
+[trace]   draw 16 ACCEPT x=12 z=29 y=101 tree_feature=true

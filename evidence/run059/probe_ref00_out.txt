@@ -1,0 +1,74 @@
+vanilla trunks: 37
+probe trunks: 35 (matched 0)
+  probe (0,0) extra
+  probe (1,0) extra
+  probe (2,0) extra
+  probe (3,0) extra
+  probe (0,1) extra
+  probe (1,1) extra
+  probe (2,1) extra
+  probe (3,2) extra
+  probe (11,2) extra
+  probe (8,3) extra
+  probe (9,3) extra
+  probe (10,3) extra
+  probe (9,4) extra
+  probe (10,4) extra
+  probe (11,4) extra
+  probe (4,5) extra
+  probe (3,6) extra
+  probe (4,6) extra
+  probe (5,6) extra
+  probe (3,7) extra
+  probe (4,7) extra
+  probe (1,8) extra
+  probe (2,8) extra
+  probe (3,8) extra
+  probe (0,9) extra
+  probe (1,9) extra
+  probe (2,9) extra
+  probe (0,10) extra
+  probe (1,10) extra
+  probe (2,11) extra
+  probe (12,14) extra
+  probe (14,14) extra
+  probe (12,15) extra
+  probe (13,15) extra
+  probe (14,15) extra
+  MISSING vanilla trunk (7,106,0)
+  MISSING vanilla trunk (8,103,0)
+  MISSING vanilla trunk (9,103,0)
+  MISSING vanilla trunk (10,106,0)
+  MISSING vanilla trunk (7,108,1)
+  MISSING vanilla trunk (8,108,1)
+  MISSING vanilla trunk (0,107,3)
+  MISSING vanilla trunk (0,106,4)
+  MISSING vanilla trunk (6,105,5)
+  MISSING vanilla trunk (7,105,5)
+  MISSING vanilla trunk (8,105,5)
+  MISSING vanilla trunk (6,106,6)
+  MISSING vanilla trunk (7,102,6)
+  MISSING vanilla trunk (8,102,6)
+  MISSING vanilla trunk (9,105,6)
+  MISSING vanilla trunk (7,102,7)
+  MISSING vanilla trunk (8,102,7)
+  MISSING vanilla trunk (9,105,7)
+  MISSING vanilla trunk (14,98,7)
+  MISSING vanilla trunk (15,98,7)
+  MISSING vanilla trunk (6,106,8)
+  MISSING vanilla trunk (9,107,8)
+  MISSING vanilla trunk (14,96,8)
+  MISSING vanilla trunk (15,95,8)
+  MISSING vanilla trunk (14,98,9)
+  MISSING vanilla trunk (15,95,9)
+  MISSING vanilla trunk (15,99,10)
+  MISSING vanilla trunk (1,106,11)
+  MISSING vanilla trunk (15,100,11)
+  MISSING vanilla trunk (2,102,12)
+  MISSING vanilla trunk (3,102,12)
+  MISSING vanilla trunk (1,108,13)
+  MISSING vanilla trunk (2,102,13)
+  MISSING vanilla trunk (3,102,13)
+  MISSING vanilla trunk (4,108,13)
+  MISSING vanilla trunk (2,106,14)
+  MISSING vanilla trunk (3,107,14)
