@@ -1,0 +1,165 @@
+=== run-059 T1: pale_stream_probe BEFORE (vanilla terrain, strip center, idx13) ===
+vanilla trunks: 37
+probe trunks: 35 (matched 0)
+  probe (0,0) extra
+  probe (1,0) extra
+  probe (2,0) extra
+  probe (3,0) extra
+  probe (0,1) extra
+  probe (1,1) extra
+  probe (2,1) extra
+  probe (3,2) extra
+  probe (11,2) extra
+  probe (8,3) extra
+  probe (9,3) extra
+  probe (10,3) extra
+  probe (9,4) extra
+  probe (10,4) extra
+  probe (11,4) extra
+  probe (4,5) extra
+  probe (3,6) extra
+  probe (4,6) extra
+  probe (5,6) extra
+  probe (3,7) extra
+  probe (4,7) extra
+  probe (1,8) extra
+  probe (2,8) extra
+  probe (3,8) extra
+  probe (0,9) extra
+  probe (1,9) extra
+  probe (2,9) extra
+  probe (0,10) extra
+  probe (1,10) extra
+  probe (2,11) extra
+  probe (12,14) extra
+  probe (14,14) extra
+  probe (12,15) extra
+  probe (13,15) extra
+  probe (14,15) extra
+  MISSING vanilla trunk (7,106,0)
+  MISSING vanilla trunk (8,103,0)
+  MISSING vanilla trunk (9,103,0)
+  MISSING vanilla trunk (10,106,0)
+  MISSING vanilla trunk (7,108,1)
+  MISSING vanilla trunk (8,108,1)
+  MISSING vanilla trunk (0,107,3)
+  MISSING vanilla trunk (0,106,4)
+  MISSING vanilla trunk (6,105,5)
+  MISSING vanilla trunk (7,105,5)
+  MISSING vanilla trunk (8,105,5)
+  MISSING vanilla trunk (6,106,6)
+  MISSING vanilla trunk (7,102,6)
+  MISSING vanilla trunk (8,102,6)
+  MISSING vanilla trunk (9,105,6)
+  MISSING vanilla trunk (7,102,7)
+  MISSING vanilla trunk (8,102,7)
+  MISSING vanilla trunk (9,105,7)
+  MISSING vanilla trunk (14,98,7)
+  MISSING vanilla trunk (15,98,7)
+  MISSING vanilla trunk (6,106,8)
+  MISSING vanilla trunk (9,107,8)
+  MISSING vanilla trunk (14,96,8)
+  MISSING vanilla trunk (15,95,8)
+  MISSING vanilla trunk (14,98,9)
+  MISSING vanilla trunk (15,95,9)
+  MISSING vanilla trunk (15,99,10)
+  MISSING vanilla trunk (1,106,11)
+  MISSING vanilla trunk (15,100,11)
+  MISSING vanilla trunk (2,102,12)
+  MISSING vanilla trunk (3,102,12)
+  MISSING vanilla trunk (1,108,13)
+  MISSING vanilla trunk (2,102,13)
+  MISSING vanilla trunk (3,102,13)
+  MISSING vanilla trunk (4,108,13)
+  MISSING vanilla trunk (2,106,14)
+  MISSING vanilla trunk (3,107,14)
+
+=== draw trace (16/16 ACCEPT) ===
+stripped center step-9 vegetal blocks: 1567
+seed=424242 chunk=(0,0) placed=pale_garden_vegetation index=13 dec=424242
+[trace] chunk=(0,0) placed=minecraft:pale_garden_vegetation count=16
+[trace]   draw 1 ACCEPT x=3 z=6 y=104 tree_feature=true
+[trace]   draw 2 ACCEPT x=12 z=15 y=95 tree_feature=true
+[trace]   draw 3 ACCEPT x=11 z=7 y=98 tree_feature=true
+[trace]   draw 4 ACCEPT x=4 z=7 y=114 tree_feature=true
+[trace]   draw 5 ACCEPT x=1 z=0 y=105 tree_feature=true
+[trace]   draw 6 ACCEPT x=5 z=6 y=114 tree_feature=true
+[trace]   draw 7 ACCEPT x=6 z=4 y=113 tree_feature=true
+[trace]   draw 8 ACCEPT x=11 z=11 y=96 tree_feature=true
+[trace]   draw 9 ACCEPT x=0 z=9 y=104 tree_feature=true
+[trace]   draw 10 ACCEPT x=11 z=4 y=99 tree_feature=true
+[trace]   draw 11 ACCEPT x=4 z=1 y=111 tree_feature=true
+[trace]   draw 12 ACCEPT x=6 z=0 y=104 tree_feature=true
+[trace]   draw 13 ACCEPT x=0 z=5 y=113 tree_feature=true
+[trace]   draw 14 ACCEPT x=12 z=3 y=98 tree_feature=true
+[trace]   draw 15 ACCEPT x=3 z=8 y=114 tree_feature=true
+[trace]   draw 16 ACCEPT x=9 z=3 y=102 tree_feature=true
+
+=== idx score scan (pure-RNG draw fit vs vanilla trunks) ===
+vanilla trunk columns: 37
+idx= 17 scored_draws=9 base_hits=26
+idx= 78 scored_draws=6 base_hits=19
+idx= 10 scored_draws=6 base_hits=18
+idx= 11 scored_draws=6 base_hits=18
+idx= 88 scored_draws=6 base_hits=16
+idx=105 scored_draws=6 base_hits=16
+idx= 28 scored_draws=6 base_hits=14
+idx=  5 scored_draws=5 base_hits=18
+idx= 54 scored_draws=5 base_hits=16
+idx= 26 scored_draws=5 base_hits=15
+idx= 53 scored_draws=5 base_hits=15
+idx= 97 scored_draws=5 base_hits=14
+idx= 98 scored_draws=5 base_hits=13
+idx= 91 scored_draws=4 base_hits=16
+idx= 39 scored_draws=4 base_hits=15
+---
+idx= 66 scored_draws=0 base_hits=0
+idx= 75 scored_draws=0 base_hits=1
+idx= 41 scored_draws=0 base_hits=1
+idx= 16 scored_draws=0 base_hits=1
+idx= 27 scored_draws=0 base_hits=2
+catalog index = Some(13)
+
+=== idx scan full chain ===
+vanilla trunks: 37 columns
+idx=  0 probe_cols=32 matched= 0 vanilla_hit=0
+idx=  1 probe_cols=43 matched= 6 vanilla_hit=6
+idx=  2 probe_cols=48 matched= 9 vanilla_hit=9
+idx=  3 probe_cols=27 matched= 9 vanilla_hit=9
+idx=  4 probe_cols=39 matched= 7 vanilla_hit=7
+idx=  5 probe_cols=31 matched= 4 vanilla_hit=4
+idx=  6 probe_cols=43 matched= 5 vanilla_hit=5
+idx=  7 probe_cols=59 matched= 5 vanilla_hit=5
+idx=  8 probe_cols=55 matched= 9 vanilla_hit=9
+idx=  9 probe_cols=36 matched= 3 vanilla_hit=3
+idx= 10 probe_cols=44 matched= 7 vanilla_hit=7
+idx= 11 probe_cols=35 matched= 1 vanilla_hit=1
+idx= 12 probe_cols=39 matched= 3 vanilla_hit=3
+idx= 13 probe_cols=35 matched= 0 vanilla_hit=0
+idx= 14 probe_cols=29 matched= 7 vanilla_hit=7
+idx= 15 probe_cols=43 matched= 5 vanilla_hit=5
+idx= 16 probe_cols=32 matched= 9 vanilla_hit=9
+idx= 17 probe_cols=39 matched= 7 vanilla_hit=7
+idx= 18 probe_cols=46 matched= 8 vanilla_hit=8
+idx= 19 probe_cols=37 matched= 4 vanilla_hit=4
+idx= 20 probe_cols=43 matched=10 vanilla_hit=10
+idx= 21 probe_cols=38 matched= 3 vanilla_hit=3
+idx= 22 probe_cols=33 matched= 3 vanilla_hit=3
+idx= 23 probe_cols=20 matched= 2 vanilla_hit=2
+idx= 24 probe_cols=29 matched=10 vanilla_hit=10
+idx= 25 probe_cols=20 matched= 1 vanilla_hit=1
+idx= 26 probe_cols=46 matched= 7 vanilla_hit=7
+idx= 27 probe_cols=43 matched=10 vanilla_hit=10
+idx= 28 probe_cols=48 matched= 8 vanilla_hit=8
+idx= 29 probe_cols=37 matched= 4 vanilla_hit=4
+idx= 30 probe_cols=31 matched= 5 vanilla_hit=5
+idx= 31 probe_cols=26 matched= 0 vanilla_hit=0
+idx= 32 probe_cols=24 matched= 1 vanilla_hit=1
+idx= 33 probe_cols=23 matched= 3 vanilla_hit=3
+idx= 34 probe_cols=50 matched= 8 vanilla_hit=8
+idx= 35 probe_cols=44 matched= 8 vanilla_hit=8
+idx= 36 probe_cols=37 matched=12 vanilla_hit=12
+idx= 37 probe_cols=32 matched= 7 vanilla_hit=7
+idx= 38 probe_cols=43 matched=10 vanilla_hit=10
+idx= 39 probe_cols=38 matched= 3 vanilla_hit=3
+catalog index = Some(13)

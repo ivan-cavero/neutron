@@ -1,0 +1,42 @@
+vanilla trunks: 37 columns
+idx=  0 probe_cols=32 matched= 0 vanilla_hit=0
+idx=  1 probe_cols=43 matched= 6 vanilla_hit=6
+idx=  2 probe_cols=48 matched= 9 vanilla_hit=9
+idx=  3 probe_cols=27 matched= 9 vanilla_hit=9
+idx=  4 probe_cols=39 matched= 7 vanilla_hit=7
+idx=  5 probe_cols=31 matched= 4 vanilla_hit=4
+idx=  6 probe_cols=43 matched= 5 vanilla_hit=5
+idx=  7 probe_cols=59 matched= 5 vanilla_hit=5
+idx=  8 probe_cols=55 matched= 9 vanilla_hit=9
+idx=  9 probe_cols=36 matched= 3 vanilla_hit=3
+idx= 10 probe_cols=44 matched= 7 vanilla_hit=7
+idx= 11 probe_cols=35 matched= 1 vanilla_hit=1
+idx= 12 probe_cols=39 matched= 3 vanilla_hit=3
+idx= 13 probe_cols=35 matched= 0 vanilla_hit=0
+idx= 14 probe_cols=29 matched= 7 vanilla_hit=7
+idx= 15 probe_cols=43 matched= 5 vanilla_hit=5
+idx= 16 probe_cols=32 matched= 9 vanilla_hit=9
+idx= 17 probe_cols=39 matched= 7 vanilla_hit=7
+idx= 18 probe_cols=46 matched= 8 vanilla_hit=8
+idx= 19 probe_cols=37 matched= 4 vanilla_hit=4
+idx= 20 probe_cols=43 matched=10 vanilla_hit=10
+idx= 21 probe_cols=38 matched= 3 vanilla_hit=3
+idx= 22 probe_cols=33 matched= 3 vanilla_hit=3
+idx= 23 probe_cols=20 matched= 2 vanilla_hit=2
+idx= 24 probe_cols=29 matched=10 vanilla_hit=10
+idx= 25 probe_cols=20 matched= 1 vanilla_hit=1
+idx= 26 probe_cols=46 matched= 7 vanilla_hit=7
+idx= 27 probe_cols=43 matched=10 vanilla_hit=10
+idx= 28 probe_cols=48 matched= 8 vanilla_hit=8
+idx= 29 probe_cols=37 matched= 4 vanilla_hit=4
+idx= 30 probe_cols=31 matched= 5 vanilla_hit=5
+idx= 31 probe_cols=26 matched= 0 vanilla_hit=0
+idx= 32 probe_cols=24 matched= 1 vanilla_hit=1
+idx= 33 probe_cols=23 matched= 3 vanilla_hit=3
+idx= 34 probe_cols=50 matched= 8 vanilla_hit=8
+idx= 35 probe_cols=44 matched= 8 vanilla_hit=8
+idx= 36 probe_cols=37 matched=12 vanilla_hit=12
+idx= 37 probe_cols=32 matched= 7 vanilla_hit=7
+idx= 38 probe_cols=43 matched=10 vanilla_hit=10
+idx= 39 probe_cols=38 matched= 3 vanilla_hit=3
+catalog index = Some(13)

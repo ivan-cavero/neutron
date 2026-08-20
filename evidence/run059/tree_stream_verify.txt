@@ -1,0 +1,24 @@
+=== run-059 T1: pale_oak stream verification (rust vs vanilla java 26.2 jar) ===
+Chunk (0,0), seed 424242, feature index 13 (pale_garden_vegetation), step 9.
+
+Java ProbeDraws (8-bit=30, 16 in_square):
+  draw1 (3,6) draw2 (10,8) draw3 (5,8) draw4 (13,0) draw5 (9,11) draw6 (11,3)
+  draw7 (5,14) draw8 (7,2) draw9 (2,10) draw10 (4,0) draw11 (15,11) draw12 (12,2)
+  draw13 (7,6) draw14 (4,4) draw15 (9,4) draw16 (4,7)
+
+Rust FeatureRandom trace (NEUTRON_RNG_TRACE=1) first bits:
+bits1-4: setDecorationSeed next(32) x4
+bits5-6: nextInt(16)=3,6  (in_square draw1)  <-- identical to Java
+bits7-8: nextFloat 0.6284853/0.50684786 (random_selector 0.1/0.9)  <-- identical
+bits9-10: nextInt(3)=2, nextInt(2)=1 (straight-height 9)  <-- identical
+bits11..28: dark_oak trunk RNG (dir/lean/steps/corners) all match Java ProbePaleFlow PALE_TRACE 1:1.
+=> stream plumbing + index 13 CORRECT vs 26.2 jar.
+
+TreeFeature acceptance on vanilla FINAL terrain (Java ProbePaleFlow, tmp-vanilla-terrain-3x3.txt):
+draw1 (3,6) below=dirt surv=true PLACED ok=true (47 logs/113 leaves)   <-- vanilla code ACCEPTS
+   but the REF world has NO trunk near (3,6) -> ref's own pre-deco draw-time terrain differed.
+draw2 (10,8) PLACED; draw3 (8,3) ok=false (4 bits); ... draw13 (14,0) PLACED; etc.
+=> acceptance is terrain-coupled; the ref's pre-deco ground at (3,6) was not SUPPORTS_VEGETATION.
+
+Neutron terrain at (3,6) 101-103 = dirt -> accepts draw1 -> 8-log trunk y104-112.
+Vanilla ref final at (3,6): 101-102 dirt, 103 pale_moss_block(hairline) 104 short_grass, NO trunk.

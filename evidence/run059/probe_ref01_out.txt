@@ -1,0 +1,60 @@
+vanilla trunks: 35
+probe trunks: 29 (matched 6)
+  probe (7,16) extra
+  probe (8,16) extra
+  probe (9,16) extra
+  probe (6,17) extra
+  probe (7,17) extra
+  probe (8,17) extra
+  probe (9,17) extra
+  probe (8,18) extra
+  probe (1,23) extra
+  probe (0,24) extra
+  probe (1,24) extra
+  probe (0,25) extra
+  probe (1,25) extra
+  probe (5,25) extra
+  probe (6,25) extra
+  probe (7,25) extra
+  probe (8,25) extra
+  probe (5,26) extra
+  probe (6,26) extra
+  probe (7,26) extra
+  probe (8,26) extra
+  probe (6,27) extra
+  probe (7,27) extra
+  probe (10,30) MATCH
+  probe (11,30) MATCH
+  probe (9,31) MATCH
+  probe (10,31) MATCH
+  probe (11,31) MATCH
+  probe (12,31) MATCH
+  MISSING vanilla trunk (9,98,19)
+  MISSING vanilla trunk (10,95,20)
+  MISSING vanilla trunk (11,95,20)
+  MISSING vanilla trunk (4,102,21)
+  MISSING vanilla trunk (5,101,21)
+  MISSING vanilla trunk (6,96,21)
+  MISSING vanilla trunk (7,96,21)
+  MISSING vanilla trunk (9,98,21)
+  MISSING vanilla trunk (10,95,21)
+  MISSING vanilla trunk (11,95,21)
+  MISSING vanilla trunk (12,98,21)
+  MISSING vanilla trunk (4,102,22)
+  MISSING vanilla trunk (5,101,22)
+  MISSING vanilla trunk (6,96,22)
+  MISSING vanilla trunk (7,96,22)
+  MISSING vanilla trunk (10,100,22)
+  MISSING vanilla trunk (11,101,22)
+  MISSING vanilla trunk (7,100,23)
+  MISSING vanilla trunk (10,102,23)
+  MISSING vanilla trunk (11,102,23)
+  MISSING vanilla trunk (3,101,27)
+  MISSING vanilla trunk (1,102,28)
+  MISSING vanilla trunk (2,96,28)
+  MISSING vanilla trunk (3,96,28)
+  MISSING vanilla trunk (4,101,28)
+  MISSING vanilla trunk (1,102,29)
+  MISSING vanilla trunk (2,96,29)
+  MISSING vanilla trunk (3,96,29)
+  MISSING vanilla trunk (4,101,29)

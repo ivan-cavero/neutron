@@ -81,7 +81,11 @@ impl FeatureRandom {
     /// `WorldgenRandom.next(bits)` wrapping Xoroshiro: `xoroshiro.nextLong() >>> (64-bits)`.
     pub fn next_bits(&mut self, bits: u32) -> i32 {
         self.draw_count = self.draw_count.wrapping_add(1);
-        (self.rng.next_u64() >> (64 - bits)) as u32 as i32
+        let v = (self.rng.next_u64() >> (64 - bits)) as u32 as i32;
+        if std::env::var("NEUTRON_RNG_TRACE").is_ok() {
+            eprintln!("RNG next({bits})={v} bits={}", self.draw_count);
+        }
+        v
     }
 
     /// `BitRandomSource.nextFloat()` = `next(24) * 2^-24`.
