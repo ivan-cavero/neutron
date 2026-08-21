@@ -131,6 +131,9 @@ pub enum BlockId {
     MediumAmethystBud = 133,
     LargeAmethystBud = 134,
     AmethystCluster = 135,
+    SmallDripleaf = 136,
+    BigDripleaf = 137,
+    BigDripleafStem = 138,
 }
 
 impl BlockId {
@@ -259,6 +262,9 @@ impl BlockId {
             133 => Some(Self::MediumAmethystBud),
             134 => Some(Self::LargeAmethystBud),
             135 => Some(Self::AmethystCluster),
+            136 => Some(Self::SmallDripleaf),
+            137 => Some(Self::BigDripleaf),
+            138 => Some(Self::BigDripleafStem),
             _ => None,
         }
     }
@@ -393,6 +399,9 @@ impl BlockId {
             Self::MediumAmethystBud => "minecraft:medium_amethyst_bud",
             Self::LargeAmethystBud => "minecraft:large_amethyst_bud",
             Self::AmethystCluster => "minecraft:amethyst_cluster",
+            Self::SmallDripleaf => "minecraft:small_dripleaf",
+            Self::BigDripleaf => "minecraft:big_dripleaf",
+            Self::BigDripleafStem => "minecraft:big_dripleaf_stem",
         }
     }
 
@@ -519,6 +528,9 @@ impl BlockId {
             "medium_amethyst_bud" => Some(Self::MediumAmethystBud),
             "large_amethyst_bud" => Some(Self::LargeAmethystBud),
             "amethyst_cluster" => Some(Self::AmethystCluster),
+            "small_dripleaf" => Some(Self::SmallDripleaf),
+            "big_dripleaf" => Some(Self::BigDripleaf),
+            "big_dripleaf_stem" => Some(Self::BigDripleafStem),
             // Infested variants are visually identical to their host block.
             "infested_stone" => Some(Self::Stone),
             "infested_cobblestone" => Some(Self::Cobblestone),
@@ -650,6 +662,9 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::MediumAmethystBud => "minecraft:medium_amethyst_bud",
         BlockId::LargeAmethystBud => "minecraft:large_amethyst_bud",
         BlockId::AmethystCluster => "minecraft:amethyst_cluster",
+        BlockId::SmallDripleaf => "minecraft:small_dripleaf",
+        BlockId::BigDripleaf => "minecraft:big_dripleaf",
+        BlockId::BigDripleafStem => "minecraft:big_dripleaf_stem",
     }
 }
 

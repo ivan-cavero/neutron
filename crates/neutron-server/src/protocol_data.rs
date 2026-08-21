@@ -113,6 +113,9 @@ pub fn block_state_id(internal: u16) -> i32 {
         116 => 15062, // kelp
         117 => 15088, // kelp_plant
         118 => 3368,  // mossy_cobblestone
+        136 => 30399, // small_dripleaf (default facing=north,half=lower,waterlogged=false)
+        137 => 30357, // big_dripleaf (default facing=north,tilt=none,waterlogged=false)
+        138 => 30389, // big_dripleaf_stem (default facing=north,waterlogged=false)
         _ => 1,       // unknown -> stone
     }
 }

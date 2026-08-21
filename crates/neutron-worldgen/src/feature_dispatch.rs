@@ -710,6 +710,13 @@ pub(crate) fn is_solid_block(b: BlockId) -> bool {
     blocks_motion(b)
 }
 
+/// `SmallDripleafBlock.mayPlaceOn`: `#supports_small_dripleaf` (clay, moss)
+/// or water source at the plant cell + `VegetationBlock.mayPlaceOn` (dirt).
+fn small_dripleaf_may_place_on(below: BlockId, at: BlockId) -> bool {
+    matches!(below, BlockId::Clay | BlockId::MossBlock)
+        || (at == BlockId::Water && supports_vegetation(below))
+}
+
 /// Membership in a block tag (subset used by lush/pale placement predicates).
 pub(crate) fn is_in_tag(b: BlockId, tag: &str) -> bool {
     let t = tag.strip_prefix("#minecraft:").unwrap_or(tag);
@@ -807,9 +814,22 @@ pub(crate) fn dispatch_configured(
     let ty = cfg["type"].as_str().unwrap_or("");
     match ty {
         "minecraft:simple_block" => {
+            // SimpleBlockFeature.place: canSurvive then setBlock — not an air
+            // check. Waterlogged dripleaf replaces water. DoublePlantBlock
+            // (small dripleaf) also needs empty above, then placeAt both halves.
             if let Some(block) = block_from_to_place(rng, &cfg["config"]["to_place"]) {
-                if region.get(x, y, z) == BlockId::Air {
-                    region.set(x, y, z, block);
+                let cur = region.get(x, y, z);
+                if matches!(cur, BlockId::Air | BlockId::Water) {
+                    if block == BlockId::SmallDripleaf {
+                        if region.get(x, y + 1, z) == BlockId::Air
+                            && small_dripleaf_may_place_on(region.get(x, y - 1, z), cur)
+                        {
+                            region.set(x, y, z, block);
+                            region.set(x, y + 1, z, block);
+                        }
+                    } else {
+                        region.set(x, y, z, block);
+                    }
                 }
             }
         }
@@ -1517,7 +1537,10 @@ pub(crate) fn place_vegetation_patch(
             if extra_bottom > 0.0 && rng.next_f32() < extra_bottom {
                 depth += 1;
             }
-            // placeGround: replace replaceable blocks with ground_state.
+            // VegetationPatchFeature.placeGround: same-block skips set+move.
+            // Vanilla returns true when the depth loop completes (already-ground
+            // columns still join the surface set); we insert only on a real
+            // place so extra Neutron clay does not extra-draw dripleaf RNG.
             let (gx0, gy0, gz0) = (bx, by, bz);
             let (mut gx, mut gy, mut gz) = (bx, by, bz);
             let mut placed_any = false;
@@ -1563,12 +1586,17 @@ pub(crate) fn place_vegetation_patch(
         surface_pts = interior;
     }
 
-    // distributeVegetation
+    // distributeVegetation. Dry: place opposite of inwards (floor → above).
+    // WaterloggedVegetationPatchFeature.placeVegetation calls
+    // super.placeVegetation(pos.below()) so the +up offset lands ON the water
+    // cell (then vanilla waterlogs the placed block).
     for (sx, sy, sz) in surface_pts.iter() {
         if veg_chance > 0.0 && rng.next_f32() < veg_chance {
-            let vx = sx + out_dx;
-            let vy = sy + out_dy;
-            let vz = sz + out_dz;
+            let (vx, vy, vz) = if waterlogged {
+                (sx, sy, sz)
+            } else {
+                (sx + out_dx, sy + out_dy, sz + out_dz)
+            };
             place_feature_ref(rng, region, state, vx, vy, vz, &veg_feature, gen_step);
         }
     }
@@ -1763,6 +1791,9 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::HangingRoots
             | BlockId::Azalea
             | BlockId::FloweringAzalea
+            | BlockId::SmallDripleaf
+            | BlockId::BigDripleaf
+            | BlockId::BigDripleafStem
     )
 }
 
