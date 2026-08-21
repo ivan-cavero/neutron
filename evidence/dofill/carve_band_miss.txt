@@ -1,0 +1,121 @@
+seed=424242  target chunks (0,0) and (0,1)  band y[-16,16)
+question: why CARVE_BAND cell=write=none=0 while vanilla ref (0,0) y[-16,-1] has 151 cave_air
+sources: ProbeCarveStartY (jar UniformHeight.sample + createTunnel/doCanyon Mth) vs carve_path.rs vs carvers.rs
+NOT a start-Y bug. carve_y_dump.rs start list after the first instance in a source chunk is a DUMP artifact (does not consume horiz/vert/floor/tunnels RNG). Production carve_from_chunk and carve_path.rs do.
+
+================================================================
+1. UniformHeight.sample vs sample_y  (MATCH)
+================================================================
+Vanilla: CaveWorldCarver.carve → cfg.y.sample(rng, WorldGenerationContext minY=-64 height=384)
+  UniformHeight: minInclusive.resolveY .. maxInclusive.resolveY inclusive
+  cave: above_bottom 8 .. absolute 180  →  [-56, 180]
+  cave_extra: above_bottom 8 .. absolute 47 → [-56, 47]
+  canyon: absolute 10 .. 67
+  Mth.randomBetweenInclusive(rng, min, max) = min + nextInt(max-min+1)
+
+Neutron: carvers.rs sample_y (line 266)  y_min + rng.next_int(y_max - y_min + 1)
+  same bounds (WORLD_BOTTOM+8, 180) / (WORLD_BOTTOM+8, 47) / (10, 67)
+
+isStartChunk hits: cave=42 cave_extra=18 canyon=9 (total=69)  BOTH
+isStart cave_count=0: cave=20 cave_extra=6  BOTH
+sampled start instances (Y + canyons): 118  BOTH
+start Y min/max: vanilla -56..177  neutron_carve_path same positions (see table)
+starts Y in [-32,0): 29  BOTH
+
+================================================================
+2. Start positions that can reach (0,0)/(0,1)  (APPLY_RANGE=8, cx=-8..8 cz=-8..9)
+   First instance in a source chunk always matched even in carve_y_dump.
+   Full instance list matches carve_path <-> ProbeCarveStartY.
+================================================================
+kind        source     vanilla pos           neutron carve_path      match
+cave_extra  (0,-1)     (5,-43,-13)           (5,-43,-13)             Y
+cave_extra  (0,-1)     (10,-52,-4)           (10,-52,-4)             Y
+cave_extra  (0,2)      (8,-27,46)            (8,-27,46)              Y
+cave_extra  (0,2)      (10,-9,41)            (10,-9,41)              Y
+cave_extra  (0,2)      (10,-6,44)            (10,-6,44)              Y
+cave_extra  (0,2)      (4,-38,40)            (4,-38,40)              Y
+cave_extra  (0,2)      (5,-19,44)            (5,-19,44)              Y
+cave_extra  (0,2)      (9,26,42)             (9,26,42)               Y
+cave_extra  (0,2)      (1,4,37)              (1,4,37)                Y
+cave_extra  (0,5)      (15,-2,83)            (15,-2,83)              Y
+canyon      (-2,0)     (-24,22,0)            (-24,22,0)              Y
+cave        (0,0)      (not a start chunk)   (not a start chunk)
+
+No cave/canyon start is inside chunk (0,0). Nearest in-band-Y starts are cave_extra (0,2).
+
+================================================================
+3. WorldCarver.canReach vs can_reach  (MATCH)
+================================================================
+Vanilla WorldCarver.canReach(ChunkPos, x, z, branchIndex, branchCount, thickness):
+  mid = (cx*16+8, cz*16+8)
+  remaining = (double)(branchCount - branchIndex)
+  max = (double)(thickness + 2.0f + 16.0f)
+  return dx*dx + dz*dz - remaining*remaining <= max*max
+
+Neutron carvers.rs can_reach line 449: same formula (dcmpg <= ).
+
+This is NOT why the band is empty: geometric band00_steps=0 even if can_reach is ignored
+(carve_path band = worm CENTER in target chunk AND y in [-16,16); post_abort_band=0).
+
+================================================================
+4. Worm path vs ellipsoid write into the band
+   vanilla ProbeCarveStartY.note: band = ellipsoid early-out overlap AND Y near [-16,16)
+     (does NOT abort on canReach; so band is a SUPERSET of real carve steps)
+   neutron carve_path:
+     bandNN  = center in chunk (N,N) and y in [-16,16)  [geometric, ignore abort]
+     reachNN = can_reach alive, NOT ellipsoid early-out, Y-loop overlaps [-16,16)
+     writeNN = reach AND local x/z range non-empty
+               (WorldCarver.carveEllipsoid minLx<=maxLx && minLz<=maxLz)
+               → this is when CARVE_BAND_CELL could increment
+================================================================
+worm (near band)                         van band00/01  van write00/01  neu reach00/01  neu write00/01  neu band00/01
+cave_extra (0,-1) (5,-43,-13)            2 / 0          0 / 0           2 / 0           0 / 0           0 / 0
+cave_extra (0,2)  (10,-9,41)             0 / 1          0 / 0           0 / 1           0 / 0           0 / 0
+cave_extra (0,2)  (4,-38,40)             0 / 0 *in00=9   0 / 0           0 / 0 (in00=12) 0 / 0           0 / 0
+cave_extra (0,2)  (9,26,42)              5 / 5          0 / 0           0 / 0 **        0 / 0           0 / 0
+cave_extra (0,2)  (1,4,37)               0 / 11         0 / 0           0 / 11          0 / 0           0 / 0
+cave_extra (0,5)  (15,-2,83)             0 / 15         0 / 0           0 / 13 **       0 / 0           0 / 0
+canyon     (2,7)  (43,60,115)            0 / 0 (in01=9) 0 / 0           0 / 0           0 / 0           0 / 0
+
+* in00/in01 = center in chunk at ANY Y (here y~-38, below the band)
+** vanilla band counts steps after a canReach abort and uses a looser yBand
+   (y > -16-vert && y < 16+vert). Neutron reach requires can_reach still alive.
+   Difference does not create writes: van write still 0.
+
+SUMMARY
+  vanilla: worms_with_band00=2 worms_with_band01=4  band00_steps=7 band01_steps=32  write00=0 write01=0
+  neutron: worms_with_band00=0 worms_with_band01=0  band00_steps=0 band01_steps=0
+           reach00_steps=2 reach01_steps=25  write00=0 write01=0
+           in00_steps=12 in01_steps=41 (any Y; the (0,0) visits are y~-38 from (4,-38,40))
+  production carve_y_dump apply_carvers_region (rooms + Y loop + can_replace):
+           CARVE_BAND cell=0 write=0 aquifer_none=0
+           (0,0) carver delta air: y[-16,16)=0 ; all 349 writes in y[-48,-32)
+           (0,1) carver delta air: y[-16,16)=0 ; writes in y[-48,-32) and y[48,80)
+
+Vanilla starts that would WRITE into (0,0) or (0,1) y[-16,16): 0
+Neutron starts that would WRITE into that band: 0
+
+================================================================
+5. Why worms never visit / never write the band
+================================================================
+Not start-Y: sample_y == UniformHeight.sample (118 starts, 29 in [-32,0), (0,2) seven extras identical).
+Not can_reach: center never sits in (0,0)/(0,1) at y[-16,16) even before abort (band00=band01=0).
+  can_reach abort also does not hide in-band center steps (post_abort_band=0).
+Geometry: nearest worm CENTER to the water cells is at x=-8.58 (chunk -1), y=6.62, z=14.48
+  from cave_extra (0,2) (9,26,42) tun=1. Dist to (12,1,15)=21.3 blocks.
+  A few ellipsoids PASS early-out vs (0,0)/(0,1) with Y overlapping the band (reach00=2, reach01=25)
+  but WorldCarver.carveEllipsoid local x/z range in the target is EMPTY
+  (minLx>maxLx or minLz>maxLz). CARVE_BAND_CELL is after that check → 0.
+
+cite:
+  WorldCarver.canReach / carvers.rs can_reach:449
+  WorldCarver.carveEllipsoid local range / carvers.rs carve_ellipsoid:500-514 (EMPTY_RANGE)
+  CaveWorldCarver.createTunnel / carvers.rs create_tunnel:312
+  UniformHeight.sample / carvers.rs sample_y:266
+  ProbeCarveStartY.java  CaveWorldCarver.carve / UniformHeight.sample / WorldGenerationContext
+
+FINDING: no code bug in can_reach, sample_y, or worm path for this cell.
+  Vanilla classic carvers also write 0 cells into (0,0)/(0,1) y[-16,16).
+  The 151 vanilla cave_air in (0,0) y[-16,-1] are not classic cave/canyon worm writes
+  (noise caves write minecraft:air via doFill; classic WorldCarver.getCarveState writes cave_air).
+  CARVE_BAND cell=0 is empty local x/z, not aquifer compute_substance returning None.

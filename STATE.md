@@ -13,23 +13,25 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD pending: clay-pool dripleaf (`BlockId` + 
 | 777 | ~98.58% | ridge-noise raw fix was the real jump |
 | 12345 | ~97.8% when Status=full | skip if proto-chunk |
 
-- lush/pale recall ~57% (bar ≥80% — **not** the next knob).
-- clay full `(0,0)`: Neutron 575 vs vanilla 509 (`clay_overlap` iso 517/509, xz overlap 96/134).
-- water y[0,16): Neutron **(0,0)=4 (0,1)=96** vs vanilla **15 + 97**. Probe cells **13/22 water**.
-- trees `(0,0)` 424242: 51 vs 37 pale trunks. RNG 1:1. Extra accepts = terrain.
-- open (air+cave_air) `(0,0)`: Neutron doFill y0..16 **2023** vs vanilla final **1900**; y-16..-1 Neutron **0** vs vanilla **151 cave_air**. `(0,1)` y0..16 2957 vs 2932 (close). Carvers: `CARVE_BAND` cell=write=none=**0** in y[-16,16) for `(0,0)`/`(0,1)`.
+- lush/pale recall **61.81%** (dripleaf helped; bar ≥80% — not the next knob).
+- clay full `(0,0)`: Neutron 575 vs vanilla 509. `lush_caves_clay` draws **1:1** vs `ProbeClayDraws` (gi=29).
+- water y[0,16): Neutron **(0,0)=4 (0,1)=96** vs vanilla **15 + 97**.
+- trees `(0,0)` 424242: 51 vs 37 pale trunks. RNG 1:1.
+- doFill `(0,0)` y0..16 vs vanilla final: extra air over vegetation/clay=122, over solid=**0**. Terrain matches. `placeGround` already-ground still overshoots %.
+- classic carvers: starts 1:1 vs `ProbeCarveStartY`. `CARVE_BAND` cell=0; vanilla worms also **write 0** into `(0,0)`/`(0,1)` y[-16,16).
+- `minecraft:multiface_growth` (glow_lichen) is a no-op in dispatch. First port 97.71→**97.62%** (wrong cells). Do not ship until spread + `surface_relative_threshold_filter` match.
 
 Benchmarks track: **done**. Server: joinable.
 
 ## Next (one question)
 
-`(0,1)` water is done (96 vs 97). `(0,0)` 4 vs 15 is extra doFill air at y0..16 (+123 vs vanilla final) + already-clay skip. `placeGround` return-true overshoots (waterlogged-only 49; clay+pool 18 / region 97.67%; all patches 18 / 97.68%). Do not poke `placeGround` again.
+`(0,1)` water done. `(0,0)` 4 vs 15 = extra lush clay (575 vs 509) on **matching** doFill, then pool skip on already-clay. Do not poke `placeGround`. Do not chase doFill extra air (it was grass).
 
-Next dump: extra Neutron air cells in `(0,0)` y0..16 vs vanilla (doFill density at those coords). Parallel: why `CARVE_BAND` cell=0 while vanilla has 151 cave_air in `(0,0)` y[-16,-1] (worm path / `can_reach`, not aquifer-None).
+Next: extra clay on matching terrain — glow_lichen/cave_vines before clay (step 9 order) vs vanilla counts in `(0,0)`. Closed port: `MultifaceGrowthFeature` with jar defaults (floor=false, spread 0.5, search 20) + threshold filter.
 
 ## Dead (do not reopen without a new two-sided dump)
 
-Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch` HashSet · noodle sign (compared seed 12345 vs 424242) · `getInterpolatedNoiseValue` helper as if it were `doFill` · T4 feature ports as the 424242 recall lever · classic carvers as the writer of 424242 `(0,0)`/`(0,1)` y[-16,16) water · worm start-Y desync · `SpringFeature` as the writer of those floor cells · `nextInt(2)` as `RandomBooleanSelectorFeature` pick · missing dripleaf `BlockId` as the extra `(0,1)` water (111→96).
+Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch` HashSet · noodle sign (compared seed 12345 vs 424242) · `getInterpolatedNoiseValue` helper as if it were `doFill` · T4 feature ports as the 424242 recall lever · classic carvers as the writer of 424242 `(0,0)`/`(0,1)` y[-16,16) water · worm start-Y desync · `SpringFeature` as the writer of those floor cells · `nextInt(2)` as `RandomBooleanSelectorFeature` pick · missing dripleaf `BlockId` as the extra `(0,1)` water (111→96) · extra doFill air in `(0,0)` y0..16 (was grass/clay vs vanilla final).
 
 ## This machine
 
