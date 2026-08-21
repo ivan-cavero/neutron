@@ -1749,7 +1749,13 @@ pub(crate) fn place_vegetation_patch(
             if region.get(px, py, pz) != BlockId::Air {
                 continue;
             }
-            if !is_solid_block(region.get(bx, by, bz)) {
+            // belowState.isFaceSturdy(..., outwards). Full cubes yes; leaves /
+            // pointed dripstone / sculk_vein / bamboo no. Azalea is sturdy on UP
+            // (ProbeSolidFaces 26.2) so a floor can sit on it.
+            let below = region.get(bx, by, bz);
+            if !(is_face_sturdy(below)
+                || matches!(below, BlockId::Azalea | BlockId::FloweringAzalea))
+            {
                 continue;
             }
             let mut depth = sample_int_provider(rng, depth_prov).max(0);
@@ -1758,8 +1764,8 @@ pub(crate) fn place_vegetation_patch(
             }
             // VegetationPatchFeature.placeGround: same-block skips set+move.
             // Vanilla returns true when the depth loop completes (already-ground
-            // columns still join the surface set); we insert only on a real
-            // place so extra Neutron clay does not extra-draw dripleaf RNG.
+            // still joins the surface set). Insert only on a real place: already-
+            // ground membership extra-draws vegetationChance and drops ALL.
             let (gx0, gy0, gz0) = (bx, by, bz);
             let (mut gx, mut gy, mut gz) = (bx, by, bz);
             let mut placed_any = false;
@@ -1821,11 +1827,30 @@ pub(crate) fn place_vegetation_patch(
     }
 }
 
-/// `WaterloggedVegetationPatchFeature.isExposed`: any of N/E/S/W/DOWN is not face-sturdy.
+/// `WaterloggedVegetationPatchFeature.isExposed`: any of N/E/S/W/DOWN is not
+/// `isFaceSturdy` on the opposite face. Full cubes are sturdy on every face.
 fn patch_is_exposed(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
     const DIRS: [(i32, i32, i32); 5] = [(0, 0, -1), (1, 0, 0), (0, 0, 1), (-1, 0, 0), (0, -1, 0)];
     DIRS.iter()
-        .any(|&(dx, dy, dz)| !is_solid_block(region.get(x + dx, y + dy, z + dz)))
+        .any(|&(dx, dy, dz)| !is_face_sturdy(region.get(x + dx, y + dy, z + dz)))
+}
+
+/// 26.2 `BlockState.isFaceSturdy` for the worldgen palette (ProbeSolidFaces).
+/// Azalea is sturdy on UP only — floor `below` checks add that at the call site.
+fn is_face_sturdy(b: BlockId) -> bool {
+    match b {
+        BlockId::PointedDripstone | BlockId::SculkVein | BlockId::Bamboo => false,
+        BlockId::OakLeaves
+        | BlockId::DarkOakLeaves
+        | BlockId::PaleOakLeaves
+        | BlockId::BirchLeaves
+        | BlockId::SpruceLeaves
+        | BlockId::JungleLeaves
+        | BlockId::AcaciaLeaves
+        | BlockId::MangroveLeaves
+        | BlockId::CherryLeaves => false,
+        _ => is_solid_block(b),
+    }
 }
 
 /// Port of `SpringFeature.place` (step 8, FLUID_SPRINGS).
@@ -1999,7 +2024,6 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::Lava
             | BlockId::ShortGrass
             | BlockId::LeafLitter
-            | BlockId::SculkVein
             | BlockId::Snow
             | BlockId::PowderSnow
             | BlockId::PaleMossCarpet
