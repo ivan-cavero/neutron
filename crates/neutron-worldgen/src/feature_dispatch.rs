@@ -1606,7 +1606,13 @@ pub(crate) fn block_from_to_place(rng: &mut FeatureRandom, v: &Value) -> Option<
             }
             None
         }
-        "minecraft:randomized_int_state_provider" => block_from_to_place(rng, &v["source"]),
+        "minecraft:randomized_int_state_provider" => {
+            // RandomizedIntStateProvider.getState: source.getState then
+            // values.sample(random) for the int property (age on cave_vines).
+            let block = block_from_to_place(rng, &v["source"]);
+            let _ = sample_int_provider(rng, &v["values"]);
+            block
+        }
         _ => BlockId::from_name(v.pointer("/state/Name")?.as_str()?),
     }
 }

@@ -5,17 +5,17 @@
 
 ## Now
 
-Worldgen 1:1 vs vanilla **26.2**. HEAD: `MultifaceGrowthFeature` (glow_lichen) from 26.2 bytecode.
+Worldgen 1:1 vs vanilla **26.2**. HEAD: `RandomizedIntStateProvider` samples `values` after source (cave_vines age).
 
 | Seed | region ALL | notes |
 | --- | --- | --- |
-| 424242 | **97.68%** r=1 (was 97.71); **97.04%** center (1,-1) r=1 (was 96.95) | JSON-driven; not fitted to (0,0) |
-| 12345 | **97.62%** chunk (0,0) Status=full | vanilla1; unchanged |
+| 424242 | **97.69%** r=1 (was 97.68); **97.04%** center (1,-1) r=1 | JSON-driven; not fitted to (0,0) |
+| 12345 | **97.64%** chunk (0,0) Status=full (was 97.62) | vanilla1 |
 | 777 | no `.mca` on this machine | — |
 
-- lush/pale recall **61.81%** (dripleaf helped; bar ≥80% — not the next knob).
+- lush/pale recall **61.15%** (bar ≥80% — not the next knob).
 - clay full `(0,0)`: Neutron 575 vs vanilla 509. `lush_caves_clay` draws **1:1** vs `ProbeClayDraws` (gi=29).
-- water y[0,16): Neutron **(0,0)=3 (0,1)=96** vs vanilla **15 + 97**.
+- water y[0,16): Neutron **(0,0)=4 (0,1)=96** vs vanilla **15 + 97**.
 - trees `(0,0)` 424242: 51 vs 37 pale trunks. RNG 1:1.
 - doFill `(0,0)` y0..16 vs vanilla final: extra air over vegetation/clay=122, over solid=**0**. Terrain matches. `placeGround` already-ground still overshoots %.
 - classic carvers: starts 1:1 vs `ProbeCarveStartY`. `CARVE_BAND` cell=0; vanilla worms also **write 0** into `(0,0)`/`(0,1)` y[-16,16).
