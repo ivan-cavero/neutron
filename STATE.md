@@ -27,11 +27,11 @@ Benchmarks track: **done**. Server: joinable.
 
 `(0,1)` water done. `(0,0)` 4 vs 15 = extra lush clay (575 vs 509) on **matching** doFill, then pool skip on already-clay. Do not poke `placeGround`. Do not chase doFill extra air (it was grass).
 
-Next: extra clay 575 vs 509 on matching doFill (pool skip). Face-state on glow_lichen if (0,0) r=1 needs the 0.03pp back. Cave vines counts vs vanilla.
+Next: extra clay 575 vs 509 on matching doFill (pool skip). `BendingTrunkPlacer`/`RandomSpreadFoliagePlacer` extra-placed azalea (ALL flat/down — do not land without a two-sided dump). Face-state on glow_lichen. Cave vines counts vs vanilla. Dead: missing flower `BlockId` as a solo ALL lever (noise_threshold + palette did not move r=1).
 
 ## Dead (do not reopen without a new two-sided dump)
 
-Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch` HashSet · noodle sign (compared seed 12345 vs 424242) · `getInterpolatedNoiseValue` helper as if it were `doFill` · T4 feature ports as the 424242 recall lever · classic carvers as the writer of 424242 `(0,0)`/`(0,1)` y[-16,16) water · worm start-Y desync · `SpringFeature` as the writer of those floor cells · `nextInt(2)` as `RandomBooleanSelectorFeature` pick · missing dripleaf `BlockId` as the extra `(0,1)` water (111→96) · extra doFill air in `(0,0)` y0..16 (was grass/clay vs vanilla final) · walking `search_range` on vegetation_patch-style glow_lichen (bytecode is adjacent-only).
+Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch` HashSet · noodle sign (compared seed 12345 vs 424242) · `getInterpolatedNoiseValue` helper as if it were `doFill` · T4 feature ports as the 424242 recall lever · classic carvers as the writer of 424242 `(0,0)`/`(0,1)` y[-16,16) water · worm start-Y desync · `SpringFeature` as the writer of those floor cells · `nextInt(2)` as `RandomBooleanSelectorFeature` pick · missing dripleaf `BlockId` as the extra `(0,1)` water (111→96) · extra doFill air in `(0,0)` y0..16 (was grass/clay vs vanilla final) · walking `search_range` on vegetation_patch-style glow_lichen (bytecode is adjacent-only) · flower `BlockId` + `NoiseThresholdProvider` as a solo 424242 r=1 ALL lever · `BendingTrunkPlacer`/`RandomSpreadFoliagePlacer` without a two-sided azalea dump.
 
 ## This machine
 
