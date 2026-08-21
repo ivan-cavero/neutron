@@ -1,0 +1,186 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/ivan.cavero/Documents/GitHub/neutron/tools/nbt-ref/vanilla1/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[09:09:35] [main/INFO]: [STDOUT]: limitation=BeardifierMarker seed=424242
+CELL 12 1 15 density=+0.003725 solid block=null
+  above (12,2,15) density=-0.003188 open block=minecraft:air
+  below (12,0,15) density=+0.010638 solid block=null
+  west (11,1,15) density=+0.007464 solid block=null
+  east (13,1,15) density=+0.000071 solid block=null
+  north (12,1,14) density=+0.003338 solid block=null
+  south (12,1,16) density=+0.004111 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 10 2 15 density=+0.004569 solid block=null
+  above (10,3,15) density=-0.002065 open block=minecraft:air
+  below (10,1,15) density=+0.011202 solid block=null
+  west (9,2,15) density=+0.008447 solid block=null
+  east (11,2,15) density=+0.000690 solid block=null
+  north (10,2,14) density=+0.004368 solid block=null
+  south (10,2,16) density=+0.004770 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 8 3 14 density=+0.005650 solid block=null
+  above (8,4,14) density=-0.000597 open block=minecraft:air
+  below (8,2,14) density=+0.011896 solid block=null
+  west (7,3,14) density=+0.009190 solid block=null
+  east (9,3,14) density=+0.001822 solid block=null
+  north (8,3,13) density=+0.005327 solid block=null
+  south (8,3,15) density=+0.005972 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 2 5 14 density=+0.004397 solid block=null
+  above (2,6,14) density=-0.001798 open block=minecraft:air
+  below (2,4,14) density=+0.010591 solid block=null
+  west (1,5,14) density=+0.002496 solid block=null
+  east (3,5,14) density=+0.006298 solid block=null
+  north (2,5,13) density=+0.002948 solid block=null
+  south (2,5,15) density=+0.005846 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 5 5 14 density=+0.004438 solid block=null
+  above (5,6,14) density=-0.001479 open block=minecraft:air
+  below (5,4,14) density=+0.010355 solid block=null
+  west (4,5,14) density=+0.008199 solid block=null
+  east (6,5,14) density=+0.000677 solid block=null
+  north (5,5,13) density=+0.003147 solid block=null
+  south (5,5,15) density=+0.005729 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 5 15 density=+0.003826 solid block=null
+  above (1,6,15) density=-0.002785 open block=minecraft:air
+  below (1,4,15) density=+0.010437 solid block=null
+  west (0,5,15) density=+0.001807 solid block=null
+  east (2,5,15) density=+0.005846 solid block=null
+  north (1,5,14) density=+0.002496 solid block=null
+  south (1,5,16) density=+0.005157 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 8 3 15 density=+0.005972 solid block=null
+  above (8,4,15) density=-0.000383 open block=minecraft:air
+  below (8,2,15) density=+0.012326 solid block=null
+  west (7,3,15) density=+0.009802 solid block=null
+  east (9,3,15) density=+0.001953 solid block=null
+  north (8,3,14) density=+0.005650 solid block=null
+  south (8,3,16) density=+0.006294 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 2 5 15 density=+0.005846 solid block=null
+  above (2,6,15) density=-0.000464 open block=minecraft:air
+  below (2,4,15) density=+0.012154 solid block=null
+  west (1,5,15) density=+0.003826 solid block=null
+  east (3,5,15) density=+0.007865 solid block=null
+  north (2,5,14) density=+0.004397 solid block=null
+  south (2,5,16) density=+0.007294 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 5 5 15 density=+0.005729 solid block=null
+  above (5,6,15) density=-0.000139 open block=minecraft:air
+  below (5,4,15) density=+0.011596 solid block=null
+  west (4,5,15) density=+0.009884 solid block=null
+  east (6,5,15) density=+0.001574 solid block=null
+  north (5,5,14) density=+0.004438 solid block=null
+  south (5,5,16) density=+0.007020 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 6 21 density=+0.005308 solid block=null
+  above (1,7,21) density=-0.002659 open block=minecraft:air
+  below (1,5,21) density=+0.013273 solid block=null
+  west (0,6,21) density=+0.004850 solid block=null
+  east (2,6,21) density=+0.005765 solid block=null
+  north (1,6,20) density=+0.004873 solid block=null
+  south (1,6,22) density=+0.005742 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 3 6 23 density=+0.006097 solid block=null
+  above (3,7,23) density=-0.001877 open block=minecraft:air
+  below (3,5,23) density=+0.014070 solid block=null
+  west (2,6,23) density=+0.006137 solid block=null
+  east (4,6,23) density=+0.006057 solid block=null
+  north (3,6,22) density=+0.006160 solid block=null
+  south (3,6,24) density=+0.006034 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 0 5 17 density=+0.005375 solid block=null
+  above (0,6,17) density=-0.002127 open block=minecraft:air
+  below (0,4,17) density=+0.012876 solid block=null
+  west (-1,5,17) density=+0.003351 solid block=null
+  east (1,5,17) density=+0.007116 solid block=null
+  north (0,5,16) density=+0.003019 solid block=null
+  south (0,5,18) density=+0.007731 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 5 17 density=+0.007116 solid block=null
+  above (1,6,17) density=-0.000039 open block=minecraft:air
+  below (1,4,17) density=+0.014270 solid block=null
+  west (0,5,17) density=+0.005375 solid block=null
+  east (2,5,17) density=+0.008856 solid block=null
+  north (1,5,16) density=+0.005157 solid block=null
+  south (1,5,18) density=+0.009075 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 0 5 18 density=+0.007731 solid block=null
+  above (0,6,18) density=-0.000029 open block=minecraft:air
+  below (0,4,18) density=+0.015490 solid block=null
+  west (-1,5,18) density=+0.005873 solid block=null
+  east (1,5,18) density=+0.009075 solid block=null
+  north (0,5,17) density=+0.005375 solid block=null
+  south (0,5,19) density=+0.010087 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 6 19 density=+0.003236 solid block=null
+  above (1,7,19) density=-0.004563 open block=minecraft:air
+  below (1,5,19) density=+0.011034 solid block=null
+  west (0,6,19) density=+0.002069 solid block=null
+  east (2,6,19) density=+0.004402 solid block=null
+  north (1,6,18) density=+0.001598 solid block=null
+  south (1,6,20) density=+0.004873 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 0 6 20 density=+0.004167 solid block=null
+  above (0,7,20) density=-0.004109 open block=minecraft:air
+  below (0,5,20) density=+0.012442 solid block=null
+  west (-1,6,20) density=+0.002836 solid block=null
+  east (1,6,20) density=+0.004873 solid block=null
+  north (0,6,19) density=+0.002069 solid block=null
+  south (0,6,21) density=+0.004850 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 2 6 22 density=+0.005951 solid block=null
+  above (2,7,22) density=-0.001915 open block=minecraft:air
+  below (2,5,22) density=+0.013816 solid block=null
+  west (1,6,22) density=+0.005742 solid block=null
+  east (3,6,22) density=+0.006160 solid block=null
+  north (2,6,21) density=+0.005765 solid block=null
+  south (2,6,23) density=+0.006137 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 0 5 24 density=+0.014143 solid block=null
+  above (0,6,24) density=+0.006900 solid block=null
+  below (0,4,24) density=+0.021385 solid block=null
+  west (-1,5,24) density=+0.013902 solid block=null
+  east (1,5,24) density=+0.014116 solid block=null
+  north (0,5,23) density=+0.013718 solid block=null
+  south (0,5,25) density=+0.010803 solid block=null
+  spring_shape above_solid=true nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 5 25 density=+0.010539 solid block=null
+  above (1,6,25) density=+0.003513 solid block=null
+  below (1,4,25) density=+0.017564 solid block=null
+  west (0,5,25) density=+0.010803 solid block=null
+  east (2,5,25) density=+0.010276 solid block=null
+  north (1,5,24) density=+0.014116 solid block=null
+  south (1,5,26) density=+0.006962 solid block=null
+  spring_shape above_solid=true nesw+below rock=5 hole=0 SHAPED=false
+CELL 1 4 28 density=+0.005396 solid block=null
+  above (1,5,28) density=-0.000193 open block=minecraft:air
+  below (1,3,28) density=+0.010985 solid block=null
+  west (0,4,28) density=+0.005834 solid block=null
+  east (2,4,28) density=+0.004958 solid block=null
+  north (1,4,27) density=+0.009453 solid block=null
+  south (1,4,29) density=+0.002124 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 2 4 28 density=+0.004958 solid block=null
+  above (2,5,28) density=-0.001166 open block=minecraft:air
+  below (2,3,28) density=+0.011082 solid block=null
+  west (1,4,28) density=+0.005396 solid block=null
+  east (3,4,28) density=+0.004520 solid block=null
+  north (2,4,27) density=+0.009183 solid block=null
+  south (2,4,29) density=+0.001333 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+CELL 3 4 28 density=+0.004520 solid block=null
+  above (3,5,28) density=-0.002139 open block=minecraft:air
+  below (3,3,28) density=+0.011178 solid block=null
+  west (2,4,28) density=+0.004958 solid block=null
+  east (4,4,28) density=+0.004082 solid block=null
+  north (3,4,27) density=+0.008913 solid block=null
+  south (3,4,29) density=+0.000542 solid block=null
+  spring_shape above_solid=false nesw+below rock=5 hole=0 SHAPED=false
+[09:09:36] [main/INFO]: [STDOUT]: FINDING spring_shaped_solid_cells=0/22
+- cells are cave FLOORS: density>0, above open air (block=minecraft:air), NESW+below solid. SpringFeature cannot place (needs valid block ABOVE + 1 hole).
+- aquifer at the open above cell is air, not water. Water in the ref is a later feature (waterlogged vegetation patch interior).
+- cite NoiseChunk.getInterpolatedDensity BeardifierMarker; SpringFeature.place; WaterloggedVegetationPatchFeature.placeGroundPatch
+[09:09:36] [main/INFO]: [STDOUT]: cite NoiseChunk.getInterpolatedDensity / getInterpolatedState BeardifierMarker; SpringFeature.place rockCount=4 holeCount=1

@@ -222,5 +222,12 @@ mod tests {
         assert_eq!(rng.next_f32().to_bits(), 0.3558504f32.to_bits());
         assert_eq!(rng.next_f64().to_bits(), 0.9180557537010783f64.to_bits());
         assert_eq!(rng.next_long(), -5824706931741106560);
+
+        // RandomBooleanSelectorFeature uses nextBoolean = next(1)!=0, not nextInt(2).
+        let mut a = FeatureRandom::new(424242);
+        let mut b = FeatureRandom::new(424242);
+        let nbool: Vec<bool> = (0..16).map(|_| a.next_boolean()).collect();
+        let nint2: Vec<bool> = (0..16).map(|_| b.next_int(2) == 0).collect();
+        assert_ne!(nbool, nint2);
     }
 }

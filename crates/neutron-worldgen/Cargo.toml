@@ -152,3 +152,12 @@ name = "dofill_cells"
 
 [[example]]
 name = "carve_y_dump"
+
+[[example]]
+name = "carve_path"
+
+[[example]]
+name = "spring_neigh"
+
+[[example]]
+name = "water_band"

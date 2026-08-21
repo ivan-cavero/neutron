@@ -1,0 +1,230 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/ivan.cavero/Documents/GitHub/neutron/tools/nbt-ref/vanilla1/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+minY=-64 height=384 (WorldGenerationContext)
+cave p=0.1500 extra p=0.0700 canyon p=0.0100
+START cave source=(-8,-8) pos=(-120,122,-115) caveCount=1 i=0
+START cave_extra source=(-8,-6) pos=(-126,36,-88) caveCount=8 i=0
+START cave_extra source=(-8,-6) pos=(-115,12,-90) caveCount=8 i=1
+START cave_extra source=(-8,-6) pos=(-120,-6,-96) caveCount=8 i=2
+START cave_extra source=(-8,-6) pos=(-116,-23,-81) caveCount=8 i=3
+START cave_extra source=(-8,-6) pos=(-123,41,-86) caveCount=8 i=4
+START cave_extra source=(-8,-6) pos=(-121,1,-88) caveCount=8 i=5
+START cave_extra source=(-8,-6) pos=(-128,-30,-92) caveCount=8 i=6
+START cave_extra source=(-8,-6) pos=(-122,-12,-89) caveCount=8 i=7
+START cave_extra source=(-8,-5) pos=(-126,-4,-78) caveCount=7 i=0
+START cave_extra source=(-8,-5) pos=(-115,-1,-80) caveCount=7 i=1
+START cave_extra source=(-8,-5) pos=(-127,-50,-78) caveCount=7 i=2
+START cave_extra source=(-8,-5) pos=(-126,11,-66) caveCount=7 i=3
+START cave_extra source=(-8,-5) pos=(-119,36,-74) caveCount=7 i=4
+START cave_extra source=(-8,-5) pos=(-127,4,-76) caveCount=7 i=5
+START cave_extra source=(-8,-5) pos=(-114,6,-80) caveCount=7 i=6
+START canyon source=(-8,-5) pos=(-128,50,-70)
+START cave source=(-8,-1) pos=(-119,48,-6) caveCount=2 i=0
+START cave source=(-8,-1) pos=(-115,81,-6) caveCount=2 i=1
+START cave source=(-8,4) cave_count=0
+START cave source=(-8,7) pos=(-128,117,122) caveCount=1 i=0
+START canyon source=(-7,-6) pos=(-98,46,-94)
+START cave source=(-6,-8) cave_count=0
+START cave source=(-6,-1) cave_count=0
+START cave source=(-6,3) cave_count=0
+START cave_extra source=(-6,4) cave_count=0
+START cave source=(-6,5) cave_count=0
+START cave source=(-5,2) pos=(-78,127,41) caveCount=2 i=0
+START cave source=(-5,2) pos=(-74,-55,45) caveCount=2 i=1
+START cave source=(-5,4) pos=(-66,127,69) caveCount=1 i=0
+START canyon source=(-4,-8) pos=(-55,25,-125)
+START cave_extra source=(-4,-1) pos=(-58,-26,-3) caveCount=4 i=0
+START cave_extra source=(-4,-1) pos=(-63,-54,-6) caveCount=4 i=1
+START cave_extra source=(-4,-1) pos=(-55,-8,-8) caveCount=4 i=2
+START cave_extra source=(-4,-1) pos=(-57,-10,-9) caveCount=4 i=3
+START cave source=(-4,6) pos=(-56,62,96) caveCount=3 i=0
+START cave source=(-4,6) pos=(-64,91,97) caveCount=3 i=1
+START cave source=(-4,6) pos=(-61,34,109) caveCount=3 i=2
+START cave source=(-4,9) cave_count=0
+START cave source=(-3,-8) pos=(-41,88,-114) caveCount=2 i=0
+START cave source=(-3,-8) pos=(-46,110,-117) caveCount=2 i=1
+START cave_extra source=(-3,-8) pos=(-41,-5,-126) caveCount=6 i=0
+START cave_extra source=(-3,-8) pos=(-41,-23,-122) caveCount=6 i=1
+START cave_extra source=(-3,-8) pos=(-43,0,-116) caveCount=6 i=2
+START cave_extra source=(-3,-8) pos=(-45,-2,-119) caveCount=6 i=3
+START cave_extra source=(-3,-8) pos=(-44,-33,-118) caveCount=6 i=4
+START cave_extra source=(-3,-8) pos=(-37,43,-123) caveCount=6 i=5
+START cave source=(-3,-3) pos=(-48,161,-42) caveCount=2 i=0
+START cave source=(-3,-3) pos=(-40,128,-38) caveCount=2 i=1
+START cave source=(-2,-7) pos=(-24,107,-98) caveCount=2 i=0
+START cave source=(-2,-7) pos=(-24,49,-104) caveCount=2 i=1
+START canyon source=(-2,-7) pos=(-28,17,-100)
+START cave source=(-2,-6) pos=(-30,-8,-92) caveCount=1 i=0
+START cave_extra source=(-2,-6) pos=(-29,-44,-82) caveCount=3 i=0
+START cave_extra source=(-2,-6) pos=(-22,-55,-94) caveCount=3 i=1
+START cave_extra source=(-2,-6) pos=(-23,-3,-96) caveCount=3 i=2
+START canyon source=(-2,0) pos=(-24,22,0)
+START cave source=(-2,1) cave_count=0
+START cave source=(-2,4) cave_count=0
+START cave source=(-1,-8) pos=(-5,-6,-120) caveCount=11 i=0
+START cave source=(-1,-8) pos=(-9,159,-127) caveCount=11 i=1
+START cave source=(-1,-8) pos=(-8,121,-117) caveCount=11 i=2
+START cave source=(-1,-8) pos=(-4,74,-122) caveCount=11 i=3
+START cave source=(-1,-8) pos=(-9,85,-127) caveCount=11 i=4
+START cave source=(-1,-8) pos=(-9,50,-114) caveCount=11 i=5
+START cave source=(-1,-8) pos=(-1,-47,-119) caveCount=11 i=6
+START cave source=(-1,-8) pos=(-15,-35,-122) caveCount=11 i=7
+START cave source=(-1,-8) pos=(-10,147,-120) caveCount=11 i=8
+START cave source=(-1,-8) pos=(-3,-42,-120) caveCount=11 i=9
+START cave source=(-1,-8) pos=(-8,-23,-117) caveCount=11 i=10
+START cave_extra source=(-1,7) cave_count=0
+START cave source=(0,-7) pos=(5,142,-99) caveCount=1 i=0
+START cave source=(0,-6) cave_count=0
+START cave_extra source=(0,-4) pos=(15,6,-60) caveCount=2 i=0
+START cave_extra source=(0,-4) pos=(6,37,-61) caveCount=2 i=1
+START cave source=(0,-2) cave_count=0
+START cave_extra source=(0,-1) pos=(5,-43,-13) caveCount=2 i=0
+START cave_extra source=(0,-1) pos=(10,-52,-4) caveCount=2 i=1
+START cave_extra source=(0,2) pos=(8,-27,46) caveCount=7 i=0
+START cave_extra source=(0,2) pos=(10,-9,41) caveCount=7 i=1
+START cave_extra source=(0,2) pos=(10,-6,44) caveCount=7 i=2
+START cave_extra source=(0,2) pos=(4,-38,40) caveCount=7 i=3
+START cave_extra source=(0,2) pos=(5,-19,44) caveCount=7 i=4
+START cave_extra source=(0,2) pos=(9,26,42) caveCount=7 i=5
+START cave_extra source=(0,2) pos=(1,4,37) caveCount=7 i=6
+START cave_extra source=(0,5) pos=(15,-2,83) caveCount=9 i=0
+START cave_extra source=(0,5) pos=(12,23,90) caveCount=9 i=1
+START cave_extra source=(0,5) pos=(6,34,84) caveCount=9 i=2
+START cave_extra source=(0,5) pos=(12,-29,83) caveCount=9 i=3
+START cave_extra source=(0,5) pos=(1,-46,93) caveCount=9 i=4
+START cave_extra source=(0,5) pos=(8,9,90) caveCount=9 i=5
+START cave_extra source=(0,5) pos=(1,-11,87) caveCount=9 i=6
+START cave_extra source=(0,5) pos=(10,36,86) caveCount=9 i=7
+START cave_extra source=(0,5) pos=(12,35,90) caveCount=9 i=8
+START cave_extra source=(1,-7) pos=(26,32,-110) caveCount=2 i=0
+START cave_extra source=(1,-7) pos=(21,-23,-100) caveCount=2 i=1
+START cave source=(1,8) pos=(16,35,138) caveCount=1 i=0
+START cave source=(2,-4) cave_count=0
+START cave source=(2,-1) cave_count=0
+START cave source=(2,0) cave_count=0
+START cave source=(2,6) cave_count=0
+START cave_extra source=(2,6) pos=(46,-24,108) caveCount=1 i=0
+START cave source=(2,7) cave_count=0
+START canyon source=(2,7) pos=(43,60,115)
+START cave source=(3,3) pos=(61,-44,61) caveCount=2 i=0
+START cave source=(3,3) pos=(54,58,58) caveCount=2 i=1
+START cave source=(3,8) cave_count=0
+START cave_extra source=(3,8) cave_count=0
+START cave source=(4,-6) pos=(75,177,-86) caveCount=2 i=0
+START cave source=(4,-6) pos=(69,74,-82) caveCount=2 i=1
+START cave_extra source=(4,1) pos=(65,-34,26) caveCount=2 i=0
+START cave_extra source=(4,1) pos=(68,20,16) caveCount=2 i=1
+START canyon source=(4,8) pos=(73,25,131)
+START cave source=(5,-4) cave_count=0
+START cave source=(5,-2) pos=(82,127,-23) caveCount=2 i=0
+START cave source=(5,-2) pos=(86,-55,-19) caveCount=2 i=1
+START cave source=(6,-5) pos=(96,43,-78) caveCount=2 i=0
+START cave source=(6,-5) pos=(104,11,-79) caveCount=2 i=1
+START cave_extra source=(6,-4) cave_count=0
+START cave source=(6,-3) pos=(104,-15,-45) caveCount=2 i=0
+START cave source=(6,-3) pos=(100,-52,-34) caveCount=2 i=1
+START cave source=(6,1) cave_count=0
+START cave source=(6,8) pos=(101,130,138) caveCount=1 i=0
+START cave source=(6,9) pos=(101,104,159) caveCount=1 i=0
+START canyon source=(7,6) pos=(126,46,98)
+START cave source=(8,-7) cave_count=0
+START cave source=(8,-4) pos=(128,101,-55) caveCount=4 i=0
+START cave source=(8,-4) pos=(139,145,-60) caveCount=4 i=1
+START cave source=(8,-4) pos=(133,117,-58) caveCount=4 i=2
+START cave source=(8,-4) pos=(132,78,-63) caveCount=4 i=3
+START cave source=(8,1) pos=(135,165,18) caveCount=10 i=0
+START cave source=(8,1) pos=(135,-14,18) caveCount=10 i=1
+START cave source=(8,1) pos=(139,54,19) caveCount=10 i=2
+START cave source=(8,1) pos=(140,170,24) caveCount=10 i=3
+START cave source=(8,1) pos=(138,-6,22) caveCount=10 i=4
+START cave source=(8,1) pos=(137,174,31) caveCount=10 i=5
+START cave source=(8,1) pos=(137,-56,25) caveCount=10 i=6
+START cave source=(8,1) pos=(131,105,16) caveCount=10 i=7
+START cave source=(8,1) pos=(139,-6,25) caveCount=10 i=8
+START cave source=(8,1) pos=(133,103,30) caveCount=10 i=9
+START cave_extra source=(8,5) cave_count=0
+START canyon source=(8,5) pos=(139,52,90)
+START cave_extra source=(8,6) cave_count=0
+START cave source=(8,8) cave_count=0
+
+isStartChunk hits: cave=42 cave_extra=18 canyon=9 (total=69)
+isStart with cave_count=0: cave=20 cave_extra=6
+sampled start instances (caves with Y + canyons): 118
+[08:52:02] [main/INFO]: [STDOUT]: start Y 16-high bins:
+  y[-48,-32) n=8
+  y[-32,-16) n=10
+  y[-16,0) n=10
+  y[0,16) n=29
+  y[16,32) n=7
+  y[32,48) n=14
+  y[48,64) n=9
+  y[64,80) n=3
+  y[80,96) n=4
+  y[96,112) n=6
+  y[112,128) n=7
+  y[128,144) n=3
+  y[144,160) n=3
+  y[160,176) n=4
+  y[176,192) n=1
+start Y min=-56 max=177
+starts with Y in [-32,0): 29
+    cave_extra source=(-8,-6) pos=(-120,-6,-96)
+    cave_extra source=(-8,-6) pos=(-116,-23,-81)
+    cave_extra source=(-8,-6) pos=(-128,-30,-92)
+    cave_extra source=(-8,-6) pos=(-122,-12,-89)
+    cave_extra source=(-8,-5) pos=(-126,-4,-78)
+    cave_extra source=(-8,-5) pos=(-115,-1,-80)
+    cave_extra source=(-4,-1) pos=(-58,-26,-3)
+    cave_extra source=(-4,-1) pos=(-55,-8,-8)
+    cave_extra source=(-4,-1) pos=(-57,-10,-9)
+    cave_extra source=(-3,-8) pos=(-41,-5,-126)
+    cave_extra source=(-3,-8) pos=(-41,-23,-122)
+    cave_extra source=(-3,-8) pos=(-45,-2,-119)
+    cave source=(-2,-6) pos=(-30,-8,-92)
+    cave_extra source=(-2,-6) pos=(-23,-3,-96)
+    cave source=(-1,-8) pos=(-5,-6,-120)
+    cave source=(-1,-8) pos=(-8,-23,-117)
+    cave_extra source=(0,2) pos=(8,-27,46)
+    cave_extra source=(0,2) pos=(10,-9,41)
+    cave_extra source=(0,2) pos=(10,-6,44)
+    cave_extra source=(0,2) pos=(5,-19,44)
+    cave_extra source=(0,5) pos=(15,-2,83)
+    cave_extra source=(0,5) pos=(12,-29,83)
+    cave_extra source=(0,5) pos=(1,-11,87)
+    cave_extra source=(1,-7) pos=(21,-23,-100)
+    cave_extra source=(2,6) pos=(46,-24,108)
+    cave source=(6,-3) pos=(104,-15,-45)
+    cave source=(8,1) pos=(135,-14,18)
+    cave source=(8,1) pos=(138,-6,22)
+    cave source=(8,1) pos=(139,-6,25)
+
+[08:52:02] [main/INFO]: [STDOUT]: === worm motion (createTunnel / doCanyon, vanilla Mth) ===
+WORM cave_extra source=(0,-1) pos=(5,-43,-13) steps=179 ymin=-57 ymax=-15 in00=0 in01=0 band00=2 band01=0 write00=0 write01=0
+WORM cave_extra source=(0,2) pos=(10,-9,41) steps=132 ymin=-10 ymax=8 in00=0 in01=0 band00=0 band01=1 write00=0 write01=0
+WORM cave_extra source=(0,2) pos=(4,-38,40) steps=96 ymin=-51 ymax=-37 in00=9 in01=18 band00=0 band01=0 write00=0 write01=0
+WORM cave_extra source=(0,2) pos=(9,26,42) steps=119 ymin=6 ymax=28 in00=0 in01=0 band00=5 band01=5 write00=0 write01=0
+WORM cave_extra source=(0,2) pos=(1,4,37) steps=115 ymin=3 ymax=25 in00=0 in01=0 band00=0 band01=11 write00=0 write01=0
+WORM cave_extra source=(0,5) pos=(15,-2,83) steps=393 ymin=-31 ymax=33 in00=0 in01=0 band00=0 band01=15 write00=0 write01=0
+WORM canyon source=(2,7) pos=(43,60,115) steps=82 ymin=56 ymax=61 in00=0 in01=9 band00=0 band01=0 write00=0 write01=0
+SUMMARY worms_with_band00=2 worms_with_band01=4 total_band00_steps=7 total_band01_steps=32 write00=0 write01=0
+[08:52:02] [main/INFO]: [STDOUT]: closest start (euclidean) to water cells:
+  (12,1,15) dist=24.78 start=cave_extra source=(0,2) pos=(1,4,37)
+  (10,2,15) dist=23.85 start=cave_extra source=(0,2) pos=(1,4,37)
+  (8,3,14) dist=24.06 start=cave_extra source=(0,2) pos=(1,4,37)
+  (2,5,14) dist=23.04 start=cave_extra source=(0,2) pos=(1,4,37)
+  (5,5,14) dist=23.37 start=cave_extra source=(0,2) pos=(1,4,37)
+  (1,5,15) dist=22.02 start=cave_extra source=(0,2) pos=(1,4,37)
+  (8,3,15) dist=23.11 start=cave_extra source=(0,2) pos=(1,4,37)
+  (2,5,15) dist=22.05 start=cave_extra source=(0,2) pos=(1,4,37)
+  (5,5,15) dist=22.38 start=cave_extra source=(0,2) pos=(1,4,37)
+  (1,6,21) dist=16.12 start=cave_extra source=(0,2) pos=(1,4,37)
+  (3,6,23) dist=14.28 start=cave_extra source=(0,2) pos=(1,4,37)
+
+FINDING:
+- start Y vs Neutron carve_path (RNG consumed between caves): MATCH (29 starts in [-32,0); (0,2) seven cave_extra pos identical incl. (1,4,37))
+- worm Y extents MATCH on near starts; vanilla band01=(1,4,37)=11 == Neutron reach01=11 (early-out overlap, CaveWorldCarver.createTunnel / Mth.sin)
+- write00=0 write01=0: carveEllipsoid local x/z range in target (0,0)/(0,1) never non-empty while Y overlaps [-16,16)
+- classic carvers do not write that band (vanilla == Neutron). Water is a later stage.
+- CaveWorldCarver.carve / UniformHeight.sample / WorldGenerationContext minY=-64 height=384 / WorldCarver.carveEllipsoid local range

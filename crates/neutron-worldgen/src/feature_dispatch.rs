@@ -587,7 +587,13 @@ fn resolve_anchor(v: &Value) -> i32 {
     0
 }
 
-pub(crate) fn eval_block_predicate(region: &RegionBuf, x: i32, y: i32, z: i32, pred: &Value) -> bool {
+pub(crate) fn eval_block_predicate(
+    region: &RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    pred: &Value,
+) -> bool {
     let ty = pred["type"].as_str().unwrap_or("");
     match ty {
         "minecraft:matching_block_tag" => {
@@ -1099,8 +1105,11 @@ pub(crate) fn dispatch_configured(
             }
         }
         "minecraft:random_boolean_selector" => {
+            // RandomBooleanSelectorFeature.place: `random.nextBoolean()`
+            // (next(1) != 0), not `nextInt(2)`. Same xoroshiro consume count
+            // but a different bit — lush_caves_clay true=dry clay, false=pool.
             let cfg = &cfg["config"];
-            let feature = if rng.next_int(2) == 0 {
+            let feature = if rng.next_boolean() {
                 &cfg["feature_true"]
             } else {
                 &cfg["feature_false"]
@@ -1461,6 +1470,7 @@ pub(crate) fn place_vegetation_patch(
     let replaceable = c["replaceable"].as_str().unwrap_or("");
     let veg_chance = c["vegetation_chance"].as_f64().unwrap_or(0.0) as f32;
     let veg_feature = c["vegetation_feature"].clone();
+    let waterlogged = cfg["type"].as_str() == Some("minecraft:waterlogged_vegetation_patch");
 
     let xr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
     let zr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
@@ -1537,6 +1547,22 @@ pub(crate) fn place_vegetation_patch(
         }
     }
 
+    // WaterloggedVegetationPatchFeature.placeGroundPatch: interior (not
+    // isExposed N/E/S/W/DOWN) ground cells become water; vegetation is only
+    // distributed on those interior positions.
+    if waterlogged {
+        let mut interior = JavaBlockPosSet::new();
+        for (sx, sy, sz) in surface_pts.iter() {
+            if !patch_is_exposed(region, sx, sy, sz) {
+                interior.insert(sx, sy, sz);
+            }
+        }
+        for (sx, sy, sz) in interior.iter() {
+            region.set(sx, sy, sz, BlockId::Water);
+        }
+        surface_pts = interior;
+    }
+
     // distributeVegetation
     for (sx, sy, sz) in surface_pts.iter() {
         if veg_chance > 0.0 && rng.next_f32() < veg_chance {
@@ -1546,6 +1572,13 @@ pub(crate) fn place_vegetation_patch(
             place_feature_ref(rng, region, state, vx, vy, vz, &veg_feature, gen_step);
         }
     }
+}
+
+/// `WaterloggedVegetationPatchFeature.isExposed`: any of N/E/S/W/DOWN is not face-sturdy.
+fn patch_is_exposed(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
+    const DIRS: [(i32, i32, i32); 5] = [(0, 0, -1), (1, 0, 0), (0, 0, 1), (-1, 0, 0), (0, -1, 0)];
+    DIRS.iter()
+        .any(|&(dx, dy, dz)| !is_solid_block(region.get(x + dx, y + dy, z + dz)))
 }
 
 /// Port of `SpringFeature.place` (step 8, FLUID_SPRINGS).
@@ -1752,7 +1785,12 @@ fn heightmap_opaque(b: BlockId, kind: HeightmapKind) -> bool {
 }
 
 /// Highest Y whose block is opaque for `kind`, or None if the column is empty.
-pub(crate) fn heightmap_top(region: &RegionBuf, x: i32, z: i32, kind: HeightmapKind) -> Option<i32> {
+pub(crate) fn heightmap_top(
+    region: &RegionBuf,
+    x: i32,
+    z: i32,
+    kind: HeightmapKind,
+) -> Option<i32> {
     for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
         if heightmap_opaque(region.get(x, y, z), kind) {
             return Some(y);
