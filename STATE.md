@@ -9,9 +9,9 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD pending: clay-pool dripleaf (`BlockId` + 
 
 | Seed | region ALL | notes |
 | --- | --- | --- |
-| 424242 | **97.71%** (was ~97.34) | re-extracted ref `vanilla-fresh-424242`, forceload chunks [-2,2]² |
-| 777 | ~98.58% | ridge-noise raw fix was the real jump |
-| 12345 | ~97.8% when Status=full | skip if proto-chunk |
+| 424242 | **97.71%** r=1 (9 ch); **97.31%** r=2 (25 ch); **96.95%** center (1,-1) r=1 | forceload [-2,2]²; not one-cell fitted |
+| 12345 | **97.62%** chunk (0,0) Status=full | vanilla1; 9-chunk 96.33% includes proto neighbours — skip those |
+| 777 | no `.mca` on this machine | path in STATE is stale |
 
 - lush/pale recall **61.81%** (dripleaf helped; bar ≥80% — not the next knob).
 - clay full `(0,0)`: Neutron 575 vs vanilla 509. `lush_caves_clay` draws **1:1** vs `ProbeClayDraws` (gi=29).
@@ -19,7 +19,7 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD pending: clay-pool dripleaf (`BlockId` + 
 - trees `(0,0)` 424242: 51 vs 37 pale trunks. RNG 1:1.
 - doFill `(0,0)` y0..16 vs vanilla final: extra air over vegetation/clay=122, over solid=**0**. Terrain matches. `placeGround` already-ground still overshoots %.
 - classic carvers: starts 1:1 vs `ProbeCarveStartY`. `CARVE_BAND` cell=0; vanilla worms also **write 0** into `(0,0)`/`(0,1)` y[-16,16).
-- `minecraft:multiface_growth` (glow_lichen) is a no-op in dispatch. First port 97.71→**97.62%** (wrong cells). Do not ship until spread + `surface_relative_threshold_filter` match.
+- `minecraft:multiface_growth` (glow_lichen) is a no-op. Ports with/without spread: 97.71→**97.67/97.62** and `(0,0)` water 4→1. Do not ship until jar-accurate.
 
 Benchmarks track: **done**. Server: joinable.
 
@@ -37,8 +37,8 @@ Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch
 
 ```
 424242  tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region
-12345   tools/nbt-ref/vanilla-fresh-12345/dimensions/minecraft/overworld/region
-777     tools/nbt-ref/vanilla-fresh-777/dimensions/minecraft/overworld/region
+12345   tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region
+777     (missing)
 jar     tools/mc-decompiler/jars/server-26.2.jar
 java    tools/mc-decompiler/output/26.2/src
 ```

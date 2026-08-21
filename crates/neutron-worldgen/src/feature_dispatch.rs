@@ -1794,6 +1794,7 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::SmallDripleaf
             | BlockId::BigDripleaf
             | BlockId::BigDripleafStem
+            | BlockId::Vine
     )
 }
 
