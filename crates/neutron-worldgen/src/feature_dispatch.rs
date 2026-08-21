@@ -361,6 +361,21 @@ pub(crate) fn place_placed_feature_step(
                             ok = false;
                         }
                     }
+                    "minecraft:surface_relative_threshold_filter" => {
+                        // SurfaceRelativeThresholdFilter.shouldPlace: Java long
+                        // add so omitted min=Integer.MIN_VALUE does not wrap.
+                        // getHeight = Heightmap.getFirstAvailable = solid Y + 1.
+                        let kind = parse_heightmap_kind(m["heightmap"].as_str().unwrap_or(""));
+                        let min_inc = m["min_inclusive"].as_i64().unwrap_or(i32::MIN as i64);
+                        let max_inc = m["max_inclusive"].as_i64().unwrap_or(i32::MAX as i64);
+                        let surface = heightmap_top(region, x, z, kind)
+                            .map(|s| s as i64 + 1)
+                            .unwrap_or(i64::MIN / 4);
+                        let yy = y as i64;
+                        if !(surface + min_inc <= yy && yy <= surface + max_inc) {
+                            ok = false;
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -855,7 +870,8 @@ pub(crate) fn dispatch_configured(
             // handled by sculk module with proper seeds — skip here
         }
         "minecraft:multiface_growth" => {
-            // sculk_vein handled by sculk module
+            // sculk_vein stays in sculk.rs (step 7, dedicated seeds).
+            place_multiface_growth(rng, region, x, y, z, cfg);
         }
         "minecraft:vines" => {
             place_vines(rng, region, x, y, z);
@@ -1145,6 +1161,203 @@ pub(crate) fn dispatch_configured(
 // ---------------------------------------------------------------------------
 // B4 ports: multiface_growth (glow_lichen), vines, root_system
 // ---------------------------------------------------------------------------
+
+fn shuffle_dirs(rng: &mut FeatureRandom, dirs: &[usize]) -> Vec<usize> {
+    // Util.shuffle: for (i = size; i > 1; i--) swap(i-1, nextInt(i))
+    let mut order = dirs.to_vec();
+    let mut i = order.len();
+    while i > 1 {
+        let j = rng.next_int(i as i32) as usize;
+        order.swap(i - 1, j);
+        i -= 1;
+    }
+    order
+}
+
+fn dir_opposite(d: usize) -> usize {
+    match d {
+        0 => 1,
+        1 => 0,
+        2 => 3,
+        3 => 2,
+        4 => 5,
+        5 => 4,
+        _ => d,
+    }
+}
+
+fn dir_axis(d: usize) -> usize {
+    match d {
+        0 | 1 => 1,
+        2 | 3 => 2,
+        _ => 0,
+    }
+}
+
+/// `MultifaceGrowthFeature.place` / `placeGrowthIfPossible` (26.2 bytecode).
+///
+/// Search loop is `mutable.setWithOffset(origin, searchDir)` every iteration
+/// (not `move`) — only the adjacent cell is tested, `search_range` times.
+/// `validDirections` order: UP (ceiling), DOWN (floor), then HORIZONTAL
+/// NORTH/EAST/SOUTH/WEST. sculk_vein is skipped (sculk.rs owns it).
+fn place_multiface_growth(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+) {
+    let c = &cfg["config"];
+    let Some(place_block) = c["block"].as_str().and_then(BlockId::from_name) else {
+        return;
+    };
+    if place_block == BlockId::SculkVein {
+        return;
+    }
+    let here = region.get(x, y, z);
+    if !matches!(here, BlockId::Air | BlockId::Water) {
+        return;
+    }
+    let search_range = c["search_range"].as_i64().unwrap_or(10) as i32;
+    let on_floor = c["can_place_on_floor"].as_bool().unwrap_or(false);
+    let on_ceiling = c["can_place_on_ceiling"].as_bool().unwrap_or(false);
+    let on_wall = c["can_place_on_wall"].as_bool().unwrap_or(false);
+    let chance = c["chance_of_spreading"].as_f64().unwrap_or(0.5) as f32;
+    let allowed: Vec<BlockId> = c["can_be_placed_on"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str().and_then(BlockId::from_name))
+                .collect()
+        })
+        .unwrap_or_default();
+    // Ctor: if ceiling add UP; if floor add DOWN; if wall HORIZONTAL N,E,S,W.
+    let mut valid = Vec::new();
+    if on_ceiling {
+        valid.push(1usize); // UP
+    }
+    if on_floor {
+        valid.push(0); // DOWN
+    }
+    if on_wall {
+        valid.extend_from_slice(&[2, 5, 3, 4]); // NORTH EAST SOUTH WEST
+    }
+    if valid.is_empty() {
+        return;
+    }
+
+    let air_or_water_or_self = |b: BlockId| {
+        matches!(b, BlockId::Air | BlockId::Water) || b == place_block
+    };
+
+    let try_place = |rng: &mut FeatureRandom,
+                     region: &mut RegionBuf,
+                     px: i32,
+                     py: i32,
+                     pz: i32,
+                     dirs: &[usize]|
+     -> bool {
+        for &d in dirs {
+            let (dx, dy, dz) = crate::multiface_spreader::DIRS[d];
+            if !allowed.contains(&region.get(px + dx, py + dy, pz + dz)) {
+                continue;
+            }
+            // getStateForPlacement null → vanilla returns false immediately
+            // (does not try later dirs). Air/water + canBePlacedOn neighbour
+            // is never null for glow_lichen.
+            region.set(px, py, pz, place_block);
+            if rng.next_f32() < chance {
+                // Direction.allShuffled consumes 5× nextInt; placing the
+                // spread cell is a separate block write (DefaultSpreaderConfig).
+                lichen_spread(rng, region, px, py, pz, d, place_block);
+            }
+            return true;
+        }
+        false
+    };
+
+    let dirs0 = shuffle_dirs(rng, &valid);
+    if try_place(rng, region, x, y, z, &dirs0) {
+        return;
+    }
+    for &search in &dirs0 {
+        let except: Vec<usize> = valid
+            .iter()
+            .copied()
+            .filter(|&d| d != dir_opposite(search))
+            .collect();
+        let place_dirs = shuffle_dirs(rng, &except);
+        let (sdx, sdy, sdz) = crate::multiface_spreader::DIRS[search];
+        // Bytecode: setWithOffset(origin, searchDir) every i — adjacent only.
+        let px = x + sdx;
+        let py = y + sdy;
+        let pz = z + sdz;
+        for _ in 0..search_range {
+            let st = region.get(px, py, pz);
+            if !air_or_water_or_self(st) {
+                break;
+            }
+            if try_place(rng, region, px, py, pz, &place_dirs) {
+                return;
+            }
+        }
+    }
+}
+
+/// `MultifaceSpreader.spreadFromFaceTowardRandomDirection`:
+/// `Direction.allShuffled` then first successful SAME_POSITION / SAME_PLANE /
+/// WRAP_AROUND (skip same-axis). Attach uses isFaceSturdy ≈ `is_solid_block`.
+fn lichen_spread(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    start_face: usize,
+    place_block: BlockId,
+) {
+    let order = shuffle_dirs(rng, &[0, 1, 2, 3, 4, 5]);
+    // Stream.findFirst: first successful spreadFromFaceTowardDirection.
+    for spread_dir in order {
+        if dir_axis(start_face) == dir_axis(spread_dir) {
+            continue;
+        }
+        let candidates = [
+            (x, y, z, spread_dir),
+            {
+                let (dx, dy, dz) = crate::multiface_spreader::DIRS[spread_dir];
+                (x + dx, y + dy, z + dz, start_face)
+            },
+            {
+                let (sdx, sdy, sdz) = crate::multiface_spreader::DIRS[spread_dir];
+                let (fdx, fdy, fdz) = crate::multiface_spreader::DIRS[start_face];
+                (
+                    x + sdx + fdx,
+                    y + sdy + fdy,
+                    z + sdz + fdz,
+                    dir_opposite(spread_dir),
+                )
+            },
+        ];
+        for (sx, sy, sz, face) in candidates {
+            let cur = region.get(sx, sy, sz);
+            if !matches!(
+                cur,
+                BlockId::Air | BlockId::Water | BlockId::GlowLichen | BlockId::SculkVein
+            ) && cur != place_block
+            {
+                continue;
+            }
+            let (dx, dy, dz) = crate::multiface_spreader::DIRS[face];
+            if !is_solid_block(region.get(sx + dx, sy + dy, sz + dz)) {
+                continue;
+            }
+            region.set(sx, sy, sz, place_block);
+            return; // first success, like Optional.findFirst
+        }
+    }
+}
 
 /// `VinesFeature.place` (26.2): origin must be empty; attaches to the first
 /// acceptable neighbor among all directions except DOWN (isAcceptableNeighbour
@@ -1795,6 +2008,7 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::BigDripleaf
             | BlockId::BigDripleafStem
             | BlockId::Vine
+            | BlockId::GlowLichen
     )
 }
 
