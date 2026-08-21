@@ -17,14 +17,15 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD pending: clay-pool dripleaf (`BlockId` + 
 - clay full `(0,0)`: Neutron 575 vs vanilla 509 (`clay_overlap` iso 517/509, xz overlap 96/134).
 - water y[0,16): Neutron **(0,0)=4 (0,1)=96** vs vanilla **15 + 97**. Probe cells **13/22 water**.
 - trees `(0,0)` 424242: 51 vs 37 pale trunks. RNG 1:1. Extra accepts = terrain.
+- open (air+cave_air) `(0,0)`: Neutron doFill y0..16 **2023** vs vanilla final **1900**; y-16..-1 Neutron **0** vs vanilla **151 cave_air**. `(0,1)` y0..16 2957 vs 2932 (close). Carvers: `CARVE_BAND` cell=write=none=**0** in y[-16,16) for `(0,0)`/`(0,1)`.
 
 Benchmarks track: **done**. Server: joinable.
 
 ## Next (one question)
 
-424242 region **97.71%**. `(0,1)` y0..16 water is 96 vs 97. `(0,0)` still short (4 vs 15): dry clay placed first, later pool `placeGround` skips already-clay so interiors never convert. Vanilla `placeGround` returns true on already-ground (insert). Matching that overshoots `(0,0)` water 4→61 and drops region to 97.59%. Extra dry clay (iso 517 vs 509, full 575) is the remaining lever.
+`(0,1)` water is done (96 vs 97). `(0,0)` 4 vs 15 is extra doFill air at y0..16 (+123 vs vanilla final) + already-clay skip. `placeGround` return-true overshoots (waterlogged-only 49; clay+pool 18 / region 97.67%; all patches 18 / 97.68%). Do not poke `placeGround` again.
 
-Do not reopen springs/carvers/`nextInt(2)`/dripleaf-missing.
+Next dump: extra Neutron air cells in `(0,0)` y0..16 vs vanilla (doFill density at those coords). Parallel: why `CARVE_BAND` cell=0 while vanilla has 151 cave_air in `(0,0)` y[-16,-1] (worm path / `can_reach`, not aquifer-None).
 
 ## Dead (do not reopen without a new two-sided dump)
 
