@@ -474,6 +474,10 @@ public class ProbePaleFlow {
                             BlockPos p = ((BlockPos) margs[0]).immutable();
                             BlockState s = (BlockState) margs[1];
                             blocks.put(p, s);
+                            if (System.getenv("PALE_SETBLOCK") != null) {
+                                System.out.println("SET " + p.getX() + "," + p.getY() + ","
+                                        + p.getZ() + " " + s.getBlock());
+                            }
                             return true;
                         }
                         case "getFluidState" -> {
