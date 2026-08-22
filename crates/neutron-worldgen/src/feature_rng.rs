@@ -82,7 +82,7 @@ impl FeatureRandom {
     pub fn next_bits(&mut self, bits: u32) -> i32 {
         self.draw_count = self.draw_count.wrapping_add(1);
         let v = (self.rng.next_u64() >> (64 - bits)) as u32 as i32;
-        if std::env::var("NEUTRON_RNG_TRACE").is_ok() {
+        if rng_trace_enabled() {
             eprintln!("RNG next({bits})={v} bits={}", self.draw_count);
         }
         v
@@ -230,4 +230,10 @@ mod tests {
         let nint2: Vec<bool> = (0..16).map(|_| b.next_int(2) == 0).collect();
         assert_ne!(nbool, nint2);
     }
+}
+
+/// Whether `NEUTRON_RNG_TRACE` is set — resolved once, checked on every draw.
+fn rng_trace_enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("NEUTRON_RNG_TRACE").is_some())
 }

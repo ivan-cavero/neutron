@@ -211,27 +211,20 @@ pub(crate) fn place_placed_feature_step(
     let Some(placed) = feature_catalog::load_placed_feature(placed_id) else {
         return;
     };
-    let feature_ref = placed["feature"]
-        .as_str()
-        .map(|s| s.to_string())
-        .or_else(|| {
-            // inline feature
-            None
-        });
+    let feature_ref = placed["feature"].as_str().map(|s| s.to_string());
 
     // PlacedFeature.placeWithContext is a lazy stream: Count → InSquare →
     // filters → Feature.place. Each surviving position is placed *before*
     // the next InSquare nextInt (TreeFeature consumes a lot of RNG).
     // Collecting all xz first then placing desyncs every attempt after the first.
-    let configured = if let Some(ref id) = feature_ref {
+    let configured: Option<&'static Value> = if let Some(ref id) = feature_ref {
         feature_catalog::load_configured_feature(id)
-    } else if placed["feature"].is_object() {
-        Some(placed["feature"].clone())
     } else {
-        None
+        placed.get("feature").filter(|v| v.is_object())
     };
     let base_count = placement_count(rng, &placed);
-    let trace_trees = std::env::var("NEUTRON_TRACE_TREES").is_ok();
+    static TRACE_TREES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    let trace_trees = *TRACE_TREES.get_or_init(|| std::env::var_os("NEUTRON_TRACE_TREES").is_some());
     if trace_trees {
         eprintln!(
             "[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}"
@@ -332,8 +325,7 @@ pub(crate) fn place_placed_feature_step(
                         let bname = biome_name_at(state, x, y, z);
                         let step_list = feature_catalog::features_at_step(
                             &bname,
-                            step_for_id(placed_id, gen_step),
-                        );
+                            gen_step,                        );
                         let id = strip(placed_id);
                         if !step_list.iter().any(|f| strip(f) == id) {
                             ok = false;
@@ -400,10 +392,12 @@ pub(crate) fn place_placed_feature_step(
         // draws at the feature gate (no tree RNG consumed) — simulates the
         // "draws rejected by decoration-time terrain" hypothesis for the
         // vanilla-stream derivation (deco_stream_probe).
-        if let Some(skip) = std::env::var("NEUTRON_DECO_SKIP_TREE_DRAWS")
-            .ok()
-            .and_then(|s| s.parse::<i32>().ok())
-        {
+        static SKIP_TREE_DRAWS: std::sync::OnceLock<Option<i32>> = std::sync::OnceLock::new();
+        if let Some(skip) = *SKIP_TREE_DRAWS.get_or_init(|| {
+            std::env::var("NEUTRON_DECO_SKIP_TREE_DRAWS")
+                .ok()
+                .and_then(|s| s.parse::<i32>().ok())
+        }) {
             if draw_no <= skip {
                 if trace_trees {
                     eprintln!("[trace]   draw {draw_no} SKIP (x={x},z={z},y={y})");
@@ -430,10 +424,6 @@ pub(crate) fn place_placed_feature_step(
             );
         }
     }
-}
-
-fn step_for_id(_placed_id: &str, gen_step: i32) -> i32 {
-    gen_step
 }
 
 fn placement_count(rng: &mut FeatureRandom, placed: &Value) -> i32 {
@@ -1541,7 +1531,7 @@ fn place_resolved_placed(
                         let bname = biome_name_at(st, x, y, z);
                         let id = placed["feature"].as_str().map(strip).unwrap_or("");
                         let list =
-                            feature_catalog::features_at_step(&bname, step_for_id("", gen_step));
+                            feature_catalog::features_at_step(&bname, gen_step);
                         list.iter().any(|f| strip(f) == id)
                             || list.iter().any(|f| {
                                 feature_catalog::load_placed_feature(f)
@@ -1566,18 +1556,13 @@ fn place_resolved_placed(
             }
         }
     }
-    let configured = placed["feature"]
+    if let Some(cfg) = placed["feature"]
         .as_str()
         .and_then(feature_catalog::load_configured_feature)
-        .or_else(|| {
-            if placed["feature"].is_object() {
-                Some(placed["feature"].clone())
-            } else {
-                None
-            }
-        });
-    if let Some(cfg) = configured {
-        dispatch_configured(rng, region, state, x, y, z, &cfg, gen_step);
+    {
+        dispatch_configured(rng, region, state, x, y, z, cfg, gen_step);
+    } else if let Some(feat) = placed.get("feature").filter(|v| v.is_object()) {
+        dispatch_configured(rng, region, state, x, y, z, feat, gen_step);
     }
 }
 

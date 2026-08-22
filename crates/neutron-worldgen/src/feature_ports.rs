@@ -2000,9 +2000,3 @@ fn sample_float_provider(rng: &mut FeatureRandom, v: &Value) -> f32 {
         _ => 0.0,
     }
 }
-
-/// `Mth.randomBetween(random, min, max)` — float.
-#[allow(dead_code)]
-fn random_between_f32(rng: &mut FeatureRandom, min: f32, max: f32) -> f32 {
-    min + rng.next_f32() * (max - min)
-}

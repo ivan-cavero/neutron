@@ -329,24 +329,30 @@ fn load_feature_directory(kind: &str) -> HashMap<String, Value> {
 }
 
 /// Load a placed_feature JSON object.
-pub fn load_placed_feature(id: &str) -> Option<Value> {
+///
+/// Returns a `&'static Value`: cache hits borrow from the global JSON cache;
+/// disk fallbacks are leaked once (bounded by the finite datapack file count)
+/// to keep the return type uniform and clone-free.
+pub fn load_placed_feature(id: &str) -> Option<&'static Value> {
     let name = strip_mc(id);
     if let Some(value) = feature_json_cache().placed.get(name) {
-        return Some(value.clone());
+        return Some(value);
     }
     let text = datapack_fs::worldgen_json_with_fallback(&format!("placed_feature/{name}.json"))?;
-    serde_json::from_str(&text).ok()
+    let value: Value = serde_json::from_str(&text).ok()?;
+    Some(Box::leak(value.into()))
 }
 
-/// Load a configured_feature JSON object.
-pub fn load_configured_feature(id: &str) -> Option<Value> {
+/// Load a configured_feature JSON object (see [`load_placed_feature`]).
+pub fn load_configured_feature(id: &str) -> Option<&'static Value> {
     let name = strip_mc(id);
     if let Some(value) = feature_json_cache().configured.get(name) {
-        return Some(value.clone());
+        return Some(value);
     }
     let text =
         datapack_fs::worldgen_json_with_fallback(&format!("configured_feature/{name}.json"))?;
-    serde_json::from_str(&text).ok()
+    let value: Value = serde_json::from_str(&text).ok()?;
+    Some(Box::leak(value.into()))
 }
 
 #[cfg(test)]

@@ -103,7 +103,7 @@ fn collect_configured(
     // Prefer configured (matches `place_placed_feature_step`); the id may also
     // be a nested placed feature (selector children) — recurse then.
     if let Some(cfg) = load_configured_feature(ref_id) {
-        out.push((ref_id.to_string(), cfg));
+        out.push((ref_id.to_string(), cfg.clone()));
         return;
     }
     if let Some(_placed) = load_placed_feature(ref_id) {

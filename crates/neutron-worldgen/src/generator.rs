@@ -446,8 +446,11 @@ impl ChunkGenerator {
                                     &mut marker_state,
                                 );
                                 let final_density = compute(&st.router.final_density, &mut env);
-                                if std::env::var("NEUTRON_TRACE_DENS").is_ok()
-                                    && pos_x == 2
+                                static TRACE_DENS: std::sync::OnceLock<bool> =
+                                    std::sync::OnceLock::new();
+                                if *TRACE_DENS.get_or_init(|| {
+                                    std::env::var_os("NEUTRON_TRACE_DENS").is_some()
+                                }) && pos_x == 2
                                     && pos_y == 5
                                     && pos_z == 26
                                 {
