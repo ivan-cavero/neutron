@@ -772,3 +772,60 @@ impl BlendedNoise {
         self.main_noise.dump_octaves();
     }
 }
+
+#[cfg(test)]
+mod golden_vectors {
+    //! Regression pins for the noise core. The implementation these pin was
+    //! verified 1:1 against vanilla 26.2 via the worldgen-probe harness; any
+    //! change to these hashes means the noise math moved — check whether that
+    //! is intended parity work or an accidental regression before updating.
+
+    use super::*;
+    use crate::rng::Xoroshiro128;
+    use xxhash_rust::xxh3::xxh3_64;
+
+    const IMPROVED_PIN: u64 = 0x1fee_e384_e470_0353;
+    const NORMAL_PIN: u64 = 0xfc01_8f5d_ddfe_1e08;
+    const BLENDED_PIN: u64 = 0xb111_c89a_3963_3f70;
+
+    /// Deterministic f64 grid hash: samples (x,y,z) over a stride and mixes
+    /// raw bits into xxh3 so ANY bit change flips the digest.
+    fn grid_hash(mut sample: impl FnMut(i32, i32, i32) -> f64) -> u64 {
+        let mut buf = Vec::with_capacity(8 * 11 * 11 * 11);
+        for k in 0..11i32 {
+            for j in 0..11i32 {
+                for i in 0..11i32 {
+                    let v = sample(i * 7 - 35, k * 9 - 45, j * 7 - 35);
+                    buf.extend_from_slice(&v.to_bits().to_le_bytes());
+                }
+            }
+        }
+        xxh3_64(&buf)
+    }
+
+    #[test]
+    fn noise_grid_pins() {
+        let mut rng = Xoroshiro128::new(424242);
+        let improved = ImprovedNoise::new(&mut rng);
+        let h_improved = grid_hash(|x, y, z| {
+            improved.noise(x as f64 * 0.01, y as f64 * 0.01, z as f64 * 0.01)
+        });
+
+        let normal = NormalNoise::create(0x1234_5678_9abc_def0, 0xfeed_beef_cafe_0001, -7, &[
+            1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        ]);
+        let h_normal =
+            grid_hash(|x, y, z| normal.get_value(x as f64 * 0.03, y as f64 * 0.03, z as f64 * 0.03));
+
+        let blended = BlendedNoise::create_unseeded(0.25, 0.125, 80.0, 160.0, 8.0);
+        let h_blended =
+            grid_hash(|x, y, z| blended.compute(x * 4, y * 4, z * 4));
+
+        eprintln!("PINS improved={h_improved:#018x} normal={h_normal:#018x} blended={h_blended:#018x}");
+        assert_eq!(
+            (h_improved, h_normal, h_blended),
+            (IMPROVED_PIN, NORMAL_PIN, BLENDED_PIN),
+            "noise math moved — intended parity change or regression?"
+        );
+    }
+}
