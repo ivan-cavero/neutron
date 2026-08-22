@@ -210,6 +210,8 @@ impl MultifaceSpreader {
         }
         // wrap-around: manhattan==2 + opposite-face sturdy at source.relative(face.opposite)
         let manh = (sp.x - sx).abs() + (sp.y - sy).abs() + (sp.z - sz).abs();
+        // wrap-around: manhattan==2 + opposite-face sturdy at source.relative(face.opposite)
+        let manh = (sp.x - sx).abs() + (sp.y - sy).abs() + (sp.z - sz).abs();
         if manh == 2 {
             let opp = opposite(sp.face);
             let (odx, ody, odz) = DIRS[opp];
@@ -464,6 +466,12 @@ fn is_sturdy_attach(b: BlockId) -> bool {
 }
 
 /// isFaceSturdy for a full cube (wrap-around reject). Sculk/catalyst are sturdy.
+
+/// isFaceSturdy for a full cube (wrap-around reject). Sculk/catalyst are sturdy.
+/// NOTE: this is the BlockState.isFaceSturdy == collision-shape-full-block
+/// shortcut, so vein/sensor/shrieker are NOT sturdy on ANY face. Verified by
+/// the Java flat-floor probe: the full-cube check matches 166 sculk; a
+/// face-aware variant (is_face_sturdy_at) regresses to 162.
 fn is_face_sturdy_full(b: BlockId) -> bool {
     !matches!(
         b,
@@ -533,4 +541,10 @@ mod tests {
             "wrap around a sturdy corner must be rejected"
         );
     }
+
 }
+
+
+
+
+

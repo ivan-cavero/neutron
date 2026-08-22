@@ -198,28 +198,7 @@ enum TargetKind {
     DeepslateOre,
 }
 
-const fn range_y(height: HeightSpec) -> YSpec {
-    YSpec::Range {
-        height,
-        max_relative_to_ocean_floor_wg: None,
-    }
-}
 
-const fn ore_kind(
-    size: i32,
-    discard_chance: f32,
-    stone_block: BlockId,
-    deepslate_block: Option<BlockId>,
-    target: TargetKind,
-) -> FeatureKind {
-    FeatureKind::Ore(OreDef {
-        size,
-        discard_chance,
-        stone_block,
-        deepslate_block,
-        target,
-    })
-}
 
 // ---------------------------------------------------------------------------
 // Data-driven step-6 definitions (datapack placed_feature + configured_feature)
@@ -1365,3 +1344,4 @@ mod tests {
         assert!(f >= 1.0 / 6.0);
     }
 }
+
