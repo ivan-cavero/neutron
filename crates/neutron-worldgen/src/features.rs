@@ -16,6 +16,7 @@ use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;
 use crate::worldgen::WorldgenState;
+use serde_json::Value;
 
 const STEP_UNDERGROUND_ORES: i32 = 6;
 const PI: f32 = 3.1415927;
@@ -54,9 +55,11 @@ pub(crate) fn apply_underground_ores_origin(
 ) {
     let state = WorldgenState::overworld(level_seed);
     let saved = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+    static ORES: std::sync::OnceLock<Vec<FeatureDef>> = std::sync::OnceLock::new();
+    let ores = ORES.get_or_init(load_overworld_ores);
     let mut rng = FeatureRandom::new(level_seed);
     let decoration_seed = rng.set_decoration_seed(level_seed, origin_min_x, origin_min_z);
-    for def in OVERWORLD_ORES {
+    for def in ores {
         rng.set_feature_seed(decoration_seed, def.feature_index, STEP_UNDERGROUND_ORES);
         if matches!(def.gate, BiomeGate::Off) {
             continue;
@@ -70,14 +73,14 @@ pub(crate) fn apply_underground_ores_origin(
 // Feature definitions (from datapack placed_feature + configured_feature)
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum CountSpec {
     Fixed(i32),
     Uniform { min: i32, max: i32 },
     Rarity(i32),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum HeightSpec {
     Uniform {
         min: HeightAnchor,
@@ -89,7 +92,7 @@ enum HeightSpec {
     },
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum HeightAnchor {
     Absolute(i32),
     AboveBottom(i32),
@@ -106,7 +109,7 @@ impl HeightAnchor {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct FeatureDef {
     /// FeatureSorter global index for step 6.
     feature_index: i32,
@@ -117,7 +120,7 @@ struct FeatureDef {
 }
 
 /// Vanilla `minecraft:biome` placement filter, sampled at the origin.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum BiomeGate {
     Any,
     /// Index reserved; no place (missing BlockId or colliding biome id).
@@ -125,7 +128,7 @@ enum BiomeGate {
     Ids(&'static [u8]),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum YSpec {
     Range {
         height: HeightSpec,
@@ -140,7 +143,7 @@ enum YSpec {
     },
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum FeatureKind {
     Ore(OreDef),
     Disk(DiskDef),
@@ -151,7 +154,7 @@ enum FeatureKind {
     },
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct OreDef {
     size: i32,
     discard_chance: f32,
@@ -160,7 +163,7 @@ struct OreDef {
     target: TargetKind,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct DiskDef {
     half_height: i32,
     radius_min: i32,
@@ -169,14 +172,14 @@ struct DiskDef {
     provider: DiskProvider,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum DiskTarget {
     DirtOrClay,
     DirtOrGrass,
     DirtOrMud,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum DiskProvider {
     Simple(BlockId),
     /// Sand; sandstone if the block below is air.
@@ -185,7 +188,7 @@ enum DiskProvider {
     GrassOrDirt,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum TargetKind {
     /// stone, granite, diorite, andesite
     StoneOre,
@@ -218,529 +221,322 @@ const fn ore_kind(
     })
 }
 
-const OVERWORLD_ORES: &[FeatureDef] = &[
-    // 0 ore_dirt
-    FeatureDef {
-        feature_index: 0,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(7),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(0),
-            max: HeightAnchor::Absolute(160),
-        }),
-        kind: ore_kind(33, 0.0, BlockId::Dirt, None, TargetKind::BaseStone),
-    },
-    // 1 ore_gravel
-    FeatureDef {
-        feature_index: 1,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(14),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::BelowTop(0),
-        }),
-        kind: ore_kind(33, 0.0, BlockId::Gravel, None, TargetKind::BaseStone),
-    },
-    // 2 ore_granite_upper (rarity 6)
-    FeatureDef {
-        feature_index: 2,
-        gate: BiomeGate::Any,
-        count: CountSpec::Rarity(6),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(64),
-            max: HeightAnchor::Absolute(128),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Granite, None, TargetKind::BaseStone),
-    },
-    // 3 ore_granite_lower
-    FeatureDef {
-        feature_index: 3,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(0),
-            max: HeightAnchor::Absolute(60),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Granite, None, TargetKind::BaseStone),
-    },
-    // 4 ore_diorite_upper
-    FeatureDef {
-        feature_index: 4,
-        gate: BiomeGate::Any,
-        count: CountSpec::Rarity(6),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(64),
-            max: HeightAnchor::Absolute(128),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Diorite, None, TargetKind::BaseStone),
-    },
-    // 5 ore_diorite_lower
-    FeatureDef {
-        feature_index: 5,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(0),
-            max: HeightAnchor::Absolute(60),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Diorite, None, TargetKind::BaseStone),
-    },
-    // 6 ore_andesite_upper
-    FeatureDef {
-        feature_index: 6,
-        gate: BiomeGate::Any,
-        count: CountSpec::Rarity(6),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(64),
-            max: HeightAnchor::Absolute(128),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Andesite, None, TargetKind::BaseStone),
-    },
-    // 7 ore_andesite_lower
-    FeatureDef {
-        feature_index: 7,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(0),
-            max: HeightAnchor::Absolute(60),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Andesite, None, TargetKind::BaseStone),
-    },
-    // 8 ore_tuff
-    FeatureDef {
-        feature_index: 8,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::Absolute(0),
-        }),
-        kind: ore_kind(64, 0.0, BlockId::Tuff, None, TargetKind::BaseStone),
-    },
-    // 9 ore_coal_upper
-    FeatureDef {
-        feature_index: 9,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(30),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(136),
-            max: HeightAnchor::BelowTop(0),
-        }),
-        kind: ore_kind(
-            17,
-            0.0,
-            BlockId::CoalOre,
-            Some(BlockId::DeepslateCoalOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 10 ore_coal_lower (buried)
-    FeatureDef {
-        feature_index: 10,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(20),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(0),
-            max: HeightAnchor::Absolute(192),
-        }),
-        kind: ore_kind(
-            17,
-            0.5,
-            BlockId::CoalOre,
-            Some(BlockId::DeepslateCoalOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 11 ore_iron_upper
-    FeatureDef {
-        feature_index: 11,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(90),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(80),
-            max: HeightAnchor::Absolute(384),
-        }),
-        kind: ore_kind(
-            9,
-            0.0,
-            BlockId::IronOre,
-            Some(BlockId::DeepslateIronOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 12 ore_iron_middle
-    FeatureDef {
-        feature_index: 12,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(10),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-24),
-            max: HeightAnchor::Absolute(56),
-        }),
-        kind: ore_kind(
-            9,
-            0.0,
-            BlockId::IronOre,
-            Some(BlockId::DeepslateIronOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 13 ore_iron_small
-    FeatureDef {
-        feature_index: 13,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(10),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::Absolute(72),
-        }),
-        kind: ore_kind(
-            4,
-            0.0,
-            BlockId::IronOre,
-            Some(BlockId::DeepslateIronOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 14 ore_gold
-    FeatureDef {
-        feature_index: 14,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(4),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-64),
-            max: HeightAnchor::Absolute(32),
-        }),
-        kind: ore_kind(
-            9,
-            0.5,
-            BlockId::GoldOre,
-            Some(BlockId::DeepslateGoldOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 15 ore_gold_lower
-    FeatureDef {
-        feature_index: 15,
-        gate: BiomeGate::Any,
-        count: CountSpec::Uniform { min: 0, max: 1 },
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(-64),
-            max: HeightAnchor::Absolute(-48),
-        }),
-        kind: ore_kind(
-            9,
-            0.5,
-            BlockId::GoldOre,
-            Some(BlockId::DeepslateGoldOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 16 ore_redstone
-    FeatureDef {
-        feature_index: 16,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(4),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::Absolute(15),
-        }),
-        kind: ore_kind(
-            8,
-            0.0,
-            BlockId::RedstoneOre,
-            Some(BlockId::DeepslateRedstoneOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 17 ore_redstone_lower
-    FeatureDef {
-        feature_index: 17,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(8),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::AboveBottom(-32),
-            max: HeightAnchor::AboveBottom(32),
-        }),
-        kind: ore_kind(
-            8,
-            0.0,
-            BlockId::RedstoneOre,
-            Some(BlockId::DeepslateRedstoneOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 18 ore_diamond (small)
-    FeatureDef {
-        feature_index: 18,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(7),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::AboveBottom(-80),
-            max: HeightAnchor::AboveBottom(80),
-        }),
-        kind: ore_kind(
-            4,
-            0.5,
-            BlockId::DiamondOre,
-            Some(BlockId::DeepslateDiamondOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 19 ore_diamond_medium
-    FeatureDef {
-        feature_index: 19,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(-64),
-            max: HeightAnchor::Absolute(-4),
-        }),
-        kind: ore_kind(
-            8,
-            0.5,
-            BlockId::DiamondOre,
-            Some(BlockId::DeepslateDiamondOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 20 ore_diamond_large (rarity 9)
-    FeatureDef {
-        feature_index: 20,
-        gate: BiomeGate::Any,
-        count: CountSpec::Rarity(9),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::AboveBottom(-80),
-            max: HeightAnchor::AboveBottom(80),
-        }),
-        kind: ore_kind(
-            12,
-            0.7,
-            BlockId::DiamondOre,
-            Some(BlockId::DeepslateDiamondOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 21 ore_diamond_buried
-    FeatureDef {
-        feature_index: 21,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(4),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::AboveBottom(-80),
-            max: HeightAnchor::AboveBottom(80),
-        }),
-        kind: ore_kind(
-            8,
-            1.0,
-            BlockId::DiamondOre,
-            Some(BlockId::DeepslateDiamondOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 22 ore_lapis
-    FeatureDef {
-        feature_index: 22,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(2),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-32),
-            max: HeightAnchor::Absolute(32),
-        }),
-        kind: ore_kind(
-            7,
-            0.0,
-            BlockId::LapisOre,
-            Some(BlockId::DeepslateLapisOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 23 ore_lapis_buried
-    FeatureDef {
-        feature_index: 23,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(4),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::Absolute(64),
-        }),
-        kind: ore_kind(
-            7,
-            1.0,
-            BlockId::LapisOre,
-            Some(BlockId::DeepslateLapisOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 24 ore_copper_large — dripstone_caves only
-    FeatureDef {
-        feature_index: 24,
-        gate: BiomeGate::Ids(&[biome_id::DRIPSTONE_CAVES]),
-        count: CountSpec::Fixed(16),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-16),
-            max: HeightAnchor::Absolute(112),
-        }),
-        kind: ore_kind(
-            20,
-            0.0,
-            BlockId::CopperOre,
-            Some(BlockId::DeepslateCopperOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 25 ore_copper
-    FeatureDef {
-        feature_index: 25,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(16),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-16),
-            max: HeightAnchor::Absolute(112),
-        }),
-        kind: ore_kind(
-            10,
-            0.0,
-            BlockId::CopperOre,
-            Some(BlockId::DeepslateCopperOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 26 underwater_magma — most overworld biomes (incl. deep_dark)
-    FeatureDef {
-        feature_index: 26,
-        gate: BiomeGate::Any,
-        count: CountSpec::Uniform { min: 44, max: 52 },
-        y: YSpec::Range {
-            height: HeightSpec::Uniform {
-                min: HeightAnchor::AboveBottom(0),
-                max: HeightAnchor::Absolute(256),
-            },
-            max_relative_to_ocean_floor_wg: Some(-2),
-        },
-        kind: FeatureKind::UnderwaterMagma {
-            floor_search_range: 5,
-            probability: 0.5,
-            radius: 1,
-        },
-    },
-    // 27 ore_clay — lush_caves only
-    FeatureDef {
-        feature_index: 27,
-        gate: BiomeGate::Ids(&[biome_id::LUSH_CAVES]),
-        count: CountSpec::Fixed(46),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::AboveBottom(0),
-            max: HeightAnchor::Absolute(256),
-        }),
-        kind: ore_kind(33, 0.0, BlockId::Clay, None, TargetKind::BaseStone),
-    },
-    // 28 ore_gold_extra — badlands-like only (configured ore_gold, discard 0)
-    FeatureDef {
-        feature_index: 28,
-        gate: BiomeGate::Ids(&[
+// ---------------------------------------------------------------------------
+// Data-driven step-6 definitions (datapack placed_feature + configured_feature)
+// ---------------------------------------------------------------------------
+
+/// Overworld step-6 feature names in FeatureSorter order (= `feature_index`).
+const OVERWORLD_ORE_NAMES: [&str; 34] = [
+    "ore_dirt",
+    "ore_gravel",
+    "ore_granite_upper",
+    "ore_granite_lower",
+    "ore_diorite_upper",
+    "ore_diorite_lower",
+    "ore_andesite_upper",
+    "ore_andesite_lower",
+    "ore_tuff",
+    "ore_coal_upper",
+    "ore_coal_lower",
+    "ore_iron_upper",
+    "ore_iron_middle",
+    "ore_iron_small",
+    "ore_gold",
+    "ore_gold_lower",
+    "ore_redstone",
+    "ore_redstone_lower",
+    "ore_diamond",
+    "ore_diamond_medium",
+    "ore_diamond_large",
+    "ore_diamond_buried",
+    "ore_lapis",
+    "ore_lapis_buried",
+    "ore_copper_large",
+    "ore_copper",
+    "underwater_magma",
+    "ore_clay",
+    "ore_gold_extra",
+    "disk_grass",
+    "disk_sand",
+    "disk_clay",
+    "disk_gravel",
+    "ore_emerald",
+];
+
+/// Biome membership that vanilla encodes in each biome's step-6 feature list.
+/// These five are the only overworld ores/disks whose gate is not "any biome".
+static GATE_OVERRIDES: &[(&str, BiomeGate)] = &[
+    ("ore_copper_large", BiomeGate::Ids(&[biome_id::DRIPSTONE_CAVES])),
+    ("ore_clay", BiomeGate::Ids(&[biome_id::LUSH_CAVES])),
+    (
+        "ore_gold_extra",
+        BiomeGate::Ids(&[
             biome_id::BADLANDS,
             biome_id::ERODED_BADLANDS,
             biome_id::WOODED_BADLANDS,
         ]),
-        count: CountSpec::Fixed(50),
-        y: range_y(HeightSpec::Uniform {
-            min: HeightAnchor::Absolute(32),
-            max: HeightAnchor::Absolute(256),
-        }),
-        kind: ore_kind(
-            9,
-            0.0,
-            BlockId::GoldOre,
-            Some(BlockId::DeepslateGoldOre),
-            TargetKind::StoneOre,
-        ),
-    },
-    // 29 disk_grass — mangrove_swamp only
-    FeatureDef {
-        feature_index: 29,
-        gate: BiomeGate::Ids(&[biome_id::MANGROVE_SWAMP]),
-        count: CountSpec::Fixed(1),
-        y: YSpec::OceanFloorWg {
-            require_water: false,
-            require_mud: true,
-            y_offset: -1,
-        },
-        kind: FeatureKind::Disk(DiskDef {
-            half_height: 2,
-            radius_min: 2,
-            radius_max: 6,
-            target: DiskTarget::DirtOrMud,
-            provider: DiskProvider::GrassOrDirt,
-        }),
-    },
-    // 30 disk_sand — most biomes (incl. deep_dark); count 3
-    FeatureDef {
-        feature_index: 30,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(3),
-        y: YSpec::OceanFloorWg {
-            require_water: true,
-            require_mud: false,
-            y_offset: 0,
-        },
-        kind: FeatureKind::Disk(DiskDef {
-            half_height: 2,
-            radius_min: 2,
-            radius_max: 6,
-            target: DiskTarget::DirtOrGrass,
-            provider: DiskProvider::SandOrSandstone,
-        }),
-    },
-    // 31 disk_clay — most biomes (incl. deep_dark)
-    FeatureDef {
-        feature_index: 31,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(1),
-        y: YSpec::OceanFloorWg {
-            require_water: true,
-            require_mud: false,
-            y_offset: 0,
-        },
-        kind: FeatureKind::Disk(DiskDef {
-            half_height: 1,
-            radius_min: 2,
-            radius_max: 3,
-            target: DiskTarget::DirtOrClay,
-            provider: DiskProvider::Simple(BlockId::Clay),
-        }),
-    },
-    // 32 disk_gravel — most biomes (incl. deep_dark)
-    FeatureDef {
-        feature_index: 32,
-        gate: BiomeGate::Any,
-        count: CountSpec::Fixed(1),
-        y: YSpec::OceanFloorWg {
-            require_water: true,
-            require_mud: false,
-            y_offset: 0,
-        },
-        kind: FeatureKind::Disk(DiskDef {
-            half_height: 2,
-            radius_min: 2,
-            radius_max: 5,
-            target: DiskTarget::DirtOrGrass,
-            provider: DiskProvider::Simple(BlockId::Gravel),
-        }),
-    },
-    // 33 ore_emerald — peaks/grove/meadow/…; BlockId lacks emerald ore
-    FeatureDef {
-        feature_index: 33,
-        gate: BiomeGate::Off,
-        count: CountSpec::Fixed(100),
-        y: range_y(HeightSpec::Trapezoid {
-            min: HeightAnchor::Absolute(-16),
-            max: HeightAnchor::Absolute(480),
-        }),
-        kind: ore_kind(3, 0.0, BlockId::CopperOre, None, TargetKind::StoneOre),
-    },
+    ),
+    ("disk_grass", BiomeGate::Ids(&[biome_id::MANGROVE_SWAMP])),
+    // peaks/grove/meadow/…; BlockId lacks emerald ore → slot reserved
+    ("ore_emerald", BiomeGate::Off),
 ];
+
+fn parse_anchor(v: &Value) -> HeightAnchor {
+    if let Some(n) = v.get("absolute").and_then(|x| x.as_i64()) {
+        return HeightAnchor::Absolute(n as i32);
+    }
+    if let Some(n) = v.get("above_bottom").and_then(|x| x.as_i64()) {
+        return HeightAnchor::AboveBottom(n as i32);
+    }
+    if let Some(n) = v.get("below_top").and_then(|x| x.as_i64()) {
+        return HeightAnchor::BelowTop(n as i32);
+    }
+    panic!("unrecognized height anchor: {v}");
+}
+
+fn parse_height_spec(h: &Value) -> HeightSpec {
+    let min = parse_anchor(&h["min_inclusive"]);
+    let max = parse_anchor(&h["max_inclusive"]);
+    match h["type"].as_str().unwrap_or("") {
+        "minecraft:uniform" => HeightSpec::Uniform { min, max },
+        "minecraft:trapezoid" => HeightSpec::Trapezoid { min, max },
+        other => panic!("unrecognized height distribution: {other}"),
+    }
+}
+
+fn parse_count(placements: &[Value]) -> CountSpec {
+    let mut spec = CountSpec::Fixed(1); // vanilla default when no count modifier
+    for m in placements {
+        match m["type"].as_str().unwrap_or("") {
+            "minecraft:count" => {
+                let c = &m["count"];
+                if let Some(n) = c.as_i64() {
+                    spec = CountSpec::Fixed(n as i32);
+                } else if c["type"].as_str() == Some("minecraft:uniform") {
+                    spec = CountSpec::Uniform {
+                        min: c["min_inclusive"].as_i64().unwrap() as i32,
+                        max: c["max_inclusive"].as_i64().unwrap() as i32,
+                    };
+                }
+            }
+            "minecraft:rarity_filter" => {
+                spec = CountSpec::Rarity(m["chance"].as_i64().unwrap() as i32);
+            }
+            _ => {}
+        }
+    }
+    spec
+}
+
+fn parse_yspec(placements: &[Value]) -> YSpec {
+    let mut yspec = YSpec::Range {
+        height: HeightSpec::Uniform {
+            min: HeightAnchor::Absolute(0),
+            max: HeightAnchor::Absolute(0),
+        },
+        max_relative_to_ocean_floor_wg: None,
+    };
+    for m in placements {
+        match m["type"].as_str().unwrap_or("") {
+            "minecraft:height_range" => {
+                yspec = YSpec::Range {
+                    height: parse_height_spec(&m["height"]),
+                    max_relative_to_ocean_floor_wg: None,
+                };
+            }
+            "minecraft:surface_relative_threshold_filter" => {
+                if let YSpec::Range { height, .. } = yspec {
+                    yspec = YSpec::Range {
+                        height,
+                        max_relative_to_ocean_floor_wg: m["max_inclusive"]
+                            .as_i64()
+                            .map(|n| n as i32),
+                    };
+                }
+            }
+            "minecraft:heightmap" => {
+                debug_assert_eq!(m["heightmap"].as_str(), Some("OCEAN_FLOOR_WG"));
+                yspec = YSpec::OceanFloorWg {
+                    require_water: false,
+                    require_mud: false,
+                    y_offset: 0,
+                };
+            }
+            "minecraft:random_offset" => {
+                if let YSpec::OceanFloorWg {
+                    require_water,
+                    require_mud,
+                    ..
+                } = yspec
+                {
+                    yspec = YSpec::OceanFloorWg {
+                        require_water,
+                        require_mud,
+                        y_offset: m["y_spread"].as_i64().unwrap_or(0) as i32,
+                    };
+                }
+            }
+            "minecraft:block_predicate_filter" => {
+                let p = &m["predicate"];
+                if let YSpec::OceanFloorWg { require_water, require_mud, y_offset } = yspec {
+                    if p["type"] == "minecraft:matching_fluids"
+                        && p["fluids"] == "minecraft:water"
+                    {
+                        yspec = YSpec::OceanFloorWg { require_water: true, require_mud, y_offset };
+                    }
+                    if p["type"] == "minecraft:matching_blocks" {
+                        let blocks = &p["blocks"];
+                        let is_mud = |b: &Value| b.as_str() == Some("minecraft:mud");
+                        let has_mud = blocks.as_str().is_some_and(|s| is_mud(&Value::String(s.into())))
+                            || blocks
+                                .as_array()
+                                .is_some_and(|a| a.iter().any(is_mud));
+                        if has_mud {
+                            yspec = YSpec::OceanFloorWg { require_water, require_mud: true, y_offset };
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    yspec
+}
+
+fn block_from_state(v: &Value) -> Option<BlockId> {
+    v.pointer("/state/Name")
+        .and_then(|n| n.as_str())
+        .and_then(BlockId::from_name)
+}
+
+fn parse_kind(cfg: &Value) -> FeatureKind {
+    match cfg["type"].as_str().unwrap_or("") {
+        "minecraft:ore" => {
+            let targets = cfg["config"]["targets"].as_array().expect("ore targets");
+            let stone_block = block_from_state(&targets[0])
+                // ore_emerald: BlockId lacks emerald_ore; slot stays reserved
+                // behind BiomeGate::Off with the same copper placeholder as
+                // the old hand-written table.
+                .unwrap_or_else(|| {
+                    if targets[0]["state"]["Name"] == "minecraft:emerald_ore" {
+                        BlockId::CopperOre
+                    } else {
+                        panic!("no BlockId for {}", targets[0]["state"]);
+                    }
+                });
+            let deepslate_block = targets.get(1).and_then(block_from_state);
+            let tag = targets[0]["target"]["tag"].as_str().unwrap_or("");
+            let target = if tag == "minecraft:base_stone_overworld" {
+                TargetKind::BaseStone
+            } else {
+                TargetKind::StoneOre
+            };
+            FeatureKind::Ore(OreDef {
+                size: cfg["config"]["size"].as_i64().unwrap() as i32,
+                discard_chance: cfg["config"]["discard_chance_on_air_exposure"]
+                    .as_f64()
+                    .unwrap() as f32,
+                stone_block,
+                deepslate_block,
+                target,
+            })
+        }
+        "minecraft:disk" => {
+            let cfg = &cfg["config"];
+            let provider = &cfg["state_provider"];
+            let fallback = block_from_state(&provider["fallback"]);
+            let simple = block_from_state(provider);
+            // rule shape decides the two special providers; else Simple(fallback)
+            let rules = provider["rules"].as_array();
+            let disk_provider = if let Some(rules) = rules {
+                let then_block = block_from_state(&rules[0]["then"]);
+                match (fallback, then_block) {
+                    (Some(BlockId::Sand), Some(BlockId::Sandstone)) => {
+                        DiskProvider::SandOrSandstone
+                    }
+                    (Some(BlockId::Dirt), Some(BlockId::GrassBlock)) => DiskProvider::GrassOrDirt,
+                    _ => panic!(
+                        "unrecognized disk rules: fallback={fallback:?} then={then_block:?}"
+                    ),
+                }
+            } else {
+                DiskProvider::Simple(
+                    block_from_state(provider).expect("disk simple provider"),
+                )
+            };
+            let mut target_blocks: Vec<&str> = Vec::new();
+            if let Some(arr) = cfg["target"]["blocks"].as_array() {
+                for b in arr {
+                    if let Some(s) = b.as_str() {
+                        target_blocks.push(s);
+                    }
+                }
+            } else if let Some(s) = cfg["target"]["blocks"].as_str() {
+                target_blocks.push(s);
+            }
+            let has = |n: &str| target_blocks.iter().any(|b| b.ends_with(n));
+            let target = if has("clay") {
+                DiskTarget::DirtOrClay
+            } else if has("grass_block") {
+                DiskTarget::DirtOrGrass
+            } else if has("mud") {
+                DiskTarget::DirtOrMud
+            } else {
+                DiskTarget::DirtOrGrass
+            };
+            let radius = &cfg["radius"];
+            FeatureKind::Disk(DiskDef {
+                half_height: cfg["half_height"].as_i64().unwrap() as i32,
+                radius_min: radius["min_inclusive"].as_i64().unwrap() as i32,
+                radius_max: radius["max_inclusive"].as_i64().unwrap() as i32,
+                target,
+                provider: disk_provider,
+            })
+        }
+        "minecraft:underwater_magma" => {
+            let c = &cfg["config"];
+            FeatureKind::UnderwaterMagma {
+                floor_search_range: c["floor_search_range"].as_i64().unwrap() as i32,
+                probability: c["placement_probability_per_valid_position"]
+                    .as_f64()
+                    .unwrap() as f32,
+                radius: c["placement_radius_around_floor"].as_i64().unwrap() as i32,
+            }
+        }
+        other => panic!("unsupported step-6 configured type: {other}"),
+    }
+}
+
+/// Build the step-6 definitions from the embedded datapack JSONs.
+pub fn load_overworld_ores() -> Vec<FeatureDef> {
+    OVERWORLD_ORE_NAMES
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            let placed = crate::feature_catalog::load_placed_feature(name)
+                .unwrap_or_else(|| panic!("placed_feature/{name}.json"));
+            let configured_name = placed["feature"]
+                .as_str()
+                .and_then(|s| s.strip_prefix("minecraft:"))
+                .unwrap_or(name);
+            let configured = crate::feature_catalog::load_configured_feature(configured_name)
+                .unwrap_or_else(|| panic!("configured_feature/{configured_name}.json"));
+            let placements = placed["placement"].as_array().expect("placement list");
+            let gate = GATE_OVERRIDES
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, g)| *g)
+                .unwrap_or(BiomeGate::Any);
+            FeatureDef {
+                feature_index: i as i32,
+                gate,
+                count: parse_count(placements),
+                y: parse_yspec(placements),
+                kind: parse_kind(configured),
+            }
+        })
+        .collect()
+}
 
 // ---------------------------------------------------------------------------
 // Placement + OreFeature
@@ -1516,23 +1312,24 @@ mod tests {
 
     #[test]
     fn step6_feature_indices_are_explicit_0_to_33() {
-        let idxs: Vec<i32> = OVERWORLD_ORES.iter().map(|d| d.feature_index).collect();
+        let ores = load_overworld_ores();
+        let idxs: Vec<i32> = ores.iter().map(|d| d.feature_index).collect();
         assert_eq!(idxs, (0..=33).collect::<Vec<i32>>());
-        assert!(matches!(OVERWORLD_ORES[24].gate, BiomeGate::Ids(_)));
-        assert!(matches!(OVERWORLD_ORES[25].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[26].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[27].gate, BiomeGate::Ids(_)));
-        assert!(matches!(OVERWORLD_ORES[28].gate, BiomeGate::Ids(_)));
-        assert!(matches!(OVERWORLD_ORES[29].gate, BiomeGate::Ids(_)));
-        assert!(matches!(OVERWORLD_ORES[30].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[31].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[32].gate, BiomeGate::Any));
-        assert!(matches!(OVERWORLD_ORES[33].gate, BiomeGate::Off));
-        assert!(matches!(OVERWORLD_ORES[30].kind, FeatureKind::Disk(_)));
-        assert!(matches!(OVERWORLD_ORES[31].kind, FeatureKind::Disk(_)));
-        assert!(matches!(OVERWORLD_ORES[32].kind, FeatureKind::Disk(_)));
+        assert!(matches!(ores[24].gate, BiomeGate::Ids(_))); // copper_large
+        assert!(matches!(ores[25].gate, BiomeGate::Any)); // copper
+        assert!(matches!(ores[26].gate, BiomeGate::Any)); // underwater_magma
+        assert!(matches!(ores[27].gate, BiomeGate::Ids(_))); // clay
+        assert!(matches!(ores[28].gate, BiomeGate::Ids(_))); // gold_extra
+        assert!(matches!(ores[29].gate, BiomeGate::Ids(_))); // disk_grass
+        assert!(matches!(ores[30].gate, BiomeGate::Any)); // disk_sand
+        assert!(matches!(ores[31].gate, BiomeGate::Any)); // disk_clay
+        assert!(matches!(ores[32].gate, BiomeGate::Any)); // disk_gravel
+        assert!(matches!(ores[33].gate, BiomeGate::Off)); // emerald
+        assert!(matches!(ores[30].kind, FeatureKind::Disk(_)));
+        assert!(matches!(ores[31].kind, FeatureKind::Disk(_)));
+        assert!(matches!(ores[32].kind, FeatureKind::Disk(_)));
         assert!(matches!(
-            OVERWORLD_ORES[26].kind,
+            ores[26].kind,
             FeatureKind::UnderwaterMagma { .. }
         ));
     }
