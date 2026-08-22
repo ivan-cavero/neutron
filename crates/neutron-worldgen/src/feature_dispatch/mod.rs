@@ -136,15 +136,17 @@ fn origin_biome_union(
             let cx0 = region.origin_x + ncx * 16;
             let cz0 = region.origin_z + ncz * 16;
             for section in 0..24i32 {
-                let y = WORLD_BOTTOM + section * 16 + 8;
-                for bz4 in 0..4i32 {
-                    for bx4 in 0..4i32 {
-                        push(crate::biome_manager::noise_biome_at_quart(
-                            state,
-                            cx0 / 4 + bx4,
-                            y >> 2,
-                            cz0 / 4 + bz4,
-                        ));
+                let base_y_q = (WORLD_BOTTOM + section * 16) >> 2;
+                for sy4 in 0..4i32 {
+                    for bz4 in 0..4i32 {
+                        for bx4 in 0..4i32 {
+                            push(crate::biome_manager::noise_biome_at_quart(
+                                state,
+                                cx0 / 4 + bx4,
+                                base_y_q + sy4,
+                                cz0 / 4 + bz4,
+                            ));
+                        }
                     }
                 }
             }

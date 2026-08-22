@@ -73,13 +73,14 @@ pub fn encode_playable_chunk(chunk: &GeneratedChunk) -> Vec<u8> {
             }
         }
 
-        // Worldgen stores 4×4 XZ biomes per section; vanilla wants 4×4×4 (YZX).
-        let biome_base = (section_idx as usize) * 16;
+        // Vanilla stores 4×4×4 quarts per section, YZX order (matches worldgen
+        // storage layout in GeneratedChunk).
+        let biome_base = (section_idx as usize) * 64;
         let mut section_biomes = Vec::with_capacity(64);
-        for _y4 in 0..4usize {
+        for y4 in 0..4usize {
             for z4 in 0..4usize {
                 for x4 in 0..4usize {
-                    let internal = chunk.biomes[biome_base + z4 * 4 + x4];
+                    let internal = chunk.biomes[biome_base + y4 * 16 + z4 * 4 + x4];
                     section_biomes.push(protocol_data::biome_protocol_id(internal));
                 }
             }

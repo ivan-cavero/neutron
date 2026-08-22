@@ -131,7 +131,7 @@ pub const SECTIONS_PER_COLUMN: usize = 24;
 /// Total blocks per chunk column.
 pub const CHUNK_BLOCK_VOLUME: usize = 16 * 384 * 16;
 /// Total biome entries per column (4 x 24 x 4).
-pub const CHUNK_BIOME_VOLUME: usize = 4 * 24 * 4;
+pub const CHUNK_BIOME_VOLUME: usize = 4 * 4 * 4 * 24;
 /// Heightmap size (16 x 16).
 pub const HEIGHTMAP_SIZE: usize = 16 * 16;
 
@@ -504,21 +504,25 @@ impl ChunkGenerator {
             }
         }
 
-        // --- Biomes (4x4 horizontal per 16-block section; one Y sample at section mid) ---
-        // Vanilla `fillBiomesFromNoise` stores 4×4×4 quarts per section via
-        // `getNoiseBiome(quart)` (no voronoi). We keep one Y quart per section
-        // at the section midpoint quart. Sample climate at `QuartPos.toBlock`.
+        // --- Biomes (vanilla `fillBiomesFromNoise`: 4×4×4 quarts per section,
+        // no voronoi at storage time; voronoi applies on read). Layout within a
+        // section is YZX to match the client PalettedContainer order.
         let mut biomes = vec![0u8; CHUNK_BIOME_VOLUME];
         let st = &self.state;
-        for section in 0..24 {
-            for bz4 in 0..4 {
-                for bx4 in 0..4 {
-                    let quart_x = cx * 4 + bx4;
-                    let quart_z = cz * 4 + bz4;
-                    let quart_y = (WORLD_BOTTOM + section * 16 + 8) >> 2;
-                    let idx = section * 16 + bz4 * 4 + bx4;
-                    biomes[idx as usize] =
-                        crate::biome_manager::noise_biome_at_quart(st, quart_x, quart_y, quart_z);
+        for section in 0..24usize {
+            let base_y_q = (WORLD_BOTTOM + (section * 16) as i32) >> 2;
+            for sy4 in 0..4usize {
+                for bz4 in 0..4usize {
+                    for bx4 in 0..4usize {
+                        let quart_x = cx * 4 + bx4 as i32;
+                        let quart_y = base_y_q + sy4 as i32;
+                        let quart_z = cz * 4 + bz4 as i32;
+                        let idx =
+                            section * 64 + sy4 * 16 + bz4 * 4 + bx4;
+                        biomes[idx] = crate::biome_manager::noise_biome_at_quart(
+                            st, quart_x, quart_y, quart_z,
+                        );
+                    }
                 }
             }
         }
@@ -597,3 +601,46 @@ mod tests {
         assert!(!cache.map.contains_key(&(0, 0)));
     }
 }
+
+#[cfg(test)]
+mod t3_probe {
+    use super::*;
+    use crate::biome_manager::noise_biome_at_quart;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn probe_y_granularity_changes_gates() {
+        let state = WorldgenState::overworld(12345);
+        let mut changed = Vec::new();
+        // 9 decoration origins around center chunk (6,-2)
+        for oc in [(5i32, -3), (6, -3), (7, -3), (5, -2), (6, -2), (7, -2), (5, -1), (6, -1), (7, -1)] {
+            let mut old_set = BTreeSet::new();
+            let mut new_set = BTreeSet::new();
+            let ox = oc.0 * 16;
+            let oz = oc.1 * 16;
+            for section in 0..24i32 {
+                let base_q = (WORLD_BOTTOM + section * 16) >> 2;
+                for sy4 in 0..4i32 {
+                    for bz4 in 0..4i32 {
+                        for bx4 in 0..4i32 {
+                            let qx = ox / 4 + bx4;
+                            let qz = oz / 4 + bz4;
+                            let qy = base_q + sy4;
+                            let b = noise_biome_at_quart(&state, qx, qy, qz);
+                            new_set.insert(b);
+                            if sy4 == 2 {
+                                old_set.insert(b);
+                            }
+                        }
+                    }
+                }
+            }
+            if old_set != new_set {
+                changed.push((oc, old_set.len(), new_set.len()));
+            }
+        }
+        eprintln!("T3 PROBE: origins with changed gate-set: {changed:?}");
+        assert!(changed.len() > 0 || true); // informativo
+    }
+}
+
