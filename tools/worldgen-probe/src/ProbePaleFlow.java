@@ -71,12 +71,14 @@ public class ProbePaleFlow {
 
         net.minecraft.core.HolderLookup.Provider lookup = net.minecraft.data.registries.VanillaRegistries.createLookup();
         RegistryAccess registry = registryAccessFrom(lookup);
+        String biomeName = args.length > 5 ? args[5] : "minecraft:pale_garden";
+        String placedName = args.length > 6 ? args[6] : "minecraft:pale_garden_vegetation";
         Holder<Biome> paleGarden = lookup.lookupOrThrow(Registries.BIOME)
                 .getOrThrow(ResourceKey.create(Registries.BIOME,
-                        Identifier.parse("minecraft:pale_garden")));
+                        Identifier.parse(biomeName)));
         PlacedFeature placed = lookup.lookupOrThrow(Registries.PLACED_FEATURE)
                 .getOrThrow(ResourceKey.create(Registries.PLACED_FEATURE,
-                        Identifier.parse("minecraft:pale_garden_vegetation"))).value();
+                        Identifier.parse(placedName))).value();
 
         ChunkAccess chunk = dummyChunk();
         ChunkGenerator generator = fakeGenerator(registry, paleGarden);

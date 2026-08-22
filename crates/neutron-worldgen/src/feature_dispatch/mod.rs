@@ -467,9 +467,17 @@ pub(crate) fn dispatch_configured(
         "minecraft:random_selector" => {
             // weighted chance features then default
             if let Some(features) = cfg["config"]["features"].as_array() {
+                let trace_trees =
+                    std::env::var_os("NEUTRON_TRACE_TREES").is_some();
                 for f in features {
                     let chance = f["chance"].as_f64().unwrap_or(0.0) as f32;
-                    if rng.next_f32() < chance {
+                    let roll = rng.next_f32();
+                    if trace_trees {
+                        let name = f["feature"].as_str().unwrap_or("<inline>");
+                        eprintln!("[selector] roll={roll:.4} chance={chance} -> {}",
+                            if roll < chance { name } else { "next" });
+                    }
+                    if roll < chance {
                         place_feature_ref(rng, region, state, x, y, z, &f["feature"], gen_step);
                         return;
                     }

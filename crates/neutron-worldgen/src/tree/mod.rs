@@ -227,6 +227,15 @@ pub fn place_tree_from_config(
     if let Some(decorators) = cfg["decorators"].as_array() {
         apply_decorators(&mut ctx, decorators);
     }
+    if std::env::var_os("NEUTRON_DECO_TREE_TRACE").is_some()
+        || std::env::var_os("NEUTRON_TRACE_TREES").is_some()
+    {
+        eprintln!(
+            "[tree] done origin=({x},{y},{z}) trunks={} foliage={}",
+            ctx.trunks.len(),
+            ctx.foliage.len()
+        );
+    }
     true
 }
 

@@ -19,6 +19,15 @@ use std::path::PathBuf;
 /// Vanilla pale_oak trunk base positions for a chunk (ground truth for the
 /// draw->tree mapping in the before-set derivation).
 fn vanilla_trunks(region_dir: &str, cx: i32, cz: i32) -> Vec<(i32, i32, i32)> {
+    vanilla_trunks_of(region_dir, cx, cz, BlockId::PaleOakLog)
+}
+
+fn vanilla_trunks_of(
+    region_dir: &str,
+    cx: i32,
+    cz: i32,
+    log_block: BlockId,
+) -> Vec<(i32, i32, i32)> {
     let Some(blocks) = load_vanilla_blocks(region_dir, cx, cz) else {
         return Vec::new();
     };
@@ -28,13 +37,13 @@ fn vanilla_trunks(region_dir: &str, cx: i32, cz: i32) -> Vec<(i32, i32, i32)> {
         for lx in 0..16i32 {
             for ly in 0..384i32 {
                 let bi = (ly * 256 + lz * 16 + lx) as usize;
-                if blocks[bi] == BlockId::PaleOakLog.as_u16() {
+                if blocks[bi] == log_block.as_u16() {
                     let y = wb + ly;
                     // find the base: lowest log in the column
                     let mut by = y;
                     while by > wb
                         && blocks[((by - 1 - wb) * 256 + lz * 16 + lx) as usize]
-                            == BlockId::PaleOakLog.as_u16()
+                            == log_block.as_u16()
                     {
                         by -= 1;
                     }
@@ -277,7 +286,11 @@ fn main() {
     // Optional: print the vanilla trunk bases (2x2 NW-corner candidates) for
     // the center chunk (the ground truth for the draw->tree mapping.
     if std::env::var("NEUTRON_DECO_TRUNKS").is_ok() {
-        let trunks = vanilla_trunks(&region_dir, cx, cz);
+        let log_block = std::env::var("NEUTRON_DECO_TRUNKS_LOG")
+            .ok()
+            .and_then(|n| BlockId::from_name(&n))
+            .unwrap_or(BlockId::PaleOakLog);
+        let trunks = vanilla_trunks_of(&region_dir, cx, cz, log_block);
         for (x, y, z) in trunks {
             println!("trunk ({x},{y},{z})");
         }
@@ -634,6 +647,9 @@ fn main() {
             .collect();
         for (dx, dz) in &offsets {
             let (ox, oz) = (cx + dx, cz + dz);
+            if std::env::var_os("NEUTRON_TRACE_TREES").is_some() {
+                eprintln!("[replay] === origin ({ox},{oz}) ===");
+            }
             let mut rng = FeatureRandom::new(seed);
             let dec = rng.set_decoration_seed(seed, ox * 16, oz * 16);
             for f in &feats {
@@ -648,12 +664,31 @@ fn main() {
                 );
             }
         }
-        let vanilla = vanilla_trunks(&region_dir, cx, cz);
+        if let Ok(colspec) = std::env::var("NEUTRON_DECO_REPLAY_COL") {
+            let mut it = colspec.split(',');
+            let px: i32 = it.next().unwrap().parse().unwrap();
+            let pz: i32 = it.next().unwrap().parse().unwrap();
+            for y in (wb..wb + 384).rev() {
+                let b = van.get(px, y, pz);
+                if b != BlockId::Air {
+                    println!(
+                        "RCOL {px},{y},{pz} {}",
+                        neutron_worldgen::surface::vanilla_name(b)
+                    );
+                }
+            }
+            return;
+        }
+        let log_block = std::env::var("NEUTRON_DECO_REPLAY_LOG")
+            .ok()
+            .and_then(|n| BlockId::from_name(&n))
+            .unwrap_or(BlockId::PaleOakLog);
+        let vanilla = vanilla_trunks_of(&region_dir, cx, cz, log_block);
         let mut accepted: Vec<(i32, i32)> = Vec::new();
         for z in 0..16i32 {
             'col: for x in 0..16i32 {
                 for y in (wb..wb + 384).rev() {
-                    if van.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                    if van.get(cx * 16 + x, y, cz * 16 + z) == log_block {
                         accepted.push((cx * 16 + x, cz * 16 + z));
                         continue 'col;
                     }
