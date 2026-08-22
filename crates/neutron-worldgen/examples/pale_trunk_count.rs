@@ -20,7 +20,14 @@ fn load_vanilla_blocks(region_dir: &str, cx: i32, cz: i32) -> Option<Vec<u16>> {
     let region = Region::open(&path).ok()?.with_coords(rx, rz);
     let data = region.get_chunk(cx & 31, cz & 31).ok()??;
     let nbt = read_nbt(&data).ok()?;
-    let sections = match compound_get(&nbt.compound, "sections") {
+    if let Some(Tag::String(s)) = compound_get(&nbt.compound, "Status") {
+        let st = s.to_string();
+        if !st.ends_with("full") {
+            return None; // stub chunk (biomes-only etc.): not comparable
+        }
+    } else {
+        return None;
+    }    let sections = match compound_get(&nbt.compound, "sections") {
         Some(Tag::List(List::Compound(l))) => l,
         _ => return None,
     };
@@ -202,3 +209,5 @@ fn main() {
         }
     }
 }
+
+

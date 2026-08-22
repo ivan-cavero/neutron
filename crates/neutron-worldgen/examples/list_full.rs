@@ -4,10 +4,12 @@ use neutron_world::Region;
 use std::collections::HashMap;
 use std::path::PathBuf;
 fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let base = args.first().map(|s| s.as_str()).unwrap_or("tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region");
     let mut by_status: HashMap<String, Vec<(i32, i32, usize)>> = HashMap::new();
     for rx in -1i32..=0 {
         for rz in -1i32..=0 {
-            let path=PathBuf::from(format!("tools/nbt-ref/vanilla1/world/dimensions/minecraft/overworld/region/r.{rx}.{rz}.mca"));
+            let path=PathBuf::from(format!("{base}/r.{rx}.{rz}.mca"));
             if !path.exists() {
                 continue;
             }
@@ -52,3 +54,4 @@ fn main() {
         }
     }
 }
+

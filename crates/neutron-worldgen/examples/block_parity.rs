@@ -39,6 +39,10 @@ fn main() {
         .expect("get")
         .expect("chunk present");
     let nbt = read_nbt(&data).expect("nbt");
+    if let Some(Tag::String(s)) = compound_get(&nbt.compound, "Status") {
+        let st = s.to_string();
+        assert!(st.ends_with("full"), "chunk status {} not full", st);
+    }
 
     let sections = match compound_get(&nbt.compound, "sections") {
         Some(Tag::List(List::Compound(list))) => list,
@@ -182,3 +186,5 @@ fn is_veg(name: &str) -> bool {
 fn block_to_name(b: BlockId) -> &'static str {
     neutron_worldgen::surface::vanilla_name(b)
 }
+
+

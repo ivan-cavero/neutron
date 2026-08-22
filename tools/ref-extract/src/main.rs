@@ -72,6 +72,16 @@ enum Commands {
         /// What to hash from each chunk.
         #[arg(long, value_enum, default_value_t = HashMode::Full)]
         hash_mode: HashMode,
+
+        /// After startup, run `forceload add X1 Z1 X2 Z2` (block coords) so the
+        /// target area reaches `full` status; without it only spawn chunks
+        /// complete and most comparisons hit stub chunks.
+        #[arg(long)]
+        forceload: Option<String>,
+
+        /// Seconds to wait for chunk generation after Done (or after forceload).
+        #[arg(long, default_value_t = 90)]
+        gen_wait_secs: u64,
     },
 
     /// Compare two reference data JSON files.
@@ -191,6 +201,8 @@ fn main() -> Result<()> {
             keep_tmp,
             tmp_dir,
             hash_mode,
+            forceload,
+            gen_wait_secs,
         }) => cmd_extract(
             seed,
             server,
@@ -201,6 +213,8 @@ fn main() -> Result<()> {
             keep_tmp,
             tmp_dir,
             hash_mode,
+            forceload,
+            gen_wait_secs,
         ),
         Some(Commands::Compare { left, right }) => cmd_compare(left, right),
         Some(Commands::ExtractAll {
@@ -237,6 +251,8 @@ fn cmd_extract(
     keep_tmp: bool,
     tmp_dir: Option<PathBuf>,
     hash_mode: HashMode,
+    forceload: Option<String>,
+    gen_wait_secs: u64,
 ) -> Result<()> {
     tracing::info!(
         seed = seed,
@@ -281,7 +297,18 @@ fn cmd_extract(
 
     // Extra time for chunk generation
     tracing::info!("server started, waiting for chunk generation...");
-    std::thread::sleep(Duration::from_secs(90));
+    if let Some(fl) = &forceload {
+        // Force-load the target area so chunks reach `full` status (vanilla
+        // only fully generates loaded chunks; spawn radius alone leaves stubs).
+        let cmd = format!("forceload add {fl}");
+        tracing::info!(cmd = %cmd, "sending forceload");
+        if let Some(ref mut stdin) = server_proc.stdin {
+            use std::io::Write;
+            writeln!(stdin, "{cmd}").context("failed to send forceload")?;
+            stdin.flush().ok();
+        }
+    }
+    std::thread::sleep(Duration::from_secs(gen_wait_secs));
 
     // Stop server gracefully
     stop_server(&mut server_proc)?;
@@ -415,6 +442,8 @@ fn cmd_extract_all(
                 false,
                 None,
                 hash_mode.clone(),
+                None,
+                90,
             )?;
             println!();
         }
