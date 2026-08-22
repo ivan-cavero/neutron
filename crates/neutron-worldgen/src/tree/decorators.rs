@@ -46,7 +46,11 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
     let origin = *shuffled
         .iter()
         .fold(&shuffled[0], |best, p| if p.1 < best.1 { p } else { best });
-    if ctx.rng.next_f32() < ground_prob {
+    let groll = ctx.rng.next_f32();
+    if trace {
+        eprintln!("[palemoss] ground-roll={groll} (<{ground_prob} entra)");
+    }
+    if groll < ground_prob {
         // PALE_MOSS_PATCH configured feature at origin.above().
         if let Some(cfg) = feature_catalog::load_configured_feature("pale_moss_patch") {
             if trace {
