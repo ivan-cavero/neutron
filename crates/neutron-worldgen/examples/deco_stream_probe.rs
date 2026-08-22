@@ -339,6 +339,26 @@ fn main() {
             }
         }
         eprintln!("trunk-base columns: {bases}");
+        if std::env::var_os("NEUTRON_DECO_DUMPALL").is_some() {
+            let mut cells: Vec<String> = Vec::new();
+            for y in wb..wb + 384 {
+                for z in (cz - 1) * 16..(cz + 2) * 16 {
+                    for x in (cx - 1) * 16..(cx + 2) * 16 {
+                        let b = region.get(x, y, z);
+                        if b != BlockId::Air && b != BlockId::Stone && b != BlockId::Dirt && b != BlockId::GrassBlock {
+                            cells.push(format!(
+                                "B {x},{y},{z} {}",
+                                neutron_worldgen::surface::vanilla_name(b)
+                            ));
+                        }
+                    }
+                }
+            }
+            cells.sort();
+            for c in cells {
+                println!("{c}");
+            }
+        }
         if std::env::var_os("NEUTRON_DECO_DUMPMOSS").is_some() {
             let mut cells: Vec<String> = Vec::new();
             for y in wb..wb + 384 {

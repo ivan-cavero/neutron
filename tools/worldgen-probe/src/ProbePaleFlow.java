@@ -143,6 +143,14 @@ public class ProbePaleFlow {
                     + " water=" + waterOk + " biome=" + biomeOk + " below="
                     + belowName(level, x, y - 1, z) + " surv=" + wouldSurvive
                     + " bits=" + nextBits);
+            // PALE_SKIP=N: reject draws 1..N after gates (RNG parity with the
+            // rust NEUTRON_DECO_SKIP_TREE_DRAWS diagnostic — pos+gates consumed,
+            // no dispatch).
+            int skipN = Integer.getInteger("pale.skip", 0);
+            if (d + 1 <= skipN) {
+                System.out.println("draw " + (d + 1) + " SKIP");
+                continue;
+            }
             if (!(waterOk && biomeOk && wouldSurvive)) {
                 continue;
             }
@@ -192,8 +200,17 @@ public class ProbePaleFlow {
                     + " f2=" + f2 + " ok=" + ok + " consumed=" + (nextBits - beforeDraw)
                     + " deltaLogs=" + (countBlock(blocks, Blocks.PALE_OAK_LOG) - preLogs)
                     + " deltaLeaves=" + (countBlock(blocks, Blocks.PALE_OAK_LEAVES) - preLeaves));
-            if (System.getenv("PALE_DUMPDELTA") != null) {
-                // print cells added THIS draw for the decorator-relevant names
+            if (System.getenv("PALE_DUMPALL") != null && d == 15) {
+                StringBuilder sb = new StringBuilder();
+                blocks.entrySet().stream()
+                        .sorted(java.util.Comparator.comparing(e -> e.getKey().getX() * 1000000000L
+                                + e.getKey().getY() * 100000L + e.getKey().getZ()))
+                        .forEach(e -> sb.append("B ").append(e.getKey().getX()).append(',')
+                                .append(e.getKey().getY()).append(',').append(e.getKey().getZ())
+                                .append(' ').append(e.getValue().getBlock()).append('\n'));
+                System.out.print(sb);
+            }
+            if (System.getenv("PALE_DUMPDELTA") != null) {                // print cells added THIS draw for the decorator-relevant names
                 String[] names = { "minecraft:pale_moss_block", "minecraft:pale_hanging_moss",
                         "minecraft:moss_carpet", "minecraft:pale_oak_log",
                         "minecraft:pale_oak_leaves" };
