@@ -88,6 +88,7 @@ pub fn probe_run_patch(
         growth_rounds: 0,
         catalyst_chance: 0.5,
         extra_rare_growths: 0,
+        extra_rare_growths_provider: None,
         patch_count: 1,
     };
     let mut faces = FaceMap::new();
@@ -139,6 +140,7 @@ pub fn probe_flat_floor_patch() -> (u32, u32, u32, f32, u32) {
         growth_rounds: 0,
         catalyst_chance: 0.5,
         extra_rare_growths: 0,
+        extra_rare_growths_provider: None,
         patch_count: 1,
     };
     let mut faces = FaceMap::new();
@@ -303,3 +305,4 @@ pub fn probe_vein_origin_traced(
     }
     (events, faces)
 }
+

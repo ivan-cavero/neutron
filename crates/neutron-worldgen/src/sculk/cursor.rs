@@ -213,8 +213,12 @@ pub(super) fn run_patch(
         }
     }
     // SculkPatchFeature.place: extraRareGrowths.sample then offset(nextInt(5)-2, 0, nextInt(5)-2).
-    // deep_dark JSON is 0 (ConstantInt.sample — no RNG).
-    let extra = cfg.extra_rare_growths;
+    // deep_dark JSON is 0 (ConstantInt.sample — no RNG); a non-constant provider
+    // would consume draws exactly here, matching vanilla's stream position.
+    let extra = match cfg.extra_rare_growths_provider.as_ref() {
+        Some(v) => crate::feature_dispatch::sample_int_provider(rng, v),
+        None => cfg.extra_rare_growths,
+    };
     for _ in 0..extra {
         let px = ox + rng.next_int(5) - 2;
         let pz = oz + rng.next_int(5) - 2;

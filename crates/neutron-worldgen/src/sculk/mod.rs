@@ -18,6 +18,7 @@ use crate::multiface_spreader::{self, FaceMap, MultifaceSpreader, DIRS as MF_DIR
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;
 use crate::worldgen::WorldgenState;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 
@@ -55,6 +56,9 @@ pub(super) struct PatchConfig {
     pub(super) growth_rounds: i32,
     pub(super) catalyst_chance: f32,
     pub(super) extra_rare_growths: i32,
+    /// Raw JSON of `extra_rare_growths` (IntProvider). Sampled at the vanilla
+    /// point in the RNG stream; ConstantInt consumes no draws.
+    pub(super) extra_rare_growths_provider: Option<Value>,
     pub(super) patch_count: i32,
 }
 
@@ -80,6 +84,7 @@ impl PatchConfig {
             growth_rounds: 0,
             catalyst_chance: 0.5,
             extra_rare_growths: 0,
+                    extra_rare_growths_provider: None,
             patch_count,
         };
         if let Some(v) = feature_catalog::load_configured_feature("sculk_patch_deep_dark") {
@@ -91,6 +96,7 @@ impl PatchConfig {
             s.growth_rounds = c["growth_rounds"].as_i64().unwrap_or(0) as i32;
             s.catalyst_chance = c["catalyst_chance"].as_f64().unwrap_or(0.5) as f32;
             s.extra_rare_growths = c["extra_rare_growths"].as_i64().unwrap_or(0) as i32;
+            s.extra_rare_growths_provider = Some(c["extra_rare_growths"].clone());
         }
         s
     }
@@ -536,6 +542,7 @@ mod tests {
             growth_rounds: 0,
             catalyst_chance: 0.0,
             extra_rare_growths: 0,
+                    extra_rare_growths_provider: None,
             patch_count: 1,
         };
         let mut faces = FaceMap::new();
@@ -583,3 +590,6 @@ mod tests {
         assert_eq!(dirs, vec![4, 1, 3, 0, 5, 2]);
     }
 }
+
+
+
