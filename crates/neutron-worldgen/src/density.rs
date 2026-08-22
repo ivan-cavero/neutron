@@ -95,11 +95,11 @@ impl CellInterpRuntime {
 /// markers can update their caches in-place without a RefCell.
 #[derive(Debug)]
 pub struct MarkerState {
-    /// Last XZ position used by Cache2D (packed as `blockX << 32 | blockZ`).
-    /// Also doubles as the counter key for CacheOnce.
-    pub last_pos_2d: Option<i64>,
-    /// Last value returned by Cache2D or CacheOnce.
-    pub last_value: f64,
+    /// Per-marker-node cache slots (vanilla `NoiseChunk.Cache2D` /
+    /// `CacheOnce` carry their state per instance — `NoiseChunk.java`
+    /// L531-553 / L615-644). Indexed by the slot id stored in
+    /// [`DFNode::Marker`].
+    pub cache_slots: Vec<CacheSlot>,
     /// Counter incremented per-block (for CacheOnce).
     pub interpolation_counter: i64,
     /// Counter incremented per-array-fill (for CacheOnce array mode).
@@ -117,11 +117,27 @@ pub struct MarkerState {
     pub cell_interp: Option<CellInterpRuntime>,
 }
 
+/// State of one `Cache2D`/`CacheOnce` marker node.
+///
+/// `key` is the packed XZ position (Cache2D) or the interpolation counter
+/// (CacheOnce). `i64::MIN` is the "empty" sentinel — it never collides with
+/// real packed positions or block counters.
+#[derive(Debug, Clone, Copy)]
+pub struct CacheSlot {
+    pub key: i64,
+    pub value: f64,
+}
+
 impl MarkerState {
-    pub fn new(cell_width: usize, cell_height: usize) -> Self {
+    pub fn new(cell_width: usize, cell_height: usize, cache_slot_count: usize) -> Self {
         Self {
-            last_pos_2d: None,
-            last_value: 0.0,
+            cache_slots: vec![
+                CacheSlot {
+                    key: i64::MIN,
+                    value: 0.0
+                };
+                cache_slot_count
+            ],
             interpolation_counter: 0,
             array_interpolation_counter: 0,
             flat_cache: std::collections::HashMap::new(),
@@ -198,7 +214,7 @@ pub enum DFNode {
     ShiftB(String),
     YClampedGradient(f64, f64, f64, f64),
     Spline(SplineDef),
-    Marker(MarkerKind, DF),
+    Marker(MarkerKind, DF, u32),
     BlendAlpha,
     BlendOffset,
     /// (density, upper_bound, lower_bound, cell_height)
@@ -224,7 +240,7 @@ impl DFNode {
             | DFNode::Invert(a)
             | DFNode::Squeeze(a)
             | DFNode::Clamp(a, _, _)
-            | DFNode::Marker(_, a) => vec![a],
+            | DFNode::Marker(_, a, _) => vec![a],
             DFNode::RangeChoice(input, _, _, in_range, out_of_range) => {
                 vec![input, in_range, out_of_range]
             }
@@ -342,7 +358,7 @@ pub fn smoothstep(x: f64) -> f64 {
 /// Used by the chunk generator to build per-marker sample grids matching
 /// vanilla `NoiseChunk` interpolators (including all four noodle markers).
 pub fn collect_interpolated(df: &DF, out: &mut Vec<DF>) {
-    if let DFNode::Marker(MarkerKind::Interpolated, _) = &**df {
+    if let DFNode::Marker(MarkerKind::Interpolated, _, _) = &**df {
         out.push(df.clone());
     }
     for child in df.children() {
@@ -353,7 +369,7 @@ pub fn collect_interpolated(df: &DF, out: &mut Vec<DF>) {
 /// Wrapped function of an Interpolated marker (panics if not Interpolated).
 pub fn interpolated_wrapped(df: &DF) -> DF {
     match &**df {
-        DFNode::Marker(MarkerKind::Interpolated, w) => w.clone(),
+        DFNode::Marker(MarkerKind::Interpolated, w, _) => w.clone(),
         _ => panic!("expected Interpolated marker"),
     }
 }
@@ -445,7 +461,7 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             lerp(d, *from_v, *to_v)
         }
         DFNode::Spline(spline) => spline_sample(spline, env) as f64,
-        DFNode::Marker(kind, wrapped) => {
+        DFNode::Marker(kind, wrapped, slot) => {
             // Interpolated: use pre-sampled cell grid when filling a chunk.
             if *kind == MarkerKind::Interpolated {
                 if let Some(state) = env.marker_state.as_ref() {
@@ -460,27 +476,41 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
                 return compute(wrapped, env);
             }
 
-            // If we have marker state in the env, use it. Otherwise evaluate directly.
-            // Strategy: check cache with immutable borrow, call compute with mutable borrow,
-            // then store in cache with mutable borrow. This avoids borrow conflicts.
+            // Cache2D / CacheOnce — vanilla semantics (NoiseChunk.java
+            // L531-553 / L615-644): each marker instance owns its cache slot.
+            // With no marker_state (point contexts) both evaluate wrapped
+            // directly; that mirrors vanilla's `context != NoiseChunk.this`
+            // bypass for CacheOnce and is a no-op miss for Cache2D.
+            if matches!(kind, MarkerKind::Cache2D | MarkerKind::CacheOnce) {
+                let hit = env.marker_state.as_ref().and_then(|state| {
+                    let s = &state.cache_slots[*slot as usize];
+                    let key = match kind {
+                        MarkerKind::Cache2D => MarkerState::pack_pos_2d(env.x, env.z),
+                        _ => state.interpolation_counter,
+                    };
+                    (s.key == key).then_some(s.value)
+                });
+                if let Some(v) = hit {
+                    return v;
+                }
+                let v = compute(wrapped, env);
+                if let Some(state) = env.marker_state.as_mut() {
+                    let key = match kind {
+                        MarkerKind::Cache2D => MarkerState::pack_pos_2d(env.x, env.z),
+                        _ => state.interpolation_counter,
+                    };
+                    let s = &mut state.cache_slots[*slot as usize];
+                    s.key = key;
+                    s.value = v;
+                }
+                return v;
+            }
+
+            // FlatCache / CacheAllInCell: keyed maps, no cross-node aliasing.
             let cache_hit_value: Option<f64> = env
                 .marker_state
                 .as_ref()
-                .map(|state| match kind {
-                    MarkerKind::Cache2D => {
-                        let pos2d = MarkerState::pack_pos_2d(env.x, env.z);
-                        state
-                            .last_pos_2d
-                            .filter(|p| *p == pos2d)
-                            .map(|_| state.last_value)
-                    }
-                    MarkerKind::CacheOnce => {
-                        let counter = state.interpolation_counter;
-                        state
-                            .last_pos_2d
-                            .filter(|p| *p == counter)
-                            .map(|_| state.last_value)
-                    }
+                .and_then(|state| match kind {
                     MarkerKind::FlatCache => {
                         let qx = MarkerState::quart_from_block(env.x);
                         let qz = MarkerState::quart_from_block(env.z);
@@ -506,17 +536,16 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
                             z
                         };
                         let key = format!("{},{},{}", x, y, z);
-                        state.cell_cache.get(&key).map(|cell_data| {
+                        state.cell_cache.get(&key).and_then(|cell_data| {
                             let idx =
                                 ((state.cell_height as i32 - 1 - y) * state.cell_width as i32 + x)
                                     * state.cell_width as i32
                                     + z;
-                            cell_data[idx as usize]
+                            cell_data.get(idx as usize).copied()
                         })
                     }
-                    MarkerKind::Interpolated | MarkerKind::BlendDensity => None,
-                })
-                .flatten();
+                    _ => None,
+                });
 
             if let Some(v) = cache_hit_value {
                 return v;
@@ -528,15 +557,6 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             // Store in cache
             if let Some(state) = &mut env.marker_state {
                 match kind {
-                    MarkerKind::Cache2D | MarkerKind::CacheOnce => {
-                        let pos2d = if *kind == MarkerKind::Cache2D {
-                            MarkerState::pack_pos_2d(env.x, env.z)
-                        } else {
-                            state.interpolation_counter
-                        };
-                        state.last_pos_2d = Some(pos2d);
-                        state.last_value = v;
-                    }
                     MarkerKind::FlatCache => {
                         let qx = MarkerState::quart_from_block(env.x);
                         let qz = MarkerState::quart_from_block(env.z);
@@ -562,7 +582,7 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
                             z
                         };
                         let key = format!("{},{},{}", x, y, z);
-                        state.cell_cache.insert(key, vec![v]);
+                        state.cell_cache.entry(key).or_insert_with(|| vec![v]);
                     }
                     _ => {}
                 }
@@ -677,6 +697,10 @@ pub struct DensityRegistry {
     /// Terrain random seed pair for the base_3d_noise (RandomState re-seeds
     /// the BlendedNoise with `fromHashOf("terrain")`).
     terrain_random: Option<(u64, u64)>,
+    /// Ids assigned to Cache2D/CacheOnce marker nodes as they are parsed.
+    /// Each node gets a unique slot in [`MarkerState::cache_slots`] — vanilla
+    /// keeps per-instance cache state (`NoiseChunk.wrapNew`).
+    next_cache_slot: usize,
 }
 
 impl DensityRegistry {
@@ -686,6 +710,7 @@ impl DensityRegistry {
             functions: HashMap::new(),
             noise_params: HashMap::new(),
             terrain_random: None,
+            next_cache_slot: 0,
         };
         // Load all noise params.
         for path in crate::datapack_data::all_paths() {
@@ -702,6 +727,19 @@ impl DensityRegistry {
         }
         // Parse density functions lazily on first access.
         reg
+    }
+
+    /// Number of Cache2D/CacheOnce slots allocated while parsing (size of
+    /// [`MarkerState::cache_slots`]).
+    pub fn cache_slot_count(&self) -> usize {
+        self.next_cache_slot
+    }
+
+    /// Wrap `inner` in a marker node with a unique cache slot id.
+    fn marker_node(&mut self, kind: MarkerKind, inner: DF) -> DFNode {
+        let slot = self.next_cache_slot as u32;
+        self.next_cache_slot += 1;
+        DFNode::Marker(kind, inner, slot)
     }
 
     /// Get or parse a density function by datapack key (e.g. "overworld/offset").
@@ -838,27 +876,27 @@ impl DensityRegistry {
                     }
                     "flat_cache" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::FlatCache, inner))
+                        Arc::new(self.marker_node(MarkerKind::FlatCache, inner))
                     }
                     "cache_2d" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::Cache2D, inner))
+                        Arc::new(self.marker_node(MarkerKind::Cache2D, inner))
                     }
                     "cache_once" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::CacheOnce, inner))
+                        Arc::new(self.marker_node(MarkerKind::CacheOnce, inner))
                     }
                     "cache_all_in_cell" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::CacheAllInCell, inner))
+                        Arc::new(self.marker_node(MarkerKind::CacheAllInCell, inner))
                     }
                     "interpolated" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::Interpolated, inner))
+                        Arc::new(self.marker_node(MarkerKind::Interpolated, inner))
                     }
                     "blend_density" => {
                         let inner = self.parse(&obj["argument"]);
-                        Arc::new(DFNode::Marker(MarkerKind::BlendDensity, inner))
+                        Arc::new(self.marker_node(MarkerKind::BlendDensity, inner))
                     }
                     "blend_alpha" => Arc::new(DFNode::BlendAlpha),
                     "blend_offset" => Arc::new(DFNode::BlendOffset),
@@ -954,3 +992,126 @@ fn parse_noise_json(json: &str) -> Option<(i32, Vec<f64>)> {
         .collect();
     Some((first_octave, amplitudes))
 }
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    fn empty_noises() -> HashMap<String, NormalNoise> {
+        HashMap::new()
+    }
+
+    /// Vanilla gives every Cache2D/CacheOnce instance its own state
+    /// (NoiseChunk.java L531-553 / L615-644). A shared slot would make the
+    /// second sibling return the first one's value.
+    #[test]
+    fn cache_once_slots_are_per_node() {
+        let a: DF = Arc::new(DFNode::Marker(
+            MarkerKind::CacheOnce,
+            Arc::new(DFNode::Const(41.0)),
+            0,
+        ));
+        let b: DF = Arc::new(DFNode::Marker(
+            MarkerKind::CacheOnce,
+            Arc::new(DFNode::Const(-42.0)),
+            1,
+        ));
+        let tree: DF = Arc::new(DFNode::Add(a, b));
+
+        let noises = empty_noises();
+        let mut ms = MarkerState::new(4, 8, 2);
+        ms.interpolation_counter = 7;
+        let mut env = DensityEnv::with_markers(0, 0, 0, &noises, &mut ms);
+
+        assert_eq!(compute(&tree, &mut env), -1.0);
+    }
+
+    #[test]
+    fn cache_2d_slots_are_per_node() {
+        // Same column, two Cache2D wrappers around different constants.
+        let a: DF = Arc::new(DFNode::Marker(
+            MarkerKind::Cache2D,
+            Arc::new(DFNode::Const(10.0)),
+            0,
+        ));
+        let b: DF = Arc::new(DFNode::Marker(
+            MarkerKind::Cache2D,
+            Arc::new(DFNode::Const(20.0)),
+            1,
+        ));
+        let tree: DF = Arc::new(DFNode::Add(a, b));
+
+        let noises = empty_noises();
+        let mut ms = MarkerState::new(4, 8, 2);
+        let mut env = DensityEnv::with_markers(3, -40, 9, &noises, &mut ms);
+
+        assert_eq!(compute(&tree, &mut env), 30.0);
+    }
+
+    /// Cache2D keys on XZ only — same column at another Y is a hit
+    /// (ChunkPos.pack(blockX, blockZ), NoiseChunk.java L542-547).
+    #[test]
+    fn cache_2d_hits_across_y_same_column() {
+        let a: DF = Arc::new(DFNode::Marker(
+            MarkerKind::Cache2D,
+            Arc::new(DFNode::Const(7.0)),
+            0,
+        ));
+
+        let noises = empty_noises();
+        let mut ms = MarkerState::new(4, 8, 1);
+        let mut env = DensityEnv::with_markers(0, 10, 0, &noises, &mut ms);
+        assert_eq!(compute(&a, &mut env), 7.0);
+
+        env.y = 99; // same column -> hit regardless of Y
+        assert_eq!(compute(&a, &mut env), 7.0);
+
+        env.x = 16; // different column -> miss, recomputed value identical here
+        assert_eq!(compute(&a, &mut env), 7.0);
+    }
+
+    /// CacheOnce re-evaluates when the interpolation counter advances
+    /// (lastCounter == NoiseChunk.interpolationComparator check,
+    /// NoiseChunk.java L636-643).
+    #[test]
+    fn cache_once_recomputes_per_block() {
+        let a: DF = Arc::new(DFNode::Marker(
+            MarkerKind::CacheOnce,
+            Arc::new(DFNode::Const(5.0)),
+            0,
+        ));
+
+        let noises = empty_noises();
+        let mut ms = MarkerState::new(4, 8, 1);
+        ms.interpolation_counter = 1;
+        let mut env = DensityEnv::with_markers(0, 0, 0, &noises, &mut ms);
+
+        assert_eq!(compute(&a, &mut env), 5.0);
+        drop(env);
+        // Slot key must now be 1, not i64::MIN sentinel.
+        assert_eq!(ms.cache_slots[0].key, 1);
+
+        ms.interpolation_counter = 2; // next block -> miss -> store again
+        let mut env = DensityEnv::with_markers(0, 0, 0, &noises, &mut ms);
+        assert_eq!(compute(&a, &mut env), 5.0);
+        drop(env);
+        assert_eq!(ms.cache_slots[0].key, 2);
+    }
+
+    /// Without marker_state (point contexts: aquifer, biome queries) markers
+    /// bypass caching entirely — vanilla's `context != NoiseChunk.this`.
+    #[test]
+    fn markers_bypass_without_marker_state() {
+        let a: DF = Arc::new(DFNode::Marker(
+            MarkerKind::CacheOnce,
+            Arc::new(DFNode::Const(3.5)),
+            0,
+        ));
+        let noises = empty_noises();
+        let mut env = DensityEnv::new(0, 0, 0, &noises);
+        assert_eq!(compute(&a, &mut env), 3.5);
+    }
+}
+

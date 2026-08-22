@@ -345,7 +345,8 @@ impl ChunkGenerator {
         let mut blocks = vec![BlockId::Air.as_u16(); CHUNK_BLOCK_VOLUME];
 
         // Create per-chunk marker state (owned by the generator).
-        let mut marker_state = MarkerState::new(st.cell_width as usize, st.cell_height as usize);
+        let mut marker_state =
+            MarkerState::new(st.cell_width as usize, st.cell_height as usize, st.reg.cache_slot_count());
 
         // Collect ALL Interpolated markers in final_density (A-path + noodle).
         let mut interp_markers: Vec<DF> = Vec::new();

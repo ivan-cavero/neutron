@@ -12,7 +12,7 @@ fn squeeze(v: f64) -> f64 {
 
 fn find_interp(df: &DF) -> DF {
     match &**df {
-        DFNode::Marker(MarkerKind::Interpolated, inner) => inner.clone(),
+        DFNode::Marker(MarkerKind::Interpolated, inner, _) => inner.clone(),
         _ => {
             for c in df.children() {
                 if let Some(x) = find_interp_opt(c) {
@@ -26,7 +26,7 @@ fn find_interp(df: &DF) -> DF {
 
 fn find_interp_opt(df: &DF) -> Option<DF> {
     match &**df {
-        DFNode::Marker(MarkerKind::Interpolated, inner) => Some(inner.clone()),
+        DFNode::Marker(MarkerKind::Interpolated, inner, _) => Some(inner.clone()),
         _ => {
             for c in df.children() {
                 if let Some(x) = find_interp_opt(c) {
@@ -87,7 +87,7 @@ fn density_at(
     let v1 = lerp(fx, v01, v11);
     let interp_cheese = lerp(fz, v0, v1);
     let interp_a = squeeze(interp_cheese);
-    let mut marker = MarkerState::new(cell_width as usize, cell_height as usize);
+    let mut marker = MarkerState::new(cell_width as usize, cell_height as usize, st.reg.cache_slot_count());
     let mut env = DensityEnv::with_markers(pos_x, pos_y, pos_z, st.noises.noises(), &mut marker);
     let noodle = compute(&noodle_part, &mut env);
     (raw_cheese, raw_a, interp_a, interp_a.min(noodle))

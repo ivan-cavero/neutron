@@ -12,7 +12,7 @@ fn main() {
     };
     let pts = [(1, 5, 15), (12, 1, 15), (0, 5, 17), (0, 5, 18), (1, 6, 21), (3, 6, 23)];
     for &(x, y, z) in &pts {
-        let mut marker = MarkerState::new(st.cell_width as usize, st.cell_height as usize);
+        let mut marker = MarkerState::new(st.cell_width as usize, st.cell_height as usize, st.reg.cache_slot_count());
         let mut env = DensityEnv::with_markers(x, y, z, st.noises.noises(), &mut marker);
         let noodle = compute(&noodle_part, &mut env);
         let mut env2 = DensityEnv::new(x, y, z, st.noises.noises());

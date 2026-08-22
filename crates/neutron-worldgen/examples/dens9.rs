@@ -10,13 +10,13 @@ fn squeeze(v: f64) -> f64 {
 }
 fn find_interp(df: &DF) -> DF {
     match &**df {
-        DFNode::Marker(MarkerKind::Interpolated, inner) => inner.clone(),
+        DFNode::Marker(MarkerKind::Interpolated, inner, _) => inner.clone(),
         _ => { for c in df.children() { if let Some(x) = find_interp_opt(c) { return x; } } panic!("no interp"); }
     }
 }
 fn find_interp_opt(df: &DF) -> Option<DF> {
     match &**df {
-        DFNode::Marker(MarkerKind::Interpolated, inner) => Some(inner.clone()),
+        DFNode::Marker(MarkerKind::Interpolated, inner, _) => Some(inner.clone()),
         _ => { for c in df.children() { if let Some(x) = find_interp_opt(c) { return Some(x); } } None }
     }
 }
@@ -52,7 +52,7 @@ fn density_at(st: &WorldgenState, cx: i32, cz: i32, px: i32, py: i32, pz: i32) -
     let v1 = lerp(fx, v01, v11);
     let interp = lerp(fz, v0, v1);
     let a = squeeze(interp);
-    let mut marker = MarkerState::new(cw as usize, ch as usize);
+    let mut marker = MarkerState::new(cw as usize, ch as usize, st.reg.cache_slot_count());
     let mut env = DensityEnv::with_markers(px, py, pz, st.noises.noises(), &mut marker);
     let noodle = compute(&noodle_part, &mut env);
     (interp, a, a.min(noodle))

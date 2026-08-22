@@ -16,7 +16,7 @@ fn main() {
 
     println!("=== Generator pipeline at chunk (0,0) ===");
     for y in (0..=100).step_by(5) {
-        let mut ms = neutron_worldgen::density::MarkerState::new(4, 8);
+        let mut ms = neutron_worldgen::density::MarkerState::new(4, 8, st.reg.cache_slot_count());
         let mut env = DensityEnv::with_markers(8, y, 8, st.noises.noises(), &mut ms);
 
         let inner_val = compute(&a_part, &mut env);
