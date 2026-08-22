@@ -90,7 +90,11 @@ impl FeatureRandom {
 
     /// `BitRandomSource.nextFloat()` = `next(24) * 2^-24`.
     pub fn next_f32(&mut self) -> f32 {
-        (self.next_bits(24) as f32) * (1.0 / (1u32 << 24) as f32)
+        let v = (self.next_bits(24) as f32) * (1.0 / (1u32 << 24) as f32);
+        if rng_trace_enabled() {
+            eprintln!("RNG nextFloat={v} bits={}", self.draw_count);
+        }
+        v
     }
 
     /// `BitRandomSource.nextDouble()` = `(next(26) << 27) + next(27)` × `2^-53`.
@@ -103,6 +107,14 @@ impl FeatureRandom {
     /// Legacy-style `nextInt(bound)` using `next(31)`.
     pub fn next_int(&mut self, bound: i32) -> i32 {
         assert!(bound > 0);
+        let v = self.next_int_inner(bound);
+        if rng_trace_enabled() {
+            eprintln!("RNG nextInt({bound})={v} bits={}", self.draw_count);
+        }
+        v
+    }
+
+    fn next_int_inner(&mut self, bound: i32) -> i32 {
         // Power-of-two fast path (LegacyRandomSource)
         if (bound & -bound) == bound {
             return (((bound as i64) * (self.next_bits(31) as i64)) >> 31) as i32;
@@ -123,7 +135,11 @@ impl FeatureRandom {
 
     /// `RandomSource.nextBoolean()` = `next(1) != 0`.
     pub fn next_boolean(&mut self) -> bool {
-        self.next_bits(1) != 0
+        let v = self.next_bits(1) != 0;
+        if rng_trace_enabled() {
+            eprintln!("RNG nextBoolean={v} bits={}", self.draw_count);
+        }
+        v
     }
 
     /// `RandomSource.nextGaussian()` — Marsaglia polar, cached spare. Each

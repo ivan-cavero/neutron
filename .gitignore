@@ -170,3 +170,17 @@ tools/mc-decompiler/output/
 tools/mc-decompiler/target/
 tools/mc-decompiler/jars/
 tools/mc-decompiler/Cargo.lock
+
+# probe session artifacts
+java*.txt
+rust*.txt
+ruflat*.txt
+tree*_dump.txt
+treedbg.txt
+leaf_inserts.txt
+pret_*.err
+paleflow_*.txt
+tmp-flat.txt
+tmp-terrain-*.txt
+ruflat_mark.txt
+rust_raw.txt

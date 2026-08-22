@@ -192,6 +192,25 @@ public class ProbePaleFlow {
                     + " f2=" + f2 + " ok=" + ok + " consumed=" + (nextBits - beforeDraw)
                     + " deltaLogs=" + (countBlock(blocks, Blocks.PALE_OAK_LOG) - preLogs)
                     + " deltaLeaves=" + (countBlock(blocks, Blocks.PALE_OAK_LEAVES) - preLeaves));
+            if (System.getenv("PALE_DUMPDELTA") != null) {
+                // print cells added THIS draw for the decorator-relevant names
+                String[] names = { "minecraft:pale_moss_block", "minecraft:pale_hanging_moss",
+                        "minecraft:moss_carpet", "minecraft:pale_oak_log",
+                        "minecraft:pale_oak_leaves" };
+                for (String n : names) {
+                    Block bb = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                            .get(Identifier.parse(n)).map(Holder.Reference::value).orElse(Blocks.AIR);
+                    int now = countBlock(blocks, bb);
+                    System.out.println("  DELTA " + n.substring(10) + "=" + now);
+                }
+                for (var e : blocks.entrySet()) {
+                    String nm = e.getValue().getBlock().toString();
+                    if (nm.contains("hanging_moss") || nm.contains("moss_block")) {
+                        System.out.println("  CELL " + e.getKey().getX() + "," + e.getKey().getY()
+                                + "," + e.getKey().getZ() + " " + nm);
+                    }
+                }
+            }
             // Debug the real would_survive predicate on the first draw only.
             if (d == 0) {
                 for (var mod : chosenHolder.value().placement()) {

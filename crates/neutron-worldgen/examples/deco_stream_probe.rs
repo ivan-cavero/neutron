@@ -283,6 +283,374 @@ fn main() {
         }
         return;
     }
+    // NEUTRON_DECO_FROMDUMP=<file> — load the EXACT terrain dump written by
+    // dump_terrain.rs ("x y z name" lines, 3x3 chunks) and run the origin's
+    // stream over it with NEUTRON_RNG_TRACE enabled -> line-by-line RNG call
+    // parity against ProbePaleFlow's PALE_RAW output on the same file.
+    if let Ok(dump_path) = std::env::var("NEUTRON_DECO_FROMDUMP") {
+        let mut region = RegionBuf::new(cx, cz, 2);
+        let text = std::fs::read_to_string(&dump_path).expect("dump file");
+        for line in text.lines() {
+            let mut it = line.split_whitespace();
+            let (Some(x), Some(y), Some(z), Some(name)) =
+                (it.next(), it.next(), it.next(), it.next())
+            else {
+                continue;
+            };
+            let (Ok(x), Ok(y), Ok(z)) = (x.parse::<i32>(), y.parse::<i32>(), z.parse::<i32>())
+            else {
+                continue;
+            };
+            let bid = BlockId::from_name(name.strip_prefix("minecraft:").unwrap_or(name))
+                .unwrap_or(BlockId::Air);
+            region.set(x, y, z, bid);
+        }
+        eprintln!("fromdump cells loaded");
+        let idx = std::env::var("NEUTRON_DECO_FORCE_IDX")
+            .ok()
+            .and_then(|s| s.parse::<i32>().ok())
+            .or_else(|| {
+                neutron_worldgen::feature_catalog::global_feature_index(9, &placed_id)
+            })
+            .expect("feature index");
+        let mut rng = FeatureRandom::new(seed);
+        let dec = rng.set_decoration_seed(seed, cx * 16, cz * 16);
+        rng.set_feature_seed(dec, idx, 9);
+        eprintln!("dec={dec} idx={idx}");
+        neutron_worldgen::feature_dispatch::place_placed_feature(
+            &mut rng,
+            &mut region,
+            &gen.state,
+            cx * 16,
+            cz * 16,
+            &placed_id,
+        );
+        // summary: trunk bases in center chunk
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut bases = 0usize;
+        for z in 0..16i32 {
+            'col: for x in 0..16i32 {
+                for y in (wb..wb + 384).rev() {
+                    if region.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                        bases += 1;
+                        continue 'col;
+                    }
+                }
+            }
+        }
+        eprintln!("trunk-base columns: {bases}");
+        if std::env::var_os("NEUTRON_DECO_DUMPMOSS").is_some() {
+            let mut cells: Vec<String> = Vec::new();
+            for y in wb..wb + 384 {
+                for z in (cz - 1) * 16..(cz + 2) * 16 {
+                    for x in (cx - 1) * 16..(cx + 2) * 16 {
+                        let b = region.get(x, y, z);
+                        let n = neutron_worldgen::surface::vanilla_name(b);
+                        if n.contains("hanging_moss") || n.contains("moss_block") {
+                            cells.push(format!("CELL {x},{y},{z} {n}"));
+                        }
+                    }
+                }
+            }
+            cells.sort();
+            for c in cells {
+                println!("{c}");
+            }
+        }
+        return;
+    }
+    // FORCE_IDX=scan (+PRETERRAIN): index sweep over stripped-vanilla refs,
+    // WITHOUT generating neutron chunks (that costs ~10 min and adds nothing
+    // to the sweep). Runs first so the heavy PRETERRAIN branch never starts.
+    if std::env::var("NEUTRON_DECO_PRETERRAIN").is_ok()
+        && std::env::var("NEUTRON_DECO_FORCE_IDX").as_deref() == Ok("scan")
+    {
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut van = RegionBuf::new(cx, cz, 2);
+        for dz in -2..=2 {
+            for dx in -2..=2 {
+                let Some(b) = load_vanilla_blocks(&region_dir, cx + dx, cz + dz) else {
+                    eprintln!("missing vanilla chunk ({},{})", cx + dx, cz + dz);
+                    return;
+                };
+                van.put_chunk(cx + dx, cz + dz, &b, &vec![0i16; 256]);
+            }
+        }
+        for y in wb..neutron_worldgen::generator::WORLD_TOP {
+            for z in (cz - 2) * 16..(cz + 3) * 16 {
+                for x in (cx - 2) * 16..(cx + 3) * 16 {
+                    if neutron_worldgen::sculk::is_vegetal_family(van.get(x, y, z)) {
+                        van.set(x, y, z, BlockId::Air);
+                    }
+                }
+            }
+        }
+        let truth = vanilla_trunks(&region_dir, cx, cz);
+        let max_idx = neutron_worldgen::feature_catalog::features_per_step_at(9).len() as i32;
+        let pristine = van.blocks.clone();
+        for i in 0..=max_idx {
+            van.blocks.copy_from_slice(&pristine);
+            let mut rng = FeatureRandom::new(seed);
+            let dec = rng.set_decoration_seed(seed, cx * 16, cz * 16);
+            rng.set_feature_seed(dec, i, 9);
+            neutron_worldgen::feature_dispatch::place_placed_feature(
+                &mut rng,
+                &mut van,
+                &gen.state,
+                cx * 16,
+                cz * 16,
+                &placed_id,
+            );
+            let mut bases = 0usize;
+            let mut matched = 0usize;
+            for z in 0..16i32 {
+                'col2: for x in 0..16i32 {
+                    for y in (wb..wb + 384).rev() {
+                        if van.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                            bases += 1;
+                            if truth.iter().any(|(tx, _, tz)| *tx == cx * 16 + x && *tz == cz * 16 + z) {
+                                matched += 1;
+                            }
+                            continue 'col2;
+                        }
+                    }
+                }
+            }
+            eprintln!("SCANIDX {i} probe={bases} matched={matched}");
+        }
+        return;
+    }
+    // NEUTRON_DECO_PRETERRAIN=1 — run the SAME decoration stream over
+    // PRE-FEATURE terrain on both sides: (a) vanilla refs stripped of
+    // vegetal family, (b) neutron-generated 5×5 chunks stripped likewise.
+    // Per-draw ACCEPT/REJECT goes to stderr (NEUTRON_TRACE_TREES); after
+    // each run the resulting trunk bases in the center chunk are printed,
+    // so divergent draws map straight onto displaced trees.
+    if std::env::var("NEUTRON_DECO_PRETERRAIN").is_ok() {
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut van = RegionBuf::new(cx, cz, 2);
+        let mut neu = RegionBuf::new(cx, cz, 2);
+        for dz in -2..=2 {
+            for dx in -2..=2 {
+                let (ncx, ncz) = (cx + dx, cz + dz);
+                let Some(b) = load_vanilla_blocks(&region_dir, ncx, ncz) else {
+                    eprintln!("missing vanilla chunk ({ncx},{ncz})");
+                    return;
+                };
+                van.put_chunk(ncx, ncz, &b, &vec![0i16; 256]);
+                let g =
+                    gen.generate_chunk_cached(ncx, ncz, &mut neutron_worldgen::NoiseCache::new());
+                let mut nb = vec![BlockId::Air.as_u16(); 16 * 384 * 16];
+                for ly in 0..384i32 {
+                    for lz in 0..16i32 {
+                        for lx in 0..16i32 {
+                            nb[(ly * 256 + lz * 16 + lx) as usize] =
+                                g.block_at(lx as u32, wb + ly, lz as u32).as_u16();
+                        }
+                    }
+                }
+                neu.put_chunk(ncx, ncz, &nb, &vec![0i16; 256]);
+            }
+        }
+        // Strip ALL step-9 vegetal output to AIR: none of it exists at
+        // vegetation-draw time (moss_patch idx14 > vegetation idx13 etc.).
+        // v1 converted it to Stone instead -> fake motion-blocking pillars
+        // inflated heightmaps and broke would_survive (saplings need dirt/
+        // grass) -> zero trunks on BOTH sides, invalidating the diff.
+        for region in [&mut van, &mut neu] {
+            for y in wb..neutron_worldgen::generator::WORLD_TOP {
+                for z in (cz - 2) * 16..(cz + 3) * 16 {
+                    for x in (cx - 2) * 16..(cx + 3) * 16 {
+                        let b = region.get(x, y, z);
+                        if neutron_worldgen::sculk::is_vegetal_family(b) {
+                            region.set(x, y, z, BlockId::Air);
+                        }
+                    }
+                }
+            }
+        }
+        let idx = match std::env::var("NEUTRON_DECO_FORCE_IDX") {
+            Ok(s) => s.parse::<i32>().unwrap(),
+            Err(_) => neutron_worldgen::feature_catalog::global_feature_index(9, &placed_id)
+                .expect("feature in step 9 sorter"),
+        };
+        let force = std::env::var("NEUTRON_DECO_FORCE_IDX").is_ok();
+        if std::env::var("NEUTRON_DECO_FORCE_IDX").as_deref() == Ok("scan") {
+            // In-process sweep: for EVERY candidate step-9 index, replay the
+            // origin's stream over the stripped-vanilla buffer and score
+            // trunk-column matches vs vanilla truth. One process instead of
+            // 100+ cargo launches.
+            let truth = vanilla_trunks(&region_dir, cx, cz);
+            let max_idx =
+                neutron_worldgen::feature_catalog::features_per_step_at(9).len() as i32;
+            let pristine = van.blocks.clone();
+            for i in 0..=max_idx {
+                van.blocks.copy_from_slice(&pristine);
+                let mut rng = FeatureRandom::new(seed);
+                let dec = rng.set_decoration_seed(seed, cx * 16, cz * 16);
+                rng.set_feature_seed(dec, i, 9);
+                neutron_worldgen::feature_dispatch::place_placed_feature(
+                    &mut rng,
+                    &mut van,
+                    &gen.state,
+                    cx * 16,
+                    cz * 16,
+                    &placed_id,
+                );
+                let mut bases = 0usize;
+                let mut matched = 0usize;
+                for z in 0..16i32 {
+                    'col2: for x in 0..16i32 {
+                        for y in (wb..wb + 384).rev() {
+                            if van.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                                bases += 1;
+                                if truth.iter().any(|(tx, _, tz)| *tx == cx * 16 + x && *tz == cz * 16 + z) {
+                                    matched += 1;
+                                }
+                                continue 'col2;
+                            }
+                        }
+                    }
+                }
+                eprintln!("SCANIDX {i} probe={bases} matched={matched}");
+            }
+            return;
+        }
+        for (name, region) in
+            [("VANILLA", &mut van), ("NEUTRON", &mut neu)].into_iter().skip(if force { 1 } else { 0 })
+        {
+            eprintln!("=== stream over {name} terrain ===");
+            let mut rng = FeatureRandom::new(seed);
+            let dec = rng.set_decoration_seed(seed, cx * 16, cz * 16);
+            rng.set_feature_seed(dec, idx, 9);
+            neutron_worldgen::feature_dispatch::place_placed_feature(
+                &mut rng,
+                region,
+                &gen.state,
+                cx * 16,
+                cz * 16,
+                &placed_id,
+            );
+            let mut bases = Vec::new();
+            for z in 0..16i32 {
+                'col: for x in 0..16i32 {
+                    for y in (wb..wb + 384).rev() {
+                        if region.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                            bases.push((cx * 16 + x, y, cz * 16 + z));
+                            continue 'col;
+                        }
+                    }
+                }
+            }
+            bases.sort();
+            if force {
+                let truth = vanilla_trunks(&region_dir, cx, cz);
+                let matched = bases
+                    .iter()
+                    .filter(|(x, _, z)| {
+                        truth.iter().any(|(tx, _, tz)| tx == x && tz == z)
+                    })
+                    .count();
+                eprintln!("FORCEIDX {idx} probe={} matched={matched}", bases.len());
+            }
+            eprintln!(
+                "=== {name}: {} trunk-base columns: {:?}",
+                bases.len(),
+                bases
+            );
+        }
+        return;
+    }
+    // NEUTRON_DECO_REPLAY="dx,dz;dx,dz;..." (9 offsets = origin order) —
+    // replay step-9 decoration of ALL origins over the stripped-vanilla 5×5
+    // in the GIVEN order. Each origin consumes its own decoration seed and
+    // per-feature seeds (vanilla applyBiomeDecoration semantics); motion-
+    // blocking output of earlier origins is visible to later ones via the
+    // live buffer. Reports center-chunk trunk bases vs vanilla ground truth,
+    // so candidate ORDERS are scored directly against the reference world.
+    // NEUTRON_DECO_REPLAY_FEATURES: ';'-list of placed ids to run per origin
+    // (default pale vegetation + moss patch; add dark_forest_vegetation for
+    // dark-forest-boundary chunks).
+    if let Ok(order_spec) = std::env::var("NEUTRON_DECO_REPLAY") {
+        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+        let mut van = RegionBuf::new(cx, cz, 2);
+        for dz in -2..=2 {
+            for dx in -2..=2 {
+                match load_vanilla_blocks(&region_dir, cx + dx, cz + dz) {
+                    Some(b) => van.put_chunk(cx + dx, cz + dz, &b, &vec![0i16; 256]),
+                    None => {
+                        eprintln!("missing vanilla chunk ({},{})", cx + dx, cz + dz);
+                        return;
+                    }
+                }
+            }
+        }
+        for y in wb..neutron_worldgen::generator::WORLD_TOP {
+            for z in (cz - 2) * 16..(cz + 3) * 16 {
+                for x in (cx - 2) * 16..(cx + 3) * 16 {
+                    if neutron_worldgen::sculk::is_vegetal_family(van.get(x, y, z)) {
+                        van.set(x, y, z, BlockId::Air);
+                    }
+                }
+            }
+        }
+        let offsets: Vec<(i32, i32)> = order_spec
+            .split(';')
+            .filter(|p| !p.is_empty())
+            .map(|p| {
+                let mut it = p.split(',');
+                (
+                    it.next().unwrap().parse::<i32>().unwrap(),
+                    it.next().unwrap().parse::<i32>().unwrap(),
+                )
+            })
+            .collect();
+        let feats: Vec<String> = std::env::var("NEUTRON_DECO_REPLAY_FEATURES")
+            .unwrap_or_else(|_| {
+                "minecraft:pale_garden_vegetation;minecraft:pale_moss_patch".into()
+            })
+            .split(';')
+            .map(|s| s.to_string())
+            .collect();
+        for (dx, dz) in &offsets {
+            let (ox, oz) = (cx + dx, cz + dz);
+            let mut rng = FeatureRandom::new(seed);
+            let dec = rng.set_decoration_seed(seed, ox * 16, oz * 16);
+            for f in &feats {
+                let Some(idx) =
+                    neutron_worldgen::feature_catalog::global_feature_index(9, f)
+                else {
+                    continue;
+                };
+                rng.set_feature_seed(dec, idx, 9);
+                neutron_worldgen::feature_dispatch::place_placed_feature(
+                    &mut rng, &mut van, &gen.state, ox * 16, oz * 16, f,
+                );
+            }
+        }
+        let vanilla = vanilla_trunks(&region_dir, cx, cz);
+        let mut accepted: Vec<(i32, i32)> = Vec::new();
+        for z in 0..16i32 {
+            'col: for x in 0..16i32 {
+                for y in (wb..wb + 384).rev() {
+                    if van.get(cx * 16 + x, y, cz * 16 + z) == BlockId::PaleOakLog {
+                        accepted.push((cx * 16 + x, cz * 16 + z));
+                        continue 'col;
+                    }
+                }
+            }
+        }
+        let matched = accepted
+            .iter()
+            .filter(|(x, z)| vanilla.iter().any(|(vx, _, vz)| vx == x && vz == z))
+            .count();
+        println!(
+            "REPLAY order={offsets:?} features={feats:?} vanilla={} probe={} matched={matched}",
+            vanilla.len(),
+            accepted.len()
+        );
+        return;
+    }
     // B4 T3 before-set derivation: strip vegetal output of selected 3×3
     // neighbours ("after" chunks — at CARVERS in vanilla when the center
     // decorates) plus optionally the center's own trees (absent at its draw
@@ -338,12 +706,11 @@ fn main() {
                     for x in x0..x0 + 16 {
                         let b = region.get(x, y, z);
                         if neutron_worldgen::sculk::is_vegetal_family(b) {
-                            region.set(
-                                x,
-                                y,
-                                z,
-                                if y < 0 { BlockId::Deepslate } else { BlockId::Stone },
-                            );
+                            // AIR, not stone: vegetal output is absent at
+                            // draw time; a motion-blocking filler would fake
+                            // pillars (inflated heightmap + would_survive on
+                            // stone fails) and pollute the replay.
+                            region.set(x, y, z, BlockId::Air);
                             stripped += 1;
                         }
                     }
@@ -362,12 +729,7 @@ fn main() {
                     for x in x0..x0 + 16 {
                         let b = region.get(x, y, z);
                         if neutron_worldgen::sculk::is_vegetal_family(b) {
-                            region.set(
-                                x,
-                                y,
-                                z,
-                                if y < 0 { BlockId::Deepslate } else { BlockId::Stone },
-                            );
+                            region.set(x, y, z, BlockId::Air);
                             stripped += 1;
                         }
                     }

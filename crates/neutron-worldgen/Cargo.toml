@@ -104,6 +104,12 @@ name = "pale_window_dump"
 [[example]]
 name = "pale_idx_score"
 
+[[example]]
+name = "rng_echo"
+
+[[example]]
+name = "hash_echo"
+
 
 
 [[example]]

@@ -33,6 +33,7 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
     let ground_prob = dec["ground_probability"].as_f64().unwrap_or(0.0) as f32;
     let trunk_prob = dec["trunk_probability"].as_f64().unwrap_or(0.0) as f32;
     let leaves_prob = dec["leaves_probability"].as_f64().unwrap_or(0.0) as f32;
+    let trace = std::env::var_os("NEUTRON_RNG_TRACE").is_some();
     // Util.shuffledCopy(context.logs(), random) — consumes RNG even when the
     // ground check then fails.
     let mut shuffled: Vec<(i32, i32, i32)> = ctx.trunks.clone();
@@ -48,6 +49,9 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
     if ctx.rng.next_f32() < ground_prob {
         // PALE_MOSS_PATCH configured feature at origin.above().
         if let Some(cfg) = feature_catalog::load_configured_feature("pale_moss_patch") {
+            if trace {
+                eprintln!("[palemoss] patch start trunks={} leaves={}", ctx.trunks.len(), ctx.foliage.len());
+            }
             crate::feature_dispatch::place_vegetation_patch(
                 ctx.rng,
                 ctx.region,
@@ -58,7 +62,13 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
                 &cfg,
                 crate::feature_catalog::step::VEGETAL_DECORATION,
             );
+            if trace {
+                eprintln!("[palemoss] patch end");
+            }
         }
+    }
+    if trace {
+        eprintln!("[palemoss] trunk loop n={}", ctx.trunks.len());
     }
     for i in 0..ctx.trunks.len() {
         let (tx, ty, tz) = ctx.trunks[i];
@@ -66,11 +76,17 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
             add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
     }
+    if trace {
+        eprintln!("[palemoss] leaves loop n={}", ctx.foliage.len());
+    }
     for i in 0..ctx.foliage.len() {
         let (tx, ty, tz) = ctx.foliage[i];
         if ctx.rng.next_f32() < leaves_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
             add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
+    }
+    if trace {
+        eprintln!("[palemoss] done");
     }
 }
 

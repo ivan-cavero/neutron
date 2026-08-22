@@ -101,7 +101,7 @@ fn main() {
     };
 
     println!("vanilla trunk columns: {trunk_count}");
-    let mut scored: Vec<(i32, i32, i32)> = Vec::new(); // (score, idx, base_hits)
+    let mut scored: Vec<(i32, i32, i32, i32)> = Vec::new(); // (score, base_hits, idx, all4)
     for idx in 0..=105 {
         let mut rng = FeatureRandom::new(seed);
         let dec = rng.set_decoration_seed(seed, cx * 16, cz * 16);
@@ -112,21 +112,31 @@ fn main() {
         }
         let mut score = 0;
         let mut base_hits = 0;
+        let mut all4 = 0;
         for &(x, z) in &draws {
             let h = hits_for_point(x, z, &is_trunk);
             base_hits += h;
             if h >= 2 {
                 score += 1;
             }
+            if h >= 4 {
+                all4 += 1;
+            }
         }
-        scored.push((score, base_hits, idx));
+        scored.push((score, base_hits, idx, all4));
     }
     scored.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)).then(a.2.cmp(&b.2)));
-    for (score, base_hits, idx) in scored.iter().take(15) {
-        println!("idx={idx:3} scored_draws={score} base_hits={base_hits}");
+    for (score, base_hits, idx, all4) in scored.iter().take(15) {
+        println!("idx={idx:3} scored_draws={score} base_hits={base_hits} all4={all4}");
     }
     println!("---");
-    for (score, base_hits, idx) in scored.iter().rev().take(5) {
+    // all4 ranking (pale oak is ALWAYS 2x2: a vanilla-accepted draw has all
+    // four base columns as trunks) — far more discriminative than >=2.
+    scored.sort_by(|a, b| b.3.cmp(&a.3).then(b.0.cmp(&a.0)).then(a.2.cmp(&b.2)));
+    for (score, base_hits, idx, all4) in scored.iter().take(10) {
+        println!("ALL4 idx={idx:3} all4={all4} scored_draws={score} base_hits={base_hits}");
+    }
+    for (score, base_hits, idx, _) in scored.iter().rev().take(5) {
         println!("idx={idx:3} scored_draws={score} base_hits={base_hits}");
     }
     println!(

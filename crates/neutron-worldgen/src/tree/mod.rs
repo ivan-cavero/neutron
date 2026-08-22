@@ -16,6 +16,7 @@ use crate::worldgen::WorldgenState;
 use serde_json::Value;
 mod cfg;
 mod decorators;
+pub mod java_hash;
 mod foliage_placers;
 mod trunk_placers;
 
@@ -210,6 +211,18 @@ pub fn place_tree_from_config(
             eprintln!("  leaf  ({tx},{ty},{tz})");
         }
     }
+
+    // Vanilla TreeFeature.place keeps trunks/foliage in Set<BlockPos>
+    // (dedup across overlapping rows/branches) and TreeDecorator.Context
+    // exposes them in HashSet ITERATION order (leaves stable-sorted by Y).
+    // Our Vec accumulated duplicates AND insertion order — the pale_moss
+    // decorator then drew extra probability rolls and assigned them to
+    // different cells, desyncing the whole decoration stream.
+    ctx.trunks = java_hash::java_hash_order(std::mem::take(&mut ctx.trunks));
+    ctx.foliage = java_hash::java_hash_order(std::mem::take(&mut ctx.foliage));
+    // Context ctor: this.leaves.sort(Comparator.comparingInt(getY)) — Java
+    // List.sort is STABLE (TimSort).
+    ctx.foliage.sort_by(|a, b| a.1.cmp(&b.1));
 
     if let Some(decorators) = cfg["decorators"].as_array() {
         apply_decorators(&mut ctx, decorators);
