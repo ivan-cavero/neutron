@@ -999,21 +999,11 @@ fn place_on_ground(ctx: &mut TreeCtx<'_>, dec: &Value) {
 }
 
 fn next_int_inclusive(rng: &mut FeatureRandom, min: i32, max: i32) -> i32 {
-    let span = max - min + 1;
-    if span <= 0 {
-        min
-    } else {
-        min + rng.next_int(span)
-    }
+    crate::deco_util::next_int_inclusive(rng, min, max)
 }
 
 fn shuffle<T>(list: &mut [T], rng: &mut FeatureRandom) {
-    let mut i = list.len();
-    while i > 1 {
-        let swap_to = rng.next_int(i as i32) as usize;
-        list.swap(i - 1, swap_to);
-        i -= 1;
-    }
+    crate::deco_util::shuffle(list, rng)
 }
 
 fn is_solid_render(b: BlockId) -> bool {

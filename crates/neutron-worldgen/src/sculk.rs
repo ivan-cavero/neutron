@@ -503,12 +503,7 @@ pub(crate) fn shuffle_dirs_list(
     dirs: &[(i32, i32, i32)],
 ) -> Vec<(i32, i32, i32)> {
     let mut d = dirs.to_vec();
-    let mut i = d.len();
-    while i > 1 {
-        let j = rng.next_int(i as i32) as usize;
-        d.swap(i - 1, j);
-        i -= 1;
-    }
+    crate::deco_util::shuffle(&mut d, rng);
     d
 }
 
@@ -1389,15 +1384,7 @@ fn attempt_place_sculk(
 }
 
 fn opposite_dir(fi: usize) -> usize {
-    match fi {
-        0 => 1,
-        1 => 0,
-        2 => 3,
-        3 => 2,
-        4 => 5,
-        5 => 4,
-        _ => fi,
-    }
+    crate::deco_util::opposite(fi)
 }
 
 /// SculkVeinBlock.onDischarged with vanilla's STALE-state semantics
@@ -1406,6 +1393,20 @@ fn opposite_dir(fi: usize) -> usize {
 /// stripped snapshot — wiping faces the live state gained mid-tick.
 /// Non-empty result rewrites the cell as a vein even if the live mask
 /// had extra faces; empty result turns it back to air.
+/// Strip face bits whose neighbour cell is Sculk — the shared core of
+/// SculkVeinBlock.onDischarged (live and snapshot variants).
+fn strip_faces_toward_sculk(region: &RegionBuf, mut mask: u8, x: i32, y: i32, z: i32) -> u8 {
+    for (i, &(dx, dy, dz)) in DIRS.iter().enumerate() {
+        if mask & (1u8 << i) == 0 {
+            continue;
+        }
+        if region.get(x + dx, y + dy, z + dz) == BlockId::Sculk {
+            mask &= !(1u8 << i);
+        }
+    }
+    mask
+}
+
 fn on_discharged_snapshot(
     region: &mut RegionBuf,
     faces: &mut FaceMap,
@@ -1419,15 +1420,7 @@ fn on_discharged_snapshot(
             eprintln!("TRACE snapshot_discharge ({x},{y},{z}) snap={snapshot_mask}");
         }
     }
-    let mut mask = snapshot_mask;
-    for (i, &(dx, dy, dz)) in DIRS.iter().enumerate() {
-        if mask & (1u8 << i) == 0 {
-            continue;
-        }
-        if region.get(x + dx, y + dy, z + dz) == BlockId::Sculk {
-            mask &= !(1u8 << i);
-        }
-    }
+    let mask = strip_faces_toward_sculk(region, snapshot_mask, x, y, z);
     if mask == 0 {
         region.set(x, y, z, BlockId::Air);
         faces.remove(&(x, y, z));
@@ -1450,15 +1443,8 @@ fn on_discharged(region: &mut RegionBuf, faces: &mut FaceMap, x: i32, y: i32, z:
     if region.get(x, y, z) != BlockId::SculkVein {
         return;
     }
-    let mut mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
-    for (i, &(dx, dy, dz)) in DIRS.iter().enumerate() {
-        if mask & (1u8 << i) == 0 {
-            continue;
-        }
-        if region.get(x + dx, y + dy, z + dz) == BlockId::Sculk {
-            mask &= !(1u8 << i);
-        }
-    }
+    let mask = faces.get(&(x, y, z)).copied().unwrap_or(0);
+    let mask = strip_faces_toward_sculk(region, mask, x, y, z);
     if mask == 0 {
         region.set(x, y, z, BlockId::Air);
         faces.remove(&(x, y, z));

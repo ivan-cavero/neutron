@@ -1153,27 +1153,13 @@ pub(crate) fn dispatch_configured(
 // ---------------------------------------------------------------------------
 
 fn shuffle_dirs(rng: &mut FeatureRandom, dirs: &[usize]) -> Vec<usize> {
-    // Util.shuffle: for (i = size; i > 1; i--) swap(i-1, nextInt(i))
     let mut order = dirs.to_vec();
-    let mut i = order.len();
-    while i > 1 {
-        let j = rng.next_int(i as i32) as usize;
-        order.swap(i - 1, j);
-        i -= 1;
-    }
+    crate::deco_util::shuffle(&mut order, rng);
     order
 }
 
 fn dir_opposite(d: usize) -> usize {
-    match d {
-        0 => 1,
-        1 => 0,
-        2 => 3,
-        3 => 2,
-        4 => 5,
-        5 => 4,
-        _ => d,
-    }
+    crate::deco_util::opposite(d)
 }
 
 fn dir_axis(d: usize) -> usize {

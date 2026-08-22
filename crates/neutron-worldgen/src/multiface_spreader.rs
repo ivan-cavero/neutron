@@ -85,15 +85,7 @@ impl SpreadType {
 }
 
 fn opposite(dir: usize) -> usize {
-    match dir {
-        0 => 1,
-        1 => 0,
-        2 => 3,
-        3 => 2,
-        4 => 5,
-        5 => 4,
-        _ => dir,
-    }
+    crate::deco_util::opposite(dir)
 }
 
 /// Config for sculk vein spreaders.
