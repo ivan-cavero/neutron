@@ -644,3 +644,37 @@ mod t3_probe {
     }
 }
 
+
+#[cfg(test)]
+mod pale_gate_probe {
+    use super::*;
+    use crate::biome_manager::noise_biome_at_quart;
+    use crate::biome_source::biome_id;
+
+    #[test]
+    fn probe_pale_garden_presence_around_3_3() {
+        let state = WorldgenState::overworld(424242);
+        // para cada chunk en 5x5 alrededor de (3,3): ¿algún quart pale_garden?
+        for cz in 1..=5i32 {
+            let mut row = String::new();
+            for cx in 1..=5i32 {
+                let mut has = false;
+                'q: for sy in 0..96i32 {
+                    for bz in 0..4i32 {
+                        for bx in 0..4i32 {
+                            if noise_biome_at_quart(&state, cx * 4 + bx, sy, cz * 4 + bz)
+                                == biome_id::PALE_GARDEN
+                            {
+                                has = true;
+                                break 'q;
+                            }
+                        }
+                    }
+                }
+                row.push(if has { 'P' } else { '.' });
+            }
+            eprintln!("cz={cz}: {row}");
+        }
+        eprintln!("(P = pale_garden presente en algun quart del chunk)");
+    }
+}
