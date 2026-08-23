@@ -560,9 +560,11 @@ fn place_feature(
                 max_relative_to_ocean_floor_wg,
             } => {
                 let y = sample_height(rng, height);
-                if y < WORLD_BOTTOM || y >= WORLD_TOP {
-                    continue;
-                }
+                // NOTE: no early-out on out-of-world Y here — vanilla runs
+                // OreFeature.place regardless and its per-cell
+                // isOutsideBuildHeight skips writes; the blob draws MUST be
+                // consumed either way or every later attempt of this feature
+                // desyncs (deep diamond/redstone_lower samples go below -64).
                 if let Some(max_rel) = max_relative_to_ocean_floor_wg {
                     let Some(surf) = ocean_floor_wg_first_available(region, x, z) else {
                         continue;
@@ -594,6 +596,20 @@ fn place_feature(
                 y
             }
         };
+        let pre = std::env::var_os("NEUTRON_ORE_TRACE").is_some();
+        let _ = pre; // trace prints sampled position before gates below
+        if pre {
+            eprintln!(
+                "{} ({},{},{}) @({},{}) draws={}",
+                def.feature_index,
+                x,
+                y,
+                z,
+                origin_min_x,
+                origin_min_z,
+                rng.draw_count()
+            );
+        }
         if !biome_gate_ok(state, def.gate, def.feature_index, x, y, z) {
             continue;
         }
@@ -614,7 +630,7 @@ fn place_feature(
                 probability,
                 radius,
             ),
-        }
+        };
     }
 }
 

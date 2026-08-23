@@ -64,6 +64,3 @@ jar     tools/mc-decompiler/jars/server-26.2.jar
 java    tools/mc-decompiler/output/26.2/src
 javacp  tools/nbt-ref/vanilla-fresh-12345/versions/26.2/server-26.2.jar + libraries/
 ```
-
-Visual diff without the game: `tools/neutron-map` (map/tree/biomes/feature —
-see its README). First full-region run: 91/91 full chunks match, 0 differ.
