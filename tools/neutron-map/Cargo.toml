@@ -1,0 +1,12 @@
+[package]
+name = "neutron-map"
+version = "0.1.0"
+edition = "2021"
+description = "Render generated/vanilla chunks to PNG maps; inspect the embedded worldgen tree"
+
+[dependencies]
+neutron-world = { path = "../../crates/neutron-world" }
+neutron-worldgen = { path = "../../crates/neutron-worldgen" }
+png = "0.17"
+anyhow = "1"
+serde_json = "1"
