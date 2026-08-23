@@ -327,6 +327,8 @@ impl ChunkGenerator {
         const FEATURE_RADIUS: i32 = 2;
         let mut region = RegionBuf::new(cx, cz, FEATURE_RADIUS);
         let mut center_biomes = vec![0u8; CHUNK_BIOME_VOLUME];
+        let prof = std::env::var_os("NEUTRON_STEP_TIMING").is_some();
+        let t_all = std::time::Instant::now();
 
         for dz in -FEATURE_RADIUS..=FEATURE_RADIUS {
             for dx in -FEATURE_RADIUS..=FEATURE_RADIUS {
@@ -341,12 +343,23 @@ impl ChunkGenerator {
                 }
             }
         }
+        let t_noise = t_all.elapsed().as_millis();
+        if prof {
+            eprintln!("[gen-timing] noise+surface(25 chunks)={}ms", t_noise);
+        }
 
         // Classic carvers (caves + canyon).
         carvers::apply_carvers_region(&mut region, &self.state);
+        let t_carve = t_all.elapsed().as_millis();
+        if prof {
+            eprintln!("[gen-timing] carvers={}ms", t_carve - t_noise);
+        }
         // Structure pieces (mineshafts) are part of the CARVERS status — placed
         // once over the region before decoration, visible to every origin.
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
+        if prof {
+            eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);
+        }
 
         // Origin-major decoration (vanilla `ChunkGenerator.applyBiomeDecoration`
         // per chunk). The center chunk is decorated FIRST while its neighbours
