@@ -139,11 +139,23 @@ pub(crate) fn sample_height(rng: &mut FeatureRandom, height: &Value) -> i32 {
         let max = resolve_anchor(&height["max_inclusive"]);
         min + rng.next_int((max - min + 1).max(1))
     } else if ty.contains("trapezoid") {
+        // TrapezoidHeight.sample (26.2): range = max-min;
+        // if plateau >= range -> betweenInclusive(min,max);
+        // else min + betweenInclusive(0, range-plateauStart)
+        //          + betweenInclusive(0, plateauStart).
         let min = resolve_anchor(&height["min_inclusive"]);
         let max = resolve_anchor(&height["max_inclusive"]);
-        let a = min + rng.next_int((max - min + 1).max(1));
-        let b = min + rng.next_int((max - min + 1).max(1));
-        (a + b) / 2
+        if min > max {
+            return min;
+        }
+        let plateau = height["plateau"].as_i64().unwrap_or(0) as i32;
+        let range = max - min;
+        if plateau >= range {
+            return min + rng.next_int(range + 1);
+        }
+        let plateau_start = (range - plateau) / 2;
+        let plateau_end = range - plateau_start;
+        min + rng.next_int(plateau_end + 1) + rng.next_int(plateau_start + 1)
     } else if ty.contains("very_biased_to_bottom") {
         // VeryBiasedToBottomHeight.sample (decompiled 26.2):
         //   if max - min - inner + 1 <= 0 → min

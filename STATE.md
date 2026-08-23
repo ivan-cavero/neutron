@@ -1,58 +1,58 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 23 Aug 2026.**
+> **Updated 23 Aug 2026 (sesión 2).**
 
 ## Now
 
-Worldgen 1:1 vs vanilla **26.2**. HEAD: steps 1/2/10 wired + geode dead-branch fix
-+ `BlockId::CaveAir` + biome-climate freeze gate.
+Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
++ trapezoid dispatcher fix.
 
 | Seed | region ALL | notes |
 | --- | --- | --- |
-| 424242 | **97.69%** r=1 (-0.01: honest mineshaft labels expose piece-layout desync) | was 97.70 with masked Air |
-| 12345 | **98.28%** center (6,-2) r=1 (+0.05; was 98.23) | geodes now match |
+| 424242 | **97.90%** r=1 (+0.20 vs 97.70) | mineshafts now 1:1 |
+| 12345 | **98.28%** center (6,-2) r=1 (+0.05 vs 98.23) | geodes + honest CAVE_AIR |
 | 777 | 99.38% chunk (0,0) only full chunk on disk | |
 
-- Geodes: wired step 2 (LOCAL_MODIFICATIONS). Vanilla's last layer branch is DEAD
-  CODE (`else if >= outerCrust` after negated guard) — port kept verbatim; cells
-  below inner_crust stay terrain. Both ref geodes match (~161 residual air->stone).
-- Lakes (step 1) + freeze_top_layer (step 10) wired. Freeze/lake-ice gate =
-  biome base `temperature < 0.15` from JSON (`feature_catalog::biome_climate`),
-  NOT router temperature noise. ponytail: FROZEN modifier + >y80 noise term need
-  PerlinSimplexNoise(1234L/3456L) ports.
-- Step 3 (monster_room/fossil) **stays OFF**: rooms place where vanilla's 10
-  attempts reject (evidence 424242 (1,-1): 250 wrong cave_air at y=4). Suspect
-  uniform-height draw order vs `Mth.randomBetweenInclusive`. Next: ProbeYAnchor.
-- Mineshaft pieces write `CAVE_AIR` (vanilla). Piece LAYOUT diverges from vanilla:
-  424242 (1,-1) has a vanilla corridor y≈-14 we don't build; 12345 corridors match.
-  Fixing layout converts 424242 -0.01 into gain (proven by 12345 +0.05 same code).
-- lush/pale recall ~59.8% · trees per-pipeline exact, cascade over non-100% base.
+- **Mineshaft layout 1:1**: root cause = SOUTH corridor side-exits at
+  `maxZ()` instead of `maxZ() - 3` (MineshaftPieces.java:233/:244; the EAST
+  maxX-3 quirk was ported, the mirrored SOUTH one was not). All referenced
+  starts now BB-IDENTICAL vs vanilla NBT (14/14 across both seeds).
+  Probe kept: `examples/ms_layout.rs` (diffs structures.starts Children BBs;
+  References longs are `(z<<32)|x`, NOT ChunkPos.asLong). Step-6 sorter probe:
+  `examples/sorter6.rs` — our order matches vanilla 34/34.
+- Step 3 (monster_room/fossil) wired and stays ON: uniform-height sampling is
+  correct (`randomBetweenInclusive`); earlier "wrong rooms" were cascade from
+  the mineshaft bug.
+- TrapezoidHeight fixed in dispatcher (sampling.rs): vanilla =
+  min + betweenInclusive(0, range-plateauStart) + betweenInclusive(0,
+  plateauStart); was (a+b)/2. Dedicated ore path already had it right.
+- Ore blob mismatches remain (~150 cells/region, e.g. extra redstone / missing
+  diamond blobs): discrete step-6 OreFeature blobs, NOT the noise veinifier
+  (OreVeinifier port verified line-exact). Next probe: blob start positions.
+- Remaining composition (12345 center): trees ~800 (cascade), sculk ~400,
+  ores ~80, leaf_litter/grass ~90, clay patches 424242 ~300.
 
 ## Perf (this machine, release)
 
-- Decoration biome union memoized per origin (`origin_biome_union_memo`) +
-  quart grids stored in `RegionBuf::put_chunk_biomes` / `stored_noise_biome`.
-  Was ~750 ms per apply_step_origin call → 0-60 ms first, then free.
-- block_parity single-chunk gen: 50 s → 11.5 s. Remaining hotspots: noise+surface
-+carvers for the 5×5 buffer (~9 s), veg step ~125 ms ×9 origins.
-- `NEUTRON_STEP_TIMING=1` prints per-origin per-step ms. `[geode]` trace via
-  `NEUTRON_GEODE_TRACE`.
+- Biome union memoized per origin; quart grids stored in RegionBuf.
+  Single-chunk gen 50 s → 11.5 s (noise+surface = 10 s of it; carvers 79 ms;
+  decoration ~1.7 s). `NEUTRON_STEP_TIMING=1` per-phase/per-step ms.
 
 ## Next (one question)
 
-Mineshaft piece-layout parity vs vanilla (salt/spacing/probability + piece RNG):
-closes 424242 -0.01 AND unlocks step 3 re-enable path. Then ProbeYAnchor for
-uniform-height draw order (monster_room count=10).
+Ore blob placement parity: diff our blob starts vs vanilla for ore_redstone /
+ore_diamond in one chunk (ProbeOreBlob pattern), then sculk spreader cascade,
+then tree draw-column base closure.
 
 ## Dead (do not reopen without a new two-sided dump)
 
-Chunk decoration order · cave-biome stored-grid vs voronoi · `vegetation_patch`
-HashSet · noodle sign · T4 feature ports as recall lever · carvers write cave_air
-(overworld carvers write plain AIR; refs' cave_air comes from structures) ·
-geode outer-layer branch reachable (it is dead code in 26.2 jar) · freeze gate as
-router-temperature (biome attribute is correct) · worm start-Y desync ·
-`placeGround` already-ground joining surface set.
+Chunk decoration order · cave-biome stored-grid vs voronoi · vegetation_patch
+HashSet · noodle sign · carvers write cave_air (overworld carvers write plain
+AIR; refs' cave_air = structures) · geode outer-layer branch reachable · freeze
+gate as router-temperature · worm start-Y desync · placeGround already-ground
+in surface set · mineshaft set_large_feature_seed missing salt (vanilla uses no
+salt for structure generation either) · step-6 sorter order (34/34 exact).
 
 ## This machine
 
@@ -62,4 +62,5 @@ router-temperature (biome attribute is correct) · worm start-Y desync ·
 777     tools/nbt-ref/vanilla-fresh-777/world/dimensions/minecraft/overworld/region
 jar     tools/mc-decompiler/jars/server-26.2.jar
 java    tools/mc-decompiler/output/26.2/src
+javacp  tools/nbt-ref/vanilla-fresh-12345/versions/26.2/server-26.2.jar + libraries/
 ```

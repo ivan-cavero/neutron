@@ -18,6 +18,9 @@ use crate::worldgen::WorldgenState;
 mod pieces;
 mod place;
 
+/// Diagnostics: piece-tree generation for one start (parity examples).
+pub use pieces::generate_start;
+
 pub(super) const MAGIC_START_Y: i32 = 50;
 const MAX_DEPTH: i32 = 8;
 const MAX_DIST: i32 = 80;

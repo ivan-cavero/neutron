@@ -167,3 +167,9 @@ name = "spring_neigh"
 
 [[example]]
 name = "water_band"
+
+[[example]]
+name = "ms_layout"
+[[example]]
+name = "sorter6"
+
