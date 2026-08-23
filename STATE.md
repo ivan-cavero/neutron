@@ -10,28 +10,24 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 | Seed | region ALL | notes |
 | --- | --- | --- |
-| 424242 | **97.90%** r=1 (+0.20 vs 97.70) | mineshafts now 1:1 |
-| 12345 | **98.28%** center (6,-2) r=1 (+0.05 vs 98.23) | geodes + honest CAVE_AIR |
+| 424242 | **97.96%** r=1 (+0.26 vs 97.70) | mineshafts 1:1 + ores draw-flow fix |
+| 12345 | **98.36%** center (6,-2) r=1 (+0.13 vs 98.23) | center chunk 98.31 / BASE 99.82 |
 | 777 | 99.38% chunk (0,0) only full chunk on disk | |
 
-- **Mineshaft layout 1:1**: root cause = SOUTH corridor side-exits at
-  `maxZ()` instead of `maxZ() - 3` (MineshaftPieces.java:233/:244; the EAST
-  maxX-3 quirk was ported, the mirrored SOUTH one was not). All referenced
-  starts now BB-IDENTICAL vs vanilla NBT (14/14 across both seeds).
-  Probe kept: `examples/ms_layout.rs` (diffs structures.starts Children BBs;
-  References longs are `(z<<32)|x`, NOT ChunkPos.asLong). Step-6 sorter probe:
-  `examples/sorter6.rs` — our order matches vanilla 34/34.
-- Step 3 (monster_room/fossil) wired and stays ON: uniform-height sampling is
-  correct (`randomBetweenInclusive`); earlier "wrong rooms" were cascade from
-  the mineshaft bug.
-- TrapezoidHeight fixed in dispatcher (sampling.rs): vanilla =
-  min + betweenInclusive(0, range-plateauStart) + betweenInclusive(0,
-  plateauStart); was (a+b)/2. Dedicated ore path already had it right.
-- Ore blob mismatches remain (~150 cells/region, e.g. extra redstone / missing
-  diamond blobs): discrete step-6 OreFeature blobs, NOT the noise veinifier
-  (OreVeinifier port verified line-exact). Next probe: blob start positions.
-- Remaining composition (12345 center): trees ~800 (cascade), sculk ~400,
-  ores ~80, leaf_litter/grass ~90, clay patches 424242 ~300.
+- **Ores fixed**: root cause = out-of-world Y samples (`y < -64`) hit an early
+  `continue` before place_ore_blob, skipping ~69 draws vanilla consumes.
+  Verified attempt counts per feature vs ProbeOrePositions.java (new probe:
+  modifier-chain model count/rarity/square/uniform/trapezoid for step 6).
+  Center-chunk ore mismatches (iron/redstone/diamond) eliminated.
+- **Mineshaft layout 1:1**: SOUTH corridor side-exits at `maxZ() - 3`
+  (MineshaftPieces.java:233/:244). All referenced starts BB-IDENTICAL vs NBT
+  (14/14 both seeds). Probes kept: `examples/ms_layout.rs`,
+  `examples/sorter6.rs`, `ProbeSorter6.java`, `ProbeOrePositions.java`.
+- Step 3 (monster_room/fossil) wired ON. TrapezoidHeight fixed in dispatcher.
+- lush/pale recall 60.66% (was 60.96 — deep-ore fix shifted some lush gates;
+  net region gain positive).
+- Remaining composition (12345 center): trees ~700 (cascade), sculk ~400,
+  surface veg (leaf_litter/grass) ~180, clay patches 424242 ~300, misc ~100.
 
 ## Perf (this machine, release)
 
@@ -41,9 +37,9 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Ore blob placement parity: diff our blob starts vs vanilla for ore_redstone /
-ore_diamond in one chunk (ProbeOreBlob pattern), then sculk spreader cascade,
-then tree draw-column base closure.
+Sculk spreader cascade (~400 cells 12345 center): deepslate<->sculk + vein
+placement drift over near-matching terrain. Then tree draw-column base closure
+(~700), surface veg (~180), clay patches (~300).
 
 ## Dead (do not reopen without a new two-sided dump)
 
@@ -52,7 +48,9 @@ HashSet · noodle sign · carvers write cave_air (overworld carvers write plain
 AIR; refs' cave_air = structures) · geode outer-layer branch reachable · freeze
 gate as router-temperature · worm start-Y desync · placeGround already-ground
 in surface set · mineshaft set_large_feature_seed missing salt (vanilla uses no
-salt for structure generation either) · step-6 sorter order (34/34 exact).
+salt for structure generation either) · step-6 sorter order (34/34 exact) ·
+OreFeature blob math (line-exact; desync was the skipped-draw early-out) ·
+trapezoid dedicated-path formula (was already correct).
 
 ## This machine
 
