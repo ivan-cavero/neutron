@@ -371,7 +371,8 @@ fn is_ore_family(b: BlockId) -> bool {
 pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
-    let order = std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "center_row".into());
+    let order =
+        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "spiral".into());
     match order.as_str() {
         "row" => {
             for czl in 0..chunks {
@@ -505,11 +506,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decoration_origin_order_center_first() {
+    fn decoration_origin_order_is_set_initial_spawn_spiral() {
+        // Vanilla decorates spawn-area origins in the MinecraftServer
+        // setInitialSpawn square-spiral wavefront; region parity improved
+        // broadly (+0.06 12345) once this became the default.
         let o = decoration_origin_order(3);
-        assert_eq!(o[0], (1, 1));
         assert_eq!(o.len(), 9);
-        assert!(o[1..].iter().all(|&p| p != (1, 1)));
+        assert_eq!(o[0], (1, 1), "center first");
+        assert_eq!(
+            o,
+            vec![
+                (1, 1),
+                (2, 1),
+                (2, 2),
+                (1, 2),
+                (0, 2),
+                (0, 1),
+                (0, 0),
+                (1, 0),
+                (2, 0)
+            ]
+        );
     }
 
     #[test]
