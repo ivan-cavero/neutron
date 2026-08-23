@@ -23,13 +23,13 @@ impl Dir {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct Bb {
-    pub(super) min_x: i32,
-    pub(super) min_y: i32,
-    pub(super) min_z: i32,
-    pub(super) max_x: i32,
-    pub(super) max_y: i32,
-    pub(super) max_z: i32,
+pub struct Bb {
+    pub min_x: i32,
+    pub min_y: i32,
+    pub min_z: i32,
+    pub max_x: i32,
+    pub max_y: i32,
+    pub max_z: i32,
 }
 
 impl Bb {
@@ -82,9 +82,9 @@ pub(super) enum Kind {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct Piece {
+pub struct Piece {
     pub(super) kind: Kind,
-    pub(super) bb: Bb,
+    pub bb: Bb,
     pub(super) depth: i32,
     pub(super) dir: Dir,
     /// `StructurePiece.orientation` — None for Room/Crossing (NBT O=-1).
@@ -94,7 +94,9 @@ pub(super) struct Piece {
 
 /// `findGenerationPoint` + `moveBelowSeaLevel`: the room seed piece plus all
 /// children generated with `setLargeFeatureSeed`.
-pub(super) fn generate_start(level_seed: i64, cx: i32, cz: i32) -> Vec<Piece> {
+/// Generate one mineshaft start's piece tree (diagnostics-visible: parity
+/// examples diff these BBs against vanilla `structures.starts` NBT).
+pub fn generate_start(level_seed: i64, cx: i32, cz: i32) -> Vec<Piece> {
     let mut rng = LegacyRandom::new(0);
     rng.set_large_feature_seed(level_seed, cx, cz);
     // findGenerationPoint: nextDouble() then pop
@@ -396,8 +398,9 @@ fn add_corridor_children(
         (Dir::North, 2) => (bb.min_x - 1, bb.min_z, Dir::West),
         (Dir::North, _) => (bb.max_x + 1, bb.min_z, Dir::East),
         (Dir::South, 0 | 1) => (bb.min_x, bb.max_z + 1, dir),
-        (Dir::South, 2) => (bb.min_x - 1, bb.max_z, Dir::West),
-        (Dir::South, _) => (bb.max_x + 1, bb.max_z, Dir::East),
+        // javap: SOUTH side exits use maxZ() - 3 (same 3-wide strip quirk as EAST)
+        (Dir::South, 2) => (bb.min_x - 1, bb.max_z - 3, Dir::West),
+        (Dir::South, _) => (bb.max_x + 1, bb.max_z - 3, Dir::East),
         (Dir::West, 0 | 1) => (bb.min_x - 1, bb.min_z, dir),
         (Dir::West, 2) => (bb.min_x, bb.min_z - 1, Dir::North),
         (Dir::West, _) => (bb.min_x, bb.max_z + 1, Dir::South),
