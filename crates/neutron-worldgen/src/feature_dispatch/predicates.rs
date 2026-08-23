@@ -338,7 +338,7 @@ pub(crate) fn biome_name_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> St
     biome_id_to_name(biome_id_at_block(state, x, y, z)).to_string()
 }
 
-pub(crate) fn biome_id_to_name(id: u8) -> &'static str {
+pub fn biome_id_to_name(id: u8) -> &'static str {
     // Subset — extend as biome_source ids expand
     match id {
         x if x == biome_id::DEEP_DARK => "deep_dark",

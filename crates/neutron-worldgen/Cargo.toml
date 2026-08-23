@@ -177,3 +177,7 @@ name = "sorter6"
 [[example]]
 name = "base_clusters"
 
+
+[[example]]
+name = "decorate_oracle"
+

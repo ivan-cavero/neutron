@@ -925,6 +925,7 @@ mod sampling;
 mod vegetation;
 
 pub(crate) use fluids::*;
+pub use predicates::biome_id_to_name;
 pub(crate) use predicates::*;
 pub(crate) use sampling::*;
 pub(crate) use vegetation::*;

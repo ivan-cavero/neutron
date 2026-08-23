@@ -419,8 +419,97 @@ impl ChunkGenerator {
         region
     }
 
-    /// Density fill + aquifer + surface rules for one chunk (no features).
-    /// Pure and cached by the caller; exposed for diagnostics/order search.
+    /// 5×5 pre-decoration snapshot (noise + surface + carvers + mineshafts,
+    /// NO feature steps) for the vanilla decoration oracle
+    /// (tools/worldgen-probe/src/ProbeDecorate.java, NDEC1 format).
+    ///
+    /// Returns (biome-name table is written by the caller from
+    /// `crate::biome_source` ids): per-chunk palettes, per-chunk block palette
+    /// indices (y*256+z*16+x, y from WORLD_BOTTOM) and per-chunk quart-biome
+    /// grids in chunk order dz-major then dx.
+    pub fn export_predecorate(
+        &self,
+        cx: i32,
+        cz: i32,
+    ) -> (
+        Vec<Vec<String>>,
+        Vec<Vec<u16>>,
+        Vec<[u8; 1536]>,
+        Vec<String>,
+    ) {
+        use crate::surface::BlockId;
+        const R: i32 = 2;
+        let n = (R * 2 + 1) as usize;
+        let mut region = crate::region_buf::RegionBuf::new(cx, cz, R);
+        let mut bio_grids: Vec<[u8; 1536]> = Vec::new();
+        for dz in -R..=R {
+            for dx in -R..=R {
+                let (blocks, _hm, biomes) =
+                    self.generate_noise_and_surface(cx + dx, cz + dz);
+                region.put_chunk(cx + dx, cz + dz, &blocks, &_hm);
+                let mut grid = [0u8; 1536];
+                grid.copy_from_slice(&biomes);
+                bio_grids.push(grid);
+            }
+        }
+        crate::carvers::apply_carvers_region(&mut region, &self.state);
+        crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
+
+        // global palette of vanilla names; index 0 == air
+        let mut pal: Vec<String> = vec!["minecraft:air".into()];
+        let mut pal_map: std::collections::HashMap<BlockId, u16> =
+            std::collections::HashMap::new();
+        pal_map.insert(BlockId::Air, 0);
+
+        let mut chunk_pals: Vec<Vec<String>> = Vec::new();
+        let mut chunk_idxs: Vec<Vec<u16>> = Vec::new();
+        let mut ci = 0usize;
+        for dz in -R..=R {
+            for dx in -R..=R {
+                let wx0 = (cx + dx) * 16;
+                let wz0 = (cz + dz) * 16;
+                // local palette referencing the global one via u16 = global idx
+                let mut idxs = vec![0u16; 16 * ((crate::generator::WORLD_TOP
+                    - crate::generator::WORLD_BOTTOM)
+                    as usize)
+                    * 16];
+                for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                    let yy = (y - crate::generator::WORLD_BOTTOM) as usize;
+                    for lz in 0..16i32 {
+                        for lx in 0..16i32 {
+                            let b = region.get(wx0 + lx, y, wz0 + lz);
+                            if b == BlockId::Air {
+                                continue;
+                            }
+                            let pi = match pal_map.get(&b) {
+                                Some(p) => *p,
+                                None => {
+                                    let p = pal.len() as u16;
+                                    pal.push(crate::surface::vanilla_name(b).to_string());
+                                    pal_map.insert(b, p);
+                                    p
+                                }
+                            };
+                            idxs[yy * 256 + lz as usize * 16 + lx as usize] = pi;
+                        }
+                    }
+                }
+                chunk_pals.push(pal.clone());
+                chunk_idxs.push(idxs);
+                ci += 1;
+                let _ = ci;
+                let _ = wx0;
+                let _ = wz0;
+            }
+        }
+        // attach biome grids in same order
+        let mut bios = Vec::new();
+        for g in &bio_grids {
+            bios.push(*g);
+        }
+        let _ = n;
+        (chunk_pals, chunk_idxs, bios, pal)
+    }
     pub fn generate_noise_and_surface(&self, cx: i32, cz: i32) -> (Vec<u16>, Vec<i16>, Vec<u8>) {
         let st = &self.state;
         let mut blocks = vec![BlockId::Air.as_u16(); CHUNK_BLOCK_VOLUME];
