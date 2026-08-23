@@ -43,24 +43,27 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Border cells (~28-40/chunk, ALL at edges): pairs like vanilla-diorite /
-neutron-granite from neighbour-origin blobs whose attempts >=2 drift (attempt
-1 always matches; ground truth for >=2 needs vanilla's live heightmap state —
-static probes can't model the gate). Candidate levers: (a) instrument ref-extract
-to boot vanilla and dump per-origin blob writes via mixin/debug agent;
-(b) accept border noise and move to structures (villages first). Trees/sculk
-cascade continues shrinking with each base win.
+Border cells: order sweep CONCLUDED — spiral beats all alternatives tried
+(S-first 97.50, SW-first 98.29, ring-S 98.18 vs spiral **98.45/97.95**).
+Vanilla's real order is ticket-scheduler-driven (async completion), not a
+fixed sequence; resolving attempts>=2 blob drift needs a live vanilla oracle
+(instrument ref-extract with a debug agent) or accept residual border noise.
+Probe infra kept: NEUTRON_ORE_CELL / NEUTRON_ORE_TRACE /
+ProbeOreFlow.java (full-flow simulator incl. blob draws).
+Recommendation: structures track next (villages first).
 
 ## Dead (do not reopen without a new two-sided dump)
 
-Chunk decoration order · cave-biome stored-grid vs voronoi · vegetation_patch
-HashSet · noodle sign · carvers write cave_air (overworld carvers write plain
-AIR; refs' cave_air = structures) · geode outer-layer branch reachable · freeze
-gate as router-temperature · worm start-Y desync · placeGround already-ground
-in surface set · mineshaft set_large_feature_seed missing salt (vanilla uses no
-salt for structure generation either) · step-6 sorter order (34/34 exact) ·
-OreFeature blob math (line-exact; desync was the skipped-draw early-out) ·
-trapezoid dedicated-path formula (was already correct).
+Chunk decoration order as FIXED sequence (vanilla = async ticket scheduler;
+spiral is the best static approximation — sweep-verified) · cave-biome
+stored-grid vs voronoi · vegetation_patch HashSet · noodle sign · carvers write
+cave_air (overworld carvers write plain AIR; refs' cave_air = structures) ·
+geode outer-layer branch reachable · freeze gate as router-temperature · worm
+start-Y desync · placeGround already-ground in surface set · mineshaft
+set_large_feature_seed missing salt · step-6 sorter order (34/34 exact) ·
+OreFeature blob math (line-exact, flow-simulated; desync was skipped-draw
+early-out) · trapezoid dedicated-path formula · ore attempt>=2 "drift" (was
+probe model missing blob draws — ProbeOreFlow now exact for discard 0/1).
 
 ## This machine
 

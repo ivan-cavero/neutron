@@ -613,8 +613,17 @@ fn place_feature(
         if !biome_gate_ok(state, def.gate, def.feature_index, x, y, z) {
             continue;
         }
+        let who = if std::env::var_os("NEUTRON_ORE_CELL").is_some() {
+            format!(
+                "{}@({},{}).{}",
+                def.feature_index, origin_min_x, origin_min_z,
+                std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_default()
+            )
+        } else {
+            String::new()
+        };
         match def.kind {
-            FeatureKind::Ore(ore) => place_ore_blob(rng, region, x, y, z, &ore),
+            FeatureKind::Ore(ore) => place_ore_blob(rng, region, x, y, z, &ore, &who),
             FeatureKind::Disk(disk) => place_disk(rng, region, x, y, z, &disk),
             FeatureKind::UnderwaterMagma {
                 floor_search_range,
@@ -961,13 +970,14 @@ fn place_ore_blob(
     oy: i32,
     oz: i32,
     def: &OreDef,
+    who: &str,
 ) {
     let size = def.size;
     if size <= 0 {
         return;
     }
     let target_fn = |existing: BlockId| target_match(existing, def);
-    place_ore_blob_inner(rng, region, ox, oy, oz, size, def.discard_chance, target_fn);
+    place_ore_blob_inner(rng, region, ox, oy, oz, size, def.discard_chance, target_fn, who);
 }
 
 /// Generic config-driven ore placement (`OreFeature` at any step, e.g.
@@ -1021,7 +1031,7 @@ pub(crate) fn place_ore_from_config(
         }
         None
     };
-    place_ore_blob_inner(rng, region, ox, oy, oz, size, discard, target_fn);
+    place_ore_blob_inner(rng, region, ox, oy, oz, size, discard, target_fn, "");
 }
 
 /// Shared blob math: `OreFeature.place` + `doPlace` with a target resolver.
@@ -1034,6 +1044,7 @@ fn place_ore_blob_inner(
     size: i32,
     discard_chance: f32,
     target_fn: impl Fn(BlockId) -> Option<BlockId>,
+    who: &str,
 ) {
     if size <= 0 {
         return;
@@ -1171,7 +1182,7 @@ fn place_ore_blob_inner(
                             .collect();
                         if want.len() == 3 && (x, y, z) == (want[0], want[1], want[2]) {
                             eprintln!(
-                                "[cell-write] ({x},{y},{z}) {existing:?} -> {}",
+                                "[cell-write] ({x},{y},{z}) {existing:?} -> {} by [{who}]",
                                 replacement.block_name()
                             );
                         }
