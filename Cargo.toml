@@ -11,6 +11,7 @@ members = [
     "tools/ref-extract",
     "tools/neutron-hash",
     "tools/chunk-dump",
+    "tools/neutron-map",
 ]
 
 # Tests are dominated by full-chunk worldgen generation (neutron-server,
