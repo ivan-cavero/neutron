@@ -2,11 +2,17 @@
 //!
 //! Copyright (c) 2026 Neutron Contributors -- MIT License
 
-use crate::density::{DensityEnv, DF};
+use crate::density::DF;
 use crate::positional::PositionalRandomFactory;
 use crate::surface::BlockId;
 
 /// Place ore-vein blocks when aquifer returns solid default (None).
+///
+/// `env` MUST be the marker-aware environment from the chunk fill loop:
+/// `vein_toggle` and `vein_ridged` contain `Interpolated` wrappers that sample
+/// on the cell grid and lerp per block (vanilla `NoiseChunk`); evaluating them
+/// raw per block flips hairline boundary cells. `vein_gap` is a bare noise
+/// node — identical either way.
 ///
 /// Returns `Some(block)` if this position is inside a vein, else `None`.
 pub fn try_place_vein(
@@ -17,10 +23,9 @@ pub fn try_place_vein(
     vein_ridged: &DF,
     vein_gap: &DF,
     ore_random: PositionalRandomFactory,
-    noises: &std::collections::HashMap<String, crate::noise::NormalNoise>,
+    env: &mut crate::density::DensityEnv,
 ) -> Option<BlockId> {
-    let mut env = DensityEnv::new(x, y, z, noises);
-    let toggle = crate::density::compute(vein_toggle, &mut env);
+    let toggle = crate::density::compute(vein_toggle, env);
     // toggle > 0 → COPPER, else IRON
     let (ore, raw, filler, min_y, max_y) = if toggle > 0.0 {
         // COPPER: copper_ore, raw_copper, granite, 0..50
@@ -63,7 +68,7 @@ pub fn try_place_vein(
     }
 
     // ridged must be < 0
-    let ridged = crate::density::compute(vein_ridged, &mut env);
+    let ridged = crate::density::compute(vein_ridged, env);
     if ridged >= 0.0 {
         return None;
     }
@@ -71,7 +76,7 @@ pub fn try_place_vein(
     // richness = clampedMap(absToggle, 0.4, 0.6, 0.1, 0.3)
     let richness = clamped_map(abs_toggle, 0.4, 0.6, 0.1, 0.3);
     if (rng.next_f32() as f64) < richness {
-        let gap = crate::density::compute(vein_gap, &mut env);
+        let gap = crate::density::compute(vein_gap, env);
         // SKIP_ORE_IF_GAP_NOISE_IS_BELOW = -0.3 → place ore if gap > -0.3
         if gap > -0.3 {
             // CHANCE_OF_RAW_ORE_BLOCK = 0.02
@@ -92,6 +97,6 @@ fn clamped_map(v: f64, from_min: f64, from_max: f64, to_min: f64, to_max: f64) -
     if v >= from_max {
         return to_max;
     }
-    let t = (v - from_min) / (from_max - from_min);
-    to_min + t * (to_max - to_min)
+    let d = (v - from_min) / (from_max - from_min);
+    to_min + d * (to_max - to_min)
 }

@@ -429,9 +429,14 @@ impl ChunkGenerator {
         let mut marker_state =
             MarkerState::new(st.cell_width as usize, st.cell_height as usize, st.reg.cache_slot_count());
 
-        // Collect ALL Interpolated markers in final_density (A-path + noodle).
+        // Collect ALL Interpolated markers in final_density (A-path + noodle)
+        // AND in the vein functions (vein_toggle / vein_ridged carry
+        // `minecraft:interpolated` wrappers — vanilla samples them on the cell
+        // grid and lerps per block; raw per-block eval flips hairline cells).
         let mut interp_markers: Vec<DF> = Vec::new();
         collect_interpolated(&st.router.final_density, &mut interp_markers);
+        collect_interpolated(&st.router.vein_toggle, &mut interp_markers);
+        collect_interpolated(&st.router.vein_ridged, &mut interp_markers);
         assert!(
             !interp_markers.is_empty(),
             "final_density must contain at least one interpolated marker"
@@ -539,7 +544,10 @@ impl ChunkGenerator {
                                 }
 
                                 // Material rules: aquifer first (None = solid default),
-                                // then ore veinifier, else stone.
+                                // then ore veinifier, else stone. The vein
+                                // functions reuse the SAME marker-aware env so
+                                // their Interpolated nodes lerp off the grids
+                                // sampled above.
                                 let state =
                                     aquifer.compute_substance(pos_x, pos_y, pos_z, final_density);
                                 let block = match state {
@@ -552,7 +560,7 @@ impl ChunkGenerator {
                                         &st.router.vein_ridged,
                                         &st.router.vein_gap,
                                         PositionalRandomFactory::new(st.ore_lo, st.ore_hi),
-                                        st.noises.noises(),
+                                        &mut env,
                                     )
                                     .unwrap_or(BlockId::Stone),
                                 };

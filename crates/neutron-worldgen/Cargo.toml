@@ -173,3 +173,7 @@ name = "ms_layout"
 [[example]]
 name = "sorter6"
 
+
+[[example]]
+name = "base_clusters"
+
