@@ -37,13 +37,12 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Base-closure loop: remaining non-veg base diffs are small clusters
-(clay<->dirt disks 34+13, tuff<->deepslate strata 26, diorite<->granite 10,
-iron-filler 10 — 177 cells center chunk). Each cascades into sculk spreader
-draws (patch origins verified identical to i=0; divergence enters via
-spread-draw counts over differing terrain) and tree gates. Sculk/tree
-mechanisms are already verified exact on synthetic dumps (sculk_replay,
-ProbeSculkPatch; pale oak 167/167).
+Border-cell spill (28 non-cascade left, ALL at chunk edges: granite/diorite
+blob overlap + clay/gravel disks + stray coal at lx=0 / lz=0-1). Likely lever:
+origin decoration ORDER vs vanilla ChunkTracker wavefront (now that everything
+else is 1:1, last-writer-wins at borders is exposed). Try NEUTRON_DECO_CUSTOM_
+ORDER sweeps per-border-origin before/after center. Then trees/sculk cascade
+shrinks further.
 
 ## Dead (do not reopen without a new two-sided dump)
 
