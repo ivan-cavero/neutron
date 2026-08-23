@@ -53,9 +53,8 @@ pub(super) fn place_multiface_growth(
     let Some(place_block) = c["block"].as_str().and_then(BlockId::from_name) else {
         return;
     };
-    if place_block == BlockId::SculkVein {
-        return;
-    }
+    // NOTE: sculk_vein flows through here too — vanilla MultifaceGrowthFeature
+    // handles ALL multiface blocks identically (glow_lichen, sculk_vein, ...).
     let here = region.get(x, y, z);
     if !matches!(here, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
         return;

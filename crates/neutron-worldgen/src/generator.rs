@@ -111,8 +111,22 @@ pub fn decorate_region_origin_major(
         }
         let t_ores = ts4.elapsed().as_millis();
         let ts5 = std::time::Instant::now();
-        // Step 7 — sculk_vein + sculk_patch (CFR MultifaceSpreader + ChargeCursor).
-        crate::sculk::apply_sculk_origin(region, state, ox0, oz0, undecorated, &mut faces);
+        // Step 7 — underground decoration: sculk_vein (multiface_growth) via
+        // generic dispatch + sculk_patch_deep_dark via dedicated charge system.
+        // Vanilla places all step-7 features sorted by global index; each gets
+        // its own setFeatureSeed(decorationSeed, index, 7) so splitting across
+        // two code paths is safe.
+        let ts5 = std::time::Instant::now();
+        crate::feature_dispatch::apply_step_origin(
+            region,
+            state,
+            crate::feature_catalog::step::UNDERGROUND_DECORATION,
+            ox0,
+            oz0,
+            undecorated,
+            "plains",
+        );
+        crate::sculk::apply_sculk_patch_only(region, state, ox0, oz0, undecorated, &mut faces);
         let t_sculk = ts5.elapsed().as_millis();
         if tmp_diag {
             let mut clay = 0u32;

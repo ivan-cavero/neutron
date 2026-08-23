@@ -203,15 +203,39 @@ pub(crate) fn apply_sculk_origin(
     // Vanilla decorates each origin while not-yet-decorated neighbour chunks
     // are still at CARVERS — their feature output (ores/sculk/vegetal spilled
     // by earlier origins) is not visible yet. Revert those cells for the
-    // duration of this origin's vein+patch pass, then restore them.
+    // duration of this origin's patch pass, then restore them.
     let saved = mask_undecorated_output(region, undecorated, FAMILY_ALL);
 
     let mut rng = FeatureRandom::new(level_seed);
     let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
-    if std::env::var_os("NEUTRON_SCULK_NO_VEIN").is_none() {
-        rng.set_feature_seed(dec, idx_vein, step::UNDERGROUND_DECORATION);
-        place_sculk_vein(&mut rng, region, state, faces, ox0, oz0, &vein_cfg);
+    rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
+    place_sculk_patch(&mut rng, region, state, faces, ox0, oz0, &patch_cfg);
+
+    restore_masked(region, saved);
+}
+
+/// Apply ONLY sculk_patch_deep_dark (catalyst + charge spreader) for one
+/// origin. sculk_vein goes through the generic feature dispatch instead.
+pub fn apply_sculk_patch_only(
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+    undecorated: &[(i32, i32)],
+    faces: &mut FaceMap,
+) {
+    if !SCULK_ENABLED {
+        return;
     }
+    let patch_cfg = PatchConfig::load();
+    let idx_patch = feature_catalog::global_feature_index(
+        step::UNDERGROUND_DECORATION,
+        "sculk_patch_deep_dark",
+    )
+    .unwrap_or(1);
+
+    let level_seed = state.seed;
+    let saved = mask_undecorated_output(region, undecorated, FAMILY_ALL);
 
     let mut rng = FeatureRandom::new(level_seed);
     let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
