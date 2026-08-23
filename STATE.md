@@ -10,9 +10,15 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 | Seed | region ALL | notes |
 | --- | --- | --- |
-| 424242 | **97.96%** r=1 (+0.26 vs 97.70) | mineshafts 1:1 + ores draw-flow fix |
-| 12345 | **98.36%** center (6,-2) r=1 (+0.13 vs 98.23) | center chunk 98.31 / BASE 99.82 |
-| 777 | 99.38% chunk (0,0) only full chunk on disk | |
+| 424242 | **97.95%** r=1 (ties center_row ±0.01; ref via forceload rect) | mineshafts 1:1 + ores + spiral order |
+| 12345 | **98.45%** center (6,-2) r=1 (+0.22 vs 98.23) | spawn = (6,-2): authentic wavefront |
+| 777 | 99.43% chunk (0,0) only full chunk on disk | |
+
+- **Decoration origin order = setInitialSpawn spiral** (MinecraftServer
+  square-spiral wavefront). Was arbitrary center_row; re-tested after
+  mineshaft/ore fixes removed cascade noise: broad per-chunk gains on 12345
+  ((5,-3) +0.15, three more +0.10..0.12). All modes kept behind
+  `NEUTRON_SCULK_ORIGIN_ORDER`.
 
 - **Ores fixed**: root cause = out-of-world Y samples (`y < -64`) hit an early
   `continue` before place_ore_blob, skipping ~69 draws vanilla consumes.
@@ -37,12 +43,12 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Border-cell spill (28 non-cascade left, ALL at chunk edges: granite/diorite
-blob overlap + clay/gravel disks + stray coal at lx=0 / lz=0-1). Likely lever:
-origin decoration ORDER vs vanilla ChunkTracker wavefront (now that everything
-else is 1:1, last-writer-wins at borders is exposed). Try NEUTRON_DECO_CUSTOM_
-ORDER sweeps per-border-origin before/after center. Then trees/sculk cascade
-shrinks further.
+Border-cell spill under the authentic spiral (40 non-cascade center, mostly
+still at z-edges): the wavefront now matches spawn generation; residual diffs
+are last-writer-wins on cells where BOTH origins' blobs reach and our
+target-state differs by 1 prior write. Probe: dump both origins' writes to one
+contested cell from ref NBT piece trees / blob models. Then trees/sculk
+cascade.
 
 ## Dead (do not reopen without a new two-sided dump)
 
