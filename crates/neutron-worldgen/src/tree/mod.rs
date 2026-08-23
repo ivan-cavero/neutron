@@ -302,6 +302,7 @@ pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Air
+            | BlockId::CaveAir
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
             | BlockId::PaleOakLeaves
@@ -323,6 +324,7 @@ pub(super) fn is_air_or_leaves(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Air
+            | BlockId::CaveAir
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
             | BlockId::PaleOakLeaves

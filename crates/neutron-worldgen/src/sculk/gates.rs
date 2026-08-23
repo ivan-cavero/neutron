@@ -143,7 +143,7 @@ pub(super) fn is_sculk_replaceable_world_gen(b: BlockId) -> bool {
 }
 
 pub(super) fn is_air_or_water(b: BlockId) -> bool {
-    matches!(b, BlockId::Air | BlockId::Water)
+    matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water)
 }
 
 pub(super) fn is_vein_placeable_on(b: BlockId) -> bool {

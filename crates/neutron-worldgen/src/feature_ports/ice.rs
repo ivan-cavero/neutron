@@ -232,6 +232,7 @@ fn set_iceberg_block(
 ) {
     let state = region.get(x, y, z);
     if state == BlockId::Air
+        || state == BlockId::CaveAir
         || state == BlockId::Snow
         || state == BlockId::Ice
         || state == BlockId::Water
@@ -270,7 +271,7 @@ fn smooth_iceberg(
             for y_off in 0..=height {
                 let b = region.get(x + dx, origin_y + y_off, z + dz);
                 if is_iceberg_state(b) || b == BlockId::Snow {
-                    if region.get(x + dx, origin_y + y_off - 1, z + dz) == BlockId::Air {
+                    if region.get(x + dx, origin_y + y_off - 1, z + dz).is_air() {
                         region.set(x + dx, origin_y + y_off, z + dz, BlockId::Air);
                         region.set(x + dx, origin_y + y_off + 1, z + dz, BlockId::Air);
                     } else if is_iceberg_state(b) {

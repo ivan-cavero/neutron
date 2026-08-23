@@ -57,7 +57,7 @@ pub(super) fn place_multiface_growth(
         return;
     }
     let here = region.get(x, y, z);
-    if !matches!(here, BlockId::Air | BlockId::Water) {
+    if !matches!(here, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
         return;
     }
     let search_range = c["search_range"].as_i64().unwrap_or(10) as i32;
@@ -89,7 +89,7 @@ pub(super) fn place_multiface_growth(
     }
 
     let air_or_water_or_self = |b: BlockId| {
-        matches!(b, BlockId::Air | BlockId::Water) || b == place_block
+        matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water) || b == place_block
     };
 
     let try_place = |rng: &mut FeatureRandom,
@@ -185,7 +185,11 @@ fn lichen_spread(
             let cur = region.get(sx, sy, sz);
             if !matches!(
                 cur,
-                BlockId::Air | BlockId::Water | BlockId::GlowLichen | BlockId::SculkVein
+                BlockId::Air
+                    | BlockId::CaveAir
+                    | BlockId::Water
+                    | BlockId::GlowLichen
+                    | BlockId::SculkVein
             ) && cur != place_block
             {
                 continue;
@@ -205,7 +209,7 @@ fn lichen_spread(
 /// = solid face or vine). No RNG consumed.
 pub(super) fn place_vines(rng: &mut FeatureRandom, region: &mut RegionBuf, x: i32, y: i32, z: i32) {
     let _ = rng;
-    if region.get(x, y, z) != BlockId::Air {
+    if !region.get(x, y, z).is_air() {
         return;
     }
     for &(dx, dy, dz) in &[(0, 1, 0), (0, 0, -1), (1, 0, 0), (0, 0, 1), (-1, 0, 0)] {
@@ -230,7 +234,7 @@ pub(super) fn place_root_system(
     z: i32,
     cfg: &Value,
 ) {
-    if region.get(x, y, z) != BlockId::Air {
+    if !region.get(x, y, z).is_air() {
         return;
     }
     let c = &cfg["config"];
@@ -260,7 +264,7 @@ pub(super) fn place_root_system(
         // allowed_tree_position: any_of(air, replaceable_by_trees) at pos AND
         // azalea_grows_on at below.
         let here = region.get(x, ty, z);
-        let pos_ok = here == BlockId::Air || crate::tree::valid_tree_pos(here);
+        let pos_ok = here.is_air() || crate::tree::valid_tree_pos(here);
         let below_ok = is_in_tag(region.get(x, ty - 1, z), "#minecraft:azalea_grows_on");
         if !pos_ok || !below_ok {
             continue;
@@ -269,7 +273,7 @@ pub(super) fn place_root_system(
         let mut space_ok = true;
         for i in 1..=required_space {
             let b = region.get(x, ty + i, z);
-            if b != BlockId::Air && !(b == BlockId::Water && i <= allowed_water) {
+            if !b.is_air() && !(b == BlockId::Water && i <= allowed_water) {
                 space_ok = false;
                 break;
             }
@@ -315,7 +319,7 @@ pub(super) fn place_root_system(
             let rx = x + rng.next_int(hang_radius) - rng.next_int(hang_radius);
             let ry = y + rng.next_int(hang_span) - rng.next_int(hang_span);
             let rz = z + rng.next_int(hang_radius) - rng.next_int(hang_radius);
-            if region.get(rx, ry, rz) == BlockId::Air && blocks_motion(region.get(rx, ry + 1, rz)) {
+            if region.get(rx, ry, rz).is_air() && blocks_motion(region.get(rx, ry + 1, rz)) {
                 region.set(rx, ry, rz, BlockId::HangingRoots);
             }
         }
@@ -435,9 +439,9 @@ pub(crate) fn place_vegetation_patch(
                 continue;
             }
             let (mut px, mut py, mut pz) = (x + dx, y, z + dz);
-            // Scan through air inwards.
+            // Scan through air inwards (isEmptyBlock == isAir, incl. cave_air).
             let mut off = 0;
-            while region.get(px, py, pz) == BlockId::Air && off < vertical_range {
+            while region.get(px, py, pz).is_air() && off < vertical_range {
                 px += in_dx;
                 py += in_dy;
                 pz += in_dz;
@@ -445,14 +449,14 @@ pub(crate) fn place_vegetation_patch(
             }
             // Scan back out through solid.
             off = 0;
-            while region.get(px, py, pz) != BlockId::Air && off < vertical_range {
+            while !region.get(px, py, pz).is_air() && off < vertical_range {
                 px += out_dx;
                 py += out_dy;
                 pz += out_dz;
                 off += 1;
             }
             let (bx, by, bz) = (px + in_dx, py + in_dy, pz + in_dz);
-            if region.get(px, py, pz) != BlockId::Air {
+            if !region.get(px, py, pz).is_air() {
                 continue;
             }
             // belowState.isFaceSturdy(..., outwards). Full cubes yes; leaves /

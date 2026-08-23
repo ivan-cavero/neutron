@@ -26,7 +26,7 @@ pub(crate) fn place_desert_well(
     z: i32,
 ) {
     let mut oy = y + 1;
-    while region.get(x, oy, z) == BlockId::Air && oy > WORLD_BOTTOM + 2 {
+    while region.get(x, oy, z).is_air() && oy > WORLD_BOTTOM + 2 {
         oy -= 1;
     }
     if region.get(x, oy, z) != BlockId::Sand {
@@ -34,8 +34,8 @@ pub(crate) fn place_desert_well(
     }
     for dx in -2..=2 {
         for dz in -2..=2 {
-            if region.get(x + dx, oy - 1, z + dz) == BlockId::Air
-                && region.get(x + dx, oy - 2, z + dz) == BlockId::Air
+            if region.get(x + dx, oy - 1, z + dz).is_air()
+                && region.get(x + dx, oy - 2, z + dz).is_air()
             {
                 return;
             }
@@ -94,12 +94,12 @@ pub(crate) fn place_desert_well(
 // ---------------------------------------------------------------------------
 
 /// `SnowAndFreezeFeature.place` (26.2): 16×16 MOTION_BLOCKING columns; ice
-/// below where the biome would freeze, snow + snowy-grass on top.
+/// below where `!warmEnoughToRain` on the biome at the TOP block, snow +
+/// snowy-grass when `shouldSnow`.
 ///
-/// ponytail: vanilla samples the per-biome `TEMPERATURE_NOISE` for
-/// `coldEnoughToSnow`; we approximate with the router temperature function
-/// (frozen biomes sit well below 0.15 there). Exact when the per-biome noise
-/// is ported.
+/// ponytail: `Biome.getHeightAdjustedTemperature` (>snow-line noise term) and
+/// the FROZEN temperature modifier are not applied (needs PerlinSimplexNoise);
+/// exact below y=81 outside frozen oceans.
 pub(crate) fn place_freeze_top_layer(
     region: &mut RegionBuf,
     state: &WorldgenState,
@@ -107,6 +107,7 @@ pub(crate) fn place_freeze_top_layer(
     y: i32,
     z: i32,
 ) {
+    let _ = y;
     for dx in 0..16 {
         for dz in 0..16 {
             let bx = x + dx;
@@ -114,22 +115,43 @@ pub(crate) fn place_freeze_top_layer(
             let Some(sy) = heightmap_top(region, bx, bz, HeightmapKind::MotionBlocking) else {
                 continue;
             };
-            if cold_enough(state, bx, sy - 1, bz) && region.get(bx, sy - 1, bz) == BlockId::Water {
-                region.set(bx, sy - 1, bz, BlockId::Ice);
+            // Vanilla samples the biome AT topPos (level.getBiome(topPos)).
+            let bid = crate::biome_manager::biome_id_at_block(state, bx, sy, bz);
+            let name = crate::feature_dispatch::biome_id_to_name(bid);
+            let (temperature, has_precip) = crate::feature_catalog::biome_climate(name);
+            let warm_enough = temperature >= 0.15;
+            // shouldFreeze(level, belowPos, false): water + !warmEnoughToRain
+            // (block light < 10 is trivially true during worldgen).
+            let below = sy - 1;
+            if !warm_enough && region.get(bx, below, bz) == BlockId::Water {
+                region.set(bx, below, bz, BlockId::Ice);
             }
+
+            // shouldSnow(topPos): precipitation==SNOW && coldEnoughToSnow &&
+            // (air | snow) && SNOW.canSurvive (solid ground below).
             let top = region.get(bx, sy, bz);
-            if cold_enough(state, bx, sy, bz) && (top == BlockId::Air || top == BlockId::Snow) {
+            let below_block = region.get(bx, below, bz);
+            let ground = !below_block.is_air()
+                && below_block != BlockId::Water
+                && below_block != BlockId::Lava;
+            if has_precip
+                && !warm_enough
+                && (top.is_air() || top == BlockId::Snow)
+                && ground
+            {
                 region.set(bx, sy, bz, BlockId::Snow);
-                // snowy grass: same block name, property only — no palette change.
             }
         }
     }
 }
 
-/// `Biome.coldEnoughToSnow` approximation: router temperature < 0.15.
-pub(crate) fn cold_enough(state: &WorldgenState, x: i32, y: i32, z: i32) -> bool {
-    let mut env = crate::density::DensityEnv::new(x, y, z, state.noises.noises());
-    crate::density::compute(&state.router.temperature, &mut env) < 0.15
+/// `Biome.warmEnoughToRain` (base-temperature form): biome temperature at
+/// `(x,y,z)` >= 0.15.
+pub(crate) fn biome_warm_enough(state: &WorldgenState, x: i32, y: i32, z: i32) -> bool {
+    let bid = crate::biome_manager::biome_id_at_block(state, x, y, z);
+    let name = crate::feature_dispatch::biome_id_to_name(bid);
+    let (temperature, _) = crate::feature_catalog::biome_climate(name);
+    temperature >= 0.15
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +173,7 @@ pub(crate) fn place_spike(
         .and_then(BlockId::from_name)
         .unwrap_or(BlockId::PackedIce);
     let mut oy = y;
-    while region.get(x, oy, z) == BlockId::Air && oy > WORLD_BOTTOM + 2 {
+    while region.get(x, oy, z).is_air() && oy > WORLD_BOTTOM + 2 {
         oy -= 1;
     }
     if !eval_block_predicate(region, x, oy, z, &c["can_place_on"]) {
@@ -177,14 +199,14 @@ pub(crate) fn place_spike(
                     || zo == new_width;
                 if in_circle && (!edge || !(rng.next_f32() > 0.75)) {
                     let b = region.get(x + xo, oy + y_off, z + zo);
-                    if b == BlockId::Air
+                    if b.is_air()
                         || eval_block_predicate(region, x + xo, oy + y_off, z + zo, &c["can_replace"])
                     {
                         region.set(x + xo, oy + y_off, z + zo, state);
                     }
                     if y_off != 0 && new_width > 1 {
                         let b2 = region.get(x + xo, oy - y_off, z + zo);
-                        if b2 == BlockId::Air
+                        if b2.is_air()
                             || eval_block_predicate(region, x + xo, oy - y_off, z + zo, &c["can_replace"])
                         {
                             region.set(x + xo, oy - y_off, z + zo, state);
@@ -209,7 +231,7 @@ pub(crate) fn place_spike(
             }
             while cy > 50 {
                 let b = region.get(x + xo, cy, z + zo);
-                if !(b == BlockId::Air
+                if !(b.is_air()
                     || eval_block_predicate(region, x + xo, cy, z + zo, &c["can_replace"]))
                     && b != state
                 {
@@ -244,7 +266,7 @@ pub(crate) fn place_bamboo(
     let prob = cfg["config"]["probability"].as_f64().unwrap_or(0.0);
     // BambooStalkBlock.canSurvive: the block below must support bamboo
     // (approx: not air — matches vanilla behavior on the ground).
-    if region.get(x, y, z) != BlockId::Air || region.get(x, y - 1, z) == BlockId::Air {
+    if !region.get(x, y, z).is_air() || region.get(x, y - 1, z).is_air() {
         return;
     }
     let height = rng.next_int(12) + 5;
@@ -268,7 +290,7 @@ pub(crate) fn place_bamboo(
     }
     let mut by = y;
     for _ in 0..height {
-        if region.get(x, by, z) != BlockId::Air {
+        if !region.get(x, by, z).is_air() {
             break;
         }
         region.set(x, by, z, BlockId::Bamboo);
@@ -313,8 +335,8 @@ pub(crate) fn place_monster_room(
                 }
                 if (dx == min_x || dx == max_x || dz == min_z || dz == max_z)
                     && dy == 0
-                    && region.get(x + dx, y + dy, z + dz) == BlockId::Air
-                    && region.get(x + dx, y + dy + 1, z + dz) == BlockId::Air
+                    && region.get(x + dx, y + dy, z + dz).is_air()
+                    && region.get(x + dx, y + dy + 1, z + dz).is_air()
                 {
                     hole_count += 1;
                 }
@@ -336,7 +358,7 @@ pub(crate) fn place_monster_room(
                 if is_wall {
                     if y + dy >= WORLD_BOTTOM && !blocks_motion(region.get(x + dx, y + dy - 1, z + dz))
                     {
-                        region.set(x + dx, y + dy, z + dz, BlockId::Air);
+                        region.set(x + dx, y + dy, z + dz, BlockId::CaveAir);
                     } else {
                         let ws = region.get(x + dx, y + dy, z + dz);
                         if blocks_motion(ws) && ws != BlockId::Chest {
@@ -350,7 +372,7 @@ pub(crate) fn place_monster_room(
                 } else {
                     let ws = region.get(x + dx, y + dy, z + dz);
                     if ws != BlockId::Chest && ws != BlockId::Spawner {
-                        region.set(x + dx, y + dy, z + dz, BlockId::Air);
+                        region.set(x + dx, y + dy, z + dz, BlockId::CaveAir);
                     }
                 }
             }
@@ -360,7 +382,7 @@ pub(crate) fn place_monster_room(
         for _ in 0..3 {
             let xc = x + rng.next_int(xr * 2 + 1) - xr;
             let zc = z + rng.next_int(zr * 2 + 1) - zr;
-            if region.get(xc, y, zc) == BlockId::Air {
+            if region.get(xc, y, zc).is_air() {
                 let mut wall_count = 0;
                 for &(dx, dz) in &[(1, 0), (-1, 0), (0, 1), (0, -1)] {
                     if blocks_motion(region.get(xc + dx, y, zc + dz)) {

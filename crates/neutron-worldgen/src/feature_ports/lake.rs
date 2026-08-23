@@ -99,8 +99,9 @@ pub(crate) fn place_lake(
                 if grid[(xx * 16 + zz) * 8 + yy] {
                     let (px, py, pz) = (ox + xx as i32, oy + yy as i32, oz + zz as i32);
                     if eval_block_predicate(region, px, py, pz, &c["can_replace_with_air_or_fluid"]) {
+                        // LakeFeature.AIR is Blocks.CAVE_AIR (not plain air).
                         let place_air = yy >= 4;
-                        region.set(px, py, pz, if place_air { BlockId::Air } else { fluid });
+                        region.set(px, py, pz, if place_air { BlockId::CaveAir } else { fluid });
                     }
                 }
             }
@@ -130,7 +131,7 @@ pub(crate) fn place_lake(
             for xx in 0..16 {
                 for zz in 0..16 {
                     let (px, py, pz) = (ox + xx as i32, oy + 4, oz + zz as i32);
-                    if cold_enough(st, px, py, pz)
+                    if !super::simple::biome_warm_enough(st, px, py, pz)
                         && eval_block_predicate(region, px, py, pz, &c["can_replace_with_air_or_fluid"])
                     {
                         region.set(px, py, pz, BlockId::Ice);

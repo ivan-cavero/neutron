@@ -14,6 +14,8 @@
 //   ore (delegates to existing OreFeature path when called from ores step)
 
 use crate::biome_source::{biome_id, biome_id_at_block};
+#[allow(unused_imports)]
+use std::collections::HashMap;
 use crate::feature_catalog::{self, step};
 use crate::feature_rng::FeatureRandom;
 use crate::generator::{WORLD_BOTTOM, WORLD_TOP};
@@ -80,7 +82,7 @@ pub(crate) fn apply_step_origin(
     // Union of the biomes present in the sections of the 3×3 chunks around
     // this origin (clamped to the buffer), then the union of their feature
     // lists in global FeatureSorter index order.
-    let biomes = origin_biome_union(region, state, ox0, oz0);
+    let biomes = origin_biome_union_memo(region, state, ox0, oz0);
     let mut merged: Vec<(i32, String)> = Vec::new();
     for b in &biomes {
         for f in feature_catalog::features_at_step(b, gen_step) {
@@ -108,6 +110,30 @@ pub(crate) fn apply_step_origin(
 /// `(ox0, oz0)`, clamped to the region buffer (approximation for edge
 /// origins — vanilla reads the full 3×3 from the world).
 ///
+/// Memoized per `(seed, ox0, oz0)`: every generation step asks the same
+/// question for the same origin, and one evaluation costs ~14k climate
+/// lookups (3×3×24 sections × 16 quart cells).
+fn origin_biome_union_memo(
+    region: &RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+) -> Vec<String> {
+    thread_local! {
+        static CACHE: std::cell::RefCell<HashMap<(i64, i32, i32), Vec<String>>> =
+            std::cell::RefCell::new(HashMap::new());
+    }
+    CACHE.with(|c| {
+        let key = (state.seed, ox0, oz0);
+        if let Some(v) = c.borrow().get(&key) {
+            return v.clone();
+        }
+        let v = origin_biome_union(region, state, ox0, oz0);
+        c.borrow_mut().insert(key, v.clone());
+        v
+    })
+}
+
 /// Sampled on the same 4×4×24 quart grid that `generate_noise_and_surface`
 /// stores (one Y quart per section at the section midpoint) via the noise
 /// biome (no voronoi — mirrors vanilla `fillBiomesFromNoise`).
@@ -119,6 +145,7 @@ fn origin_biome_union(
 ) -> Vec<String> {
     let cxl = (ox0 - region.origin_x) / 16;
     let czl = (oz0 - region.origin_z) / 16;
+    let mut fallback = 0u32;
     let mut names: Vec<String> = Vec::new();
     let mut push = |id: u8| {
         let n = biome_id_to_name(id);
@@ -140,17 +167,31 @@ fn origin_biome_union(
                 for sy4 in 0..4i32 {
                     for bz4 in 0..4i32 {
                         for bx4 in 0..4i32 {
-                            push(crate::biome_manager::noise_biome_at_quart(
-                                state,
+                            let (qx, qy, qz) = (
                                 cx0 / 4 + bx4,
                                 base_y_q + sy4,
                                 cz0 / 4 + bz4,
-                            ));
+                            );
+                            // Stored grid first (zero climate evals); the grid
+                            // holds exactly `noise_biome_at_quart` values.
+                            let stored = region.stored_noise_biome(qx, qy, qz);
+                            if stored.is_none() {
+                                fallback += 1;
+                            }
+                            let id = stored.unwrap_or_else(|| {
+                                crate::biome_manager::noise_biome_at_quart(
+                                    state, qx, qy, qz,
+                                )
+                            });
+                            push(id);
                         }
                     }
                 }
             }
         }
+    }
+    if std::env::var_os("NEUTRON_STEP_TIMING").is_some() {
+        eprintln!("[union] origin ({ox0},{oz0}) fallback={fallback}");
     }
     names
 }
@@ -447,9 +488,9 @@ pub(crate) fn dispatch_configured(
             // (small dripleaf) also needs empty above, then placeAt both halves.
             if let Some(block) = block_from_to_place(rng, &cfg["config"]["to_place"]) {
                 let cur = region.get(x, y, z);
-                if matches!(cur, BlockId::Air | BlockId::Water) {
+                if matches!(cur, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
                     if block == BlockId::SmallDripleaf {
-                        if region.get(x, y + 1, z) == BlockId::Air
+                        if region.get(x, y + 1, z).is_air()
                             && small_dripleaf_may_place_on(region.get(x, y - 1, z), cur)
                         {
                             region.set(x, y, z, block);
@@ -659,6 +700,7 @@ pub(crate) fn dispatch_configured(
                     let by = y + y_off;
                     let b = region.get(bx, by, bz);
                     if b == BlockId::Air
+                        || b == BlockId::CaveAir
                         || b == BlockId::Water
                         || b == BlockId::PackedIce
                         || b == BlockId::Ice
@@ -731,6 +773,9 @@ pub(crate) fn dispatch_configured(
         }
         "minecraft:geode" => {
             if let Some(st) = state {
+                if std::env::var_os("NEUTRON_GEODE_TRACE").is_some() {
+                    eprintln!("[geode] attempt at ({x},{y},{z})");
+                }
                 crate::feature_ports::place_geode(rng, region, st, x, y, z, cfg);
             }
         }

@@ -134,6 +134,9 @@ pub enum BlockId {
     SmallDripleaf = 136,
     BigDripleaf = 137,
     BigDripleafStem = 138,
+    /// Mineshaft / monster-room / lake "air" (`Blocks.CAVE_AIR`). Behaves as
+    /// air everywhere (`is_air`, heightmaps, placement gates).
+    CaveAir = 139,
 }
 
 impl BlockId {
@@ -265,12 +268,13 @@ impl BlockId {
             136 => Some(Self::SmallDripleaf),
             137 => Some(Self::BigDripleaf),
             138 => Some(Self::BigDripleafStem),
+            139 => Some(Self::CaveAir),
             _ => None,
         }
     }
 
     pub fn is_air(self) -> bool {
-        self == Self::Air
+        matches!(self, Self::Air | Self::CaveAir)
     }
 
     pub fn is_fluid(self) -> bool {
@@ -281,6 +285,7 @@ impl BlockId {
     pub fn block_name(&self) -> &'static str {
         match self {
             Self::Air => "minecraft:air",
+            Self::CaveAir => "minecraft:cave_air",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
             Self::Diorite => "minecraft:diorite",
@@ -409,7 +414,8 @@ impl BlockId {
     pub fn from_name(name: &str) -> Option<Self> {
         let n = name.strip_prefix("minecraft:").unwrap_or(name);
         match n {
-            "air" | "cave_air" | "void_air" => Some(Self::Air),
+            "air" | "void_air" => Some(Self::Air),
+            "cave_air" => Some(Self::CaveAir),
             "stone" => Some(Self::Stone),
             "granite" => Some(Self::Granite),
             "diorite" => Some(Self::Diorite),
@@ -665,6 +671,7 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::SmallDripleaf => "minecraft:small_dripleaf",
         BlockId::BigDripleaf => "minecraft:big_dripleaf",
         BlockId::BigDripleafStem => "minecraft:big_dripleaf_stem",
+        BlockId::CaveAir => "minecraft:cave_air",
     }
 }
 

@@ -47,10 +47,44 @@ pub fn decorate_region_origin_major(
     let mut faces: crate::multiface_spreader::FaceMap = std::collections::HashMap::new();
     let tmp_diag = std::env::var_os("NEUTRON_TMP_ORIGIN_DIAG").is_some();
     let tmp_mask = std::env::var_os("NEUTRON_TMP_MASK").is_some();
+    let t0 = std::time::Instant::now();
     for (pos, &(cxl, czl)) in order.iter().enumerate() {
+        let ts = std::time::Instant::now();
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
         let undecorated = if tmp_mask { &order[pos + 1..] } else { &[][..] };
+        // Steps 1-2 — lakes, local modifications (geode/dripstone/ice spike).
+        // Vanilla runs every step ascending per origin; each step seeds its
+        // features with setFeatureSeed(decorationSeed, sorterIndex, step), so
+        // adding these cannot desync the later steps' streams.
+        //
+        crate::feature_dispatch::apply_step_origin(
+            region,
+            state,
+            crate::feature_catalog::step::LAKES,
+            ox0,
+            oz0,
+            undecorated,
+            "plains",
+        );
+        let t_lakes = ts.elapsed().as_millis();
+        let ts2 = std::time::Instant::now();
+        crate::feature_dispatch::apply_step_origin(
+            region,
+            state,
+            crate::feature_catalog::step::LOCAL_MODIFICATIONS,
+            ox0,
+            oz0,
+            undecorated,
+            "plains",
+        );
+        let t_local = ts2.elapsed().as_millis();
+        // Step 3 (monster_room/fossil) stays OFF: our uniform-height sampling
+        // diverges from vanilla's gate chain somewhere — rooms place where
+        // vanilla's 10 attempts all reject (424242 (1,-1) y=4 dump, 250 wrong
+        // cave_air cells). Re-enable after a two-sided y-anchor probe.
+        let t_ustr = 0;
+        let ts4 = std::time::Instant::now();
         // Step 6 — ores + disks (dedicated OreFeature port).
         features::apply_underground_ores_origin(region, state.seed, ox0, oz0, undecorated);
         if tmp_diag {
@@ -67,8 +101,11 @@ pub fn decorate_region_origin_major(
             }
             eprintln!("TMPDIAG origin {pos} ({cxl},{czl}) after_step6 clay={clay}");
         }
+        let t_ores = ts4.elapsed().as_millis();
+        let ts5 = std::time::Instant::now();
         // Step 7 — sculk_vein + sculk_patch (CFR MultifaceSpreader + ChargeCursor).
         crate::sculk::apply_sculk_origin(region, state, ox0, oz0, undecorated, &mut faces);
+        let t_sculk = ts5.elapsed().as_millis();
         if tmp_diag {
             let mut clay = 0u32;
             for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
@@ -86,6 +123,7 @@ pub fn decorate_region_origin_major(
         // Step 8 — FLUID_SPRINGS (spring_water / spring_lava). Vanilla runs
         // this before step 9: spring water in the caves is the state the
         // vegetal step (moss pools, clay) and the biome filters see.
+        let ts6 = std::time::Instant::now();
         crate::feature_dispatch::apply_step_origin(
             region,
             state,
@@ -95,7 +133,9 @@ pub fn decorate_region_origin_major(
             undecorated,
             "plains",
         );
+        let t_springs = ts6.elapsed().as_millis();
         // Step 9 — vegetal decoration via datapack feature dispatcher.
+        let ts7 = std::time::Instant::now();
         crate::feature_dispatch::apply_step_origin(
             region,
             state,
@@ -105,6 +145,7 @@ pub fn decorate_region_origin_major(
             undecorated,
             "plains", // primary fallback; per-origin biome union resolved inside
         );
+        let t_veg = ts7.elapsed().as_millis();
         if tmp_diag {
             let mut leaves = 0u32;
             let mut clay = 0u32;
@@ -121,7 +162,25 @@ pub fn decorate_region_origin_major(
             }
             eprintln!("TMPDIAG origin {pos} ({cxl},{czl}) center leaves={leaves} clay={clay}");
         }
+        // Step 10 — top layer modification (freeze_top_layer).
+        let ts8 = std::time::Instant::now();
+        crate::feature_dispatch::apply_step_origin(
+            region,
+            state,
+            crate::feature_catalog::step::TOP_LAYER_MODIFICATION,
+            ox0,
+            oz0,
+            undecorated,
+            "plains",
+        );
+        let t_top = ts8.elapsed().as_millis();
+        if std::env::var_os("NEUTRON_STEP_TIMING").is_some() {
+            eprintln!(
+                "[step-timing] origin {pos} ({cxl},{czl}) lakes={t_lakes}ms local={t_local}ms ustr={t_ustr}ms ores={t_ores}ms sculk={t_sculk}ms springs={t_springs}ms veg={t_veg}ms top={t_top}ms"
+            );
+        }
     }
+    let _ = t0;
 }
 
 /// Blocks in one 16x16x16 section.
@@ -276,6 +335,7 @@ impl ChunkGenerator {
                 let (blocks, heightmap, biomes) = noise_cache
                     .get_or_insert_with((ncx, ncz), || self.generate_noise_and_surface(ncx, ncz));
                 region.put_chunk(ncx, ncz, blocks, heightmap);
+                region.put_chunk_biomes(ncx, ncz, biomes);
                 if dx == 0 && dz == 0 {
                     center_biomes = biomes.clone();
                 }
@@ -293,9 +353,9 @@ impl ChunkGenerator {
         // are still at CARVERS (terrain + surface + carvers + structures, no
         // feature output); each later origin then decorates as center of its own
         // 3×3 and can overwrite what earlier origins spilled into its cells
-        // (last-writer-wins). Every origin runs its steps 6 → 7 → 8 → 9 with its
-        // own `setDecorationSeed` (feature_rng.rs) — steps 0-5 and 10 are not
-        // ported (no blocks produced in the ported steps).
+        // (last-writer-wins). Every origin runs steps 1 → 2 → 3 → 6 (ores) →
+        // 7 (sculk) → 8 → 9 → 10 with its own `setDecorationSeed`
+        // (feature_rng.rs); steps 0/4/5 produce no overworld blocks in the data.
         //
         // No masking: vanilla shares the chunk data between generation batches
         // (WorldGenRegion.setBlock → chunk.setBlockState on the same
@@ -475,7 +535,7 @@ impl ChunkGenerator {
                                     )
                                     .unwrap_or(BlockId::Stone),
                                 };
-                                if block != BlockId::Air {
+                                if block != BlockId::Air && block != BlockId::CaveAir {
                                     let xl = (pos_x - chunk_min_x) as usize;
                                     let zl = (pos_z - chunk_min_z) as usize;
                                     let idx_b =
@@ -496,7 +556,7 @@ impl ChunkGenerator {
                 for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
                     let idx = ((y - WORLD_BOTTOM) as usize) * 256 + lz * 16 + lx;
                     let b = BlockId::from_u16(blocks[idx]).unwrap_or(BlockId::Air);
-                    if !matches!(b, BlockId::Air | BlockId::Water | BlockId::Lava) {
+                    if !matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water | BlockId::Lava) {
                         heightmap[lz * 16 + lx] = y as i16;
                         break;
                     }
@@ -537,7 +597,7 @@ impl ChunkGenerator {
                 for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
                     let idx = ((y - WORLD_BOTTOM) as usize) * 256 + lz * 16 + lx;
                     let b = BlockId::from_u16(blocks[idx]).unwrap_or(BlockId::Air);
-                    if !matches!(b, BlockId::Air | BlockId::Water | BlockId::Lava) {
+                    if !matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water | BlockId::Lava) {
                         heightmap[lz * 16 + lx] = y as i16;
                         break;
                     }

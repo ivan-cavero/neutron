@@ -222,7 +222,7 @@ pub(super) fn run_patch(
     for _ in 0..extra {
         let px = ox + rng.next_int(5) - 2;
         let pz = oz + rng.next_int(5) - 2;
-        if region.get(px, oy, pz) != BlockId::Air {
+        if !region.get(px, oy, pz).is_air() {
             continue;
         }
         if is_collision_full_block(region.get(px, oy - 1, pz)) {

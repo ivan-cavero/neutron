@@ -416,7 +416,7 @@ impl MultifaceSpreader {
         }
         faces.insert((x, y, z), mask);
         let b = region.get(x, y, z);
-        if matches!(b, BlockId::Air | BlockId::Water) {
+        if matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
             region.set(x, y, z, BlockId::SculkVein);
         }
         true

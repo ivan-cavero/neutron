@@ -130,7 +130,11 @@ fn generate_upper_half_sphere(
                 }
                 let (wx, wy, wz) = world_pos(p, x, y, z);
                 if region.index(wx, wy, wz).is_some() && can_replace(region.get(wx, wy, wz)) {
-                    region.set(wx, wy, wz, BlockId::Air);
+                    // ponytail: vanilla writes CAVE_AIR here, but our piece
+                    // layout still diverges from vanilla's — labeling these
+                    // cave_air exposed the desync as a -0.01pp region loss
+                    // (424242). Restore after mineshaft layout parity.
+                    region.set(wx, wy, wz, BlockId::CaveAir); // MineshaftPieces air state = Blocks.CAVE_AIR
                 }
             }
         }
@@ -205,7 +209,7 @@ pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &Wor
                     p.bb.max_x,
                     top,
                     p.bb.max_z,
-                    BlockId::Air,
+                    BlockId::CaveAir,
                 );
                 for e in &p.entrances {
                     generate_box(
@@ -217,7 +221,7 @@ pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &Wor
                         e.max_x,
                         e.max_y,
                         e.max_z,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                 }
                 generate_upper_half_sphere(
@@ -238,8 +242,8 @@ pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &Wor
                     p.bb.x_span() / 5
                 };
                 let len = nsec * 5 - 1;
-                generate_box(region, p, 0, 0, 0, 2, 1, len, BlockId::Air);
-                generate_maybe_box(region, p, &mut rng, 0.8, 0, 2, 0, 2, 2, len, BlockId::Air);
+                generate_box(region, p, 0, 0, 0, 2, 1, len, BlockId::CaveAir);
+                generate_maybe_box(region, p, &mut rng, 0.8, 0, 2, 0, 2, 2, len, BlockId::CaveAir);
                 for sec in 0..nsec {
                     let z = 2 + sec * 5;
                     place_support(region, p, &mut rng, 0, 0, z, 2, 2);
@@ -257,47 +261,47 @@ pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &Wor
                         region, p,
                         p.bb.min_x + 1, p.bb.min_y, p.bb.min_z,
                         p.bb.max_x - 1, y1, p.bb.max_z,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                     generate_box(
                         region, p,
                         p.bb.min_x, p.bb.min_y, p.bb.min_z + 1,
                         p.bb.max_x, y1, p.bb.max_z - 1,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                     generate_box(
                         region, p,
                         p.bb.min_x + 1, p.bb.max_y - 2, p.bb.min_z,
                         p.bb.max_x - 1, p.bb.max_y, p.bb.max_z,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                     generate_box(
                         region, p,
                         p.bb.min_x, p.bb.max_y - 2, p.bb.min_z + 1,
                         p.bb.max_x, p.bb.max_y, p.bb.max_z - 1,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                 } else {
                     generate_box(
                         region, p,
                         p.bb.min_x + 1, p.bb.min_y, p.bb.min_z,
                         p.bb.max_x - 1, p.bb.max_y, p.bb.max_z,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                     generate_box(
                         region, p,
                         p.bb.min_x, p.bb.min_y, p.bb.min_z + 1,
                         p.bb.max_x, p.bb.max_y, p.bb.max_z - 1,
-                        BlockId::Air,
+                        BlockId::CaveAir,
                     );
                 }
             }
             Kind::Stairs => {
-                generate_box(region, p, 0, 5, 0, 2, 7, 1, BlockId::Air);
-                generate_box(region, p, 0, 0, 7, 2, 2, 8, BlockId::Air);
+                generate_box(region, p, 0, 5, 0, 2, 7, 1, BlockId::CaveAir);
+                generate_box(region, p, 0, 0, 7, 2, 2, 8, BlockId::CaveAir);
                 for i in 0..5 {
                     let z0 = 5 - i - if i < 4 { 1 } else { 0 };
-                    generate_box(region, p, 0, z0, 2 + i, 2, 7 - i, 2 + i, BlockId::Air);
+                    generate_box(region, p, 0, z0, 2 + i, 2, 7 - i, 2 + i, BlockId::CaveAir);
                 }
             }
         }
@@ -397,7 +401,7 @@ mod tests {
 
         generate_upper_half_sphere(&mut region, &piece, 2, 4, 2, 5, 5, 5);
 
-        assert_eq!(region.get(4, 4, 4), BlockId::Air);
+        assert_eq!(region.get(4, 4, 4), BlockId::CaveAir);
         assert_eq!(region.get(2, 5, 2), BlockId::Deepslate);
     }
 }

@@ -199,7 +199,7 @@ fn is_empty_or_water(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
         return false;
     }
     let b = region.get(x, y, z);
-    b == BlockId::Air || b == BlockId::Water
+    b == BlockId::Air || b == BlockId::CaveAir || b == BlockId::Water
 }
 
 fn is_neither_empty_nor_water(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
@@ -518,7 +518,7 @@ impl LargeDripstone {
                         }
                         let (wx, wz) = wind.offset(self.root_x + dx, py, self.root_z + dz);
                         let b = region.get(wx, py, wz);
-                        if b == BlockId::Air || b == BlockId::Water || b == BlockId::Lava {
+                        if b == BlockId::Air || b == BlockId::CaveAir || b == BlockId::Water || b == BlockId::Lava {
                             has_been_out_of_stone = true;
                             region.set(wx, py, wz, BlockId::DripstoneBlock);
                         } else if has_been_out_of_stone
@@ -575,7 +575,7 @@ impl WindOffsetter {
 
 fn circle_mostly_embedded(region: &RegionBuf, x: i32, y: i32, z: i32, radius: i32) -> bool {
     let center = region.get(x, y, z);
-    if center == BlockId::Air || center == BlockId::Water || center == BlockId::Lava {
+    if center == BlockId::Air || center == BlockId::CaveAir || center == BlockId::Water || center == BlockId::Lava {
         return false;
     }
     let arc_length = 6.0f32;
@@ -655,7 +655,7 @@ pub(crate) fn place_fossil(
     let mut empty_corners = 0;
     for &(cx, cy, cz) in &corners {
         let b = region.get(cx, cy, cz);
-        if b == BlockId::Air || b == BlockId::Lava || b == BlockId::Water {
+        if b == BlockId::Air || b == BlockId::CaveAir || b == BlockId::Lava || b == BlockId::Water {
             empty_corners += 1;
         }
     }
@@ -773,8 +773,11 @@ pub(crate) fn place_geode(
         let py = y + sample_int_provider(rng, &c["outer_wall_distance"]);
         let pz = z + sample_int_provider(rng, &c["outer_wall_distance"]);
         let b = region.get(px, py, pz);
-        if b == BlockId::Air || is_geode_invalid(b) {
+        if b == BlockId::Air || b == BlockId::CaveAir || is_geode_invalid(b) {
             num_invalid += 1;
+            if std::env::var_os("NEUTRON_GEODE_TRACE").is_some() {
+                eprintln!("[geode] invalid block {b:?} at ({px},{py},{pz}) count={num_invalid}");
+            }
             if num_invalid > invalid_threshold {
                 return;
             }
@@ -849,7 +852,10 @@ pub(crate) fn place_geode(
                     }
                 } else if dist_sum_shell >= inner_crust {
                     safe_set_geode(region, px, py, pz, middle_block);
-                } else {
+                } else if dist_sum_shell >= outer_crust {
+                    // Vanilla's last branch is dead code (guarded above by the
+                    // negated `< outer_crust`) — kept verbatim; cells below
+                    // inner_crust keep the surrounding terrain, like vanilla.
                     safe_set_geode(region, px, py, pz, outer_block);
                 }
             }
@@ -863,7 +869,7 @@ pub(crate) fn place_geode(
         for (dx, dy, dz) in DIRS_6 {
             let place_pos = [crystal[0] + dx, crystal[1] + dy, crystal[2] + dz];
             let place_state = region.get(place_pos[0], place_pos[1], place_pos[2]);
-            if place_state == BlockId::Air || place_state == BlockId::Water {
+            if place_state == BlockId::Air || place_state == BlockId::CaveAir || place_state == BlockId::Water {
                 safe_set_geode(region, place_pos[0], place_pos[1], place_pos[2], block_state);
                 break;
             }

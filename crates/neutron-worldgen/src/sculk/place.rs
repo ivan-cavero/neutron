@@ -194,7 +194,7 @@ pub(super) fn place_sculk_patch(
         let here = region.get(x, y, z);
         let spread = can_spread_from(region, x, y, z);
         if !spread {
-            if dump && y >= -40 && y < -8 && matches!(here, BlockId::Air | BlockId::Water) {
+            if dump && y >= -40 && y < -8 && matches!(here, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
                 let mut nbs = Vec::new();
                 for &(dx, dy, dz) in &DIRS {
                     nbs.push(region.get(x + dx, y + dy, z + dz));
@@ -274,7 +274,7 @@ pub(super) fn can_spread_from(region: &RegionBuf, x: i32, y: i32, z: i32) -> boo
     }
     // Vanilla: air OR water source; any neighbour with full collision shape.
     // SCULK is a full cube — must count (cascade after earlier patches).
-    if !matches!(b, BlockId::Air | BlockId::Water) {
+    if !matches!(b, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
         return false;
     }
     DIRS.iter()

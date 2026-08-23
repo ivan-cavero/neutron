@@ -26,6 +26,9 @@ pub fn block_state_id(internal: u16) -> i32 {
     match internal {
         0 => 0,
         1 => 1,
+        // minecraft:cave_air — air-equivalent on the wire (no collision, no
+        // render). Exact state id not pinned yet; clients treat it as air.
+        139 => 0,
         2 => 2,
         3 => 4,
         4 => 6,

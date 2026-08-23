@@ -789,7 +789,7 @@ fn disk_state(
     match provider {
         DiskProvider::Simple(b) => Some(b),
         DiskProvider::SandOrSandstone => {
-            if region.get(x, y - 1, z) == BlockId::Air {
+            if region.get(x, y - 1, z).is_air() {
                 Some(BlockId::Sandstone)
             } else {
                 Some(BlockId::Sand)

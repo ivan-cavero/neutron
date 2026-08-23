@@ -76,7 +76,7 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
     }
     for i in 0..ctx.trunks.len() {
         let (tx, ty, tz) = ctx.trunks[i];
-        if ctx.rng.next_f32() < trunk_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
+        if ctx.rng.next_f32() < trunk_prob && ctx.region.get(tx, ty - 1, tz).is_air() {
             add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
     }
@@ -85,7 +85,7 @@ fn place_pale_moss(ctx: &mut TreeCtx<'_>, dec: &Value) {
     }
     for i in 0..ctx.foliage.len() {
         let (tx, ty, tz) = ctx.foliage[i];
-        if ctx.rng.next_f32() < leaves_prob && ctx.region.get(tx, ty - 1, tz) == BlockId::Air {
+        if ctx.rng.next_f32() < leaves_prob && ctx.region.get(tx, ty - 1, tz).is_air() {
             add_pale_moss_hanger(ctx, tx, ty - 1, tz);
         }
     }
@@ -130,7 +130,7 @@ fn add_pale_moss_hanger(ctx: &mut TreeCtx<'_>, x: i32, y: i32, z: i32) {
     let mut px = x;
     let mut py = y;
     let mut pz = z;
-    while ctx.region.get(px, py - 1, pz) == BlockId::Air && ctx.rng.next_f32() >= 0.5 {
+    while ctx.region.get(px, py - 1, pz).is_air() && ctx.rng.next_f32() >= 0.5 {
         ctx.region.set(px, py, pz, BlockId::PaleHangingMoss);
         py -= 1;
     }
@@ -170,7 +170,7 @@ fn place_beehive(ctx: &mut TreeCtx<'_>, dec: &Value) {
     }
     crate::deco_util::shuffle(&mut placements, ctx.rng);
     let hive = placements.into_iter().find(|&(hx, hy, hz)| {
-        ctx.region.get(hx, hy, hz) == BlockId::Air && ctx.region.get(hx, hy, hz + 1) == BlockId::Air
+        ctx.region.get(hx, hy, hz).is_air() && ctx.region.get(hx, hy, hz + 1).is_air()
     });
     if hive.is_some() {
         // Bee nest BlockId is not in the palette. Consume occupant RNG as vanilla.
@@ -216,7 +216,7 @@ fn place_on_ground(ctx: &mut TreeCtx<'_>, dec: &Value) {
         let above = (px, py + 1, pz);
         let here = ctx.region.get(px, py, pz);
         let above_b = ctx.region.get(above.0, above.1, above.2);
-        if !(above_b == BlockId::Air) {
+        if !above_b.is_air() {
             continue;
         }
         if !is_solid_render(here) {

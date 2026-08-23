@@ -290,6 +290,48 @@ fn parse_biome_features(text: &str) -> Option<Vec<Vec<String>>> {
     Some(steps)
 }
 
+/// Biome climate attributes from the embedded biome JSON
+/// (`Biome.climateSettings`): `(temperature, has_precipitation)`.
+///
+/// ponytail: the FROZEN `temperature_modifier` and the >snow-line
+/// TEMPERATURE_NOISE adjustment are not applied (needs a PerlinSimplexNoise
+/// port); matters only in frozen oceans / above y=80. Upgrade path: port
+/// `PerlinSimplexNoise` + `Biome.getHeightAdjustedTemperature`.
+pub fn biome_climate(biome: &str) -> (f32, bool) {
+    static CACHE: OnceLock<HashMap<String, (f32, bool)>> = OnceLock::new();
+    CACHE
+        .get_or_init(|| {
+            let mut m = HashMap::new();
+            for path in crate::datapack_data::EMBEDDED_PATHS {
+                let Some(rest) = path.strip_prefix("biome/") else {
+                    continue;
+                };
+                if !rest.ends_with(".json") {
+                    continue;
+                }
+                let Some(json) = crate::datapack_data::datapack_json(path) else {
+                    continue;
+                };
+                let Ok(v) = serde_json::from_str::<Value>(json) else {
+                    continue;
+                };
+                let name = rest.trim_end_matches(".json").to_string();
+                m.insert(
+                    name,
+                    (
+                        v["temperature"].as_f64().unwrap_or(0.5) as f32,
+                        v["has_precipitation"].as_bool().unwrap_or(true),
+                    ),
+                );
+            }
+            m
+        })
+        .get(strip_mc(biome))
+        .copied()
+        .unwrap_or((0.5, true))
+}
+
+
 struct FeatureJsonCache {
     placed: HashMap<String, Value>,
     configured: HashMap<String, Value>,
