@@ -189,3 +189,9 @@ truth_df.txt
 javadf.txt
 javaset_df.txt
 bp_12345.txt
+patchtest*.txt
+javadf*.txt
+javagen*.txt
+javaflat*.*
+javaset*.txt
+javaskip*.txt
