@@ -37,9 +37,13 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Sculk spreader cascade (~400 cells 12345 center): deepslate<->sculk + vein
-placement drift over near-matching terrain. Then tree draw-column base closure
-(~700), surface veg (~180), clay patches (~300).
+Base-closure loop: remaining non-veg base diffs are small clusters
+(clay<->dirt disks 34+13, tuff<->deepslate strata 26, diorite<->granite 10,
+iron-filler 10 — 177 cells center chunk). Each cascades into sculk spreader
+draws (patch origins verified identical to i=0; divergence enters via
+spread-draw counts over differing terrain) and tree gates. Sculk/tree
+mechanisms are already verified exact on synthetic dumps (sculk_replay,
+ProbeSculkPatch; pale oak 167/167).
 
 ## Dead (do not reopen without a new two-sided dump)
 
