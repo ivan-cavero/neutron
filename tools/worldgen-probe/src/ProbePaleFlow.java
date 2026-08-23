@@ -19,6 +19,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -85,6 +86,131 @@ public class ProbePaleFlow {
         dummyGenerator = generator;
         serverLevelStub = makeServerLevel(generator);
         WorldGenLevel level = fakeLevel(blocks, chunk, registry, paleGarden);
+        // Generic mode (args[6]=placedName given): run the REAL
+        // PlacedFeature.place chain once for this chunk — no manual pale
+        // emulation — with the same rng interception. Gives ground-truth
+        // draw streams for any placed feature.
+        if (args.length > 6) {
+            WorldgenRandom grng = new WorldgenRandom(new XoroshiroRandomSource(seed)) {
+                @Override public int next(int bits) {
+                    nextBits++;
+                    int v = super.next(bits);
+                    if (System.getenv("PALE_RAW") != null) {
+                        System.out.println("RAW next(" + bits + ")=" + v + " bits=" + nextBits);
+                    }
+                    return v;
+                }
+                @Override public int nextInt(int bound) {
+                    int v = super.nextInt(bound);
+                    if (System.getenv("PALE_TRACE") != null) {
+                        System.out.println("RNG nextInt(" + bound + ")=" + v + " bits=" + nextBits);
+                    }
+                    return v;
+                }
+                @Override public float nextFloat() {
+                    float v = super.nextFloat();
+                    if (System.getenv("PALE_TRACE") != null) {
+                        System.out.println("RNG nextFloat=" + v + " bits=" + nextBits);
+                    }
+                    return v;
+                }
+                @Override public boolean nextBoolean() {
+                    boolean v = super.nextBoolean();
+                    if (System.getenv("PALE_TRACE") != null) {
+                        System.out.println("RNG nextBoolean=" + v + " bits=" + nextBits);
+                    }
+                    return v;
+                }
+            };
+            long dec = grng.setDecorationSeed(seed, cx * 16, cz * 16);
+            grng.setFeatureSeed(dec, featureIndex, 9);
+            System.out.println("GENERIC dec=" + dec + " idx=" + featureIndex
+                    + " placed=" + placedName);
+            var pfHolder = lookup.lookupOrThrow(Registries.PLACED_FEATURE)
+                    .getOrThrow(ResourceKey.create(Registries.PLACED_FEATURE,
+                            Identifier.parse(placedName)));
+            int beforeLogs = countBlock(blocks, Blocks.PALE_OAK_LOG);
+            int beforeDark = countBlock(blocks, net.minecraft.world.level.block.Blocks.DARK_OAK_LOG);
+            boolean okFlag = pfHolder.value().placeWithBiomeCheck(level, generator, grng,
+                    new BlockPos(cx * 16, -64, cz * 16));
+            System.out.println("GENERIC ok=" + okFlag
+                    + " paleLogs=" + (countBlock(blocks, Blocks.PALE_OAK_LOG) - beforeLogs)
+                    + " darkLogs=" + (countBlock(blocks, net.minecraft.world.level.block.Blocks.DARK_OAK_LOG) - beforeDark));
+            if (System.getenv("PALE_DUMPALL") != null) {
+                StringBuilder sb = new StringBuilder();
+                blocks.entrySet().stream()
+                        .sorted(java.util.Comparator.comparing(e -> e.getKey().getX() * 1000000000L
+                                + e.getKey().getY() * 100000L + e.getKey().getZ()))
+                        .forEach(e -> sb.append("B ").append(e.getKey().getX()).append(',')
+                                .append(e.getKey().getY()).append(',').append(e.getKey().getZ())
+                                .append(' ').append(e.getValue().getBlock()).append('\n'));
+                System.out.print(sb);
+            }
+            return;
+        }
+
+
+        // PALE_PATCHTEST=1: replicate VegetationPatchFeature.placeGroundPatch
+        // verbatim against the SAME map+proxy with a fresh rng, printing
+        // per-column gate outcomes — isolates whether the fakeLevel lies for
+        // the patch path (java showed zero surface points despite identical
+        // pre-gate consumption to neutron).
+        if (System.getenv("PALE_PATCHTEST") != null) {
+            int ox = Integer.parseInt(System.getenv().getOrDefault("PALE_PT_X", "96"));
+            int oy = Integer.parseInt(System.getenv().getOrDefault("PALE_PT_Y", "75"));
+            int oz = Integer.parseInt(System.getenv().getOrDefault("PALE_PT_Z", "2"));
+            WorldgenRandom prng = new WorldgenRandom(new XoroshiroRandomSource(777));
+            var mossBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .get(Identifier.parse("minecraft:pale_moss_block"))
+                    .map(Holder.Reference::value).orElse(Blocks.AIR).defaultBlockState();
+            java.util.function.Predicate<BlockState> replaceable =
+                    s -> s.is(net.minecraft.tags.BlockTags.MOSS_REPLACEABLE);
+            int xr = prng.nextInt(3) + 1 + 0; // uniform(2..4)+1 shape: keep draws comparable
+            int zr = prng.nextInt(3) + 1;
+            xr += 1; zr += 1; // sample()+1 like vanilla (approximation ok: gates are the target)
+            System.out.println("PATCHTEST radii=" + xr + "," + zr);
+            int passed = 0, failedEmpty = 0, failedSturdy = 0, failedRepl = 0;
+            Direction inwards = Direction.DOWN;
+            Direction outwards = Direction.UP;
+            BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+            BlockPos.MutableBlockPos belowPos = new BlockPos.MutableBlockPos();
+            for (int dx = -xr; dx <= xr; dx++) {
+                boolean isXEdge = dx == -xr || dx == xr;
+                for (int dz = -zr; dz <= zr; dz++) {
+                    boolean isZEdge = dz == -zr || dz == zr;
+                    boolean isEdgeButNotCorner = (isXEdge || isZEdge) && !(isXEdge && isZEdge);
+                    if (!(isXEdge && isZEdge) && isEdgeButNotCorner) {
+                        prng.nextFloat(); // edge chance roll, always drawn when != 0
+                    }
+                    if ((isXEdge && isZEdge)) continue;
+                    pos.set(ox + dx, oy, oz + dz);
+                    for (int off = 0; level.isStateAtPosition(pos, BlockBehaviour.BlockStateBase::isAir) && off < 5; off++)
+                        pos.move(inwards);
+                    for (int off = 0; level.isStateAtPosition(pos, s -> !s.isAir()) && off < 5; off++)
+                        pos.move(outwards);
+                    belowPos.setWithOffset(pos, inwards);
+                    BlockState belowState = level.getBlockState(belowPos);
+                    boolean empty = level.isEmptyBlock(pos);
+                    boolean sturdy = empty && belowState.isFaceSturdy(level, belowPos, outwards);
+                    boolean repl = replaceable.test(belowState);
+                    String tag = empty ? (sturdy ? (repl ? "PLACE" : "NOREPL")
+                            : "NOTSTURDY") : "NOTEMPTY";
+                    if (tag.equals("PLACE")) {
+                        passed++;
+                        level.setBlock(belowPos, mossBlock, 2);
+                    } else if (tag.equals("NOTEMPTY")) failedEmpty++;
+                    else if (tag.equals("NOTSTURDY")) failedSturdy++;
+                    else failedRepl++;
+                    System.out.println("PT col " + pos.getX() + "," + pos.getY() + ","
+                            + pos.getZ() + " below=" + belowState.getBlock() + " -> " + tag
+                            + " repl=" + repl);
+                }
+            }
+            System.out.println("PATCHTEST summary passed=" + passed
+                    + " notEmpty=" + failedEmpty + " notSturdy=" + failedSturdy
+                    + " noRepl=" + failedRepl);
+            return;
+        }
 
         WorldgenRandom rng = new WorldgenRandom(new XoroshiroRandomSource(seed)) {
             @Override public int next(int bits) {
@@ -297,7 +423,12 @@ public class ProbePaleFlow {
     static void bindSupportsVegetationTags() throws Exception {
         var bind = Holder.Reference.class.getDeclaredMethod("bindTags", java.util.Collection.class);
         bind.setAccessible(true);
-        var tags = java.util.List.of(net.minecraft.tags.BlockTags.SUPPORTS_VEGETATION);
+        var veg = java.util.List.of(net.minecraft.tags.BlockTags.SUPPORTS_VEGETATION);
+        var mossRep = java.util.List.of(net.minecraft.tags.BlockTags.MOSS_REPLACEABLE);
+        var both = java.util.List.of(net.minecraft.tags.BlockTags.SUPPORTS_VEGETATION,
+                net.minecraft.tags.BlockTags.MOSS_REPLACEABLE);
+        // NOTE: bindTags REPLACES the tag collection, so every block gets ONE
+        // call with the full set it should carry.
         for (var b : new Block[] {
                 Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT,
                 Blocks.GRASS_BLOCK, Blocks.PODZOL, Blocks.MYCELIUM,
@@ -305,7 +436,22 @@ public class ProbePaleFlow {
                 Blocks.MOSS_BLOCK, Blocks.PALE_MOSS_BLOCK, Blocks.FARMLAND }) {
             var holder = net.minecraft.core.registries.BuiltInRegistries.BLOCK.wrapAsHolder(b);
             if (holder instanceof Holder.Reference<?> ref) {
-                bind.invoke(ref, tags);
+                bind.invoke(ref, both);
+            }
+        }
+        // #minecraft:moss_replaceable — resolved from the 26.2 jar's
+        // data/minecraft/tags/block/moss_replaceable.json. Unbound headless
+        // tags make s.is(tag) unconditionally false, which made
+        // VegetationPatchFeature.placeGround reject every column (empty
+        // surface -> no distribute -> no vegetation) — a probe artifact that
+        // masqueraded as a parity bug.
+        for (var b : new Block[] {
+                Blocks.STONE, Blocks.GRANITE, Blocks.DIORITE, Blocks.ANDESITE,
+                Blocks.TUFF, Blocks.DEEPSLATE,
+                Blocks.CAVE_VINES, Blocks.CAVE_VINES_PLANT }) {
+            var holder = net.minecraft.core.registries.BuiltInRegistries.BLOCK.wrapAsHolder(b);
+            if (holder instanceof Holder.Reference<?> ref) {
+                bind.invoke(ref, mossRep);
             }
         }
     }
