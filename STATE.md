@@ -48,9 +48,7 @@ our terrain; decorate_oracle.rs --compare diffs cell-by-cell. First finding:
 sculk_vein (MultifaceGrowthFeature + spreader) is the dominant logic gap —
 210/222 vanilla-written center cells mismatch, nearly all veins. Iterate:
 trace our validDirs/spread decisions at mismatch cells vs vanilla behavior,
-fix spreader/growth logic until 0, then trees (same loop).
-
-## Dead (do not reopen without a new two-sided dump)
+fix spreader/growth logic until 0, then trees (same loop).## Dead (do not reopen without a new two-sided dump)
 
 Chunk decoration order as FIXED sequence (vanilla = async ticket scheduler;
 spiral is the best static approximation — sweep-verified) · cave-biome
