@@ -181,3 +181,7 @@ name = "base_clusters"
 [[example]]
 name = "decorate_oracle"
 
+
+[[example]]
+name = "sculk_counts"
+
