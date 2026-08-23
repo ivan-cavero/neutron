@@ -1,0 +1,8 @@
+
+2 ore_granite_upper RARITY-REJECT
+3 ore_granite_lower (102,31,-36)
+3 ore_granite_lower (107,42,-38)
+4 ore_diorite_upper (105,70,-40)
+5 ore_diorite_lower (110,38,-48)
+5 ore_diorite_lower (102,5,-48)
+

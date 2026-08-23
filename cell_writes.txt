@@ -1,0 +1,3 @@
+[cell-write] (104,1,-32) Stone -> minecraft:granite
+[cell-write] (104,1,-32) Granite -> minecraft:diorite
+[cell-write] (104,1,-32) Diorite -> minecraft:granite

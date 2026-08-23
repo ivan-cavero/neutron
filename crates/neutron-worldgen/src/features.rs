@@ -1163,6 +1163,19 @@ fn place_ore_blob_inner(
                     if !can_place_ore(region, x, y, z, discard_chance, rng) {
                         continue;
                     }
+                    if let Some(cell) = std::env::var_os("NEUTRON_ORE_CELL") {
+                        let want: Vec<i32> = cell
+                            .to_string_lossy()
+                            .split(',')
+                            .filter_map(|s| s.parse().ok())
+                            .collect();
+                        if want.len() == 3 && (x, y, z) == (want[0], want[1], want[2]) {
+                            eprintln!(
+                                "[cell-write] ({x},{y},{z}) {existing:?} -> {}",
+                                replacement.block_name()
+                            );
+                        }
+                    }
                     region.set(x, y, z, replacement);
                 }
             }

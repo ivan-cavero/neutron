@@ -43,12 +43,13 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Border-cell spill under the authentic spiral (40 non-cascade center, mostly
-still at z-edges): the wavefront now matches spawn generation; residual diffs
-are last-writer-wins on cells where BOTH origins' blobs reach and our
-target-state differs by 1 prior write. Probe: dump both origins' writes to one
-contested cell from ref NBT piece trees / blob models. Then trees/sculk
-cascade.
+Border cells (~28-40/chunk, ALL at edges): pairs like vanilla-diorite /
+neutron-granite from neighbour-origin blobs whose attempts >=2 drift (attempt
+1 always matches; ground truth for >=2 needs vanilla's live heightmap state —
+static probes can't model the gate). Candidate levers: (a) instrument ref-extract
+to boot vanilla and dump per-origin blob writes via mixin/debug agent;
+(b) accept border noise and move to structures (villages first). Trees/sculk
+cascade continues shrinking with each base win.
 
 ## Dead (do not reopen without a new two-sided dump)
 
