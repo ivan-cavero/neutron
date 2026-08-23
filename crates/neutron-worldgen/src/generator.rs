@@ -53,10 +53,11 @@ pub fn decorate_region_origin_major(
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
         let undecorated = if tmp_mask { &order[pos + 1..] } else { &[][..] };
-        // Steps 1-2 — lakes, local modifications (geode/dripstone/ice spike).
-        // Vanilla runs every step ascending per origin; each step seeds its
-        // features with setFeatureSeed(decorationSeed, sorterIndex, step), so
-        // adding these cannot desync the later steps' streams.
+        // Steps 1-3 — lakes, local modifications (geode/dripstone/ice spike),
+        // underground structures (monster rooms/fossils). Vanilla runs every
+        // step ascending per origin; each step seeds its features with
+        // setFeatureSeed(decorationSeed, sorterIndex, step), so adding these
+        // cannot desync the later steps' streams.
         //
         crate::feature_dispatch::apply_step_origin(
             region,
@@ -79,11 +80,18 @@ pub fn decorate_region_origin_major(
             "plains",
         );
         let t_local = ts2.elapsed().as_millis();
-        // Step 3 (monster_room/fossil) stays OFF: our uniform-height sampling
-        // diverges from vanilla's gate chain somewhere — rooms place where
-        // vanilla's 10 attempts all reject (424242 (1,-1) y=4 dump, 250 wrong
-        // cave_air cells). Re-enable after a two-sided y-anchor probe.
-        let t_ustr = 0;
+        // Step 3 — underground structures (monster rooms / fossils).
+        let ts3 = std::time::Instant::now();
+        crate::feature_dispatch::apply_step_origin(
+            region,
+            state,
+            crate::feature_catalog::step::UNDERGROUND_STRUCTURES,
+            ox0,
+            oz0,
+            undecorated,
+            "plains",
+        );
+        let t_ustr = ts3.elapsed().as_millis();
         let ts4 = std::time::Instant::now();
         // Step 6 — ores + disks (dedicated OreFeature port).
         features::apply_underground_ores_origin(region, state.seed, ox0, oz0, undecorated);
