@@ -43,14 +43,12 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Border cells: order sweep CONCLUDED — spiral beats all alternatives tried
-(S-first 97.50, SW-first 98.29, ring-S 98.18 vs spiral **98.45/97.95**).
-Vanilla's real order is ticket-scheduler-driven (async completion), not a
-fixed sequence; resolving attempts>=2 blob drift needs a live vanilla oracle
-(instrument ref-extract with a debug agent) or accept residual border noise.
-Probe infra kept: NEUTRON_ORE_CELL / NEUTRON_ORE_TRACE /
-ProbeOreFlow.java (full-flow simulator incl. blob draws).
-Recommendation: structures track next (villages first).
+Oracle iteration loop is live: ProbeDecorate.java replays vanilla decoration on
+our terrain; decorate_oracle.rs --compare diffs cell-by-cell. First finding:
+sculk_vein (MultifaceGrowthFeature + spreader) is the dominant logic gap —
+210/222 vanilla-written center cells mismatch, nearly all veins. Iterate:
+trace our validDirs/spread decisions at mismatch cells vs vanilla behavior,
+fix spreader/growth logic until 0, then trees (same loop).
 
 ## Dead (do not reopen without a new two-sided dump)
 
