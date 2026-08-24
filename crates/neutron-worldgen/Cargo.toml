@@ -24,6 +24,9 @@ neutron-world = { path = "../neutron-world" }
 name = "block_parity"
 
 [[example]]
+name = "biome_grid_parity"
+
+[[example]]
 name = "carver_many"
 
 [[example]]

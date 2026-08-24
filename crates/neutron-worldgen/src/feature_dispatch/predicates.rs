@@ -369,6 +369,37 @@ pub fn biome_id_to_name(id: u8) -> &'static str {
         x if x == biome_id::FROZEN_PEAKS => "frozen_peaks",
         x if x == biome_id::SNOWY_SLOPES => "snowy_slopes",
         x if x == biome_id::WINDSWEPT_HILLS => "windswept_hills",
+        // Complete the vanilla biome set: every collision here collapses
+        // distinct biomes into "plains" downstream (export_predecorate
+        // remap), which changes the region biome SET, reshuffles
+        // FeatureSorter indices and re-seeds EVERY per-feature RNG stream.
+        x if x == biome_id::MUSHROOM_FIELDS => "mushroom_fields",
+        x if x == biome_id::OCEAN => "ocean",
+        x if x == biome_id::DEEP_OCEAN => "deep_ocean",
+        x if x == biome_id::FROZEN_OCEAN => "frozen_ocean",
+        x if x == biome_id::RIVER => "river",
+        x if x == biome_id::FROZEN_RIVER => "frozen_river",
+        x if x == biome_id::BEACH => "beach",
+        x if x == biome_id::STONY_SHORE => "stony_shore",
+        x if x == biome_id::SNOWY_PLAINS => "snowy_plains",
+        x if x == biome_id::ICE_SPIKES => "ice_spikes",
+        x if x == biome_id::DEEP_FROZEN_OCEAN => "deep_frozen_ocean",
+        x if x == biome_id::DEEP_COLD_OCEAN => "deep_cold_ocean",
+        x if x == biome_id::COLD_OCEAN => "cold_ocean",
+        x if x == biome_id::DEEP_LUKEWARM_OCEAN => "deep_lukewarm_ocean",
+        x if x == biome_id::LUKEWARM_OCEAN => "lukewarm_ocean",
+        x if x == biome_id::WARM_OCEAN => "warm_ocean",
+        x if x == biome_id::SNOWY_BEACH => "snowy_beach",
+        x if x == biome_id::WINDSWEPT_FOREST => "windswept_forest",
+        x if x == biome_id::WINDSWEPT_GRAVELLY_HILLS => "windswept_gravelly_hills",
+        x if x == biome_id::WINDSWEPT_SAVANNA => "windswept_savanna",
+        x if x == biome_id::SAVANNA_PLATEAU => "savanna_plateau",
+        x if x == biome_id::SPARSE_JUNGLE => "sparse_jungle",
+        x if x == biome_id::BAMBOO_JUNGLE => "bamboo_jungle",
+        x if x == biome_id::SUNFLOWER_PLAINS => "sunflower_plains",
+        x if x == biome_id::FLOWER_FOREST => "flower_forest",
+        x if x == biome_id::OLD_GROWTH_SPRUCE_TAIGA => "old_growth_spruce_taiga",
+        x if x == biome_id::SNOWY_TAIGA => "snowy_taiga",
         _ => "plains",
     }
 }

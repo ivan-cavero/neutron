@@ -162,7 +162,7 @@ fn main() {
             let k = (*x, *y, *z);
             *by_origin.entry(*last_origin.get(&k).unwrap_or(&(i32::MIN, i32::MIN)))
                 .or_insert(0) += 1;
-            if mismatch <= 40 {
+            if mismatch <= 40 || std::env::var_os("ORACLE_DIFF_ALL").is_some() {
                 println!("DIFF ({},{},{}) vanilla={} neutron={}", x, y, z, want_s, got);
             }
         }

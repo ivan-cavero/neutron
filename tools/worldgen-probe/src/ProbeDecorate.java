@@ -97,6 +97,8 @@ public class ProbeDecorate {
         //   "minecraft:worldgen_region_random").at(centerChunk.getWorldPosition())
         // Consumed by e.g. MossyCarpetBlock.placeAt during SimpleBlockFeature.
         static RandomSource LEVEL_RANDOM = null;
+        static Object SERVER_LEVEL_STUB = null;
+        static net.minecraft.world.level.chunk.ChunkGenerator GENERATOR = null;
     static StringBuilder LOG = new StringBuilder();
     static int WATCH_COUNT = 0;
 
@@ -132,9 +134,32 @@ public class ProbeDecorate {
             }
         }, BiomeManager.obfuscateSeed(SEED));
 
-        Set<Holder<Biome>> possible = new HashSet<>(plReg.getOrThrow(plKey).value()
-                .parameters().values().stream()
-                .map(com.mojang.datafixers.util.Pair::getSecond).distinct().toList());
+        // FeatureSorter's global index ORDER comes from BiomeSource
+        // .possibleBiomes() FIRST-SEEN order (preset parameter list order).
+        // A HashSet here shuffles every per-feature seed downstream.
+        // FeatureSorter's global index ORDER comes from BiomeSource
+        // .possibleBiomes() FIRST-SEEN order — captured empirically from the
+        // 26.2 jar (neutron feature_catalog::OVERWORLD_BIOME_ORDER). The JSON
+        // parameter-list order is NOT the same order.
+        java.util.LinkedHashSet<Holder<Biome>> possible = new java.util.LinkedHashSet<>();
+        String[] FIRST_SEEN = "mushroom_fields,deep_frozen_ocean,frozen_ocean,deep_cold_ocean,cold_ocean,deep_ocean,ocean,deep_lukewarm_ocean,lukewarm_ocean,warm_ocean,stony_shore,swamp,mangrove_swamp,snowy_slopes,snowy_plains,snowy_beach,windswept_gravelly_hills,grove,windswept_hills,snowy_taiga,windswept_forest,taiga,plains,meadow,beach,forest,old_growth_spruce_taiga,flower_forest,birch_forest,dark_forest,pale_garden,savanna_plateau,savanna,jungle,badlands,desert,wooded_badlands,jagged_peaks,stony_peaks,frozen_river,river,ice_spikes,old_growth_pine_taiga,sunflower_plains,old_growth_birch_forest,sparse_jungle,bamboo_jungle,eroded_badlands,windswept_savanna,cherry_grove,frozen_peaks,dripstone_caves,lush_caves,sulfur_caves,deep_dark".split(",");
+        var biomeRegP = lookup.lookupOrThrow(Registries.BIOME);
+        for (String bn : FIRST_SEEN) {
+            possible.add(biomeRegP.getOrThrow(ResourceKey.create(Registries.BIOME,
+                    Identifier.parse("minecraft:" + bn))));
+        }
+        // keep any preset biome not present in the captured list (future-proof)
+        for (var e : plReg.getOrThrow(plKey).value().parameters().values()) {
+            possible.add(e.getSecond());
+        }
+
+        GENERATOR = generator;
+        try {
+            SERVER_LEVEL_STUB = ProbePaleFlow.makeServerLevel(generator);
+        } catch (Exception ee) {
+            throw new RuntimeException("server level stub", ee);
+        }
+
 
         loadDump(dumpPath);
 
@@ -244,8 +269,9 @@ public class ProbeDecorate {
 
                 WorldgenRandom random = new WorldgenRandom(
                         new XoroshiroRandomSource(RandomSupport.generateUniqueSeed()));
+                // Vanilla passes CHUNK coordinates here, not block coords.
                 long decorationSeed = random.setDecorationSeed(SEED,
-                        ORX, ORZ);
+                        ocx, ocz);
 
                 for (int stepIndex = 0; stepIndex < featureStepCount; stepIndex++) {
                     var stepData = featuresPerStep.get(stepIndex);
@@ -261,6 +287,14 @@ public class ProbeDecorate {
                     }
                     int[] indexArray = possibleThisStep.stream()
                             .mapToInt(Integer::intValue).sorted().toArray();
+                    if (ocx == CCX && ocz == CCZ
+                            && System.getenv("PROBE_IDX") != null) {
+                        for (int fi2 = 0; fi2 < indexArray.length; fi2++) {
+                            System.out.println("IDX s" + stepIndex + " i=" + fi2
+                                    + " gif=" + indexArray[fi2] + " "
+                                    + stepData.features().get(indexArray[fi2]));
+                        }
+                    }
                     for (int fi = 0; fi < indexArray.length; fi++) {
                         int gif = indexArray[fi];
                         PlacedFeature pf = stepData.features().get(gif);
@@ -269,37 +303,231 @@ public class ProbeDecorate {
                         // replicate PlacedFeature.placeWithContext, logging every
                         // post-modifier position fed into Feature.place.
                         String tname = null;
-                        if (ocx == CCX && ocz == CCZ && stepIndex == 7) {
+                        if (stepIndex == 7 && ocx == CCX && ocz == CCZ) {
                             String fn = String.valueOf(pf);
                             if (fn.contains("sculk_patch")) tname = "patch";
                             else if (fn.contains("sculk_vein")) tname = "vein";
                         }
+                        if (stepIndex == 9 || stepIndex == 6) {
+                            String fn = String.valueOf(pf);
+                            if (stepIndex == 6 || fn.contains("vegetation")
+                                    || fn.contains("patch") || fn.contains("flower")
+                                    || fn.contains("grass") || fn.contains("disk")) {
+                                tname = "veg" + gif;
+                                System.out.println("VTRACE " + tname
+                                        + " feat=" + fn.replaceAll(
+                                                ".*configured_feature / ", "")
+                                        + " o=(" + ORX + "," + ORZ + ")");
+                            }
+                        }
                         try {
                             if (tname != null) {
+                                boolean stageLog = tname.startsWith("veg")
+                                        && ocx == CCX && ocz == CCZ;
                                 System.out.println("TRACE " + tname + " start o=(" + ORX + "," + ORZ + ")");
                                 var ctx = new net.minecraft.world.level.levelgen.placement.PlacementContext(
                                         (WorldGenLevel) levelProxy, generator, java.util.Optional.of(pf));
-                                java.util.stream.Stream<BlockPos> placements =
-                                        java.util.stream.Stream.of(origin);
+                                java.util.List<BlockPos> cur =
+                                        java.util.List.of(origin);
+                                int stg = 0;
                                 for (net.minecraft.world.level.levelgen.placement.PlacementModifier pm
                                         : pf.placement()) {
-                                    placements = placements.flatMap(
-                                            p -> pm.getPositions(ctx, random, p));
+                                    final java.util.List<BlockPos> in = cur;
+                                    cur = in.stream()
+                                            .flatMap(p -> pm.getPositions(ctx, random, p))
+                                            .collect(java.util.stream.Collectors.toList());
+                                    if (stageLog) {
+                                        System.out.println("VSTAGE " + tname + " s" + stg
+                                                + " " + pm.getClass().getSimpleName()
+                                                + " -> " + cur.size());
+                                        for (int qi = 0; qi < Math.min(cur.size(), 3); qi++) {
+                                            BlockPos bp = cur.get(qi);
+                                            Holder<Biome> hb = ((WorldGenLevel) levelProxy)
+                                                    .getBiome(bp);
+                                            System.out.println("   p" + qi + "=" + bp.getX()
+                                                    + "," + bp.getY() + "," + bp.getZ()
+                                                    + " biome=" + hb.unwrapKey().map(k ->
+                                                        k.identifier().getPath())
+                                                        .orElse("?"));
+                                        }
+                                    }
+                                    stg++;
                                 }
                                 ConfiguredFeature<?, ?> cf = pf.feature().value();
                                 final String tn = tname;
+                                // Diagnostic ONLY for pale_oak at center origin:
+                                // replicate getMaxFreeTreeHeight's isFree scan
+                                // (no RNG consumed).
+                                if (tname.equals("veg27") && ocx == CCX && ocz == CCZ
+                                        && !cur.isEmpty()) {
+                                    BlockPos bp0 = cur.get(0);
+                                    for (int hh = 6; hh <= 9; hh++) {
+                                        StringBuilder fail = new StringBuilder();
+                                        for (int yy = 0; yy <= hh + 1 && fail.isEmpty(); yy++) {
+                                            int rr;
+                                            if (yy < 1) rr = 0;
+                                            else if (yy >= hh - 1) rr = 2;
+                                            else rr = 1;
+                                            for (int dxx = -rr; dxx <= rr && fail.isEmpty(); dxx++) {
+                                                for (int dzz = -rr; dzz <= rr && fail.isEmpty(); dzz++) {
+                                                    BlockPos q = bp0.offset(dxx, yy, dzz);
+                                                    BlockState qs = ((WorldGenLevel) levelProxy)
+                                                            .getBlockState(q);
+                                                    boolean free = qs.isAir()
+                                                            || qs.is(net.minecraft.tags.BlockTags.LEAVES);
+                                                    if (!free) {
+                                                        fail.append("y").append(yy)
+                                                                .append(" r").append(rr)
+                                                                .append(" ").append(q.getX())
+                                                                .append(",").append(q.getY())
+                                                                .append(",").append(q.getZ())
+                                                                .append("=").append(qs.getBlock());
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!fail.isEmpty()) {
+                                            System.out.println("TREEBLOCK h=" + hh
+                                                    + " " + fail);
+                                        } else {
+                                            System.out.println("TREEFREE h=" + hh);
+                                        }
+                                    }
+                                }
                                 org.apache.commons.lang3.mutable.MutableBoolean any =
                                         new org.apache.commons.lang3.mutable.MutableBoolean();
-                                placements.forEach(bp -> {
+                                final int focx = ocx, focz = ocz;
+                                final BlockPos first0 =
+                                        cur.isEmpty() ? null : cur.get(0);
+                                cur.forEach(bp -> {
                                     LOG.append("M|ATT|").append(tn).append('|')
                                        .append(bp.getX()).append('|').append(bp.getY())
                                        .append('|').append(bp.getZ()).append('\n');
                                     System.out.println("ATT " + tn + " "
                                             + bp.getX() + " " + bp.getY() + " " + bp.getZ());
-                                    if (cf.place((WorldGenLevel) levelProxy, generator, random, bp)) {
-                                        any.setTrue();
+                                    boolean ok2 = cf.place((WorldGenLevel) levelProxy, generator, random, bp);
+                                    if ((tn.equals("veg27") || tn.equals("veg0") || tn.equals("veg1"))
+                                            && focx == CCX && focz == CCZ) {
+                                        System.out.println("ATTPLACE " + tn + " "
+                                                + bp.getX() + "," + bp.getY() + "," + bp.getZ()
+                                                + " ok=" + ok2
+                                                + " at=" + ((WorldGenLevel) levelProxy)
+                                                    .getBlockState(bp).getBlock()
+                                                + " below=" + ((WorldGenLevel) levelProxy)
+                                                    .getBlockState(bp.below()).getBlock());
+                                        if (!ok2) {
+                                            try {
+                                                var phl = lookup.lookupOrThrow(
+                                                        Registries.PLACED_FEATURE).getOrThrow(
+                                                        ResourceKey.create(Registries.PLACED_FEATURE,
+                                                                Identifier.parse(
+                                                                        "minecraft:pale_oak_checked")));
+                                                var pm0 = phl.value().placement().get(0);
+                                                java.lang.reflect.Field pff =
+                                                        pm0.getClass().getDeclaredField("predicate");
+                                                pff.setAccessible(true);
+                                                Object pred = pff.get(pm0);
+                                                var mtest = pred.getClass().getDeclaredMethod(
+                                                        "test", net.minecraft.world.level.WorldGenLevel.class,
+                                                        BlockPos.class);
+                                                mtest.setAccessible(true);
+                                                Object rrr = mtest.invoke(pred,
+                                                        (WorldGenLevel) levelProxy, bp);
+                                                System.out.println("WSURVIVE pred=" + rrr);
+                                                var sapOpt = net.minecraft.core.registries
+                                                        .BuiltInRegistries.BLOCK.get(
+                                                                Identifier.parse("minecraft:pale_oak_sapling"));
+                                                var sapHold = (java.util.Optional<?>) sapOpt;
+                                                if (sapHold.isPresent()) {
+                                                    Holder.Reference<?> hr = (Holder.Reference<?>) sapHold.get();
+                                                    net.minecraft.world.level.block.state.BlockState ss =
+                                                            ((net.minecraft.world.level.block.Block) hr.value())
+                                                                    .defaultBlockState();
+                                                    System.out.println("WSURVIVE canSurvive="
+                                                            + ss.canSurvive((WorldGenLevel) levelProxy, bp)
+                                                            + " belowTagDirt="
+                                                            + ((WorldGenLevel) levelProxy)
+                                                                    .getBlockState(bp.below())
+                                                                    .is(net.minecraft.tags.BlockTags.DIRT));
+                                                }
+                                            } catch (Throwable tt) {
+                                                System.out.println("WSURVIVE diag fail: " + tt);
+                                            }
+                                        }
+                                        if (first0 != null && bp.getX() == first0.getX()
+                                                && bp.getZ() == first0.getZ()) {
+                                            try {
+                                                System.out.println("DOPLACE level minY="
+                                                        + ((WorldGenLevel) levelProxy).getMinY()
+                                                        + " maxY="
+                                                        + ((WorldGenLevel) levelProxy).getMaxY());
+                                                Object tc = null;
+                                                for (java.lang.reflect.Field ff :
+                                                        cf.getClass().getDeclaredFields()) {
+                                                    ff.setAccessible(true);
+                                                    System.out.println("  CFfield "
+                                                            + ff.getName() + " : "
+                                                            + ff.getType().getSimpleName());
+                                                    if (tc == null && !ff.getName()
+                                                            .equals("feature")) {
+                                                        tc = ff.get(cf);
+                                                    }
+                                                }
+                                                if (tc != null) {
+                                                    System.out.println("  cfgClass="
+                                                            + tc.getClass().getSimpleName());
+                                                    for (java.lang.reflect.Field f :
+                                                            tc.getClass().getDeclaredFields()) {
+                                                        f.setAccessible(true);
+                                                        System.out.println("  cfg." + f.getName()
+                                                                + "=" + f.get(tc));
+                                                    }
+                                                }
+                                            } catch (Throwable tt) {
+                                                System.out.println("DOPLACE diag fail: " + tt);
+                                            }
+                                        }
                                     }
+                                    if (ok2) any.setTrue();
                                     LOG.append("M|END|").append(tn).append('\n');
+                                    if (System.getenv("PROBE_TREE_DEBUG") != null
+                                            && tn.equals("veg0") && focx == CCX
+                                            && focz == CCZ && bp.getX() == first0.getX()) {
+                                        // Manual OreFeature.place on guaranteed stone
+                                        var cfOreOpt = ((HolderLookup.Provider) lookup)
+                                                .lookupOrThrow(Registries.CONFIGURED_FEATURE)
+                                                .get(ResourceKey.create(
+                                                        Registries.CONFIGURED_FEATURE,
+                                                        Identifier.parse(
+                                                                "minecraft:ore_gravel")));
+                                        WorldGenLevel wl = (WorldGenLevel) levelProxy;
+                                        System.out.println("ORETEST stoneAt="
+                                                + wl.getBlockState(new BlockPos(8, -30, 8))
+                                                        .getBlock());
+                                        if (cfOreOpt.isPresent()) {
+                                            ConfiguredFeature<?, ?> cof =
+                                                    (ConfiguredFeature<?, ?>) ((Holder) cfOreOpt
+                                                            .get()).value();
+                                            boolean rr = cof.place(wl, generator,
+                                                    new WorldgenRandom(
+                                                            new XoroshiroRandomSource(42L)),
+                                                    new BlockPos(8, -30, 8));
+                                            System.out.println("ORETEST manual place=" + rr
+                                                    + " now=" + wl.getBlockState(
+                                                            new BlockPos(8, -30, 8)).getBlock());
+                                            int grav = 0;
+                                            for (int ddx = -8; ddx <= 8; ddx++)
+                                                for (int ddy = -8; ddy <= 8; ddy++)
+                                                    for (int ddz = -8; ddz <= 8; ddz++)
+                                                        if (wl.getBlockState(
+                                                                new BlockPos(8 + ddx,
+                                                                        -30 + ddy, 8 + ddz))
+                                                                .getBlock()
+                                                                .toString().contains("gravel"))
+                                                            grav++;
+                                            System.out.println("ORETEST gravel in 17^3: " + grav);
+                                        }
+                                    }
                                 });
                             } else {
                                 pf.placeWithBiomeCheck((WorldGenLevel) levelProxy,
@@ -307,9 +535,18 @@ public class ProbeDecorate {
                             }
                         } catch (Throwable t) {
                             System.out.println("ERROR placing " + gif
-                                    + " step=" + stepIndex + " feat=" + pf
-                                    + " origin (" + ocx + "," + ocz + "): " + t);
+                                    + " step=" + stepIndex + " origin ("
+                                    + ocx + "," + ocz + "): " + t);
+                            if (System.getenv("PROBE_ERR_STACK") != null) {
+                                t.printStackTrace(System.out);
+                            }
                         }
+                        // Some features write DIRECTLY into LevelChunkSection
+                        // (OreFeature.section.setBlockState), bypassing
+                        // WorldGenRegion.setBlock. Sync those writes back into
+                        // the oracle store after every feature so later gates
+                        // and the write log see them.
+                        syncSectionsToStore(ocx, ocz, gif, stepIndex);
                     }
                 }
             }
@@ -382,7 +619,54 @@ public class ProbeDecorate {
                             Object builtin = builtinRegistry(key);
                             if (builtin != null)
                                 return java.util.Optional.of(builtin);
-                            return lk(vanillaProvider, key);
+                            // Return the RegistryLookup (a Registry), NOT the
+                            // HolderLookup wrapper — callers like
+                            // PaleMossDecorator cast to Registry (26.2).
+                            try {
+                                if (path.equals("worldgen/configured_feature")) {
+                                    // The builder-backed lookup returns an
+                                    // EmptyTagLookupWrapper which is NOT a
+                                    // Registry; PaleMossDecorator casts the
+                                    // lookup result to Registry. Bridge it.
+                                    final HolderLookup.Provider vp =
+                                            (HolderLookup.Provider) vanillaProvider;
+                                    final java.lang.reflect.Method hget =
+                                            net.minecraft.core.HolderGetter.class
+                                                    .getMethod("get", ResourceKey.class);
+                                    Object regProxy = java.lang.reflect.Proxy.newProxyInstance(
+                                            ProbeDecorate.class.getClassLoader(),
+                                            new Class<?>[]{net.minecraft.core.Registry.class},
+                                            (pp, mm, aa) -> {
+                                                switch (mm.getName()) {
+                                                    case "get":
+                                                    case "getHolder": {
+                                                        try {
+                                                            return hget.invoke(
+                                                                    vp.lookupOrThrow(
+                                                                            Registries.CONFIGURED_FEATURE),
+                                                                    aa[0]);
+                                                        } catch (Exception ee2) {
+                                                            return java.util.Optional.empty();
+                                                        }
+                                                    }
+                                                    case "toString":
+                                                        return "OracleCfRegistry";
+                                                    default:
+                                                        Class<?> rt = mm.getReturnType();
+                                                        if (rt == boolean.class) return false;
+                                                        if (rt.isPrimitive()) return 0;
+                                                        if (java.util.Optional.class
+                                                                .isAssignableFrom(rt))
+                                                            return java.util.Optional.empty();
+                                                        return null;
+                                                }
+                                            });
+                                    return java.util.Optional.of(regProxy);
+                                }
+                                return java.util.Optional.of(lkOrThrow(vanillaProvider, key));
+                            } catch (Exception ee) {
+                                return java.util.Optional.empty();
+                            }
                         }case "toString":
                             return "OracleRegAccess";
                         default: {
@@ -406,8 +690,68 @@ public class ProbeDecorate {
     }
 
     // ---------- level proxy handler ----------
-    static BlockState getState(int x, int y, int z) {
-        int lx = x - OX0, lz = z - OZ0;
+    /** Mirror a proxy write into the underlying LevelChunkSection so that
+     *  direct-section writers (OreFeature) and store readers stay coherent. */
+    static void mirrorToSection(BlockPos pos, BlockState st) {
+        int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+        if (cx < CCX - RADIUS || cx > CCX + RADIUS
+                || cz < CCZ - RADIUS || cz > CCZ + RADIUS) {
+            return;
+        }
+        if (pos.getY() < MINY || pos.getY() >= TOP) return;
+        ChunkAccess chunk = chunkAt(cx, cz);
+        LevelChunkSection[] secs = chunk.getSections();
+        int s = (pos.getY() - MINY) >> 4;
+        if (s < 0 || s >= secs.length || secs[s] == null) return;
+        try {
+            secs[s].setBlockState(pos.getX() & 15, pos.getY() & 15,
+                    pos.getZ() & 15, st, false);
+        } catch (Throwable ignored) {
+            // section container edge cases don't invalidate the oracle
+        }
+    }
+
+    /** Copy section-level writes (OreFeature etc.) back into the store. */
+    static void syncSectionsToStore(int ocx, int ocz, int gif, int stepIndex) {
+        for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                int cx = ocx + dx, cz = ocz + dz;
+                if (cx < CCX - RADIUS || cx > CCX + RADIUS
+                        || cz < CCX - RADIUS || cz > CCZ + RADIUS) {
+                    continue;
+                }
+                ChunkAccess chunk = chunkAt(cx, cz);
+                LevelChunkSection[] secs = chunk.getSections();
+                int wx0 = cx * 16, wz0 = cz * 16;
+                for (int s = 0; s < secs.length; s++) {
+                    LevelChunkSection sec = secs[s];
+                    if (sec == null || sec.hasOnlyAir()) continue;
+                    int baseY = MINY + s * 16;
+                    for (int ly = 0; ly < 16; ly++) {
+                        for (int lz = 0; lz < 16; lz++) {
+                            for (int lx = 0; lx < 16; lx++) {
+                                BlockState st = sec.getBlockState(lx, ly, lz);
+                                int wx = wx0 + lx, wy = baseY + ly, wz = wz0 + lz;
+                                BlockState cur = getState(wx, wy, wz);
+                                if (!st.equals(cur)) {
+                                    setState(wx, wy, wz, st);
+                                    WRITES++;
+                                    LOG.append(wx).append('|').append(wy).append('|')
+                                       .append(wz).append('|')
+                                       .append(net.minecraft.core.registries.BuiltInRegistries
+                                               .BLOCK.getKey(st.getBlock())).append('|')
+                                       .append(TAG_ORX).append('|').append(TAG_ORZ)
+                                       .append("|sync").append('\n');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    static BlockState getState(int x, int y, int z) {        int lx = x - OX0, lz = z - OZ0;
         if (y < MINY || y >= TOP || lx < 0 || lx >= SIDE || lz < 0 || lz >= SIDE) {
             return Blocks.AIR.defaultBlockState();
         }
@@ -592,6 +936,7 @@ public class ProbeDecorate {
             case "setBlock": {
                 BlockState st = (BlockState) a[1];
                 setState(pos.getX(), pos.getY(), pos.getZ(), st);
+                mirrorToSection(pos, st);
                 WRITES++;
                 String tag = TAG_ORX + "|" + TAG_ORZ;
                 if (st.is(Blocks.SCULK_VEIN)) {
@@ -671,6 +1016,10 @@ public class ProbeDecorate {
                 return BIOME_MGR.getBiome(pos);
             case "getRandom":
                 return LEVEL_RANDOM;
+            case "getLevel":
+                // WorldGenRegion.getLevel() -> ServerLevel; used by
+                // PaleMossDecorator to reach chunkSource.getGenerator().
+                return SERVER_LEVEL_STUB;
             case "getBiomeManager":
                 return BIOME_MGR;
             case "getLightEngine":
@@ -685,6 +1034,18 @@ public class ProbeDecorate {
                 return SEED;
             case "isEmptyBlock":
                 return pos != null && getState(pos.getX(), pos.getY(), pos.getZ()).isAir();
+            case "isStateAtPosition": {
+                // LevelSimulatedReader.isStateAtPosition(BlockPos, Predicate) —
+                // used by TreeFeature.validTreePos/isAirOrLeaves/isFree. Without
+                // this case the default returned false and EVERY tree aborted
+                // silently at getMaxFreeTreeHeight (clippedTreeHeight = -2).
+                if (pos == null || a.length < 2) return false;
+                BlockState st = getState(pos.getX(), pos.getY(), pos.getZ());
+                @SuppressWarnings("unchecked")
+                java.util.function.Predicate<BlockState> pr =
+                        (java.util.function.Predicate<BlockState>) a[1];
+                return pr.test(st);
+            }
             case "getDifficulty":
                 return net.minecraft.world.Difficulty.NORMAL;
             case "getSharedSpawnPos":
