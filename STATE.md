@@ -43,12 +43,33 @@ Worldgen 1:1 vs vanilla **26.2**. HEAD: mineshaft SOUTH maxZ()-3 fix + step 3 ON
 
 ## Next (one question)
 
-Oracle iteration loop is live: ProbeDecorate.java replays vanilla decoration on
-our terrain; decorate_oracle.rs --compare diffs cell-by-cell. First finding:
-sculk_vein (MultifaceGrowthFeature + spreader) is the dominant logic gap —
-210/222 vanilla-written center cells mismatch, nearly all veins. Iterate:
-trace our validDirs/spread decisions at mismatch cells vs vanilla behavior,
-fix spreader/growth logic until 0, then trees (same loop).## Dead (do not reopen without a new two-sided dump)
+**ORACLE FIX (24 Aug): the probe was TAG-BLIND.** ProbeDecorate never bound
+block tags (bare Bootstrap ≠ server datapack load), so every
+`state.is(TagKey)` inside vanilla returned false. Consequence: sculk
+`attemptPlaceSculk` NEVER converted walls → vanilla-in-probe wrote zero sculk,
+its cascade topology + RNG diverged from real vanilla after patch attempt #1.
+Fixed: bindBlockTags() loads bundled datapack tags via TagLoader +
+prepareTagReload().apply(). Sanity line `TAGCHECK ... = true`. Region writes
+3844 → 11341.
+
+- **Writer attribution (stack-walk instrumentation, kept)**: ~99% of
+  sculk_vein cells come from the SculkPatchFeature CHARGE CASCADE
+  (`ChargeCursor.update` → `SculkVeinBlock.onDischarged` 2289 +
+  `attemptSpreadVein`→spreadAll 1507); MultifaceGrowthFeature writes only ~2
+  cells/chunk (+its single spread step). The old plan ("implement full
+  MultifaceSpreader for sculk_vein") targeted the wrong writer.
+- **Honest baseline (fixed probe, 12345 cc=(6,-2))**: 367/773 vanilla-written
+  center cells mismatch — origins: (96,-32) 193, (96,-48) 103, (80,-32) 59.
+  New diff classes: `vanilla=air ours=vein` (our onDischarged doesn't strip
+  dead veins like vanilla), sculk conversions missing on our side, plus the
+  known tree/lush cascade.
+- Attempt-level tracing available: `M|ATT|patch|...` markers in the write log
+  (per-attempt write windows), `NEUTRON_SCULK_ATT` / `NEUTRON_SCULK_TRACE_W`
+  on neutron side, `PROBE_WATCH` cell-read watcher.
+Next steps: diff OUR cascade vs corrected reference per-attempt (attempt #0
+first divergence already isolated: we convert deepslate→sculk at write #2,
+vanilla's tick-1 spreadAll order differs), fix gates/draws until 0, then
+trees (same loop).## Dead (do not reopen without a new two-sided dump)
 
 Chunk decoration order as FIXED sequence (vanilla = async ticket scheduler;
 spiral is the best static approximation — sweep-verified) · cave-biome

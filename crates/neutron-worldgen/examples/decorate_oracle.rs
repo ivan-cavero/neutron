@@ -107,6 +107,9 @@ fn main() {
     let mut last: std::collections::HashMap<(i32, i32, i32), String> =
         std::collections::HashMap::new();
     for line in content.lines() {
+        if line.starts_with("M|") {
+            continue; // attempt marker from the traced probe run
+        }
         let p: Vec<&str> = line.split('|').collect();
         if p.len() >= 4 {
             last.insert(
@@ -120,6 +123,9 @@ fn main() {
     let mut last_origin: std::collections::HashMap<(i32, i32, i32), (i32, i32)> =
         std::collections::HashMap::new();
     for line in content.lines() {
+        if line.starts_with("M|") {
+            continue;
+        }
         let p: Vec<&str> = line.split('|').collect();
         if p.len() >= 6 {
             if let (Ok(x), Ok(y), Ok(z), Ok(ox), Ok(oz)) = (

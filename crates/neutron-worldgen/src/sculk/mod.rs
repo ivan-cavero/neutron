@@ -23,6 +23,10 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 
 pub static SCULK_TRIES: AtomicU32 = AtomicU32::new(0);
+/// Env-gated per-write trace (`NEUTRON_SCULK_TRACE_W`): prints every
+/// `RegionBuf::set` while enabled. Toggled around patch 0 of the traced origin.
+pub static SET_TRACE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 pub(super) static LAST_CATALYST_ROLL: AtomicU32 = AtomicU32::new(0);
 pub static SCULK_BIOME_OK: AtomicU32 = AtomicU32::new(0);
 pub static SCULK_SPREAD_OK: AtomicU32 = AtomicU32::new(0);

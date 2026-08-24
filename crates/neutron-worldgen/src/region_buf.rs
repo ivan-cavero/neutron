@@ -74,6 +74,9 @@ impl RegionBuf {
         if let Some(i) = self.index(x, y, z) {
             self.blocks[i] = b.as_u16();
         }
+        if crate::sculk::SET_TRACE.load(std::sync::atomic::Ordering::Relaxed) {
+            eprintln!("W {x},{y},{z} {}", b.block_name());
+        }
     }
 
     /// Store a chunk's quart biome grid (see `generate_noise_and_surface`).

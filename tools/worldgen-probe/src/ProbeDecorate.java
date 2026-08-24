@@ -30,6 +30,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.tags.TagLoader;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.biome.FeatureSorter;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
@@ -37,6 +38,7 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.LightChunk;
@@ -91,6 +93,7 @@ public class ProbeDecorate {
     static Object levelProxy;
         static long WRITES = 0;
     static StringBuilder LOG = new StringBuilder();
+    static int WATCH_COUNT = 0;
 
     public static void main(String[] args) throws Exception {
         SEED = Long.parseLong(args[0]);
@@ -101,6 +104,7 @@ public class ProbeDecorate {
 
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+    bindBlockTags();
         var lookup = VanillaRegistries.createLookup();
         REG_ACCESS = (RegistryAccess) regAccessStub(lookup);
 
@@ -253,9 +257,46 @@ public class ProbeDecorate {
                         int gif = indexArray[fi];
                         PlacedFeature pf = stepData.features().get(gif);
                         random.setFeatureSeed(decorationSeed, gif, stepIndex);
+                        // Trace sculk_vein/sculk_patch attempts for the center origin:
+                        // replicate PlacedFeature.placeWithContext, logging every
+                        // post-modifier position fed into Feature.place.
+                        String tname = null;
+                        if (ocx == CCX && ocz == CCZ && stepIndex == 7) {
+                            String fn = String.valueOf(pf);
+                            if (fn.contains("sculk_patch")) tname = "patch";
+                            else if (fn.contains("sculk_vein")) tname = "vein";
+                        }
                         try {
-                            pf.placeWithBiomeCheck((WorldGenLevel) levelProxy,
-                                    generator, random, origin);
+                            if (tname != null) {
+                                System.out.println("TRACE " + tname + " start o=(" + ORX + "," + ORZ + ")");
+                                var ctx = new net.minecraft.world.level.levelgen.placement.PlacementContext(
+                                        (WorldGenLevel) levelProxy, generator, java.util.Optional.of(pf));
+                                java.util.stream.Stream<BlockPos> placements =
+                                        java.util.stream.Stream.of(origin);
+                                for (net.minecraft.world.level.levelgen.placement.PlacementModifier pm
+                                        : pf.placement()) {
+                                    placements = placements.flatMap(
+                                            p -> pm.getPositions(ctx, random, p));
+                                }
+                                ConfiguredFeature<?, ?> cf = pf.feature().value();
+                                final String tn = tname;
+                                org.apache.commons.lang3.mutable.MutableBoolean any =
+                                        new org.apache.commons.lang3.mutable.MutableBoolean();
+                                placements.forEach(bp -> {
+                                    LOG.append("M|ATT|").append(tn).append('|')
+                                       .append(bp.getX()).append('|').append(bp.getY())
+                                       .append('|').append(bp.getZ()).append('\n');
+                                    System.out.println("ATT " + tn + " "
+                                            + bp.getX() + " " + bp.getY() + " " + bp.getZ());
+                                    if (cf.place((WorldGenLevel) levelProxy, generator, random, bp)) {
+                                        any.setTrue();
+                                    }
+                                    LOG.append("M|END|").append(tn).append('\n');
+                                });
+                            } else {
+                                pf.placeWithBiomeCheck((WorldGenLevel) levelProxy,
+                                        generator, random, origin);
+                            }
                         } catch (Throwable t) {
                             System.out.println("ERROR placing " + gif + " origin ("
                                     + ocx + "," + ocz + "): " + t);
@@ -372,21 +413,185 @@ public class ProbeDecorate {
         store[lz][y - MINY][lx] = st;
     }
 
-    static Object handle(String name, Class<?> ret, Object[] a) {
-        boolean hasPos = a != null && a.length > 0 && a[0] instanceof BlockPos;
+    // First non-proxy, non-probe stack frames = vanilla writer of this block.
+    static String callerTag() {
+        StringBuilder sb = new StringBuilder();
+        int n = 0;
+        for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
+            String cn = e.getClassName();
+            if (cn.contains("ProbeDecorate") || cn.contains("Proxy")
+                || cn.startsWith("java.") || cn.startsWith("jdk.")) {
+                continue;
+            }
+            if (sb.length() > 0) sb.append("<-");
+            sb.append(cn.substring(cn.lastIndexOf('.') + 1)).append(".").append(e.getMethodName());
+            if (++n >= 9) break;
+        }
+        return sb.toString();
+    }
+
+    // ---- bind block tags from the bundled vanilla datapack ----
+    //
+    // A live server resolves #tags through TagLoader over its datapack; a bare
+    // Bootstrap.bootStrap() does NOT, leaving every `state.is(TagKey)` false.
+    // Without this, tag-gated worldgen (sculk attemptPlaceSculk conversions,
+    // tree soil checks, ...) runs with dead gates and diverges from real
+    // vanilla — the whole oracle comparison was poisoned by this.
+    static void bindBlockTags() throws Exception {
+        String jarPath = null;
+        for (String p : System.getProperty("java.class.path")
+                .split(java.io.File.pathSeparator)) {
+            if (p.endsWith("server-26.2.jar")) { jarPath = p; break; }
+        }
+        if (jarPath == null) {
+            throw new IllegalStateException("server-26.2.jar not on classpath");
+        }
+        java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jarPath);
+        net.minecraft.server.packs.PackResources pack =
+                new net.minecraft.server.packs.PackResources() {
+            public net.minecraft.server.packs.PackLocationInfo location() {
+                return new net.minecraft.server.packs.PackLocationInfo(
+                        "probe-vanilla", null, null, java.util.Optional.empty());
+            }
+            public net.minecraft.server.packs.resources.IoSupplier<java.io.InputStream>
+                    getRootResource(String... path) { return null; }
+            public net.minecraft.server.packs.resources.IoSupplier<java.io.InputStream>
+                    getResource(net.minecraft.server.packs.PackType type,
+                                net.minecraft.resources.Identifier id) {
+                return entry(type.getDirectory() + "/" + id.getNamespace()
+                        + "/" + id.getPath());
+            }
+            public void listResources(net.minecraft.server.packs.PackType type,
+                                      String namespace, String directory,
+                                      net.minecraft.server.packs.PackResources.ResourceOutput out) {
+                String prefix = type.getDirectory() + "/" + namespace + "/"
+                        + directory.replace('\\', '/') + "/";
+                var en = zip.entries();
+                while (en.hasMoreElements()) {
+                    var e = en.nextElement();
+                    String n = e.getName();
+                    if (!n.startsWith(prefix) || !n.endsWith(".json")) continue;
+                    String rest = n.substring("data/".length());
+                    int slash = rest.indexOf('/');
+                    var id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
+                            rest.substring(0, slash), rest.substring(slash + 1));
+                    out.accept(id, entry(n));
+                }
+            }
+            public java.util.Set<String> getNamespaces(net.minecraft.server.packs.PackType t) {
+                return java.util.Set.of("minecraft");
+            }
+            public <T> T getMetadataSection(
+                    net.minecraft.server.packs.metadata.MetadataSectionType<T> t) {
+                return null;
+            }
+            public void close() {}
+            private net.minecraft.server.packs.resources.IoSupplier<java.io.InputStream>
+                    entry(String path) {
+                var e = zip.getEntry(path);
+                if (e == null) return null;
+                return () -> zip.getInputStream(e);
+            }
+        };
+        final net.minecraft.server.packs.PackResources packRef = pack;
+        var rm = new net.minecraft.server.packs.resources.ResourceManager() {
+            public java.util.Set<String> getNamespaces() { return java.util.Set.of(); }
+            public java.util.Optional<net.minecraft.server.packs.resources.Resource> getResource(
+                    net.minecraft.resources.Identifier id) {
+                for (var t : net.minecraft.server.packs.PackType.values()) {
+                    var sup = packRef.getResource(t, id);
+                    if (sup != null) {
+                        return java.util.Optional.of(
+                                new net.minecraft.server.packs.resources.Resource(packRef, sup));
+                    }
+                }
+                return java.util.Optional.empty();
+            }
+            public java.util.List<net.minecraft.server.packs.resources.Resource> getResourceStack(
+                    net.minecraft.resources.Identifier id) {
+                var r = getResource(id);
+                return r.isEmpty() ? java.util.List.of() : java.util.List.of(r.get());
+            }
+            public java.util.Map<net.minecraft.resources.Identifier,
+                    net.minecraft.server.packs.resources.Resource> listResources(
+                    String directory, java.util.function.Predicate<net.minecraft.resources.Identifier> filter) {
+                var out = new java.util.HashMap<net.minecraft.resources.Identifier,
+                        net.minecraft.server.packs.resources.Resource>();
+                for (var ns : new String[]{"minecraft"}) {
+                    packRef.listResources(net.minecraft.server.packs.PackType.SERVER_DATA, ns,
+                            directory,
+                            (id, sup) -> {
+                                if (filter.test(id)) {
+                                    out.putIfAbsent(id, new net.minecraft.server.packs.resources.Resource(
+                                            packRef, sup));
+                                }
+                            });
+                }
+                return out;
+            }
+            public java.util.Map<net.minecraft.resources.Identifier,
+                    java.util.List<net.minecraft.server.packs.resources.Resource>> listResourceStacks(
+                    String directory, java.util.function.Predicate<net.minecraft.resources.Identifier> filter) {
+                var single = listResources(directory, filter);
+                var out = new java.util.HashMap<net.minecraft.resources.Identifier,
+                        java.util.List<net.minecraft.server.packs.resources.Resource>>();
+                single.forEach((k, v) -> out.put(k, java.util.List.of(v)));
+                return out;
+            }
+            public java.util.stream.Stream<net.minecraft.server.packs.PackResources> listPacks() {
+                return java.util.stream.Stream.of(packRef);
+            }
+        };
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        net.minecraft.tags.TagLoader.ElementLookup<net.minecraft.core.Holder<Block>> lookup =
+                (net.minecraft.tags.TagLoader.ElementLookup)
+                        TagLoader.ElementLookup.fromFrozenRegistry(BuiltInRegistries.BLOCK);
+        java.util.Map<net.minecraft.tags.TagKey<Block>, java.util.List<net.minecraft.core.Holder<Block>>> tags =
+                TagLoader.loadTagsForRegistry(rm, Registries.BLOCK, lookup);
+        // Frozen registries reject bindTags(); vanilla's own reload path is
+        // PendingTags.apply() (binds named sets + refreshes holder tags).
+        var result = new TagLoader.LoadResult<>(Registries.BLOCK, tags);
+        ((net.minecraft.core.WritableRegistry<Block>) BuiltInRegistries.BLOCK)
+                .prepareTagReload(result).apply();
+    }
+
+    static Object handle(String name, Class<?> ret, Object[] a) {        boolean hasPos = a != null && a.length > 0 && a[0] instanceof BlockPos;
         BlockPos pos = hasPos ? (BlockPos) a[0] : null;
 
         switch (name) {
-            case "getBlockState":
+            case "getBlockState": {
+                if (pos != null && pos.getX() == 98 && pos.getY() == -44 && pos.getZ() == -23
+                        && System.getenv("PROBE_WATCH") != null) {
+                    int c = WATCH_COUNT++;
+                    if (c < 120) {
+                        StackTraceElement[] st = Thread.currentThread().getStackTrace();
+                        StringBuilder sb = new StringBuilder();
+                        int n = 0;
+                        for (StackTraceElement e : st) {
+                            String cn = e.getClassName();
+                            if (cn.contains("ProbeDecorate") || cn.contains("Proxy")
+                                    || cn.startsWith("java.") || cn.startsWith("jdk.")) continue;
+                            if (sb.length() > 0) sb.append("<-");
+                            sb.append(cn.substring(cn.lastIndexOf('.') + 1)).append('.').append(e.getMethodName());
+                            if (++n >= 6) break;
+                        }
+                        System.out.println("WATCH[" + c + "] get (98,-44,-23) by " + sb);
+                    }
+                }
                 return getState(pos.getX(), pos.getY(), pos.getZ());
+            }
             case "setBlock": {
                 BlockState st = (BlockState) a[1];
                 setState(pos.getX(), pos.getY(), pos.getZ(), st);
                 WRITES++;
+                String tag = TAG_ORX + "|" + TAG_ORZ;
+                if (st.is(Blocks.SCULK_VEIN)) {
+                    tag = TAG_ORX + "|" + TAG_ORZ + "|" + callerTag();
+                }
                 LOG.append(pos.getX()).append('|').append(pos.getY()).append('|')
                    .append(pos.getZ()).append('|')
                    .append(BuiltInRegistries.BLOCK.getKey(st.getBlock())).append('|')
-                   .append(TAG_ORX).append('|').append(TAG_ORZ).append('\n');
+                   .append(tag).append('\n');
                 return true;
             }
             case "removeBlock":
@@ -582,6 +787,13 @@ public class ProbeDecorate {
             System.out.println("dump loaded: center=(" + CCX + "," + CCZ + ")"
                     + " biomes=" + BIOME_NAMES.size());
         }
+        // Tag-binding sanity check: a live server resolves block tags from the
+        // bundled datapack; a bare bootstrap does NOT. If this prints false,
+        // every `state.is(TagKey)` gate in this probe is dead and the oracle
+        // diverges from real vanilla on tag-dependent paths.
+        System.out.println("TAGCHECK deepslate∈sculk_replaceable_world_gen = "
+                + Blocks.DEEPSLATE.defaultBlockState()
+                        .is(net.minecraft.tags.BlockTags.SCULK_REPLACEABLE_WORLD_GEN));
     }
 
     /**

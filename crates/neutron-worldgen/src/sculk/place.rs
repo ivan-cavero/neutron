@@ -64,6 +64,9 @@ pub(super) fn place_sculk_vein_gated(
         if !gate(x, y, z) {
             continue;
         }
+        if std::env::var_os("NEUTRON_SCULK_ATT").is_some() && ox0 == 96 && oz0 == -32 {
+            eprintln!("ATT vein {x} {y} {z}");
+        }
         // MultifaceGrowthFeature.place: origin must be air/water
         if !is_air_or_water(region.get(x, y, z)) {
             continue;
@@ -226,7 +229,17 @@ pub(super) fn place_sculk_patch(
                 eprintln!();
             }
         }
+        let trace_this = ox0 == 96
+            && oz0 == -32
+            && i == 0
+            && std::env::var_os("NEUTRON_SCULK_TRACE_W").is_some();
+        if trace_this {
+            SET_TRACE.store(true, Ordering::Relaxed);
+        }
         run_patch(rng, region, faces, x, y, z, cfg);
+        if trace_this {
+            SET_TRACE.store(false, Ordering::Relaxed);
+        }
         if dump {
             eprintln!(
                 "sculk_patch o=({ox0},{oz0}) i={i} ({x},{y},{z}) here={here:?} below={:?} draws={}",
