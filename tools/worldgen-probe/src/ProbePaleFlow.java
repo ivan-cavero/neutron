@@ -45,6 +45,11 @@ public class ProbePaleFlow {
     public static void main(String[] args) throws Exception {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        // Full block-tag bind (same fix as ProbeDecorate): a bare bootStrap
+        // leaves every state.is(TagKey) false — incl. MOSS_REPLACEABLE — so
+        // placeGroundPatch never placed ground and the surface set stayed
+        // empty (the run-061 "java lies?" mystery).
+        ProbeDecorate.bindBlockTags();
         bindSupportsVegetationTags();
 
         String terrainPath = args.length > 0 ? args[0] : "tmp-vanilla-terrain-3x3.txt";

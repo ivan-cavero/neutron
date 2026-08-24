@@ -125,6 +125,12 @@ fn main() {
     });
     let mut tot = [0u64; 8];
     let mut chunks = 0u64;
+    let mut histogram: Option<std::collections::HashMap<String, u64>> =
+        if std::env::var_os("PARITY_HISTO").is_some() {
+            Some(Default::default())
+        } else {
+            None
+        };
     for (ccx, ccz, chunk) in generated {
         let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
             println!("{ccx:>5},{ccz:>4}     missing");
@@ -136,6 +142,7 @@ fn main() {
         let mut base = [0u64; 2];
         let mut core = [0u64; 2];
         let mut border = [0u64; 2];
+        let hist = &mut histogram;
         for y in wb..wt {
             for z in 0..16u32 {
                 for x in 0..16u32 {
@@ -159,6 +166,16 @@ fn main() {
                     } else {
                         border[m as usize] += 1;
                     }
+                    if m == 0 {
+                        if let Some(h) = hist {
+                            let cls = match (nn, vn) {
+                                ("minecraft:air", v) => format!("ours=air vanilla={v}"),
+                                (n, "minecraft:air") => format!("ours={n} vanilla=air"),
+                                (n, v) => format!("ours={n} vanilla={v}"),
+                            };
+                            *h.entry(cls).or_insert(0) += 1;
+                        }
+                    }
                 }
             }
         }
@@ -180,6 +197,13 @@ fn main() {
             "REGION ALL: {:.2}% over {chunks} chunks",
             100.0 * tot[1] as f64 / (tot[0] + tot[1]) as f64
         );
+    }
+    if let Some(h) = histogram.as_ref() {
+        let mut v: Vec<_> = h.iter().collect();
+        v.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+        for (cls, n) in v {
+            println!("HISTO {n:>7} {cls}");
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import java.util.Set;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.core.Registry;
 import net.minecraft.world.level.chunk.Strategy;
 import java.util.Iterator;
@@ -92,6 +93,10 @@ public class ProbeDecorate {
     static Object LEVEL_PROXY;
     static Object levelProxy;
         static long WRITES = 0;
+        // Vanilla WorldGenRegion.random: RandomState.getOrCreateRandomFactory(
+        //   "minecraft:worldgen_region_random").at(centerChunk.getWorldPosition())
+        // Consumed by e.g. MossyCarpetBlock.placeAt during SimpleBlockFeature.
+        static RandomSource LEVEL_RANDOM = null;
     static StringBuilder LOG = new StringBuilder();
     static int WATCH_COUNT = 0;
 
@@ -222,6 +227,9 @@ public class ProbeDecorate {
                 int ORX = ocx * 16, ORZ = ocz * 16;
                 TAG_ORX = ORX;
                 TAG_ORZ = ORZ;
+                LEVEL_RANDOM = rs.getOrCreateRandomFactory(
+                        Identifier.parse("minecraft:worldgen_region_random"))
+                        .at(new BlockPos(ORX, 0, ORZ));
 
                 Set<Holder<Biome>> possibleBiomes = new HashSet<>();
                 ChunkPos.rangeClosed(sectionPos.chunk(), 1).forEach(chunkPos -> {
@@ -298,8 +306,9 @@ public class ProbeDecorate {
                                         generator, random, origin);
                             }
                         } catch (Throwable t) {
-                            System.out.println("ERROR placing " + gif + " origin ("
-                                    + ocx + "," + ocz + "): " + t);
+                            System.out.println("ERROR placing " + gif
+                                    + " step=" + stepIndex + " feat=" + pf
+                                    + " origin (" + ocx + "," + ocz + "): " + t);
                         }
                     }
                 }
@@ -660,6 +669,8 @@ public class ProbeDecorate {
                 return REG_ACCESS;
             case "getBiome":
                 return BIOME_MGR.getBiome(pos);
+            case "getRandom":
+                return LEVEL_RANDOM;
             case "getBiomeManager":
                 return BIOME_MGR;
             case "getLightEngine":
