@@ -472,12 +472,13 @@ pub(crate) fn place_vegetation_patch(
                 depth += 1;
             }
             // VegetationPatchFeature.placeGround: same-block skips set+move.
-            // Vanilla returns true when the depth loop completes (already-ground
-            // still joins the surface set). Insert only on a real place: already-
-            // ground membership extra-draws vegetationChance and drops ALL.
+            // Return value (26.2): full loop -> TRUE even when nothing changed
+            // (already-ground columns JOIN the surface set and consume their
+            // vegetationChance roll); replaceable-fail -> i != 0; first-cell
+            // fail -> false.
             let (gx0, gy0, gz0) = (bx, by, bz);
             let (mut gx, mut gy, mut gz) = (bx, by, bz);
-            let mut placed_any = false;
+            let mut ground_ret = true;
             let mut i = 0;
             while i < depth {
                 let cur = region.get(gx, gy, gz);
@@ -487,18 +488,17 @@ pub(crate) fn place_vegetation_patch(
                         continue;
                     }
                     if !is_in_tag(cur, replaceable) {
-                        placed_any = i != 0;
+                        ground_ret = i != 0;
                         break;
                     }
                     region.set(gx, gy, gz, st);
-                    placed_any = true;
                 }
                 gx += in_dx;
                 gy += in_dy;
                 gz += in_dz;
                 i += 1;
             }
-            if placed_any {
+            if ground_ret {
                 surface_pts.insert(gx0, gy0, gz0);
             }
         }

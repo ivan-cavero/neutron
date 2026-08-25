@@ -232,30 +232,74 @@ fn place_on_ground(ctx: &mut TreeCtx<'_>, dec: &Value) {
 
 
 
+/// `BlockBehaviour.BlockStateBase.isSolidRender` = canOcclude (full opaque
+/// cube). Every non-full-cube plant/leaf/fluid in the worldgen palette reads
+/// as NOT solid render (26.2 block classes). Each success of a place_on_ground
+/// try draws from the weighted_state_provider, so any wrong accept/reject here
+/// desyncs the rest of the chunk's decoration stream.
 fn is_solid_render(b: BlockId) -> bool {
     !matches!(
         b,
         BlockId::Air
+            | BlockId::CaveAir
             | BlockId::Water
             | BlockId::Lava
+            | BlockId::Snow // layer: canOcclude false
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLeaves
+            | BlockId::BirchLeaves
+            | BlockId::SpruceLeaves
+            | BlockId::JungleLeaves
+            | BlockId::AcaciaLeaves
+            | BlockId::MangroveLeaves
+            | BlockId::CherryLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
             | BlockId::SculkVein
-            | BlockId::Snow
+            | BlockId::MossCarpet
+            | BlockId::PaleMossCarpet
+            | BlockId::PaleHangingMoss
+            | BlockId::Vine
+            | BlockId::GlowLichen
+            | BlockId::CaveVines
+            | BlockId::CaveVinesPlant
+            | BlockId::HangingRoots
+            | BlockId::Azalea
+            | BlockId::FloweringAzalea
     )
 }
 
+/// Heightmap.Types.MOTION_BLOCKING_NO_LEAVES: blocksMotion() || !fluid.isEmpty(),
+/// minus LeavesBlock instances. All #minecraft:leaves are excluded regardless of
+/// species (the old list only excluded oak/dark oak, so birch canopies in dark
+/// forest wrongly raised the heightmap and rejected ground tries).
 fn is_motion_blocking_no_leaves(b: BlockId) -> bool {
     !matches!(
         b,
         BlockId::Air
+            | BlockId::CaveAir
             | BlockId::OakLeaves
             | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLeaves
+            | BlockId::BirchLeaves
+            | BlockId::SpruceLeaves
+            | BlockId::JungleLeaves
+            | BlockId::AcaciaLeaves
+            | BlockId::MangroveLeaves
+            | BlockId::CherryLeaves
             | BlockId::ShortGrass
             | BlockId::LeafLitter
             | BlockId::SculkVein
+            | BlockId::MossCarpet
+            | BlockId::PaleMossCarpet
+            | BlockId::PaleHangingMoss
+            | BlockId::Vine
+            | BlockId::GlowLichen
+            | BlockId::CaveVines
+            | BlockId::CaveVinesPlant
+            | BlockId::HangingRoots
+            | BlockId::Snow // layer overrides blocksMotion() to false
     )
 }
 
