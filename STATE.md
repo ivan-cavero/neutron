@@ -56,8 +56,7 @@ EXONERATED as cause.
 - Writer attribution (kept): sculk_vein ~99% from charge cascade.
 - Honest baseline (Windows box, 12345 cc=(6,-2)): 367/773 sculk cells.
   Refs 12345/777 NOT on this machine — only 424242.
-- Attempt-level tracing: `M|ATT|patch|...`, `NEUTRON_SCULK_ATT`,
-  `NEUTRON_SCULK_TRACE_W`, `PROBE_WATCH`.
+- Tracing env: `M|ATT|patch|...`, `NEUTRON_SCULK_ATT`, `NEUTRON_SCULK_TRACE_W`, `PROBE_WATCH`.
 
 Chunk decoration order as FIXED sequence (vanilla = async ticket scheduler;
 spiral is the best static approximation — sweep-verified) · cave-biome
