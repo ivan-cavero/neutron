@@ -336,6 +336,11 @@ pub(crate) fn place_placed_feature_step(
                         let allowed = allowed.unwrap_or(&true_pred);
                         let mut py = y;
                         let mut found = None;
+                        // Vanilla EnvironmentScanPlacement.getPositions:
+                        // leaving the build height returns Stream.empty()
+                        // IMMEDIATELY — the final target re-check after the
+                        // loop must not run on an out-of-world Y.
+                        let mut out_of_world = false;
                         if !eval_block_predicate(region, x, py, z, allowed) {
                             ok = false;
                             break;
@@ -346,14 +351,21 @@ pub(crate) fn place_placed_feature_step(
                                 break;
                             }
                             py += if dir == "down" { -1 } else { 1 };
-                            if py < WORLD_BOTTOM || py > WORLD_TOP {
+                            if py < WORLD_BOTTOM || py >= WORLD_TOP {
+                                out_of_world = true;
                                 break;
                             }
                             if !eval_block_predicate(region, x, py, z, allowed) {
                                 break;
                             }
                         }
-                        if found.is_none() && eval_block_predicate(region, x, py, z, target) {
+                        // Tail check: reached by loop exhaustion or the
+                        // `!allowed` break (vanilla still tests the target at
+                        // that position once) but NOT after leaving the world.
+                        if !out_of_world
+                            && found.is_none()
+                            && eval_block_predicate(region, x, py, z, target)
+                        {
                             found = Some(py);
                         }
                         match found {

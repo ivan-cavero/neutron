@@ -188,7 +188,3 @@ name = "decorate_oracle"
 [[example]]
 name = "sculk_counts"
 
-# throwaway tree-cluster dump (uncommitted)
-[[example]]
-name = "neu_tree_dump"
-

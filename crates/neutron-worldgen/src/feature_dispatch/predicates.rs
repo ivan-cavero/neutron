@@ -24,7 +24,10 @@ pub(crate) fn eval_block_predicate(
             let tag = pred["tag"].as_str().unwrap_or("");
             let b = region.get(x, y, z);
             if tag.ends_with("air") {
-                return b == BlockId::Air;
+                // `#minecraft:air` = {air, cave_air, void_air}. void_air never
+                // enters the region buffer (carvers write air/cave_air), but a
+                // cave-air cell must pass an "is air" filter like vanilla.
+                return b == BlockId::Air || b == BlockId::CaveAir;
             }
             is_in_tag(b, tag)
         }
@@ -145,7 +148,9 @@ pub(super) fn small_dripleaf_may_place_on(below: BlockId, at: BlockId) -> bool {
 pub(crate) fn is_in_tag(b: BlockId, tag: &str) -> bool {
     let t = tag.strip_prefix("#minecraft:").unwrap_or(tag);
     match t {
-        "air" => b == BlockId::Air,
+        // `#minecraft:air` = {air, cave_air} here (void_air is unreachable in
+        // the decoration buffer; see matching_block_tag shortcut above).
+        "air" => b == BlockId::Air || b == BlockId::CaveAir,
         "cave_vines" => matches!(b, BlockId::CaveVines | BlockId::CaveVinesPlant),
         "dirt" => matches!(
             b,
@@ -309,12 +314,16 @@ pub(crate) fn heightmap_top(
     None
 }
 
-/// `WORLD_SURFACE` first-available minus `OCEAN_FLOOR` first-available.
-/// OCEAN_FLOOR = highest motion-blocking (solid) block; plants and fluids do
-/// not count (SurfaceWaterDepthFilter uses the OCEAN_FLOOR heightmap). The
-/// old "non-air non-fluid" floor counted short_grass/carpet as floor, making
-/// the depth 0 where vanilla sees 1 -> trees accepted where vanilla rejects
-/// (the pale_garden draw-1 desync root cause).
+/// `SurfaceWaterDepthFilter`: `WORLD_SURFACE` first-available minus
+/// `OCEAN_FLOOR` first-available, both scanned live from the region buffer
+/// top-down (vanilla Heightmap.Types, Heightmap.java):
+///   - `WORLD_SURFACE(_WG)` predicate = `!state.isAir()` (air/cave_air),
+///   - `OCEAN_FLOOR(_WG)` predicate = `BlockState::blocksMotion()` ONLY —
+///     no fluid term, and plants (short_grass, leaf_litter, moss carpets,
+///     vines, hanging moss) do NOT count as floor.
+/// A leaf_litter carpet therefore raises WORLD_SURFACE one above OCEAN_FLOOR
+/// even on dry land, making depth = 1 > max(0) and rejecting tree attempts
+/// exactly like vanilla (pale_garden/dark_forest step-9 desync root cause).
 pub(crate) fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
     let mut surface = None;
     let mut floor = None;
@@ -323,7 +332,7 @@ pub(crate) fn column_water_depth(region: &RegionBuf, x: i32, z: i32) -> i32 {
         if !b.is_air() && surface.is_none() {
             surface = Some(y + 1);
         }
-        if !b.is_air() && !b.is_fluid() && floor.is_none() {
+        if blocks_motion(b) {
             floor = Some(y + 1);
             break;
         }

@@ -191,10 +191,18 @@ pub fn place_tree_from_config(
         return false;
     }
 
-    // TreeDecorator.Context sorts logs/leaves by Y (ascending, stable) before
-    // any decorator runs (TreeDecorator.Context ctor, decompiled 26.2).
-    ctx.trunks.sort_by_key(|p| p.1);
-    ctx.foliage.sort_by_key(|p| p.1);
+    // TreeDecorator.Context (decompiled 26.2) copies the TreeFeature sets and
+    // stable-sorts logs AND leaves by ascending Y AFTER the copy. The Java
+    // HashSet iteration order must be simulated on the RAW add order first
+    // (bucket chains append in insertion order, so pre-sorting by Y would
+    // permute collisions differently than vanilla), then the stable Y sort is
+    // applied to both lists.
+    ctx.trunks = java_hash::java_hash_order(std::mem::take(&mut ctx.trunks));
+    ctx.foliage = java_hash::java_hash_order(std::mem::take(&mut ctx.foliage));
+    // Java List.sort(Comparator.comparingInt(getY)) = TimSort = STABLE: equal
+    // Y keeps HashSet bucket order.
+    ctx.trunks.sort_by(|a, b| a.1.cmp(&b.1));
+    ctx.foliage.sort_by(|a, b| a.1.cmp(&b.1));
 
     // NEUTRON_DECO_TREE_TRACE (diagnostic): print the placed tree blocks.
     if std::env::var("NEUTRON_DECO_TREE_TRACE").is_ok() {
@@ -211,18 +219,6 @@ pub fn place_tree_from_config(
             eprintln!("  leaf  ({tx},{ty},{tz})");
         }
     }
-
-    // Vanilla TreeFeature.place keeps trunks/foliage in Set<BlockPos>
-    // (dedup across overlapping rows/branches) and TreeDecorator.Context
-    // exposes them in HashSet ITERATION order (leaves stable-sorted by Y).
-    // Our Vec accumulated duplicates AND insertion order — the pale_moss
-    // decorator then drew extra probability rolls and assigned them to
-    // different cells, desyncing the whole decoration stream.
-    ctx.trunks = java_hash::java_hash_order(std::mem::take(&mut ctx.trunks));
-    ctx.foliage = java_hash::java_hash_order(std::mem::take(&mut ctx.foliage));
-    // Context ctor: this.leaves.sort(Comparator.comparingInt(getY)) — Java
-    // List.sort is STABLE (TimSort).
-    ctx.foliage.sort_by(|a, b| a.1.cmp(&b.1));
 
     if let Some(decorators) = cfg["decorators"].as_array() {
         apply_decorators(&mut ctx, decorators);

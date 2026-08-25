@@ -110,20 +110,28 @@ fn place_inline_placed(
                         }
                         let mut found = None;
                         let mut spy = py;
+                        // Same semantics as the feature_dispatch env_scan:
+                        // out-of-build-height after a move fails immediately,
+                        // without the final target re-check.
+                        let mut out_of_world = false;
                         for _ in 0..max_steps {
                             if eval_block_predicate(region, px, spy, pz, target) {
                                 found = Some(spy);
                                 break;
                             }
                             spy += if dir == "down" { -1 } else { 1 };
-                            if spy < WORLD_BOTTOM || spy > WORLD_TOP {
+                            if spy < WORLD_BOTTOM || spy >= WORLD_TOP {
+                                out_of_world = true;
                                 break;
                             }
                             if !eval_block_predicate(region, px, spy, pz, allowed) {
                                 break;
                             }
                         }
-                        if found.is_none() && eval_block_predicate(region, px, spy, pz, target) {
+                        if !out_of_world
+                            && found.is_none()
+                            && eval_block_predicate(region, px, spy, pz, target)
+                        {
                             found = Some(spy);
                         }
                         match found {
