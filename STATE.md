@@ -23,30 +23,28 @@ Worldgen 1:1 vs vanilla **26.2**.
 
 ## Next (one question)
 
-**ORACLE PIPELINE FIXED (24 Aug, Linux box) — now captures trees + ores +
-decorators; probe-vs-REF fidelity is the open front (~25% on origin (0,0)).**
-Probe fixes this session (ProbeDecorate.java, javap/vineflower-verified):
-(1) `getRandom`=worldgen_region_random factory per origin; (2) missing
-`isStateAtPosition` handler killed ALL trees silently — fixed (429 logs /
-2253 leaves now); (3) OreFeature writes via section.setBlockState directly —
-mirrorToSection + syncSectionsToStore (`|sync` tag) capture them; (4)
-PaleMossDecorator needs Registry-typed lookup + getLevel chain
-(makeServerLevel); (5) decorationSeed = CHUNK coords; (6) biome_id_to_name
-completed +27 names ("_ => plains" collapse poisoned export remap).
+**METER SWITCHED (24 Aug): region_parity + `PARITY_LEDGER=<csv>` is the road
+to 100%. ProbeDecorate stays as logic debugger ONLY — its replay fidelity vs
+the real world is ~27% (4035/5558 mismatches on 424242 cc=(0,0), 81678
+writes, 0 errors), so it cannot rank remaining work; don't burn sessions on
+its positional jitter. Ledger = cell-exact TSV (x,y,z,class,core/border,
+vanilla,neutron) + GAPS ranking with cumulative %. New MC version =
+`tools/nbt-ref/new-mc-version.sh <ver> <seed>` → rerun region_parity.**
+
+Top gaps 424242 r=1 (17163 cells = the missing 1.94%, cum % of gap):
+pale_oak leaves/log extra+missing ~33% · moss_block/clay/stone swaps ~20%
+(lush clay+moss patch placement) · short_grass extra+missing ~7%
+(vegetation_patch HashSet — known dead-end) · cave_vines ±6% ·
+pale_hanging_moss ±4% · tall_grass/moss_carpet minor.
+
+Probe pipeline facts kept: getRandom=worldgen_region_random factory per
+origin; isStateAtPosition handler gap killed ALL trees silently; OreFeature
+section.setBlockState needs mirrorToSection+sync (`|sync`); decorationSeed =
+CHUNK coords; biome_id_to_name +27 names.
 
 **Validation harness**: `biome_grid_parity` example (BGP_SETS=1 prints sets):
-ref-vs-ours quart grid = 99.98% (3 quarts), SETS identical (dark_forest,
-deep_dark, lush_caves, pale_garden) → BIOME GRID EXONERATED as cause.
-
-**Open mystery**: with seeds formula javap-verified (`seed+index+10000*step`),
-same dec, same feature list/order — probe blobs still land near-but-not-on
-ref/neutron positions (coal probe∩neutron = 1/48; e.g. probe (1,101,3) vs
-neutron/ref (0,101,3)). Off-by-a-few pattern suggests a draw-count divergence
-early in the modifier chain or in Feature.place entry. Next session: diff
-raw draw streams for ore_coal_upper @origin(0,0) between ProbeDecorate
-(PALE_TRACE-style) and neutron rng_echo from setFeatureSeed onward.
-NOTE: region_parity/ORACLE numbers vs ref are unaffected by probe issues —
-they read the ref world directly.
+ref-vs-ours quart grid = 99.98% (3 quarts), SETS identical → BIOME GRID
+EXONERATED as cause.
 
 - Writer attribution (kept): sculk_vein ~99% from charge cascade.
 - Honest baseline (Windows box, 12345 cc=(6,-2)): 367/773 sculk cells.

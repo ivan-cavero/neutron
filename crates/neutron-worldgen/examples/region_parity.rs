@@ -131,6 +131,9 @@ fn main() {
         } else {
             None
         };
+    // PARITY_LEDGER=<path>: cell-exact list of every mismatch (the gap to 100%)
+    let ledger_path = std::env::var_os("PARITY_LEDGER").map(std::path::PathBuf::from);
+    let mut ledger: Vec<String> = Vec::new();
     for (ccx, ccz, chunk) in generated {
         let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
             println!("{ccx:>5},{ccz:>4}     missing");
@@ -175,6 +178,19 @@ fn main() {
                             };
                             *h.entry(cls).or_insert(0) += 1;
                         }
+                        if ledger_path.is_some() {
+                            let wx = ccx * 16 + x as i32;
+                            let wz = ccz * 16 + z as i32;
+                            let class = if vn == "minecraft:air" {
+                                "extra"
+                            } else if nn == "minecraft:air" {
+                                "missing"
+                            } else {
+                                "wrong"
+                            };
+                            let zone = if d >= 5 { "core" } else { "border" };
+                            ledger.push(format!("{wx},{y},{wz},{class},{zone},{vn},{nn}"));
+                        }
                     }
                 }
             }
@@ -203,6 +219,42 @@ fn main() {
         v.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
         for (cls, n) in v {
             println!("HISTO {n:>7} {cls}");
+        }
+    }
+    if let Some(p) = ledger_path {
+        // exact gap list: every cell standing between us and 100%
+        let mut out = std::fs::File::create(&p).expect("ledger path");
+        use std::io::Write;
+        writeln!(out, "x,y,z,class,zone,vanilla,neutron").unwrap();
+        for row in &ledger {
+            writeln!(out, "{row}").unwrap();
+        }
+        println!("LEDGER {} cells -> {}", ledger.len(), p.display());
+        // ranked gaps: fix order = biggest first; cum shows % recovered
+        let mut gaps: std::collections::HashMap<String, u64> = Default::default();
+        for row in &ledger {
+            let c: Vec<&str> = row.split(',').collect();
+            let key = match c[3] {
+                "missing" => format!("missing {}", c[5]),
+                "extra" => format!("extra {}", c[6]),
+                _ => format!("wrong {} <- {}", c[5], c[6]),
+            };
+            *gaps.entry(key).or_insert(0) += 1;
+        }
+        let mut v: Vec<_> = gaps.into_iter().collect();
+        v.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+        let total_mis = ledger.len() as f64;
+        let mut cum = 0u64;
+        println!(
+            "GAPS (core rows are deterministic; border rows carry vanilla scheduler noise):"
+        );
+        for (k, n) in v.iter().take(30) {
+            cum += n;
+            println!(
+                "GAP {n:>6} {:>5.1}% cum {:>5.1}%  {k}",
+                100.0 * *n as f64 / total_mis,
+                100.0 * cum as f64 / total_mis
+            );
         }
     }
 }
