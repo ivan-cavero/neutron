@@ -1,13 +1,17 @@
 // Multi-chunk parity: neutron vs vanilla fresh reference across a chunk
 // radius, with core/border split (border cells carry the vanilla thread-
 // scheduling noise; core must be deterministic).
-// Usage: region_parity [seed] [cx] [cz] [radius] [region_dir]
+// Usage:
+//   region_parity [seed] [cx] [cz] [radius] [region_dir]      # 3×3 window
+//   PARITY_SCAN=[step] region_parity <seed> 0 0 0 <region_dir># all ref chunks
+// Env: PARITY_LEDGER=<csv> cell-exact gap list · PARITY_HISTO=1 class histogram
 use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
 use neutron_world::nbt::{compound_get, read_nbt};
 use neutron_world::Region;
 use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
 use neutron_worldgen::{ChunkGenerator, NoiseCache};
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn load_vanilla_chunk(
@@ -87,6 +91,139 @@ fn load_vanilla_chunk(
     Some(map)
 }
 
+/// All full-status chunks present in the ref region dir, sorted. Coverage =
+/// whatever the vanilla server generated there (spawn area on a fresh world;
+/// pregenerate more in-game to widen the audit).
+fn discover_chunks(
+    regions: &mut HashMap<(i32, i32), Region>,
+    region_dir: &str,
+) -> Vec<(i32, i32)> {
+    let mut rcoords: Vec<(i32, i32)> = std::fs::read_dir(region_dir)
+        .expect("region dir readable")
+        .filter_map(|e| {
+            let name = e.ok()?.file_name().into_string().ok()?;
+            let rest = name.strip_prefix("r.")?.strip_suffix(".mca")?;
+            let mut it = rest.split('.');
+            let rx = it.next()?.parse().ok()?;
+            let rz = it.next()?.parse().ok()?;
+            Some((rx, rz))
+        })
+        .collect();
+    rcoords.sort();
+    let mut coords = Vec::new();
+    for (rx, rz) in rcoords {
+        let path = PathBuf::from(format!("{region_dir}/r.{rx}.{rz}.mca"));
+        let Ok(region) = Region::open(&path).map(|r| r.with_coords(rx, rz)) else {
+            continue;
+        };
+        for lz in 0..32u32 {
+            for lx in 0..32u32 {
+                let Ok(Some(data)) = region.get_chunk(lx as i32, lz as i32) else {
+                    continue;
+                };
+                let full = read_nbt(&data).ok().is_some_and(|nbt| {
+                    match compound_get(&nbt.compound, "Status") {
+                        Some(Tag::String(s)) => s.to_string().ends_with("full"),
+                        _ => false,
+                    }
+                });
+                if full {
+                    coords.push((rx * 32 + lx as i32, rz * 32 + lz as i32));
+                }
+            }
+        }
+        regions.insert((rx, rz), region);
+    }
+    coords.sort();
+    coords
+}
+
+/// Cell-exact gap accounting: streams every mismatch to CSV and accumulates
+/// per-gap-key stats (count, example cell, bbox) so the report says not only
+/// WHAT fails but WHERE.
+struct Gaps {
+    out: Option<std::fs::File>,
+    rows: u64,
+    map: HashMap<String, GapStat>,
+}
+
+#[derive(Default)]
+struct GapStat {
+    n: u64,
+    ex: (i32, i32, i32),
+    bb: [i32; 6], // minx,miny,minz,maxx,maxy,maxz
+}
+
+impl Gaps {
+    #[allow(clippy::too_many_arguments)]
+    fn row(&mut self, ccx: i32, ccz: i32, x: u32, y: i32, z: u32, d: i32, vn: &str, nn: &str) {
+        let class = if vn == "minecraft:air" {
+            "extra"
+        } else if nn == "minecraft:air" {
+            "missing"
+        } else {
+            "wrong"
+        };
+        let zone = if d >= 5 { "core" } else { "border" };
+        let wx = ccx * 16 + x as i32;
+        let wz = ccz * 16 + z as i32;
+        self.rows += 1;
+        if let Some(f) = self.out.as_mut() {
+            let _ = writeln!(f, "{wx},{y},{wz},{class},{zone},{vn},{nn}");
+        }
+        let key = match class {
+            "missing" => format!("missing {vn}"),
+            "extra" => format!("extra {nn}"),
+            _ => format!("wrong {vn} <- {nn}"),
+        };
+        let e = self.map.entry(key).or_insert_with(|| GapStat {
+            ex: (wx, y, wz),
+            ..Default::default()
+        });
+        e.n += 1;
+        if e.n == 1 {
+            e.bb = [wx, y, wz, wx, y, wz];
+        } else {
+            e.bb[0] = e.bb[0].min(wx);
+            e.bb[1] = e.bb[1].min(y);
+            e.bb[2] = e.bb[2].min(wz);
+            e.bb[3] = e.bb[3].max(wx);
+            e.bb[4] = e.bb[4].max(y);
+            e.bb[5] = e.bb[5].max(wz);
+        }
+    }
+
+    fn report(&self, worst: &HashMap<(i32, i32), u64>) {
+        let mut v: Vec<_> = self.map.iter().collect();
+        v.sort_by_key(|(_, s)| std::cmp::Reverse(s.n));
+        let tot = self.rows as f64;
+        let mut cum = 0u64;
+        println!(
+            "GAPS (core rows are deterministic; border rows carry vanilla scheduler noise):"
+        );
+        for (k, s) in v.iter().take(30) {
+            cum += s.n;
+            let b = s.bb;
+            println!(
+                "GAP {:>6} {:>5.1}% cum {:>5.1}%  {k:<52} e.g.({}, {}, {})  bbox x {}..{}, y {}..{}, z {}..{}",
+                s.n,
+                100.0 * s.n as f64 / tot,
+                100.0 * cum as f64 / tot,
+                s.ex.0,
+                s.ex.1,
+                s.ex.2,
+                b[0], b[3], b[1], b[4], b[2], b[5],
+            );
+        }
+        let mut w: Vec<_> = worst.iter().collect();
+        w.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+        println!("WORST CHUNKS:");
+        for ((cx, cz), n) in w.iter().take(10) {
+            println!("WORST ({cx:>4},{cz:>4}) {n} cells");
+        }
+    }
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let seed: i64 = args.next().and_then(|s| s.parse().ok()).unwrap_or(12345);
@@ -97,116 +234,139 @@ fn main() {
         "tools/nbt-ref/vanilla-fresh-12345/world/dimensions/minecraft/overworld/region".to_string()
     });
 
+    // PARITY_SCAN=<step>: audit EVERY comparable chunk in the ref (step = sample
+    // every Nth chunk to trade coverage for time; PARITY_SCAN=1 = full audit).
+    let scan_step: usize =
+        std::env::var_os("PARITY_SCAN").map(|v| v.to_str().and_then(|s| s.parse().ok()).unwrap_or(1)).unwrap_or(0);
+
     let gen = ChunkGenerator::new(seed);
     let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
-    println!("seed={seed} center=({cx},{cz}) radius={radius}");
+    let coords: Vec<(i32, i32)> = if scan_step > 0 {
+        let mut c = discover_chunks(&mut regions, &region_dir);
+        if scan_step > 1 {
+            c = c.into_iter().step_by(scan_step).collect();
+        }
+        println!("seed={seed} SCAN {} comparable chunks (step {scan_step})", c.len());
+        c
+    } else {
+        println!("seed={seed} center=({cx},{cz}) radius={radius}");
+        (cz - radius..=cz + radius)
+            .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
+            .collect()
+    };
     println!(
         "{:>10} {:>9} {:>9} {:>9} {:>9}",
         "chunk", "ALL", "BASE", "core", "border"
     );
-    // Generate the radius² chunks in parallel (each with its own noise cache),
-    // then compare serially in deterministic order. Output is byte-identical to
-    // the serial loop — only wall-clock changes. `gen` is borrowed by the
-    // scoped threads (ChunkGenerator is Sync: density nodes are Arc).
-    let coords: Vec<(i32, i32)> = (cz - radius..=cz + radius)
-        .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
-        .collect();
-    let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> = std::thread::scope(|s| {
-        let gen = &gen;
-        let mut handles = Vec::with_capacity(coords.len());
-        for &(ccx, ccz) in &coords {
-            handles.push(s.spawn(move || {
-                let mut cache = NoiseCache::new();
-                let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
-                (ccx, ccz, chunk)
-            }));
-        }
-        handles.into_iter().map(|h| h.join().unwrap()).collect()
-    });
-    let mut tot = [0u64; 8];
-    let mut chunks = 0u64;
-    let mut histogram: Option<std::collections::HashMap<String, u64>> =
+
+    let mut histogram: Option<HashMap<String, u64>> =
         if std::env::var_os("PARITY_HISTO").is_some() {
             Some(Default::default())
         } else {
             None
         };
-    // PARITY_LEDGER=<path>: cell-exact list of every mismatch (the gap to 100%)
     let ledger_path = std::env::var_os("PARITY_LEDGER").map(std::path::PathBuf::from);
-    let mut ledger: Vec<String> = Vec::new();
-    for (ccx, ccz, chunk) in generated {
-        let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
-            println!("{ccx:>5},{ccz:>4}     missing");
-            continue;
-        };
-        let wb = neutron_worldgen::generator::WORLD_BOTTOM;
-        let wt = neutron_worldgen::generator::WORLD_TOP;
-        let mut all = [0u64; 2];
-        let mut base = [0u64; 2];
-        let mut core = [0u64; 2];
-        let mut border = [0u64; 2];
-        let hist = &mut histogram;
-        for y in wb..wt {
-            for z in 0..16u32 {
-                for x in 0..16u32 {
-                    let b = chunk.block_at(x, y, z);
-                    let nn = vanilla_name(b);
-                    let vn = van
-                        .get(&(x as u8, y, z as u8))
-                        .map(|s| s.as_str())
-                        .unwrap_or("minecraft:air");
-                    let m = (nn == vn) as u64;
-                    all[m as usize] += 1;
-                    if !is_vegetation_name(vn) {
-                        base[m as usize] += 1;
-                    }
-                    let d = (x as i32)
-                        .min(15 - x as i32)
-                        .min(z as i32)
-                        .min(15 - z as i32);
-                    if d >= 5 {
-                        core[m as usize] += 1;
-                    } else {
-                        border[m as usize] += 1;
-                    }
-                    if m == 0 {
-                        if let Some(h) = hist {
-                            let cls = match (nn, vn) {
-                                ("minecraft:air", v) => format!("ours=air vanilla={v}"),
-                                (n, "minecraft:air") => format!("ours={n} vanilla=air"),
-                                (n, v) => format!("ours={n} vanilla={v}"),
-                            };
-                            *h.entry(cls).or_insert(0) += 1;
+    let mut gaps = Gaps {
+        out: ledger_path
+            .as_ref()
+            .map(|p| std::fs::File::create(p).expect("ledger path")),
+        rows: 0,
+        map: Default::default(),
+    };
+    if let Some(p) = ledger_path.as_ref() {
+        writeln!(gaps.out.as_mut().unwrap(), "x,y,z,class,zone,vanilla,neutron").unwrap();
+        println!("LEDGER -> {}", p.display());
+    }
+
+    let wb = neutron_worldgen::generator::WORLD_BOTTOM;
+    let wt = neutron_worldgen::generator::WORLD_TOP;
+    let mut tot = [0u64; 2];
+    let mut chunks = 0u64;
+    let mut worst: HashMap<(i32, i32), u64> = HashMap::new();
+    const BATCH: usize = 64;
+    for batch in coords.chunks(BATCH) {
+        // Generate the batch in parallel (each with its own noise cache), then
+        // compare serially in deterministic order. `gen` is borrowed by the
+        // scoped threads (ChunkGenerator is Sync: density nodes are Arc).
+        let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
+            std::thread::scope(|s| {
+                let gen = &gen;
+                let mut handles = Vec::with_capacity(batch.len());
+                for &(ccx, ccz) in batch {
+                    handles.push(s.spawn(move || {
+                        let mut cache = NoiseCache::new();
+                        let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
+                        (ccx, ccz, chunk)
+                    }));
+                }
+                handles.into_iter().map(|h| h.join().unwrap()).collect()
+            });
+        if scan_step > 0 {
+            eprintln!("scan {}/{}", chunks as usize + generated.len(), coords.len());
+        }
+        for (ccx, ccz, chunk) in generated {
+            let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
+                println!("{ccx:>5},{ccz:>4}     missing");
+                continue;
+            };
+            let mut all = [0u64; 2];
+            let mut base = [0u64; 2];
+            let mut core = [0u64; 2];
+            let mut border = [0u64; 2];
+            let hist = &mut histogram;
+            for y in wb..wt {
+                for z in 0..16u32 {
+                    for x in 0..16u32 {
+                        let b = chunk.block_at(x, y, z);
+                        let nn = vanilla_name(b);
+                        let vn = van
+                            .get(&(x as u8, y, z as u8))
+                            .map(|s| s.as_str())
+                            .unwrap_or("minecraft:air");
+                        let m = (nn == vn) as u64;
+                        all[m as usize] += 1;
+                        if !is_vegetation_name(vn) {
+                            base[m as usize] += 1;
                         }
-                        if ledger_path.is_some() {
-                            let wx = ccx * 16 + x as i32;
-                            let wz = ccz * 16 + z as i32;
-                            let class = if vn == "minecraft:air" {
-                                "extra"
-                            } else if nn == "minecraft:air" {
-                                "missing"
-                            } else {
-                                "wrong"
-                            };
-                            let zone = if d >= 5 { "core" } else { "border" };
-                            ledger.push(format!("{wx},{y},{wz},{class},{zone},{vn},{nn}"));
+                        let d = (x as i32)
+                            .min(15 - x as i32)
+                            .min(z as i32)
+                            .min(15 - z as i32);
+                        if d >= 5 {
+                            core[m as usize] += 1;
+                        } else {
+                            border[m as usize] += 1;
+                        }
+                        if m == 0 {
+                            if let Some(h) = hist {
+                                let cls = match (nn, vn) {
+                                    ("minecraft:air", v) => format!("ours=air vanilla={v}"),
+                                    (n, "minecraft:air") => format!("ours={n} vanilla=air"),
+                                    (n, v) => format!("ours={n} vanilla={v}"),
+                                };
+                                *h.entry(cls).or_insert(0) += 1;
+                            }
+                            if gaps.out.is_some() || scan_step > 0 {
+                                gaps.row(ccx, ccz, x, y, z, d, vn, nn);
+                            }
+                            *worst.entry((ccx, ccz)).or_insert(0) += 1;
                         }
                     }
                 }
             }
+            for i in 0..2 {
+                tot[i] += all[i];
+            }
+            chunks += 1;
+            let pct = |a: [u64; 2]| 100.0 * a[1] as f64 / (a[0] + a[1]) as f64;
+            println!(
+                "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
+                pct(all),
+                pct(base),
+                pct(core),
+                pct(border)
+            );
         }
-        for i in 0..2 {
-            tot[i] += all[i];
-        }
-        chunks += 1;
-        let pct = |a: [u64; 2]| 100.0 * a[1] as f64 / (a[0] + a[1]) as f64;
-        println!(
-            "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
-            pct(all),
-            pct(base),
-            pct(core),
-            pct(border)
-        );
     }
     if tot[0] + tot[1] > 0 {
         println!(
@@ -221,42 +381,8 @@ fn main() {
             println!("HISTO {n:>7} {cls}");
         }
     }
-    if let Some(p) = ledger_path {
-        // exact gap list: every cell standing between us and 100%
-        let mut out = std::fs::File::create(&p).expect("ledger path");
-        use std::io::Write;
-        writeln!(out, "x,y,z,class,zone,vanilla,neutron").unwrap();
-        for row in &ledger {
-            writeln!(out, "{row}").unwrap();
-        }
-        println!("LEDGER {} cells -> {}", ledger.len(), p.display());
-        // ranked gaps: fix order = biggest first; cum shows % recovered
-        let mut gaps: std::collections::HashMap<String, u64> = Default::default();
-        for row in &ledger {
-            let c: Vec<&str> = row.split(',').collect();
-            let key = match c[3] {
-                "missing" => format!("missing {}", c[5]),
-                "extra" => format!("extra {}", c[6]),
-                _ => format!("wrong {} <- {}", c[5], c[6]),
-            };
-            *gaps.entry(key).or_insert(0) += 1;
-        }
-        let mut v: Vec<_> = gaps.into_iter().collect();
-        v.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
-        let total_mis = ledger.len() as f64;
-        let mut cum = 0u64;
-        println!(
-            "GAPS (core rows are deterministic; border rows carry vanilla scheduler noise):"
-        );
-        for (k, n) in v.iter().take(30) {
-            cum += n;
-            println!(
-                "GAP {n:>6} {:>5.1}% cum {:>5.1}%  {k}",
-                100.0 * *n as f64 / total_mis,
-                100.0 * cum as f64 / total_mis
-            );
-        }
+    if gaps.out.is_some() || scan_step > 0 {
+        println!("LEDGER {} cells", gaps.rows);
+        gaps.report(&worst);
     }
 }
-
-

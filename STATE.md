@@ -10,6 +10,7 @@ Worldgen 1:1 vs vanilla **26.2**.
 | Seed | region ALL | notes |
 | --- | --- | --- |
 | 424242 | **98.06%** r=1 (this Linux machine; histogram: trees ~5.8k, veg patches ~3k, grass/vines ~2k) | mineshafts 1:1 + ores + spiral order |
+| 424242 SCAN | **97.98%** over all 81 full-status ref chunks (spawn area) — the global audit number | PARITY_SCAN=1 |
 | 12345 | 98.45% center (6,-2) — Windows box only, ref not here | spawn = (6,-2): authentic wavefront |
 | 777 | 99.43% chunk (0,0) — Windows box only | |
 
@@ -28,14 +29,20 @@ to 100%. ProbeDecorate stays as logic debugger ONLY — its replay fidelity vs
 the real world is ~27% (4035/5558 mismatches on 424242 cc=(0,0), 81678
 writes, 0 errors), so it cannot rank remaining work; don't burn sessions on
 its positional jitter. Ledger = cell-exact TSV (x,y,z,class,core/border,
-vanilla,neutron) + GAPS ranking with cumulative %. New MC version =
-`tools/nbt-ref/new-mc-version.sh <ver> <seed>` → rerun region_parity.**
+vanilla,neutron) + GAPS ranking with cum % + e.g./bbox per gap. Whole-ref
+audit: `PARITY_SCAN=1 PARITY_LEDGER=g.csv cargo run -r -p neutron-worldgen
+--example region_parity -- <seed> 0 0 0 <regiondir>` (PARITY_SCAN=N samples
+every Nth chunk). Coverage = full-status chunks in the ref (spawn area;
+pregenerate more in-game to widen). New MC version =
+`tools/nbt-ref/new-mc-version.sh <ver> <seed>` → rerun scan.**
 
-Top gaps 424242 r=1 (17163 cells = the missing 1.94%, cum % of gap):
-pale_oak leaves/log extra+missing ~33% · moss_block/clay/stone swaps ~20%
-(lush clay+moss patch placement) · short_grass extra+missing ~7%
-(vegetation_patch HashSet — known dead-end) · cave_vines ±6% ·
-pale_hanging_moss ±4% · tall_grass/moss_carpet minor.
+Top gaps FULL SCAN 424242 (161200 cells = missing 2.02%; cum % of gap):
+dark_oak leaves+log ±19% · pale_oak leaves+log ±17% (tree placement/shape =
+#1 family overall ~36%) · moss_block/clay/stone swaps ~14% (lush clay+moss
+patch placement) · short_grass/tall_grass/leaf_litter ±6% (vegetation_patch
+HashSet — known dead-end) · oak_leaves ±4% · cave_vines ±4% ·
+pale_hanging_moss ±4% · coal_ore wrong ~2.4%. WORST chunks ring (-1..0,-3)
+and (1,3..4).
 
 Probe pipeline facts kept: getRandom=worldgen_region_random factory per
 origin; isStateAtPosition handler gap killed ALL trees silently; OreFeature
