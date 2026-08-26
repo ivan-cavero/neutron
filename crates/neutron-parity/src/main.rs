@@ -223,6 +223,7 @@ fn main() {
     let mut ledger_rows: u64 = 0;
     let mut protos_skipped: usize = 0;
     let mut structure_counts: std::collections::BTreeMap<String, u64> = Default::default();
+    let mut entity_counts: std::collections::BTreeMap<String, u64> = Default::default();
     const BATCH: usize = 64;
 
     println!(
@@ -339,6 +340,9 @@ fn main() {
             for s in &van.structure_starts {
                 *structure_counts.entry(s.clone()).or_insert(0) += 1;
             }
+            for (be, n) in &van.block_entities {
+                *entity_counts.entry(be.clone()).or_insert(0) += n;
+            }
             let pct = |t: &neutron_parity::Tally| t.pct();
             println!(
                 "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
@@ -382,6 +386,12 @@ fn main() {
             if args.strict {
                 std::process::exit(2);
             }
+        }
+    }
+    if !entity_counts.is_empty() {
+        println!("BLOCK ENTITIES (ref inventory — seed-deterministic loot lives here, not in blocks):");
+        for (name, n) in &entity_counts {
+            println!("  {n:>4}× {name}");
         }
     }
 

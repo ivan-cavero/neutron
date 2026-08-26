@@ -22,7 +22,13 @@ fn name_grid(fill: impl Fn(u32, i32, u32) -> &'static str) -> BlockGrid {
 }
 
 fn ref_chunk(blocks: BlockGrid) -> RefChunk {
-    RefChunk { status: "minecraft:full".into(), blocks, biomes: None, structure_starts: Vec::new() }
+    RefChunk {
+        status: "minecraft:full".into(),
+        blocks,
+        biomes: None,
+        structure_starts: Vec::new(),
+        block_entities: Default::default(),
+    }
 }
 
 /// Core zone is exactly the interior 6x6 columns (d >= 5).

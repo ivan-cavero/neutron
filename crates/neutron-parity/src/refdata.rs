@@ -162,6 +162,12 @@ pub struct RefChunk {
     /// structure-inventory tripwire: a NEW vanilla structure type shows up
     /// here even when its blocks happen to match.
     pub structure_starts: Vec<String>,
+    /// Block-entity type counts in this chunk (chests, spawners, …).
+    /// Structures fill chests during postProcess with seed-derived loot —
+    /// deterministic per world seed but stored as BLOCK ENTITIES (tile
+    /// entities), invisible to a blocks-only diff. This inventory is how a
+    /// new entity kind gets noticed at all.
+    pub block_entities: std::collections::BTreeMap<String, u64>,
 }
 
 /// Overworld structure types known to Neutron's worldgen (26.2). Extend this
@@ -276,8 +282,27 @@ impl RegionSet {
         let blocks = decode_block_sections(sections, cx, cz, dim)?;
         let biomes = decode_biome_sections(sections, cx, cz, dim)?;
         let structure_starts = decode_structure_starts(&nbt.compound);
-        Ok(Some(RefChunk { status, blocks, biomes, structure_starts }))
+        let block_entities = decode_block_entities(&nbt.compound);
+        Ok(Some(RefChunk { status, blocks, biomes, structure_starts, block_entities }))
     }
+}
+
+fn decode_block_entities(
+    compound: &neutron_world::nbt::ussr_nbt::owned::Compound,
+) -> std::collections::BTreeMap<String, u64> {
+    let mut out = std::collections::BTreeMap::new();
+    // Pre-1.18 name was "TileEntities"; modern chunks use "block_entities".
+    let Some(Tag::List(List::Compound(list))) =
+        compound_get(compound, "block_entities").or_else(|| compound_get(compound, "TileEntities"))
+    else {
+        return out;
+    };
+    for be in list {
+        if let Some(Tag::String(id)) = compound_get(be, "id") {
+            *out.entry(id.to_string()).or_insert(0) += 1;
+        }
+    }
+    out
 }
 
 fn decode_structure_starts(compound: &neutron_world::nbt::ussr_nbt::owned::Compound) -> Vec<String> {
