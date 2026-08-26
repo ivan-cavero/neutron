@@ -35,7 +35,7 @@ pub fn apply_step_region(
     gen_step: i32,
     primary_biome: &str,
 ) {
-    let order = crate::sculk::decoration_origin_order(region.chunks);
+    let order = crate::sculk::decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
     for (pos, &(cxl, czl)) in order.iter().enumerate() {
         let ox0 = region.origin_x + cxl * 16;
         let oz0 = region.origin_z + czl * 16;
@@ -99,8 +99,14 @@ pub(crate) fn apply_step_origin(
     // decoration pass (WorldGenRegion ctor seeds it at the origin min corner)
     // and survives across every feature of the pass.
     region.set_region_random(state.region_random(ox0, oz0));
-    let saved =
-        crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+    let saved: Vec<(i32, i32, i32, BlockId)> = if std::env::var_os("NEUTRON_DECO_NO_MASK").is_some() {
+        // DIAGNOSTIC: skip the undecorated-origin masking entirely (every
+        // origin sees all neighbours' feature output). Measures how much of
+        // the tree/lush displacement is gate-visibility driven.
+        Vec::new()
+    } else {
+        crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL)
+    };
     if list.is_empty() {
         // fall back to primary list if no biome matched
         place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &features);
@@ -618,6 +624,19 @@ pub(crate) fn dispatch_configured(
                     }
                 }
             }
+        }
+        "minecraft:huge_red_mushroom" | "minecraft:huge_brown_mushroom" => {
+            // AbstractHugeMushroomFeature port — the dark_forest_vegetation
+            // selector and swamp/mushroom-field placed features route here.
+            crate::feature_dispatch::place_huge_mushroom(
+                rng,
+                region,
+                x,
+                y,
+                z,
+                cfg,
+                ty.ends_with("red"),
+            );
         }
         "minecraft:tree" => {
             tree::place_tree_from_config(rng, region, state, x, y, z, cfg);

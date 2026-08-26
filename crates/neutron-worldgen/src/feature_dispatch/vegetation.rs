@@ -564,3 +564,149 @@ fn is_face_sturdy(b: BlockId) -> bool {
 
 
 
+
+/// `AbstractHugeMushroomFeature.place` + the two cap shapes
+/// (HugeRedMushroomFeature / HugeBrownMushroomFeature, decompiled 26.2).
+///
+/// RNG contract: exactly two draws — `nextInt(3)+4` then `nextInt(12)==0`
+/// height doubler (`getTreeHeight`); cap/stem providers are simple states and
+/// consume nothing. Validity (`isValidPosition`) consumes no RNG:
+///   - bounds: `minY+1 <= y` and `y+h+1 <= maxY`,
+///   - `can_place_on` tag on the block below,
+///   - free-space scan with `getTreeRadiusForHeight(-1,-1,foliageRadius,dy)`:
+///     RED passes treeHeight=-1 so its radius formula always yields 0 (column
+///     scan only); BROWN ignores the params and scans radius-2 squares from
+///     row 4 up. Cells must be air or #minecraft:leaves.
+/// Writes go through `placeMushroomBlock`: target must be air or in
+/// `#replaceable_by_mushrooms`.
+pub(crate) fn place_huge_mushroom(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    x: i32,
+    y: i32,
+    z: i32,
+    cfg: &Value,
+    red: bool,
+) {
+    let c = &cfg["config"];
+    let foliage_radius = c["foliage_radius"].as_i64().unwrap_or(2) as i32;
+    // simple_state_provider — no RNG; ids only (face properties not modeled).
+    let (cap, stem) = if red {
+        (BlockId::RedMushroomBlock, BlockId::MushroomStem)
+    } else {
+        (BlockId::BrownMushroomBlock, BlockId::MushroomStem)
+    };
+
+    // getTreeHeight
+    let mut h = rng.next_int(3) + 4;
+    if rng.next_int(12) == 0 {
+        h *= 2;
+    }
+
+    // isValidPosition
+    if y < WORLD_BOTTOM + 1 || y + h + 1 > WORLD_TOP {
+        return;
+    }
+    if !huge_mushroom_can_place_on(region.get(x, y - 1, z)) {
+        return;
+    }
+    for dy in 0..=h {
+        let radius = if red {
+            // HugeRedMushroomFeature.getTreeRadiusForHeight with
+            // treeHeight=-1: `(yo < treeHeight && yo >= treeHeight-3)` and
+            // `yo == treeHeight` are both false ⇒ radius stays 0.
+            0
+        } else if dy <= 3 {
+            0
+        } else {
+            foliage_radius
+        };
+        for dx in -radius..=radius {
+            for dz in -radius..=radius {
+                let b = region.get(x + dx, y + dy, z + dz);
+                if !b.is_air() && !is_leaves_block(b) {
+                    return;
+                }
+            }
+        }
+    }
+
+    // Cap(s), then trunk.
+    if red {
+        for dy in (h - 3)..=h {
+            let radius = if dy < h { foliage_radius } else { foliage_radius - 1 };
+            let center = foliage_radius - 2;
+            for dx in -radius..=radius {
+                for dz in -radius..=radius {
+                    let x_edge = dx == -radius || dx == radius;
+                    let z_edge = dz == -radius || dz == radius;
+                    if dy >= h || x_edge != z_edge {
+                        place_mushroom_cell(region, x + dx, y + dy, z + dz, cap);
+                    }
+                }
+            }
+        }
+    } else {
+        let radius = foliage_radius;
+        for dx in -radius..=radius {
+            for dz in -radius..=radius {
+                let x_edge = dx == -radius || dx == radius;
+                let z_edge = dz == -radius || dz == radius;
+                if !x_edge || !z_edge {
+                    place_mushroom_cell(region, x + dx, y + h, z + dz, cap);
+                }
+            }
+        }
+    }
+    for dy in 0..h {
+        place_mushroom_cell(region, x, y + dy, z, stem);
+    }
+}
+
+/// `placeMushroomBlock`: air or `#replaceable_by_mushrooms`.
+fn place_mushroom_cell(region: &mut RegionBuf, x: i32, y: i32, z: i32, b: BlockId) {
+    let cur = region.get(x, y, z);
+    if cur.is_air() || replaceable_by_mushrooms(cur) {
+        region.set(x, y, z, b);
+    }
+}
+
+/// `#huge_*_mushroom_can_place_on` = `#substrate_overworld` (+ mycelium /
+/// podzol / nylium, already covered or absent from the palette).
+fn huge_mushroom_can_place_on(b: BlockId) -> bool {
+    is_in_tag(b, "#minecraft:substrate_overworld")
+}
+
+/// Buffer-reachable subset of `#replaceable_by_mushrooms`.
+fn replaceable_by_mushrooms(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::ShortGrass
+            | BlockId::TallGrass
+            | BlockId::LeafLitter
+            | BlockId::Vine
+            | BlockId::GlowLichen
+            | BlockId::HangingRoots
+            | BlockId::PaleMossCarpet
+            | BlockId::PaleMossCarpetTopper
+            | BlockId::Water
+            | BlockId::RedMushroomBlock
+            | BlockId::BrownMushroomBlock
+    )
+}
+
+/// Any vanilla leaves block in the palette (#minecraft:leaves subset).
+fn is_leaves_block(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::OakLeaves
+            | BlockId::DarkOakLeaves
+            | BlockId::PaleOakLeaves
+            | BlockId::BirchLeaves
+            | BlockId::SpruceLeaves
+            | BlockId::JungleLeaves
+            | BlockId::AcaciaLeaves
+            | BlockId::MangroveLeaves
+            | BlockId::CherryLeaves
+    )
+}

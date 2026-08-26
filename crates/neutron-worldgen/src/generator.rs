@@ -401,7 +401,7 @@ impl ChunkGenerator {
         // patch (stone is lush_ground_replaceable, ores are not) and inflated
         // the center clay 437 → 864 vs vanilla 497. `NEUTRON_TMP_MASK`
         // re-enables the mask for A/B diagnostics.
-        let order = crate::sculk::decoration_origin_order(region.chunks);
+        let order = crate::sculk::decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
         let mid = region.chunks / 2;
         let inner: Vec<(i32, i32)> = order
             .iter()

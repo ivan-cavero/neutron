@@ -145,6 +145,11 @@ pub enum BlockId {
     /// the split exists so MossyCarpetBlock.placeAt's stacking gate and topper
     /// dice match vanilla when carpets pile up.
     PaleMossCarpetTopper = 141,
+    /// Huge mushroom caps/stems (`HugeRedMushroomFeature`). Properties
+    /// (WEST/EAST/NORTH/SOUTH/UP faces) are not modeled; parity compares ids.
+    RedMushroomBlock = 142,
+    BrownMushroomBlock = 143,
+    MushroomStem = 144,
 }
 
 impl BlockId {
@@ -279,6 +284,9 @@ impl BlockId {
             139 => Some(Self::CaveAir),
             140 => Some(Self::TallGrass),
             141 => Some(Self::PaleMossCarpetTopper),
+            142 => Some(Self::RedMushroomBlock),
+            143 => Some(Self::BrownMushroomBlock),
+            144 => Some(Self::MushroomStem),
             _ => None,
         }
     }
@@ -298,6 +306,9 @@ impl BlockId {
             Self::CaveAir => "minecraft:cave_air",
             Self::TallGrass => "minecraft:tall_grass",
             Self::PaleMossCarpet | Self::PaleMossCarpetTopper => "minecraft:pale_moss_carpet",
+            Self::RedMushroomBlock => "minecraft:red_mushroom_block",
+            Self::BrownMushroomBlock => "minecraft:brown_mushroom_block",
+            Self::MushroomStem => "minecraft:mushroom_stem",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
             Self::Diorite => "minecraft:diorite",
@@ -687,6 +698,9 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::CaveAir => "minecraft:cave_air",
         BlockId::TallGrass => "minecraft:tall_grass",
         BlockId::PaleMossCarpet | BlockId::PaleMossCarpetTopper => "minecraft:pale_moss_carpet",
+        BlockId::RedMushroomBlock => "minecraft:red_mushroom_block",
+        BlockId::BrownMushroomBlock => "minecraft:brown_mushroom_block",
+        BlockId::MushroomStem => "minecraft:mushroom_stem",
     }
 }
 

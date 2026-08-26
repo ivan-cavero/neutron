@@ -258,7 +258,7 @@ pub fn apply_sculk_region(region: &mut RegionBuf, state: &WorldgenState) {
     }
     // ChunkStatus.FEATURES: when the center is decorated, neighbours are still
     // at carvers (no sculk). Then each neighbour origin runs and can spill in.
-    let origin_order = decoration_origin_order(region.chunks);
+    let origin_order = decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
     let mut faces: FaceMap = HashMap::new();
     for (pos, &(cxl, czl)) in origin_order.iter().enumerate() {
         let ox0 = region.origin_x + cxl * 16;
@@ -396,7 +396,11 @@ fn is_ore_family(b: BlockId) -> bool {
 /// Center chunk first (vanilla FEATURES), then the other origins in x/z order.
 /// NEUTRON_SCULK_ORIGIN_ORDER (diagnostic): `row`/`col` = plain scan with the
 /// center in natural position; `center_row`/`center_col` = center first.
-pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
+pub(crate) fn decoration_origin_order(
+    chunks: i32,
+    origin_x: i32,
+    origin_z: i32,
+) -> Vec<(i32, i32)> {
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
     let order =
@@ -483,6 +487,25 @@ pub(crate) fn decoration_origin_order(chunks: i32) -> Vec<(i32, i32)> {
                 out.push((mid + dx, mid + dz));
             }
         }
+        // Global ticket-wavefront approximation for refs pregenned with
+        // concentric forceload squares centred on the WORLD ORIGIN
+        // (`forceload add -128 -128 127 127` + outer ring): origins closer to
+        // (0,0) reached FEATURES status earlier, so their feature spill-over
+        // was already visible when later origins ran their gate checks.
+        // Sort by squared distance of the origin CENTRE from the world
+        // origin; ties broken x-then-z for determinism.
+        "world_origin" => {
+            let mut v: Vec<(i64, i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
+            for czl in 0..chunks {
+                for cxl in 0..chunks {
+                    let wx = (origin_x + cxl * 16 + 8) as i64;
+                    let wz = (origin_z + czl * 16 + 8) as i64;
+                    v.push((wx * wx + wz * wz, cxl, czl));
+                }
+            }
+            v.sort();
+            out.extend(v.into_iter().map(|(_, cxl, czl)| (cxl, czl)));
+        }
         "custom" => {
             // NEUTRON_DECO_CUSTOM_ORDER="dx,dz;dx,dz;..." — explicit origin
             // order as neighbor offsets relative to the center (order search).
@@ -538,7 +561,7 @@ mod tests {
         // Vanilla decorates spawn-area origins in the MinecraftServer
         // setInitialSpawn square-spiral wavefront; region parity improved
         // broadly (+0.06 12345) once this became the default.
-        let o = decoration_origin_order(3);
+        let o = decoration_origin_order(3, 0, 0);
         assert_eq!(o.len(), 9);
         assert_eq!(o[0], (1, 1), "center first");
         assert_eq!(

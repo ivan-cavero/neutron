@@ -27,7 +27,7 @@ const PI: f32 = 3.1415927;
 /// not-yet-decorated origins — deterministic and matches a full WorldGenRegion
 /// decoration pass over the area.
 pub fn apply_underground_ores_region(region: &mut RegionBuf, level_seed: i64) {
-    let order = crate::sculk::decoration_origin_order(region.chunks);
+    let order = crate::sculk::decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
     for (pos, &(cxl, czl)) in order.iter().enumerate() {
         let origin_min_x = region.origin_x + cxl * 16;
         let origin_min_z = region.origin_z + czl * 16;
