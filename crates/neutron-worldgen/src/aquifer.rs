@@ -479,6 +479,48 @@ impl<'a> NoiseBasedAquifer<'a> {
         v
     }
 
+    /// Like [`compute_substance`] but returns the resolved fluid level/type and
+    /// lowest preliminary surface for the cell, for two-sided aquifer dumps.
+    pub fn probe_fluid(&mut self, x: i32, y: i32, z: i32) -> (i32, BlockId, i32) {
+        let fs = self.compute_fluid(x, y, z);
+        (fs.fluid_level, fs.fluid_type, self.lowest_surface_probe(x, y, z))
+    }
+
+    /// Full decision inputs at a cell: (fluid_level, fluid_type, lowest_surf,
+    /// surface_under_global, floodedness_factor, floodedness_noise, partial_thr,
+    /// full_thr) — enough to reproduce which floodedness branch fires.
+    pub fn probe_fluid_debug(&mut self, x: i32, y: i32, z: i32) -> (i32, i32, bool, f64, f64, f64, f64) {
+        let (level, _, lowest) = self.probe_fluid(x, y, z);
+        let mut under = false;
+        let mut lowest_l = lowest;
+        for (ox, oz) in Self::SURFACE_SAMPLING_OFFSETS {
+            let s = self.preliminary_surface_level(x + ox * 16, z + oz * 16);
+            if (ox, oz) == (0, 0) {
+                under = (s + 8) <= self.global_fluid_picker.compute_fluid(x, s, z).fluid_level;
+            }
+            lowest_l = lowest_l.min(s);
+        }
+        let mut env = crate::density::DensityEnv::new(x, y, z, self.env_noises);
+        let noise = crate::density::compute(&self.fluid_level_floodedness_noise, &mut env)
+            .clamp(-1.0, 1.0);
+        let factor = if under {
+            clamped_map((lowest_l + 8 - y) as f64, 0.0, 64.0, 1.0, 0.0)
+        } else {
+            0.0
+        };
+        let partial = map(factor, 1.0, 0.0, -0.8, 0.4);
+        let full = map(factor, 1.0, 0.0, -0.3, 0.8);
+        (level, lowest_l, under, factor, noise, partial, full)
+    }
+    fn lowest_surface_probe(&mut self, x: i32, y: i32, z: i32) -> i32 {
+        let mut lowest = i32::MAX;
+        for (ox, oz) in Self::SURFACE_SAMPLING_OFFSETS {
+            let s = self.preliminary_surface_level(x + ox * 16, z + oz * 16);
+            lowest = lowest.min(s);
+        }
+        lowest
+    }
+
     /// `computeSurfaceLevel`.
     fn compute_surface_level(
         &mut self,
