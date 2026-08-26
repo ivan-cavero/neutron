@@ -45,6 +45,17 @@
    "cell-identical" means the refactor moved nothing; any divergence is
    listed itemized (gap counts, percentages, worst chunks, unmapped names,
    structure inventory).
+
+2c. **Gap attribution** — `--writers --ledger l.csv` stamps every generated
+   cell with the feature that last wrote it (NEUTRON_WRITERS plane; pure
+   side channel, blocks byte-identical). The summary ranks TOP OFFENDERS BY
+   WRITER with the vanilla class to read; the ledger's `writer_id,writer`
+   columns let you cross-tab writer × block-pair per cluster. Missing-side
+   cells attribute to whatever currently occupies them (usually `terrain`),
+   so read writer rankings as "who is writing WRONG things"; cells vanilla
+   has and we never wrote show up as missing rows of other writers.
+   The writers.rs table maps ids -> decompile paths; the java-map tripwire
+   fails when a Mojang rename invalidates any entry.
 3. **JVM oracle** — `tools/worldgen-probe/src/Probe*.java` run the REAL
    vanilla feature classes against neutron-exported terrain dumps
    (draw-for-draw RNG traces). When Rust and Java disagree on identical
