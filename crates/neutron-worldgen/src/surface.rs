@@ -561,6 +561,9 @@ impl BlockId {
             "small_dripleaf" => Some(Self::SmallDripleaf),
             "big_dripleaf" => Some(Self::BigDripleaf),
             "big_dripleaf_stem" => Some(Self::BigDripleafStem),
+            "red_mushroom_block" => Some(Self::RedMushroomBlock),
+            "brown_mushroom_block" => Some(Self::BrownMushroomBlock),
+            "mushroom_stem" => Some(Self::MushroomStem),
             // Infested variants are visually identical to their host block.
             "infested_stone" => Some(Self::Stone),
             "infested_cobblestone" => Some(Self::Cobblestone),
