@@ -672,6 +672,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "neutron-parity"
+version = "0.1.0"
+dependencies = [
+ "neutron-world",
+ "neutron-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "neutron-protocol"
 version = "0.1.0"
 dependencies = [

@@ -5,6 +5,7 @@ members = [
     "crates/neutron-protocol/fuzz",
     "crates/neutron-world",
     "crates/neutron-worldgen",
+    "crates/neutron-parity",
     "crates/neutron-server",
     "crates/neutron-bench-server",
     "crates/neutron-sim",
