@@ -604,20 +604,21 @@ mod tests {
         // worst chunks. spiral/world_origin remain selectable via env.
         let o = decoration_origin_order(3, 0, 0);
         assert_eq!(o.len(), 9);
-        // World centres (origin 0,0): distance² from (0,0) ascending,
-        // ties by local x then z (tuple sort).
+        // A 3x3 buffer at origin (0,0) lies entirely inside the inner
+        // forceload square ⇒ phase 0 for all origins ⇒ plain row-major
+        // (z outer, x fastest), matching ChunkPos.rangeClosed insertion.
         assert_eq!(
             o,
             vec![
-                (0, 0), // d²=128
-                (0, 1), // 640
-                (1, 0), // 640
-                (1, 1), // 1152
-                (0, 2), // 1664
-                (2, 0), // 1664
-                (1, 2), // 2176
-                (2, 1), // 2176
-                (2, 2), // 3200
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (0, 1),
+                (1, 1),
+                (2, 1),
+                (0, 2),
+                (1, 2),
+                (2, 2),
             ]
         );
     }
