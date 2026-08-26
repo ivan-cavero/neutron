@@ -4,6 +4,7 @@
 //! Replaces the per-example decoder zoo (24 private copies, 3 divergent
 //! biome unpackers) with one auditable implementation.
 
+pub mod cache;
 pub mod compare;
 pub mod refdata;
 pub mod report;

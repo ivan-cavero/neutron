@@ -30,8 +30,21 @@
    ledger keeps the historical `x,y,z,class,zone,vanilla,neutron` CSV format.
    Exit codes for gating: `--min-core PCT` -> 1 below threshold,
    `--strict` -> 2 on unmapped names or missing ref chunks.
+   Add `--cache DIR` to memoize generated chunks on disk: the key embeds an
+   xxh3 fingerprint over all of `crates/neutron-worldgen/src` (code AND
+   runtime-read datapack JSONs), so any generator change invalidates
+   automatically; warm re-scans drop from ~30 min to seconds and stay
+   byte-identical. The cache refuses to engage when any output-affecting
+   NEUTRON_* experiment flag is set.
    The legacy `region_parity` example still exists for continuity but the
    CLI above is canonical.
+
+2b. **Refactor protocol** — after reaching 100%, refactor freely but never
+   blind: run a full scan into `--json before.json`, refactor, rerun into
+   `after.json`, then `parity gate before.json after.json`. Exit 0 +
+   "cell-identical" means the refactor moved nothing; any divergence is
+   listed itemized (gap counts, percentages, worst chunks, unmapped names,
+   structure inventory).
 3. **JVM oracle** — `tools/worldgen-probe/src/Probe*.java` run the REAL
    vanilla feature classes against neutron-exported terrain dumps
    (draw-for-draw RNG traces). When Rust and Java disagree on identical

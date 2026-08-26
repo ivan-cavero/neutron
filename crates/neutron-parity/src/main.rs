@@ -13,6 +13,7 @@
 //! 2 --strict violations / decode errors. Deterministic: identical inputs ->
 //! identical stdout, JSON, CSV (gap order is total: count desc then key asc).
 
+use neutron_parity::cache::ChunkCache;
 use neutron_parity::compare::{compare_chunk, compare_chunk_biomes};
 use neutron_parity::refdata::{discover_dimension_dirs, DimSpec, RegionSet};
 use neutron_parity::{
@@ -35,6 +36,7 @@ struct Args {
     top_gaps: usize,
     refs: String,
     dim_name: String,
+    cache: Option<PathBuf>,
 }
 
 fn usage() -> ! {
@@ -61,6 +63,7 @@ fn parse_args() -> Args {
         refs: "tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region"
             .into(),
         dim_name: "overworld".into(),
+        cache: None,
     };
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
@@ -68,6 +71,7 @@ fn parse_args() -> Args {
         match arg.as_str() {
             "--ref" => a.refs = val(),
             "--dimension" => a.dim_name = val(),
+            "--cache" => a.cache = Some(PathBuf::from(val())),
             "--seed" => a.seed = val().parse().unwrap_or_else(|_| usage()),
             "--center" => {
                 let v = val();
@@ -182,6 +186,20 @@ fn main() {
     }
 
     let gen = ChunkGenerator::new(args.seed);
+    let chunk_cache: Option<std::sync::Arc<ChunkCache>> = args.cache.as_ref().and_then(|dir| {
+        let src_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../crates/neutron-worldgen/src")
+            .canonicalize()
+            .expect("worldgen src tree");
+        match ChunkCache::open(dir, &src_root) {
+            Some(c) => {
+                println!("CACHE -> {} (fp {:016x})", dir.display(), c.fingerprint());
+                Some(std::sync::Arc::new(c))
+            }
+            None => None,
+        }
+    });
+    let cache_hits = std::sync::atomic::AtomicU64::new(0);
     let mut acc = RegionAccumulator::default();
     let mut ledger_rows: u64 = 0;
     let mut protos_skipped: usize = 0;
@@ -194,18 +212,56 @@ fn main() {
     );
 
     for batch in coords.chunks(BATCH) {
+        let cache_ref = chunk_cache.clone();
         let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
             std::thread::scope(|s| {
                 let gen = &gen;
                 let mut handles = Vec::with_capacity(batch.len());
                 for &(ccx, ccz) in batch {
+                    let cache_chunk = cache_ref.clone();
                     handles.push(s.spawn(move || {
+                        if let Some(cc) = cache_chunk.as_deref() {
+                            let dim_cells = dim.cells();
+                            let biome_cells = (dim.quarts_y() * 16) as usize;
+                            if let Some(hit) = cc.load(args.seed, ccx, ccz, dim_cells, biome_cells)
+                            {
+                                return (
+                                    ccx,
+                                    ccz,
+                                    neutron_worldgen::GeneratedChunk {
+                                        blocks: hit.blocks,
+                                        biomes: hit.biomes,
+                                        heightmap: hit.heightmap,
+                                    },
+                                    true,
+                                );
+                            }
+                        }
                         let mut cache = NoiseCache::new();
                         let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
-                        (ccx, ccz, chunk)
+                        if let Some(cc) = cache_chunk.as_deref() {
+                            let _ = cc.store(
+                                args.seed,
+                                ccx,
+                                ccz,
+                                &chunk.blocks,
+                                &chunk.biomes,
+                                &chunk.heightmap,
+                            );
+                        }
+                        (ccx, ccz, chunk, false)
                     }));
                 }
-                handles.into_iter().map(|h| h.join().unwrap()).collect()
+                handles
+                    .into_iter()
+                    .map(|h| {
+                        let (cx, cz, ch, cached) = h.join().unwrap();
+                        if cached {
+                            cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        (cx, cz, ch)
+                    })
+                    .collect()
             });
         if args.scan_step > 0 {
             eprintln!("scan {}/{}", acc.chunks_compared as usize + generated.len(), coords.len());
