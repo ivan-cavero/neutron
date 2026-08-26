@@ -404,7 +404,14 @@ pub(crate) fn decoration_origin_order(
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
     let order =
-        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "spiral".into());
+        // Default = global ticket-wavefront approximation: refs pregenned with
+        // concentric forceload squares centred on the world origin decorate
+        // origins in ascending distance from (0,0), and cross-origin blob /
+        // tree overwrites resolve last-writer-wins in that order (agentH:
+        // granite/diorite/andesite swaps -76..-97% vs spawn-spiral). The old
+        // per-buffer centre-first "spiral" remains available as an explicit
+        // NEUTRON_SCULK_ORIGIN_ORDER=spiral for A/B measurement.
+        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "world_origin".into());
     match order.as_str() {
         "row" => {
             for czl in 0..chunks {
@@ -557,25 +564,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decoration_origin_order_is_set_initial_spawn_spiral() {
-        // Vanilla decorates spawn-area origins in the MinecraftServer
-        // setInitialSpawn square-spiral wavefront; region parity improved
-        // broadly (+0.06 12345) once this became the default.
+    fn decoration_origin_order_default_world_origin() {
+        // Default = `world_origin` ticket-wavefront approximation (canonical
+        // concentric-square pregen; agentH measured granite/diorite/andesite
+        // family swaps -76..-97% vs the old spawn-spiral default). Ties break
+        // x-then-z. The old per-buffer centre-first order remains selectable
+        // as NEUTRON_SCULK_ORIGIN_ORDER=spiral.
         let o = decoration_origin_order(3, 0, 0);
         assert_eq!(o.len(), 9);
-        assert_eq!(o[0], (1, 1), "center first");
+        // World centres (origin 0,0): distance² from (0,0) ascending,
+        // ties by local x then z (tuple sort).
         assert_eq!(
             o,
             vec![
-                (1, 1),
-                (2, 1),
-                (2, 2),
-                (1, 2),
-                (0, 2),
-                (0, 1),
-                (0, 0),
-                (1, 0),
-                (2, 0)
+                (0, 0), // d²=128
+                (0, 1), // 640
+                (1, 0), // 640
+                (1, 1), // 1152
+                (0, 2), // 1664
+                (2, 0), // 1664
+                (1, 2), // 2176
+                (2, 1), // 2176
+                (2, 2), // 3200
             ]
         );
     }
