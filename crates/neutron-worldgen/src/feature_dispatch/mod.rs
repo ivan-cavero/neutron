@@ -613,17 +613,31 @@ pub(crate) fn dispatch_configured(
                         }
                     }
                     BlockId::PaleMossCarpet => place_mossy_carpet(region, x, y, z),
-                    BlockId::ShortGrass => {
+                    BlockId::ShortGrass
+                    | BlockId::Dandelion
+                    | BlockId::Poppy
+                    | BlockId::Allium
+                    | BlockId::AzureBluet
+                    | BlockId::BlueOrchid
+                    | BlockId::Cornflower
+                    | BlockId::LilyOfTheValley
+                    | BlockId::OxeyeDaisy
+                    | BlockId::FireflyBush
+                    | BlockId::ClosedEyeblossom
+                    | BlockId::Azalea
+                    | BlockId::FloweringAzalea => {
                         // SimpleBlockFeature.place gates on Block.canSurvive:
-                        // ShortGrass is TallGrassBlock class → VegetationBlock
-                        // mayPlaceOn = below ∈ #supports_vegetation. Without the
-                        // gate we plant grass on any air cell (incl. cave walls
-                        // at y<0 where vanilla never does).
+                        // ShortGrass/flowers/eyeblossom/firefly_bush extend
+                        // VegetationBlock → mayPlaceOn = below ∈
+                        // #supports_vegetation; azalea → #supports_azalea.
+                        // Without the gate we plant them on any air cell
+                        // (incl. cave walls at y<0 where vanilla never does).
                         let cur = region.get(x, y, z);
+                        let azalea = matches!(block, BlockId::Azalea | BlockId::FloweringAzalea);
                         if matches!(cur, BlockId::Air | BlockId::CaveAir)
                             && is_in_tag(
                                 region.get(x, y - 1, z),
-                                "#minecraft:supports_vegetation",
+                                if azalea { "#minecraft:supports_azalea" } else { "#minecraft:supports_vegetation" },
                             )
                         {
                             region.set(x, y, z, block);
