@@ -1,87 +1,79 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 26 Aug 2026 (Linux box, env rebuilt from scratch).**
+> **Updated 26 Aug 2026 (Linux box).**
 
 ## Now
 
-Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1` +
-`PARITY_LEDGER=<csv>` (cell-exact TSV + GAPS ranking). Coverage = full-status
-chunks in the ref region dir.
+Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
++ `PARITY_LEDGER=<csv>`. Ref = canonical concentric-square 524-chunk world
+(`new-mc-version.sh`; old corner-quadrant refs are dead for measurement).
 
-| Ref | Parity | Notes |
-| --- | --- | --- |
-| 424242 (484-ch ref, corner-quadrant pregen) | spiral default **98.32%**, row order **~98.3%** (scan pending) | tree family dominates gap |
-| 424242 (concentric-square pregen — canonical) | re-baseline pending | matches neutron `spiral` wavefront |
+| Measurement | Value |
+| --- | --- |
+| 424242 r=1 center window | 98.10% → **98.18%** (SWDF/air-tag/env_scan/decorator-order/region-RNG/carpet) |
+| 424242 SCAN 524 chunks (pre-geode-fix) | **98.43%**, ledger 806k cells (`ledger_v3.csv`) |
+| 424242 SCAN 524 (post-geode-fix) | v4 scan running — update on land |
 
-## Ref procedure is part of the measurement (26 Aug finding)
+## Closed this session (git log has evidence)
 
-Decoration order embedded in a ref world depends on HOW chunks were loaded;
-neutron's origin order (`decoration_origin_order`, default `spiral`) must match it.
+- **SWDF floor predicate**: OCEAN_FLOOR = `blocks_motion()` only; leaf_litter
+  carpets raise WS above OF ⇒ depth 1 rejects tree attempts like vanilla
+  (predicates.rs `column_water_depth`).
+- **#air tag** includes cave_air (matching_block_tag shortcut + is_in_tag).
+- **env_scan out-of-world semantics**: immediate fail after leaving build
+  height, no final target re-check; top bound exclusive (`>= WORLD_TOP`).
+  Both call sites (feature_dispatch/mod.rs, feature_ports/sequence.rs).
+- **TreeDecorator.Context order**: java_hash_order FIRST on raw add order,
+  THEN stable Y sort of logs AND leaves (trunks sort was missing after hash).
+- **WorldGenRegion.random ported**: xoroshiro factory chain
+  `main.fromHashOf("minecraft:worldgen_region_random").forkPositional().at(minCorner)`
+  — validated draw-for-draw vs JVM probe (`region_random_dump` example +
+  ProbeRegionRandom). NOTE: XoroshiroRandomSource.nextBoolean = `(next&1)!=0`
+  (LOW bit override), NOT the interface default top-bit form.
+- **pale_moss_carpet placeAt** + topper dice from region random; BASE/topper
+  split as internal ids PaleMossCarpet/PaleMossCarpetTopper (same name out);
+  tall_grass DoublePlant (new BlockId::TallGrass=140, lower+upper cells,
+  below∈#dirt + air-above gate).
+- **GEODE root cause** (was ~29k cells): cell-pass branch polarity INVERTED
+  (layer chain ran when shell<outerCrust ⇒ only crack-air ever wrote) +
+  missing codec defaults distribution_points UniformInt(3,4)/point_offset(1,2)
+  + Cursor3D x-fastest pass order + Direction.values() DOWN-first crystal
+  faces. Stream alignment proven identical to JVM probe first (trace shows
+  same origin/points/crack_size); polarity fix recovered -205 cells in chunk
+  (-11,-1) alone. gif=2/step=2 CONFIRMED origin-invariant (agentF sweep).
 
-- Vanilla truth: chunk C's features see spillover (trees, leaf_litter carpets)
-  only from origins that decorated BEFORE C; gates read that state live:
-  SurfaceWaterDepthFilter (world_surface − ocean_floor > 0 rejects carpeted
-  cells) and would_survive (rejects on canopies). One gate flip desyncs the
-  whole step-9 RNG cascade → whole-tree displacement (~40% overplacement when
-  center decorates first against a row-pregenerated ref).
-- Old refs (81 chunks) = one centered forceload square → center-out ticket
-  wavefront ≈ `spiral` ✓. A 4-corner-quadrant pregen instead embeds per-row
-  sweeps → mismatched with spiral.
-- Canonical procedure now scripted: `tools/nbt-ref/new-mc-version.sh <ver>
-  <seed>` = RCON boot + ONE centered 16×16-chunk forceload square (256 =
-  vanilla command cap), settle, then one outer ring in 4 strips ≤256 each,
-  save-all flush, stop. Keep this stable across future refs/versions.
+## Order findings (do not reopen casually)
 
-## Environment (this box — rebuilt 25 Aug)
+No static NEUTRON_SCULK_ORIGIN_ORDER preset collapses worst chunks on the
+canonical ref (spiral/row/col within ±0.09% at (7,2),(8,0)). Vanilla's true
+order = ticket-scheduler interleave; ref-procedure dependence documented in
+commit c9bd433. coal_ore/gold_buried residual (~14k+ cells) is order-
+sensitivity of discard>0 ores (agentD: row order matched chunk (-10,6)
+exactly on the OLD ref).
 
-Rust 1.98 · Temurin 25 · vineflower 1.12 (decompiled src at
-`tools/mc-decompiler/output/26.2/src`) · refs via new-mc-version.sh.
-Probe classpath jar: `tools/nbt-ref/<name>/versions/26.2/server-26.2.jar`.
-Vanilla quirks hit: `randomTickSpeed` gamerule gone; forceload area cap 256
-chunks; RCON responses can lag minutes on big forceloads (fire-and-forget +
-poll world files works); `pause-when-empty-seconds=0` needed while pregenning.
+## Gap ranking (v3 ledger, pre-geode-fix; recount on v4)
 
-## Oracle fixes (26 Aug)
+trees displaced both ways ~250k · lush moss/clay-on-stone swaps ~60k (terrain
+desync poisoned attempts — agentB: divergence onset == first-ACCEPT index;
+corr(base-mismatch,lush-mismatch)=0.637) · granite/diorite/andesite mutual
+swaps ~20k · coal_ore 14k · short_grass/tall_grass/leaf_litter ~33k.
 
-- **ProbeDecorate seeded decoration with CHUNK coords** — vanilla
-  `setDecorationSeed` takes the chunk MIN-CORNER BLOCK coords
-  (`ChunkGenerator.java:327`). All old replay numbers were seed-desynced
-  (the "~27% fidelity" was this, not physics).
-  `tools/worldgen-probe/src/ProbeTreeAttempts.java` (block coords) reproduces
-  the ref exactly: pale_garden_vegetation 0/16 attempts survive (all dark_forest
-  biome), positions identical to neutron's draws cell-for-cell.
-- Neutron RNG/position chain verified exact vs Java for origin (112,32):
-  same 32 first positions both features; divergence starts at GATES reading
-  cross-origin state (SWDF drop on prior-origin litter at (126,79,35)).
+## Next
 
-## Gap ranking FULL SCAN 424242 (800k cells = 1.68% missing, corner-quadrant ref)
-
-lush moss/clay/stone swaps ~18% · dark_oak leaves+log ~15%+ · pale_oak ~18%+
-· short_grass/tall_grass/leaf_litter ~10% · cave_vines ~4% · coal_ore ~3.6%
-· oak ~3%. WORST chunks: (7,2),(2,10),(8,0),(3,10),(-1,-2).
-
-## Closed earlier (git log has evidence)
-
-spiral origin order sweep · ore skipped-draw fix · mineshaft side-exit ·
-step 3 ON · trapezoid dispatcher · trunk/foliage placer line-exact ports
-(DarkOakTrunkPlacer lean+branches, foliage skip logic, Plane.HORIZONTAL order)
-· placement chain (count→in_square→SWDF(0)→heightmap OF→biome) JSON-exact ·
-place_on_ground predicates now all-leaves faithful (commit 864cae3) ·
-vegetation patch placeGround return semantics (already-ground joins surface
-set) · would_survive = SUPPORTS_VEGETATION below only · OCEAN_FLOOR heightmap
-= blocksMotion() only, no fluid term (26.2).
+1. Land v4 number, recount families, commit.
+2. Lush swaps need BASE convergence inside caves (carver-level), prerequisite
+   for moss/clay/cave_vines recall.
+3. Tree displacement: needs ticket-wavefront simulation or per-area order
+   detection — biggest single lever left (~30% of gap).
+4. gold_buried residual rides along with any order work.
 
 ## Perf
 
 Single-chunk gen 11.5 s. `NEUTRON_STEP_TIMING=1` per-phase ms.
 
-## Next (one question)
+## Environment (this box)
 
-Re-baseline against the canonical concentric-square ref (regen running);
-expect tree-family gap to collapse if wavefront theory holds. Then rerun
-PARITY_SCAN ledger and re-rank. Lush clay/moss swap family (#1 by cells,
-scattered single-cell jitter at many Y bands) is next in line after trees —
-needs its own two-sided dump (probe `VegetationPatchFeature` surface scan on
-identical inputs). Do NOT trust old 12345/777 Windows-box numbers against
-new-procedure refs without regenerating those refs too.
+Rust 1.98 · Temurin 25 · vineflower 1.12 (src at tools/mc-decompiler/output/
+26.2/src) · probe classpath jar under tools/nbt-ref/vanilla-fresh-424242/
+versions/26.2/. Update playbook: docs/PARITY.md (+ worldgen-json-diff.sh).
