@@ -605,7 +605,7 @@ pub(crate) fn dispatch_configured(
                         // .mayPlaceOn = below ∈ #dirt (farmland never occurs
                         // in worldgen). Whole placement fails when the cell
                         // above is occupied (DoublePlantBlock branch).
-                        if is_in_tag(region.get(x, y - 1, z), "#minecraft:dirt")
+                        if is_in_tag(region.get(x, y - 1, z), "#minecraft:supports_vegetation")
                             && region.get(x, y + 1, z).is_air()
                         {
                             region.set(x, y, z, block);
