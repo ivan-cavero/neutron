@@ -207,6 +207,9 @@ pub(crate) fn is_in_tag(b: BlockId, tag: &str) -> bool {
                 || is_in_tag(b, "#minecraft:grass_blocks")
                 || is_in_tag(b, "#minecraft:mud")
         }
+        // PlantBlock.mayPlaceOn: below ∈ #supports_vegetation (26.2) =
+        // #substrate_overworld ∪ farmland (farmland never occurs in worldgen).
+        "supports_vegetation" => is_in_tag(b, "#minecraft:substrate_overworld"),
         "azalea_grows_on" => {
             is_in_tag(b, "#minecraft:substrate_overworld")
                 || is_in_tag(b, "#minecraft:sand")

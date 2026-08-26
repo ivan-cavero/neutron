@@ -613,6 +613,22 @@ pub(crate) fn dispatch_configured(
                         }
                     }
                     BlockId::PaleMossCarpet => place_mossy_carpet(region, x, y, z),
+                    BlockId::ShortGrass => {
+                        // SimpleBlockFeature.place gates on Block.canSurvive:
+                        // ShortGrass is TallGrassBlock class → VegetationBlock
+                        // mayPlaceOn = below ∈ #supports_vegetation. Without the
+                        // gate we plant grass on any air cell (incl. cave walls
+                        // at y<0 where vanilla never does).
+                        let cur = region.get(x, y, z);
+                        if matches!(cur, BlockId::Air | BlockId::CaveAir)
+                            && is_in_tag(
+                                region.get(x, y - 1, z),
+                                "#minecraft:supports_vegetation",
+                            )
+                        {
+                            region.set(x, y, z, block);
+                        }
+                    }
                     b => {
                         let cur = region.get(x, y, z);
                         if matches!(cur, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
