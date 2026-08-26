@@ -42,6 +42,7 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
     let c0z = region.origin_z.div_euclid(16);
     let c1x = c0x + region.chunks - 1;
     let c1z = c0z + region.chunks - 1;
+    let mut starts: Vec<(i32, i32, Vec<pieces::Piece>)> = Vec::new();
     for cz in (c0z - SEARCH_RADIUS)..=(c1z + SEARCH_RADIUS) {
         for cx in (c0x - SEARCH_RADIUS)..=(c1x + SEARCH_RADIUS) {
             if !is_mineshaft_chunk(state.seed, cx, cz) {
@@ -62,8 +63,18 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
             {
                 continue;
             }
-            place::place_pieces(region, &pieces, state);
+            starts.push((cx, cz, pieces));
         }
+    }
+    if starts.is_empty() {
+        return;
+    }
+    // Pass 1 — legacy pre-decoration skeleton (carve/supports/planks), kept
+    // byte-compatible with the closed layout parity work. Per-origin decor
+    // RNG (rails/cobwebs/torches/chest cart/spawner) is not ported yet;
+    // vanilla runs it inside each piece's postProcess.
+    for (_, _, pieces) in &starts {
+        place::place_pieces(region, pieces, state);
     }
 }
 
@@ -128,5 +139,21 @@ mod tests {
         }
         eprintln!("(5,-2) y<16 air={air}");
         assert!(air > 0, "mineshaft must carve air into (5,-2)");
+    }
+
+    /// Diagnostic: accepted mineshaft start chunks near the origin for a seed
+    /// (run `-- --nocapture`). Used to pick parity measurement windows.
+    #[test]
+    fn dump_start_chunks_424242() {
+        let mut hits = Vec::new();
+        for cz in -96..96 {
+            for cx in -96..96 {
+                if is_mineshaft_chunk(424242, cx, cz) {
+                    hits.push((cx, cz));
+                }
+            }
+        }
+        eprintln!("424242 mineshaft starts: {hits:?}");
+        assert!(!hits.is_empty());
     }
 }
