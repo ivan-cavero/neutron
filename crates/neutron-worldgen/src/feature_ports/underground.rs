@@ -747,14 +747,38 @@ pub(crate) fn place_geode(
     let base_crack_size = crack["base_crack_size"].as_f64().unwrap_or(2.0);
     let crack_point_offset = crack["crack_point_offset"].as_i64().unwrap_or(2) as i32;
 
-    let num_points = sample_int_provider(rng, &c["distribution_points"]);
+    // GeodeConfiguration codec defaults (GeodeConfiguration.java:36-38):
+    // outer_wall_distance UniformInt(4,5) · distribution_points UniformInt(3,4)
+    // · point_offset UniformInt(1,2). amethyst_geode.json omits them — a bare
+    // Null sample would yield num_points=0 and the geode never generates
+    // (every layer branch unreachable), which is exactly what the ref-vs-
+    // neutron ledger showed (smooth_basalt/calcite cells staying deepslate).
+    let dist_points_cfg = if c["distribution_points"].is_null() {
+        serde_json::json!({"type":"minecraft:uniform","min_inclusive":3,"max_inclusive":4})
+    } else {
+        c["distribution_points"].clone()
+    };
+    let point_offset_cfg = if c["point_offset"].is_null() {
+        serde_json::json!({"type":"minecraft:uniform","min_inclusive":1,"max_inclusive":2})
+    } else {
+        c["point_offset"].clone()
+    };
+    let outer_wall_cfg = if c["outer_wall_distance"].is_null() {
+        serde_json::json!({"type":"minecraft:uniform","min_inclusive":4,"max_inclusive":5})
+    } else {
+        c["outer_wall_distance"].clone()
+    };
+    let num_points = sample_int_provider(rng, &dist_points_cfg);
     // Legacy LCG noise (per-level seed, NOT the feature RNG).
     let mut legacy = crate::legacy_rng::LegacyRandom::new(state.seed);
     let f1 = legacy.next_long();
     let f2 = legacy.next_long();
     let noise = crate::noise::NormalNoise::create_legacy(f1, f2, -4, &[1.0]);
 
-    let outer_wall_max = c["outer_wall_distance"]["max_inclusive"].as_i64().unwrap_or(6) as f64;
+    let outer_wall_max = outer_wall_cfg["max_inclusive"]
+        .as_i64()
+        .or_else(|| outer_wall_cfg["value"]["max_inclusive"].as_i64())
+        .unwrap_or(5) as f64;
     let crack_size_adjustment = num_points as f64 / outer_wall_max;
     let inner_air = 1.0 / filling.sqrt();
     let innermost_block_layer = 1.0 / (inner_layer + crack_size_adjustment).sqrt();
@@ -769,9 +793,9 @@ pub(crate) fn place_geode(
     let invalid_threshold = c["invalid_blocks_threshold"].as_i64().unwrap_or(1) as i32;
     let mut num_invalid = 0;
     for _ in 0..num_points {
-        let px = x + sample_int_provider(rng, &c["outer_wall_distance"]);
-        let py = y + sample_int_provider(rng, &c["outer_wall_distance"]);
-        let pz = z + sample_int_provider(rng, &c["outer_wall_distance"]);
+        let px = x + sample_int_provider(rng, &outer_wall_cfg);
+        let py = y + sample_int_provider(rng, &outer_wall_cfg);
+        let pz = z + sample_int_provider(rng, &outer_wall_cfg);
         let b = region.get(px, py, pz);
         if b == BlockId::Air || b == BlockId::CaveAir || is_geode_invalid(b) {
             num_invalid += 1;
@@ -782,7 +806,7 @@ pub(crate) fn place_geode(
                 return;
             }
         }
-        points.push(([px, py, pz], sample_int_provider(rng, &c["point_offset"])));
+        points.push(([px, py, pz], sample_int_provider(rng, &point_offset_cfg)));
     }
     let mut crack_points: Vec<[i32; 3]> = Vec::new();
     if should_generate_crack {
@@ -797,6 +821,13 @@ pub(crate) fn place_geode(
         crack_points.push([x + cx, y + 7, z + cz]);
         crack_points.push([x + cx, y + 5, z + cz]);
         crack_points.push([x + cx, y + 1, z + cz]);
+    }
+    if std::env::var_os("NEUTRON_GEODE_TRACE").is_some() {
+        eprintln!(
+            "[geode] origin=({x},{y},{z}) num_points={num_points} crack_size={crack_size:.4} \
+             should_crack={should_generate_crack} points={:?} crack_points={:?}",
+            points, crack_points
+        );
     }
 
     let noise_multiplier = c["noise_multiplier"].as_f64().unwrap_or(0.05);
@@ -820,9 +851,11 @@ pub(crate) fn place_geode(
         .unwrap_or_default();
 
     let mut potential_crystals: Vec<[i32; 3]> = Vec::new();
-    for px in x + min_gen..=x + max_gen {
+    // BlockPos.betweenClosed iteration order: X fastest, then Y, Z slowest.
+    // The per-cell alternate/potential nextFloat draws depend on this order.
+    for pz in z + min_gen..=z + max_gen {
         for py in y + min_gen..=y + max_gen {
-            for pz in z + min_gen..=z + max_gen {
+            for px in x + min_gen..=x + max_gen {
                 let noise_offset = noise.get_value(px as f64, py as f64, pz as f64) * noise_multiplier;
                 let mut dist_sum_shell = 0.0;
                 for (pt, off) in &points {
@@ -834,29 +867,36 @@ pub(crate) fn place_geode(
                     let d = dist_sqr(px, py, pz, pt[0], pt[1], pt[2]);
                     dist_sum_crack += inv_sqrt(d + crack_point_offset as f64) + noise_offset;
                 }
+                // Vanilla polarity (GeodeFeature cell pass): the whole layer
+                // chain lives under `!(distSumShell < outerCrust)` — i.e.
+                // cells AT OR INSIDE the outer crust. The final `else if
+                // >= outerCrust` arm is REACHABLE (band between outerCrust
+                // and innerCrust) — it is not dead code.
                 if !(dist_sum_shell < outer_crust) {
-                    // outer shell untouched
-                } else if should_generate_crack && dist_sum_crack >= crack_size && dist_sum_shell < inner_air {
-                    safe_set_geode(region, px, py, pz, BlockId::Air);
-                } else if dist_sum_shell >= inner_air {
-                    safe_set_geode(region, px, py, pz, filling_block);
-                } else if dist_sum_shell >= innermost_block_layer {
-                    let use_alternate = rng.next_f32() < use_alternate_chance as f32;
-                    if use_alternate {
-                        safe_set_geode(region, px, py, pz, alternate_inner);
-                    } else {
-                        safe_set_geode(region, px, py, pz, inner_block);
+                    if should_generate_crack
+                        && dist_sum_crack >= crack_size
+                        && dist_sum_shell < inner_air
+                    {
+                        safe_set_geode(region, px, py, pz, BlockId::Air);
+                    } else if dist_sum_shell >= inner_air {
+                        safe_set_geode(region, px, py, pz, filling_block);
+                    } else if dist_sum_shell >= innermost_block_layer {
+                        let use_alternate = rng.next_f32() < use_alternate_chance as f32;
+                        if use_alternate {
+                            safe_set_geode(region, px, py, pz, alternate_inner);
+                        } else {
+                            safe_set_geode(region, px, py, pz, inner_block);
+                        }
+                        if (!require_alternate || use_alternate)
+                            && rng.next_f32() < use_potential_chance as f32
+                        {
+                            potential_crystals.push([px, py, pz]);
+                        }
+                    } else if dist_sum_shell >= inner_crust {
+                        safe_set_geode(region, px, py, pz, middle_block);
+                    } else if dist_sum_shell >= outer_crust {
+                        safe_set_geode(region, px, py, pz, outer_block);
                     }
-                    if (!require_alternate || use_alternate) && rng.next_f32() < use_potential_chance as f32 {
-                        potential_crystals.push([px, py, pz]);
-                    }
-                } else if dist_sum_shell >= inner_crust {
-                    safe_set_geode(region, px, py, pz, middle_block);
-                } else if dist_sum_shell >= outer_crust {
-                    // Vanilla's last branch is dead code (guarded above by the
-                    // negated `< outer_crust`) — kept verbatim; cells below
-                    // inner_crust keep the surrounding terrain, like vanilla.
-                    safe_set_geode(region, px, py, pz, outer_block);
                 }
             }
         }
@@ -877,13 +917,15 @@ pub(crate) fn place_geode(
     }
 }
 
+/// `Direction.values()` order: DOWN, UP, NORTH, SOUTH, WEST, EAST — the face
+/// priority of geode crystal placement (first attachable side wins).
 const DIRS_6: [(i32, i32, i32); 6] = [
-    (0, 1, 0),
     (0, -1, 0),
+    (0, 1, 0),
     (0, 0, -1),
-    (1, 0, 0),
     (0, 0, 1),
     (-1, 0, 0),
+    (1, 0, 0),
 ];
 
 fn dist_sqr(x1: i32, y1: i32, z1: i32, x2: i32, y2: i32, z2: i32) -> f64 {
