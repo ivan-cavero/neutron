@@ -119,6 +119,16 @@ pub struct WorldgenState {
 }
 
 impl WorldgenState {
+    /// `WorldGenRegion.random` for a decorated chunk origin:
+    /// `main.fromHashOf("minecraft:worldgen_region_random").forkPositional()`
+    /// `.at(originMinBlockX, 0, originMinBlockZ)` — WorldGenRegion.java:89,
+    /// XoroshiroRandomSource.XoroshiroPositionalRandomFactory.at.
+    pub fn region_random(&self, ox0: i32, oz0: i32) -> crate::rng::Xoroshiro128 {
+        crate::positional::PositionalRandomFactory::new(self.main_lo, self.main_hi)
+            .from_hash_of_positional("minecraft:worldgen_region_random")
+            .at(ox0, 0, oz0)
+    }
+
     /// Create the full overworld state for a seed.
     pub fn overworld(seed: i64) -> Self {
         let mut reg = DensityRegistry::build();

@@ -262,10 +262,12 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::Water
             | BlockId::Lava
             | BlockId::ShortGrass
+            | BlockId::TallGrass
             | BlockId::LeafLitter
             | BlockId::Snow
             | BlockId::PowderSnow
             | BlockId::PaleMossCarpet
+            | BlockId::PaleMossCarpetTopper
             | BlockId::MossCarpet
             | BlockId::CaveVines
             | BlockId::CaveVinesPlant

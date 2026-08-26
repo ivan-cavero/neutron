@@ -19,6 +19,7 @@ pub const GOLDEN_RATIO_64: u64 = 0x9E37_79B9_7F4A_7C15; // -7046029254386353131
 pub const SILVER_RATIO_64: u64 = 0x6A09_E667_F3BC_C909; // 7640891576956012809
 
 /// XORoshiro128++ PRNG matching Minecraft's Java implementation exactly.
+#[derive(Clone)]
 pub struct Xoroshiro128 {
     seed_lo: u64,
     seed_hi: u64,
@@ -67,6 +68,13 @@ impl Xoroshiro128 {
     /// Raw `nextLong()` as signed.
     pub fn next_long(&mut self) -> i64 {
         self.next_u64() as i64
+    }
+
+    /// Java `XoroshiroRandomSource.nextBoolean()` — overridden in 26.2 as
+    /// `(nextLong() & 1L) != 0` (LOW bit; the RandomSource interface default
+    /// would use the top bit via nextBits(1), but this class overrides it).
+    pub fn next_boolean(&mut self) -> bool {
+        (self.next_u64() & 1) != 0
     }
 
     /// Java `RandomSource.nextInt()` -- the low 32 bits of `nextLong()`.

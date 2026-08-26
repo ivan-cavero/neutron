@@ -137,6 +137,14 @@ pub enum BlockId {
     /// Mineshaft / monster-room / lake "air" (`Blocks.CAVE_AIR`). Behaves as
     /// air everywhere (`is_air`, heightmaps, placement gates).
     CaveAir = 139,
+    /// Double tall grass (`Blocks.TALL_GRASS`, lower+upper halves share the
+    /// block id — the half property is not modeled; parity compares names).
+    TallGrass = 140,
+    /// pale_moss_carpet TOPPER layer (`BASE=false`, no collision). Same vanilla
+    /// block name as [`BlockId::PaleMossCarpet`] (which models the BASE layer);
+    /// the split exists so MossyCarpetBlock.placeAt's stacking gate and topper
+    /// dice match vanilla when carpets pile up.
+    PaleMossCarpetTopper = 141,
 }
 
 impl BlockId {
@@ -269,6 +277,8 @@ impl BlockId {
             137 => Some(Self::BigDripleaf),
             138 => Some(Self::BigDripleafStem),
             139 => Some(Self::CaveAir),
+            140 => Some(Self::TallGrass),
+            141 => Some(Self::PaleMossCarpetTopper),
             _ => None,
         }
     }
@@ -286,6 +296,8 @@ impl BlockId {
         match self {
             Self::Air => "minecraft:air",
             Self::CaveAir => "minecraft:cave_air",
+            Self::TallGrass => "minecraft:tall_grass",
+            Self::PaleMossCarpet | Self::PaleMossCarpetTopper => "minecraft:pale_moss_carpet",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
             Self::Diorite => "minecraft:diorite",
@@ -476,7 +488,8 @@ impl BlockId {
             "sculk_sensor" => Some(Self::SculkSensor),
             "sculk_shrieker" => Some(Self::SculkShrieker),
             "moss_block" => Some(Self::MossBlock),
-            "short_grass" | "grass" | "tall_grass" => Some(Self::ShortGrass),
+            "short_grass" | "grass" => Some(Self::ShortGrass),
+            "tall_grass" => Some(Self::TallGrass),
             "leaf_litter" => Some(Self::LeafLitter),
             "dark_oak_log" => Some(Self::DarkOakLog),
             "dark_oak_leaves" => Some(Self::DarkOakLeaves),
@@ -672,6 +685,8 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::BigDripleaf => "minecraft:big_dripleaf",
         BlockId::BigDripleafStem => "minecraft:big_dripleaf_stem",
         BlockId::CaveAir => "minecraft:cave_air",
+        BlockId::TallGrass => "minecraft:tall_grass",
+        BlockId::PaleMossCarpet | BlockId::PaleMossCarpetTopper => "minecraft:pale_moss_carpet",
     }
 }
 

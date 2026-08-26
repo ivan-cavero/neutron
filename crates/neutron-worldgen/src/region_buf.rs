@@ -26,6 +26,14 @@ pub struct RegionBuf {
     pub biomes: Vec<Option<Vec<u8>>>,
     /// Chunks on a side (side / 16).
     pub chunks: i32,
+    /// Vanilla `WorldGenRegion.random`: ONE xoroshiro stream per decorated
+    /// origin pass, seeded at the origin's min block corner through the
+    /// `minecraft:worldgen_region_random` positional factory (WorldGenRegion
+    /// ctor → RandomState.getOrCreateRandomFactory). Set at the start of every
+    /// `apply_step_origin` pass; consumed by `level.getRandom()` callers —
+    /// today only MossyCarpetBlock.placeAt topper dice.
+    pub(crate) region_random:
+        std::cell::RefCell<Option<crate::rng::Xoroshiro128>>,
 }
 
 impl RegionBuf {
@@ -43,7 +51,23 @@ impl RegionBuf {
             heightmaps: vec![vec![WORLD_BOTTOM as i16; HEIGHTMAP_SIZE]; (chunks * chunks) as usize],
             biomes: vec![None; (chunks * chunks) as usize],
             chunks,
+            region_random: std::cell::RefCell::new(None),
         }
+    }
+
+    /// Install the per-pass region random (called once per origin pass).
+    pub(crate) fn set_region_random(&mut self, rng: crate::rng::Xoroshiro128) {
+        *self.region_random.borrow_mut() = Some(rng);
+    }
+
+    /// Run `f` with the live region random, if installed. Returns None when
+    /// no pass installed one (feature paths outside decoration).
+    pub(crate) fn with_region_random<R>(
+        &self,
+        f: impl FnOnce(&mut crate::rng::Xoroshiro128) -> R,
+    ) -> Option<R> {
+        let mut r = self.region_random.borrow_mut();
+        r.as_mut().map(f)
     }
 
     #[inline]

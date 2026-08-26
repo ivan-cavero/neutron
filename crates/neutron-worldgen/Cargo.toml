@@ -63,6 +63,9 @@ name = "parity_multi"
 name = "region_parity"
 
 [[example]]
+name = "region_random_dump"
+
+[[example]]
 name = "sculk_cave"
 
 [[example]]

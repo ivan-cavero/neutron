@@ -95,6 +95,10 @@ pub(crate) fn apply_step_origin(
     }
     merged.sort_by_key(|(i, _)| *i);
     let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
+    // Vanilla's WorldGenRegion.random is created fresh for THIS origin's
+    // decoration pass (WorldGenRegion ctor seeds it at the origin min corner)
+    // and survives across every feature of the pass.
+    region.set_region_random(state.region_random(ox0, oz0));
     let saved =
         crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
     if list.is_empty() {
@@ -481,6 +485,78 @@ pub(crate) fn place_placed_feature_step(
     }
 }
 
+/// `#minecraft:replaceable` subset reachable in the decoration buffer
+/// (`BlockState.canBeReplaced` gate of createTopperWithSideChance).
+fn can_be_replaced(b: BlockId) -> bool {
+    matches!(
+        b,
+        BlockId::Air
+            | BlockId::CaveAir
+            | BlockId::Water
+            | BlockId::Lava
+            | BlockId::ShortGrass
+            | BlockId::TallGrass
+            | BlockId::LeafLitter
+            | BlockId::Vine
+            | BlockId::MossCarpet
+            | BlockId::GlowLichen
+            | BlockId::Snow
+            | BlockId::PowderSnow
+    )
+}
+
+/// `MossyCarpetBlock.placeAt(level, pos, level.getRandom(), 2)` — decompile
+/// MossyCarpetBlock.java:143-155 + createTopperWithSideChance:166-192.
+///
+/// The region buffer stores block ids only, so the LOW/TALL side-face
+/// properties are not modeled; what matters for parity and for RNG-stream
+/// fidelity is (a) WHICH cells end up with pale_moss_carpet and (b) exactly
+/// how many `nextBoolean` draws the topper consumes from WorldGenRegion.random
+/// (one per surviving side face, NORTH/EAST/SOUTH/WEST order).
+fn place_mossy_carpet(region: &mut RegionBuf, x: i32, y: i32, z: i32) {
+    // canSurvive(BASE=true): below must be non-air.
+    if region.get(x, y - 1, z).is_air() {
+        return;
+    }
+    // setBlock(pos, getUpdatedState(default BASE layer)) — sides are LOW where
+    // horizontal neighbours are full-cube faces; id unchanged.
+    region.set(x, y, z, BlockId::PaleMossCarpet);
+
+    // createTopperWithSideChance gate: `(!isCarpetAbove || !above.BASE) &&
+    // (isCarpetAbove || above.canBeReplaced())`. The BASE/topper split lets
+    // stacked carpets behave like vanilla: a BASE layer above blocks the
+    // topper (and its dice), a topper layer above allows it.
+    let above = region.get(x, y + 1, z);
+    if above == BlockId::PaleMossCarpet {
+        return;
+    }
+    if above != BlockId::PaleMossCarpetTopper && !can_be_replaced(above) {
+        return;
+    }
+    // aboveState = getUpdatedState(BASE=false, pos.above(), createSides=true):
+    // sides LOW where the neighbour OF THE ABOVE CELL is a full-cube face.
+    let mut sides = [false; 4]; // Plane.HORIZONTAL: N(-Z), E(+X), S(+Z), W(-X)
+    for (i, (dx, dz)) in [(0i32, -1i32), (1, 0), (0, 1), (-1, 0)].iter().enumerate() {
+        if blocks_motion(region.get(x + dx, y + 1, z + dz)) {
+            sides[i] = true;
+        }
+    }
+    // One random.nextBoolean() per surviving side keeps or drops it; these
+    // dice come from WorldGenRegion.random, NOT the decoration stream.
+    let mut kept = false;
+    for side in &mut sides {
+        if *side && !region.with_region_random(|r| r.next_boolean()).unwrap_or(false) {
+            *side = false;
+        }
+        kept |= *side;
+    }
+    // hasFaces(aboveState) && aboveState != previous ⇒ place the topper (a
+    // BASE=false layer); the bottom layer's sides become TALL under it.
+    if kept {
+        region.set(x, y + 1, z, BlockId::PaleMossCarpetTopper);
+    }
+}
+
 /// Dispatch by configured_feature.type
 pub(crate) fn dispatch_configured(
     rng: &mut FeatureRandom,
@@ -495,21 +571,50 @@ pub(crate) fn dispatch_configured(
     let ty = cfg["type"].as_str().unwrap_or("");
     match ty {
         "minecraft:simple_block" => {
-            // SimpleBlockFeature.place: canSurvive then setBlock — not an air
-            // check. Waterlogged dripleaf replaces water. DoublePlantBlock
-            // (small dripleaf) also needs empty above, then placeAt both halves.
+            // SimpleBlockFeature.place (26.2): sample `to_place` first (the
+            // weighted provider consumes RNG even when the attempt is later
+            // rejected), gate on canSurvive, then per-block-class placement:
+            //   TallGrass (DoublePlantBlock)  → below ∈ #dirt + air above,
+            //                                    writes lower AND upper half
+            //   PaleMossCarpet (MossyCarpet)  → MossyCarpetBlock.placeAt with
+            //                                    topper dice from
+            //                                    WorldGenRegion.random
+            //   SmallDripleaf                 → waterlogged-capable double
+            //                                    plant (existing port)
+            //   everything else               → plain setBlock behind the
+            //                                    historical air/water guard
             if let Some(block) = block_from_to_place(rng, &cfg["config"]["to_place"]) {
-                let cur = region.get(x, y, z);
-                if matches!(cur, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
-                    if block == BlockId::SmallDripleaf {
-                        if region.get(x, y + 1, z).is_air()
-                            && small_dripleaf_may_place_on(region.get(x, y - 1, z), cur)
+                match block {
+                    BlockId::TallGrass => {
+                        // TallGrassBlock.canSurvive = VegetationBlock
+                        // .mayPlaceOn = below ∈ #dirt (farmland never occurs
+                        // in worldgen). Whole placement fails when the cell
+                        // above is occupied (DoublePlantBlock branch).
+                        if is_in_tag(region.get(x, y - 1, z), "#minecraft:dirt")
+                            && region.get(x, y + 1, z).is_air()
                         {
                             region.set(x, y, z, block);
                             region.set(x, y + 1, z, block);
                         }
-                    } else {
-                        region.set(x, y, z, block);
+                    }
+                    BlockId::PaleMossCarpet => place_mossy_carpet(region, x, y, z),
+                    b => {
+                        let cur = region.get(x, y, z);
+                        if matches!(cur, BlockId::Air | BlockId::CaveAir | BlockId::Water) {
+                            if b == BlockId::SmallDripleaf {
+                                if region.get(x, y + 1, z).is_air()
+                                    && small_dripleaf_may_place_on(
+                                        region.get(x, y - 1, z),
+                                        cur,
+                                    )
+                                {
+                                    region.set(x, y, z, b);
+                                    region.set(x, y + 1, z, b);
+                                }
+                            } else {
+                                region.set(x, y, z, b);
+                            }
+                        }
                     }
                 }
             }
