@@ -13,7 +13,8 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | --- | --- |
 | 424242 r=1 center window | 98.10% → **98.18%** (SWDF/air-tag/env_scan/decorator-order/region-RNG/carpet) |
 | 424242 SCAN 524 chunks (pre-geode-fix) | 98.43%, ledger 806k cells (`ledger_v3.csv`) |
-| 424242 SCAN 524 chunks (post-geode-fix) | **98.52%**, ledger 764,064 cells (`ledger_v4.csv`) — geode fix recovered ~42k cells |
+| 424242 SCAN 524 (geode+world_origin) | 98.52% / 764k (`ledger_v4`) |
+| 424242 SCAN 524 (canonical_pregen order + huge_mushroom) | **98.62%**, ledger 713,256 cells (`ledger_v6.csv`) |
 
 ## Closed this session (git log has evidence)
 
@@ -59,16 +60,24 @@ desync poisoned attempts — agentB: divergence onset == first-ACCEPT index;
 corr(base-mismatch,lush-mismatch)=0.637) · granite/diorite/andesite mutual
 swaps ~20k · coal_ore 14k · short_grass/tall_grass/leaf_litter ~33k.
 
+## Causal chain proven this session
+
+Streams align draw-for-draw when inputs match (oracle traces). Remaining
+displacement = gate-input flips from upstream terrain microdiffs:
+CARVER edges → ore discard coins (coal/gold_buried) & blob overlap winners
+→ cave-floor/surface changes → lush first-accept + tree would_survive/SWDF
+flips → whole-feature cascades. Order experiments (spiral/world_origin/
+canonical_pregen/NO_MASK) shift ±0.1-0.4% per window; canonical_pregen
+(faithful to new-mc-version.sh phases) is the best global default.
+
 ## Next
 
-1. ~~Land v4~~ DONE: **98.52% / 764k cells**.
-2. Lush swaps need BASE convergence inside caves (carver-level), prerequisite
-   for moss/clay/cave_vines recall.
-3. Tree displacement: needs ticket-wavefront simulation or per-area order
-   detection — biggest single lever left (~30% of gap). air-family rows are
-   mostly tree displacement both directions (agentF-style attribution).
-4. gold_buried residual rides along with any order work.
-5. Re-run `cargo test --workspace` before any push.
+1. Carver edge parity (noodle/cheese/canyon) — THE bottleneck feeding
+   everything else. Characterize which carver + how many edge cells first.
+2. Ruined portals unported (~800 cells at (7,2) alone; netherrack/stone-
+   brick/interior air). Port structure family after carvers.
+3. Lush swaps follow from (1).
+4. Re-run `cargo test --workspace` before any push.
 
 ## Perf
 
