@@ -12,8 +12,8 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | Measurement | Value |
 | --- | --- |
 | 424242 r=1 center window | 98.10% → **98.18%** (SWDF/air-tag/env_scan/decorator-order/region-RNG/carpet) |
-| 424242 SCAN 524 chunks (pre-geode-fix) | **98.43%**, ledger 806k cells (`ledger_v3.csv`) |
-| 424242 SCAN 524 (post-geode-fix) | v4 scan running — update on land |
+| 424242 SCAN 524 chunks (pre-geode-fix) | 98.43%, ledger 806k cells (`ledger_v3.csv`) |
+| 424242 SCAN 524 chunks (post-geode-fix) | **98.52%**, ledger 764,064 cells (`ledger_v4.csv`) — geode fix recovered ~42k cells |
 
 ## Closed this session (git log has evidence)
 
@@ -61,12 +61,14 @@ swaps ~20k · coal_ore 14k · short_grass/tall_grass/leaf_litter ~33k.
 
 ## Next
 
-1. Land v4 number, recount families, commit.
+1. ~~Land v4~~ DONE: **98.52% / 764k cells**.
 2. Lush swaps need BASE convergence inside caves (carver-level), prerequisite
    for moss/clay/cave_vines recall.
 3. Tree displacement: needs ticket-wavefront simulation or per-area order
-   detection — biggest single lever left (~30% of gap).
+   detection — biggest single lever left (~30% of gap). air-family rows are
+   mostly tree displacement both directions (agentF-style attribution).
 4. gold_buried residual rides along with any order work.
+5. Re-run `cargo test --workspace` before any push.
 
 ## Perf
 
