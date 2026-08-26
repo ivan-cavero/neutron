@@ -34,6 +34,13 @@ pub struct RegionBuf {
     /// today only MossyCarpetBlock.placeAt topper dice.
     pub(crate) region_random:
         std::cell::RefCell<Option<crate::rng::Xoroshiro128>>,
+    /// Writer-attribution plane, parallel to `blocks`: id of the feature that
+    /// last wrote each cell. Allocated only when NEUTRON_WRITERS=1 at
+    /// RegionBuf construction (zero cost otherwise). See [`crate::writers`].
+    pub writers: Option<Vec<u16>>,
+    /// Id of the feature/stage currently running; stamped by drivers and by
+    /// dispatch_configured. Default TERRAIN.
+    pub current_writer: u16,
 }
 
 impl RegionBuf {
@@ -43,6 +50,10 @@ impl RegionBuf {
         let origin_x = (center_cx - radius) * 16;
         let origin_z = (center_cz - radius) * 16;
         let volume = (side as usize) * ((WORLD_TOP - WORLD_BOTTOM) as usize) * (side as usize);
+        // Read once per buffer: attribution is a process-level opt-in.
+        static WRITERS_ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        let attribution =
+            *WRITERS_ON.get_or_init(|| std::env::var_os("NEUTRON_WRITERS").is_some());
         Self {
             origin_x,
             origin_z,
@@ -52,6 +63,8 @@ impl RegionBuf {
             biomes: vec![None; (chunks * chunks) as usize],
             chunks,
             region_random: std::cell::RefCell::new(None),
+            writers: attribution.then(|| vec![crate::writers::TERRAIN; volume]),
+            current_writer: crate::writers::TERRAIN,
         }
     }
 
@@ -97,10 +110,34 @@ impl RegionBuf {
     pub fn set(&mut self, x: i32, y: i32, z: i32, b: BlockId) {
         if let Some(i) = self.index(x, y, z) {
             self.blocks[i] = b.as_u16();
+            if let Some(w) = &mut self.writers {
+                w[i] = self.current_writer;
+            }
         }
         if crate::sculk::SET_TRACE.load(std::sync::atomic::Ordering::Relaxed) {
             eprintln!("W {x},{y},{z} {}", b.block_name());
         }
+    }
+
+    /// Extract the writer plane for one chunk column (same layout as blocks).
+    /// Returns None when attribution is disabled.
+    pub fn take_chunk_writers(&self, cx: i32, cz: i32) -> Option<Vec<u16>> {
+        let plane = self.writers.as_ref()?;
+        let base_x = cx * 16;
+        let base_z = cz * 16;
+        let mut out = vec![crate::writers::TERRAIN; CHUNK_BLOCK_VOLUME];
+        for y in WORLD_BOTTOM..WORLD_TOP {
+            for z in 0..16i32 {
+                for x in 0..16i32 {
+                    if let Some(i) = self.index(base_x + x, y, base_z + z) {
+                        let dst =
+                            ((y - WORLD_BOTTOM) as usize) * 256 + (z as usize) * 16 + x as usize;
+                        out[dst] = plane[i];
+                    }
+                }
+            }
+        }
+        Some(out)
     }
 
     /// Store a chunk's quart biome grid (see `generate_noise_and_surface`).

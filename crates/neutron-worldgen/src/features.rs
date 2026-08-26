@@ -54,6 +54,7 @@ pub(crate) fn apply_underground_ores_origin(
     undecorated: &[(i32, i32)],
 ) {
     let state = WorldgenState::overworld(level_seed);
+    region.current_writer = crate::writers::MASK;
     let saved = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
     static ORES: std::sync::OnceLock<Vec<FeatureDef>> = std::sync::OnceLock::new();
     let ores = ORES.get_or_init(load_overworld_ores);
@@ -64,9 +65,16 @@ pub(crate) fn apply_underground_ores_origin(
         if matches!(def.gate, BiomeGate::Off) {
             continue;
         }
+        region.current_writer = match &def.kind {
+            FeatureKind::Ore(_) => crate::writers::ORE,
+            FeatureKind::Disk(_) => crate::writers::DISK,
+            FeatureKind::UnderwaterMagma { .. } => crate::writers::UNDERWATER_MAGMA,
+        };
         place_feature(&mut rng, region, &state, origin_min_x, origin_min_z, def);
     }
+    region.current_writer = crate::writers::MASK;
     crate::sculk::restore_masked(region, saved);
+    region.current_writer = crate::writers::TERRAIN;
 }
 
 // ---------------------------------------------------------------------------

@@ -39,6 +39,7 @@ pub mod surface;
 pub mod surface_rules;
 pub mod tree;
 pub mod worldgen;
+pub mod writers;
 
 /// Compatibility alias for [`biome::manager`].
 pub use biome::manager as biome_manager;

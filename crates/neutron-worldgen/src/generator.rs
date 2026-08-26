@@ -293,6 +293,10 @@ pub struct GeneratedChunk {
     pub biomes: Vec<u8>,
     /// Highest non-air block Y per column (index = z*16+x).
     pub heightmap: Vec<i16>,
+    /// Parallel to `blocks`: last-writer feature id per cell
+    /// ([`crate::writers`]). Some only when NEUTRON_WRITERS=1 at process
+    /// start; parity attribution consumes this, everything else ignores it.
+    pub writers: Option<Vec<u16>>,
 }
 
 impl GeneratedChunk {
@@ -371,14 +375,18 @@ impl ChunkGenerator {
         }
 
         // Classic carvers (caves + canyon).
+        region.current_writer = crate::writers::CARVER;
         carvers::apply_carvers_region(&mut region, &self.state);
+        region.current_writer = crate::writers::TERRAIN;
         let t_carve = t_all.elapsed().as_millis();
         if prof {
             eprintln!("[gen-timing] carvers={}ms", t_carve - t_noise);
         }
         // Structure pieces (mineshafts) are part of the CARVERS status — placed
         // once over the region before decoration, visible to every origin.
+        region.current_writer = crate::writers::MINESHAFT;
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
+        region.current_writer = crate::writers::TERRAIN;
         if prof {
             eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);
         }
@@ -410,10 +418,12 @@ impl ChunkGenerator {
             .collect();
         crate::generator::decorate_region_origin_major(&mut region, &self.state, &inner, (cx, cz));
         let (blocks, heightmap) = region.take_chunk(cx, cz);
+        let writers = region.take_chunk_writers(cx, cz);
         GeneratedChunk {
             blocks,
             biomes: center_biomes,
             heightmap,
+            writers,
         }
     }
 

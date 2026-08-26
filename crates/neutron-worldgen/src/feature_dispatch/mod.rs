@@ -105,7 +105,10 @@ pub(crate) fn apply_step_origin(
         // the tree/lush displacement is gate-visibility driven.
         Vec::new()
     } else {
-        crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL)
+        region.current_writer = crate::writers::MASK;
+        let s = crate::sculk::mask_undecorated_output(region, undecorated, crate::sculk::FAMILY_ALL);
+        region.current_writer = crate::writers::TERRAIN;
+        s
     };
     if list.is_empty() {
         // fall back to primary list if no biome matched
@@ -113,7 +116,9 @@ pub(crate) fn apply_step_origin(
     } else {
         place_feature_list(region, state, level_seed, ox0, oz0, gen_step, &list);
     }
+    region.current_writer = crate::writers::MASK;
     crate::sculk::restore_masked(region, saved);
+    region.current_writer = crate::writers::TERRAIN;
 }
 
 /// Biomes present in the sections of the 3×3 chunk neighbourhood of origin
@@ -575,6 +580,10 @@ pub(crate) fn dispatch_configured(
     gen_step: i32,
 ) {
     let ty = cfg["type"].as_str().unwrap_or("");
+    // Writer attribution: every dispatched feature stamps its family before
+    // placing; recursive selectors (random_selector etc.) re-stamp with the
+    // inner configured type for free precision.
+    region.current_writer = crate::writers::for_configured_type(ty);
     match ty {
         "minecraft:simple_block" => {
             // SimpleBlockFeature.place (26.2): sample `to_place` first (the

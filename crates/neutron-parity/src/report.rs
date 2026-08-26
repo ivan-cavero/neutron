@@ -91,6 +91,14 @@ pub struct WorstChunkJson {
 }
 
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct WriterOffenderJson {
+    pub writer: String,
+    /// Vanilla class path relative to the decompile root ("" = internal).
+    pub java: String,
+    pub mismatched_cells: u64,
+}
+
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct Summary {
     pub meta: RunMeta,
     pub blocks: MetricsJson,
@@ -98,6 +106,9 @@ pub struct Summary {
     pub biomes: Option<BiomesJson>,
     pub gaps: Vec<GapJson>,
     pub worst_chunks: Vec<WorstChunkJson>,
+    /// Mismatched cells per responsible feature writer, worst first.
+    /// Empty when the run didn't use --writers.
+    pub top_writers: Vec<WriterOffenderJson>,
     /// Vanilla names our palette cannot represent — the upgrade-day signal.
     /// Empty list == no version drift detected.
     pub unmapped_vanilla_names: Vec<String>,
@@ -139,6 +150,17 @@ pub fn build_summary(
             .take(top_worst)
             .map(|(&(cx, cz), n)| WorstChunkJson { cx, cz, mismatches: *n })
             .collect(),
+        top_writers: {
+            let mut w: Vec<(&String, &u64)> = acc.gaps_by_writer.iter().collect();
+            w.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+            w.into_iter()
+                .map(|(name, n)| WriterOffenderJson {
+                    writer: name.clone(),
+                    java: neutron_worldgen::writers::java_by_name(name).to_string(),
+                    mismatched_cells: *n,
+                })
+                .collect()
+        },
         unmapped_vanilla_names: acc.unmapped_vanilla.iter().cloned().collect(),
         meta,
     }
@@ -152,13 +174,20 @@ pub fn write_json(path: &std::path::Path, s: &Summary) -> std::io::Result<()> {
 
 /// Historical ledger format kept byte-compatible:
 /// `x,y,z,class,zone,vanilla,neutron` with class in {missing,extra,wrong}.
+/// Under attribution two extra columns are appended:
+/// `writer_id,writer`.
 pub fn write_ledger_csv(path: &std::path::Path, rows: &[LedgerRow]) -> std::io::Result<u64> {
     use std::io::{BufWriter, Write};
     let f = std::fs::File::create(path)?;
     let mut w = BufWriter::new(f);
-    writeln!(w, "x,y,z,class,zone,vanilla,neutron")?;
+    let with_writer = rows.iter().any(|r| r.writer.is_some());
+    if with_writer {
+        writeln!(w, "x,y,z,class,zone,vanilla,neutron,writer_id,writer")?;
+    } else {
+        writeln!(w, "x,y,z,class,zone,vanilla,neutron")?;
+    }
     for r in rows {
-        writeln!(
+        write!(
             w,
             "{},{},{},{},{},{},{}",
             r.wx,
@@ -172,6 +201,13 @@ pub fn write_ledger_csv(path: &std::path::Path, rows: &[LedgerRow]) -> std::io::
             r.vanilla,
             r.neutron
         )?;
+        if with_writer {
+            match &r.writer {
+                Some((id, name)) => write!(w, ",{id},{name}")?,
+                None => write!(w, ",,", )?,
+            }
+        }
+        writeln!(w)?;
     }
     w.flush()?;
     Ok(rows.len() as u64)
@@ -243,6 +279,19 @@ pub fn gate_diff(base: &Summary, new: &Summary) -> Vec<String> {
     if bw != nw {
         d.push(format!("worst_chunks changed: {bw:?} -> {nw:?}"));
     }
+    let bwt: Vec<_> = base
+        .top_writers
+        .iter()
+        .map(|w| (w.writer.clone(), w.mismatched_cells))
+        .collect();
+    let nwt: Vec<_> = new
+        .top_writers
+        .iter()
+        .map(|w| (w.writer.clone(), w.mismatched_cells))
+        .collect();
+    if bwt != nwt {
+        d.push(format!("top_writers changed: {bwt:?} -> {nwt:?}"));
+    }
     if base.unmapped_vanilla_names != new.unmapped_vanilla_names {
         d.push(format!(
             "unmapped_vanilla_names: {:?} -> {:?}",
@@ -302,5 +351,20 @@ pub fn print_stdout(s: &Summary) {
     println!("WORST CHUNKS:");
     for wc in s.worst_chunks.iter().take(10) {
         println!("WORST ({:>4},{:>4}) {} cells", wc.cx, wc.cz, wc.mismatches);
+    }
+    if !s.top_writers.is_empty() {
+        println!("TOP OFFENDERS BY WRITER (mismatched cells per responsible vanilla feature):");
+        for w in s.top_writers.iter().take(15) {
+            if w.java.is_empty() {
+                println!("  {:>7}  {}", w.mismatched_cells, w.writer);
+            } else {
+                println!(
+                    "  {:>7}  {:<18} -> {}",
+                    w.mismatched_cells,
+                    w.writer,
+                    w.java.trim_start_matches("net/minecraft/world/level/levelgen/")
+                );
+            }
+        }
     }
 }

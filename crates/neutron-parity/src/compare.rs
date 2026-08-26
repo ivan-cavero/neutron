@@ -57,6 +57,8 @@ pub struct LedgerRow {
     pub zone: Zone,
     pub vanilla: String,
     pub neutron: String,
+    /// Some((writer_id, writer_name)) only under attribution.
+    pub writer: Option<(u64, String)>,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize)]
@@ -113,6 +115,9 @@ pub struct RegionAccumulator {
     pub totals: ChunkMetrics,
     pub biome_totals: Option<BiomeChunkMetrics>,
     pub gaps: BTreeMap<GapKey, GapStat>,
+    /// Mismatch cells per responsible writer (short name). The "who owns the
+    /// gap" ranking — populated only when generation ran with NEUTRON_WRITERS.
+    pub gaps_by_writer: BTreeMap<String, u64>,
     pub worst: BTreeMap<(i32, i32), u64>,
     pub rows: Vec<LedgerRow>,
     pub unmapped_vanilla: std::collections::BTreeSet<String>,
@@ -193,6 +198,20 @@ pub fn compare_chunk(
                     e.bbox[4] = e.bbox[4].max(y);
                     e.bbox[5] = e.bbox[5].max(wz);
                 }
+                let mut row_writer: Option<(u64, String)> = None;
+                if let Some(plane) = &chunk.writers {
+                    let wi = ((y - dim.min_y) as usize) * 256 + (z as usize) * 16 + x as usize;
+                    if let Some(&w) = plane.get(wi) {
+                        // MASK rows are bookkeeping, not feature output.
+                        if w != neutron_worldgen::writers::MASK {
+                            *acc.gaps_by_writer
+                                .entry(neutron_worldgen::writers::name(w).to_string())
+                                .or_insert(0) += 1;
+                        }
+                        row_writer =
+                            Some((w as u64, neutron_worldgen::writers::name(w).to_string()));
+                    }
+                }
                 *acc.worst.entry((cx, cz)).or_insert(0) += 1;
                 if collect_rows {
                     acc.rows.push(LedgerRow {
@@ -204,6 +223,7 @@ pub fn compare_chunk(
                         zone,
                         vanilla: vn.to_string(),
                         neutron: nn.to_string(),
+                        writer: row_writer,
                     });
                 }
             }

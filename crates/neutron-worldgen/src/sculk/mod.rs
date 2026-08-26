@@ -208,14 +208,18 @@ pub(crate) fn apply_sculk_origin(
     // are still at CARVERS — their feature output (ores/sculk/vegetal spilled
     // by earlier origins) is not visible yet. Revert those cells for the
     // duration of this origin's patch pass, then restore them.
+    region.current_writer = crate::writers::MASK;
     let saved = mask_undecorated_output(region, undecorated, FAMILY_ALL);
 
+    region.current_writer = crate::writers::SCULK_PATCH;
     let mut rng = FeatureRandom::new(level_seed);
     let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
     rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
     place_sculk_patch(&mut rng, region, state, faces, ox0, oz0, &patch_cfg);
 
+    region.current_writer = crate::writers::MASK;
     restore_masked(region, saved);
+    region.current_writer = crate::writers::TERRAIN;
 }
 
 /// Apply ONLY sculk_patch_deep_dark (catalyst + charge spreader) for one
@@ -239,14 +243,18 @@ pub fn apply_sculk_patch_only(
     .unwrap_or(1);
 
     let level_seed = state.seed;
+    region.current_writer = crate::writers::MASK;
     let saved = mask_undecorated_output(region, undecorated, FAMILY_ALL);
 
+    region.current_writer = crate::writers::SCULK_PATCH;
     let mut rng = FeatureRandom::new(level_seed);
     let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
     rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
     place_sculk_patch(&mut rng, region, state, faces, ox0, oz0, &patch_cfg);
 
+    region.current_writer = crate::writers::MASK;
     restore_masked(region, saved);
+    region.current_writer = crate::writers::TERRAIN;
 }
 
 /// Apply sculk_vein + sculk_patch for every chunk origin in the feature

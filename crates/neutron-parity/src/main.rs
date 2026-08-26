@@ -5,6 +5,9 @@
 //!          [--seed N] [--center CX,CZ] [--radius N]   # window audit
 //!   parity --ref DIR --scan [STEP]                    # whole-ref audit
 //!   parity --ref DIR --biomes ...                     # + quart biome diff
+//!   parity --ref DIR --writers ...                    # + per-feature gap
+//!          attribution (NEUTRON_WRITERS): TOP OFFENDERS BY WRITER names the
+//!          vanilla feature family owning each mismatch cluster
 //!   parity --ledger FILE.csv --json FILE.json --strict --min-core 98.0
 //!   parity gate BASE.json NEW.json                    # refactor protocol:
 //!          exit 0 iff both runs are cell-identical (see docs/PARITY.md)
@@ -37,6 +40,7 @@ struct Args {
     refs: String,
     dim_name: String,
     cache: Option<PathBuf>,
+    writers: bool,
 }
 
 fn usage() -> ! {
@@ -64,6 +68,7 @@ fn parse_args() -> Args {
             .into(),
         dim_name: "overworld".into(),
         cache: None,
+        writers: false,
     };
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
@@ -72,6 +77,7 @@ fn parse_args() -> Args {
             "--ref" => a.refs = val(),
             "--dimension" => a.dim_name = val(),
             "--cache" => a.cache = Some(PathBuf::from(val())),
+            "--writers" => a.writers = true,
             "--seed" => a.seed = val().parse().unwrap_or_else(|_| usage()),
             "--center" => {
                 let v = val();
@@ -110,6 +116,11 @@ fn main() {
         return run_gate(&a, &b);
     }
     let args = parse_args();
+    // Attribution must be enabled BEFORE any RegionBuf is constructed.
+    let writers_on = args.writers;
+    if writers_on {
+        std::env::set_var("NEUTRON_WRITERS", "1");
+    }
     let dim = match DimSpec::parse(&args.dim_name) {
         Some(d) => d,
         None => {
@@ -120,6 +131,10 @@ fn main() {
             std::process::exit(2);
         }
     };
+    if args.writers && args.cache.is_some() {
+        eprintln!("parity: --writers and --cache are mutually exclusive (cache v1 stores no writer plane)");
+        std::process::exit(2);
+    }
     // New-dimension tripwire: refs covering a dimension we cannot compare
     // must be loud, not silent.
     if let Some(dims) = discover_dimension_dirs(std::path::Path::new(&args.refs)) {
@@ -182,7 +197,11 @@ fn main() {
         .map(|p| std::fs::File::create(p).expect("ledger path"));
     let mut ledger_writer = ledger_file.map(std::io::BufWriter::new);
     if let Some(w) = ledger_writer.as_mut() {
-        writeln!(w, "x,y,z,class,zone,vanilla,neutron").unwrap();
+        if args.writers {
+            writeln!(w, "x,y,z,class,zone,vanilla,neutron,writer_id,writer").unwrap();
+        } else {
+            writeln!(w, "x,y,z,class,zone,vanilla,neutron").unwrap();
+        }
     }
 
     let gen = ChunkGenerator::new(args.seed);
@@ -232,6 +251,9 @@ fn main() {
                                         blocks: hit.blocks,
                                         biomes: hit.biomes,
                                         heightmap: hit.heightmap,
+                                        // v1 cache stores no writer plane;
+                                        // --writers + --cache is rejected below.
+                                        writers: None,
                                     },
                                     true,
                                 );
@@ -280,30 +302,37 @@ fn main() {
                 continue;
             };
             let m = compare_chunk(&mut acc, ccx, ccz, &chunk, &van, ledger_writer.is_some());
-            if let (Some(w), true) = (ledger_writer.as_mut(), !acc.rows.is_empty()) {
-                use std::io::Write;
-                let rows = std::mem::take(&mut acc.rows);
-                ledger_rows += rows.len() as u64;
-                for r in &rows {
-                    writeln!(
-                        w,
-                        "{},{},{},{},{},{},{}",
-                        r.wx,
-                        r.y,
-                        r.wz,
-                        r.class.as_str(),
-                        match r.zone {
-                            neutron_parity::Zone::Core => "core",
-                            neutron_parity::Zone::Border => "border",
-                        },
-                        r.vanilla,
-                        r.neutron
-                    )
-                    .unwrap();
+    if let (Some(w), true) = (ledger_writer.as_mut(), !acc.rows.is_empty()) {
+        use std::io::Write;
+        let rows = std::mem::take(&mut acc.rows);
+        ledger_rows += rows.len() as u64;
+        for r in &rows {
+            write!(
+                w,
+                "{},{},{},{},{},{},{}",
+                r.wx,
+                r.y,
+                r.wz,
+                r.class.as_str(),
+                match r.zone {
+                    neutron_parity::Zone::Core => "core",
+                    neutron_parity::Zone::Border => "border",
+                },
+                r.vanilla,
+                r.neutron
+            )
+            .unwrap();
+            if writers_on {
+                match &r.writer {
+                    Some((id, name)) => write!(w, ",{id},{name}").unwrap(),
+                    None => write!(w, ",,").unwrap(),
                 }
-            } else {
-                acc.rows.clear();
             }
+            writeln!(w).unwrap();
+        }
+    } else {
+        acc.rows.clear();
+    }
             if args.biomes {
                 compare_chunk_biomes(&mut acc, &gen, ccx, ccz, &van);
             }
