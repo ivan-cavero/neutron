@@ -21,9 +21,6 @@ neutron-world = { path = "../neutron-world" }
 # deleted; recover from git history if needed. With autoexamples=false only
 # these are built.
 [[example]]
-name = "block_parity"
-
-[[example]]
 name = "biome_grid_parity"
 
 [[example]]
@@ -36,13 +33,7 @@ name = "clay_overlap"
 name = "density_at"
 
 [[example]]
-name = "density_shape"
-
-[[example]]
 name = "feature_index_probe"
-
-[[example]]
-name = "gap_blocks"
 
 [[example]]
 name = "list_full"
@@ -57,25 +48,13 @@ name = "marker_stats"
 name = "multi_base"
 
 [[example]]
-name = "parity_multi"
-
-[[example]]
 name = "region_parity"
 
 [[example]]
 name = "region_random_dump"
 
 [[example]]
-name = "sculk_cave"
-
-[[example]]
 name = "sculk_count"
-
-[[example]]
-name = "sculk_overlap"
-
-[[example]]
-name = "sculk_replay"
 
 [[example]]
 name = "sculk_veintrace"
@@ -91,9 +70,6 @@ name = "t4_measure"
 
 [[example]]
 name = "pale_trunk_count"
-
-[[example]]
-name = "ground_check"
 
 [[example]]
 name = "pale_stream_probe"
@@ -128,22 +104,10 @@ name = "wd_check"
 name = "dump_terrain"
 
 [[example]]
-name = "ref_biome"
-
-[[example]]
-name = "ref_biome2"
-
-[[example]]
 name = "neu_biome"
 
 [[example]]
-name = "seed_scan"
-
-[[example]]
 name = "water_ref_scan"
-
-[[example]]
-name = "neigh"
 
 [[example]]
 name = "dens9"
