@@ -23,8 +23,9 @@ to INITIALIZE_LIGHT, and outer rings up to earlier states. **That is what our
 
 - Source: `ChunkGenerator.java` → `BiomeResolver` from `Climate.Sampler`.
 - Climate is 6 noises (temperature, vegetation, continentalness, erosion, depth,
-  weirdness) → 7498-point table (overworld parameter list).
-- Biome choice: the point with highest `fitness` (product of deltas).
+  weirdness) → 7594-point table (overworld parameter list).
+- Biome choice: the point with lowest `fitness` (sum of squared
+  interval distances, plus offset²; the overworld offset column is all zeros).
 - Smooth borders: **voronoi at 1:4 scale** (4×4×4 blocks per biome cell) with
   `obfuscateSeed` (SHA-256 of the seed).
 - Rust: `biome/` (multi-noise + voronoi). Params in `data/biome_params.bin`.

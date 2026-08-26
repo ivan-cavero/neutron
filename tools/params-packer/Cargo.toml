@@ -1,0 +1,8 @@
+[package]
+name = "params-packer"
+version = "0.1.0"
+edition = "2021"
+description = "Deterministic regenerator of biome_params.bin from a transcription of vanilla 26.2 OverworldBiomeBuilder"
+publish = false
+
+[dependencies]

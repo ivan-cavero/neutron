@@ -46,7 +46,7 @@ Go to chunk `(6, -2)` (approx x=96, z=-32) to see mineshaft + deep dark.
 | File | Role |
 | --- | --- |
 | `generator.rs` | Orchestrates the chunk (3×3 region + features). `Send` (`Arc` density). |
-| `biome/` | Multi-noise + voronoi. Params in `data/biome_params.bin` (7498 points). |
+| `biome/` | Multi-noise + voronoi. Params in `data/biome_params.bin` (7594 points). |
 | `density.rs` / `worldgen.rs` | Noise router + markers (`DF = Arc<DFNode>`) |
 | `surface.rs` / `surface_rules.rs` | Internal `BlockId` + surface JSON + `vanilla_name` |
 | `carvers.rs` | Caves / canyon |

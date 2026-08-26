@@ -1,6 +1,6 @@
 //! Packed overworld climate parameter points (vanilla `OverworldBiomeBuilder`).
 //!
-//! The 7 498 points used to live in a 45 k-line Rust array. They are now a
+//! The 7 594 points used to live in a 45 k-line Rust array. They are now a
 //! little-endian blob so rust-analyzer / grep / incremental builds stay usable.
 //!
 //! Each record is 97 bytes:
