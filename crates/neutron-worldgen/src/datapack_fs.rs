@@ -1,7 +1,8 @@
 //! Load vanilla worldgen JSON from the crate data tree at runtime.
 //!
-//! Synced by `tools/vanilla-extract/extract-worldgen.ps1`. Prefer this for
-//! biomes/features so a datapack update is a re-run of the extract script.
+//! Synced by hand from the jar's `data/minecraft/` tree — use
+//! `tools/worldgen-json-diff.sh <old.jar> <new.jar>` on update day to list
+//! exactly which files changed, then copy them into `src/data/worldgen/`.
 //! Paths are relative to `src/data/worldgen/` or `src/data/tags/`.
 //!
 //! Copyright (c) 2026 Neutron Contributors -- MIT License

@@ -3,7 +3,8 @@
 //! `WorldgenRandom.setFeatureSeed(decorationSeed, index, step)` uses the
 //! **global FeatureSorter index** (`ChunkGenerator.applyBiomeDecoration`),
 //! not the index inside one biome's `features[step]` list.
-//! Re-run `extract-worldgen.ps1` after a Mojang drop.
+//! On a Mojang drop: refresh `src/data/` (see docs/PARITY.md runbook) and
+//! re-check `OVERWORLD_BIOME_ORDER` — it shifts every global index.
 //!
 //! Copyright (c) 2026 Neutron Contributors -- MIT License
 

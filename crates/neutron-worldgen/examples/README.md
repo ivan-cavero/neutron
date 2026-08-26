@@ -1,7 +1,11 @@
 # examples/ — parity & verification probes
 
-Not the public API. These compare neutron-worldgen against vanilla (seed 12345,
-often chunk 6,-2) and feed the runs' parity bar.
+Not the public API. These compare neutron-worldgen against vanilla (seed 424242)
+and feed the runs' parity bar.
+
+**The canonical meter is now `crates/neutron-parity`** (`cargo run --release
+-p neutron-parity -- --ref <dir>`); see docs/PARITY.md. The examples below are
+the specialized probes that remain useful around it.
 
 `Cargo.toml` sets `autoexamples = false` — only the examples listed there
 compile. The ones that survive are cited by `runs/` or AGENTS.md; one-off
