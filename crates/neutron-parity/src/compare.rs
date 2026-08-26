@@ -3,13 +3,13 @@
 //! a BTreeMap ordered by (class, vanilla, neutron); worst chunks order by
 //! (count desc, coords asc). Same input -> byte-identical report.
 
-use crate::refdata::{RefChunk, WORLD_BOTTOM, WORLD_TOP};
+use crate::refdata::{RefChunk, DimSpec};
 use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
 use neutron_worldgen::GeneratedChunk;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GapClass {
     /// Vanilla has a block here, Neutron has air.
@@ -30,7 +30,7 @@ impl GapClass {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Zone {
     Core,
@@ -142,9 +142,10 @@ pub fn compare_chunk(
     van: &RefChunk,
     collect_rows: bool,
 ) -> ChunkMetrics {
-    debug_assert_eq!(van.blocks.names.len(), crate::refdata::CHUNK_CELLS);
+    debug_assert_eq!(van.blocks.names.len(), van.blocks.dim.cells());
+    let dim: DimSpec = van.blocks.dim;
     let mut m = ChunkMetrics::default();
-    for y in WORLD_BOTTOM..WORLD_TOP {
+    for y in dim.bottom()..dim.top() {
         for z in 0..16u32 {
             for x in 0..16u32 {
                 let b = chunk.block_at(x, y, z);
@@ -240,12 +241,12 @@ pub fn compare_chunk_biomes(
 ) -> Option<BiomeChunkMetrics> {
     let biomes = van.biomes.as_ref()?;
     let mut m = BiomeChunkMetrics::default();
-    for qy in 0i32..crate::refdata::QUARTS_Y {
+    for qy in 0i32..biomes.dim.quarts_y() {
         for qz in 0u32..4 {
             for qx in 0u32..4 {
                 let want = biomes.get(qx, qy, qz);
                 let wx = cx * 4 + qx as i32 * 4 + 2;
-                let wy = (qy * 4 + 2) + WORLD_BOTTOM;
+                let wy = (qy * 4 + 2) + biomes.dim.min_y;
                 let wz = cz * 4 + qz as i32 * 4 + 2;
                 let got = neutron_worldgen::feature_dispatch::biome_id_to_name(
                     neutron_worldgen::biome_source::biome_id_at_block(&gen.state, wx, wy, wz),

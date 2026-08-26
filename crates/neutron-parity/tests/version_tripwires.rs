@@ -22,27 +22,53 @@ const REF_DIRS: &[&str] = &[
 /// Fixing a name means removing it from this list — stale entries also fail,
 /// keeping the list honest.
 const UNMAPPED_ALLOWLIST: &[&str] = &[
-    "minecraft:closed_eyeblossom",
+    "minecraft:bubble_column",
     "minecraft:cobweb",
+    "minecraft:chiseled_stone_bricks",
+    "minecraft:cracked_stone_bricks",
+    "minecraft:crying_obsidian",
+    "minecraft:gold_block",
+    "minecraft:iron_bars",
+    "minecraft:iron_chain",
+    "minecraft:mossy_stone_brick_slab",
+    "minecraft:mossy_stone_brick_stairs",
+    "minecraft:mossy_stone_bricks",
+    "minecraft:obsidian",
     "minecraft:rail",
-    "minecraft:spore_blossom",
+    "minecraft:stone_brick_slab",
+    "minecraft:stone_brick_stairs",
+    "minecraft:stone_bricks",
+    "minecraft:stone_slab",
+    "minecraft:suspicious_gravel",
+    "minecraft:wall_torch",
 ];
 
-fn existing_refs() -> Vec<&'static str> {
+fn workspace_root() -> std::path::PathBuf {
+    // Tests must not depend on CWD: resolve <repo>/ from our manifest dir.
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("manifest under <repo>/crates/neutron-parity")
+        .to_path_buf()
+}
+
+fn existing_refs() -> Vec<std::path::PathBuf> {
     REF_DIRS
         .iter()
-        .copied()
-        .filter(|d| std::path::Path::new(d).is_dir())
+        .map(|d| workspace_root().join(d))
+        .filter(|p| p.is_dir())
         .collect()
 }
 
-fn collect_ref_names(dir: &str) -> Result<(BTreeSet<String>, BTreeSet<String>), ParityError> {
+fn collect_ref_names(
+    dir: &std::path::Path,
+) -> Result<(BTreeSet<String>, BTreeSet<String>), ParityError> {
     let mut regions = RegionSet::open(dir)?;
     let d = regions.discover()?;
     let mut blocks = BTreeSet::new();
     let mut biomes = BTreeSet::new();
     for &(cx, cz) in &d.full {
-        let Some(chunk) = regions.load_chunk(cx, cz)? else {
+        let Some(chunk) = regions.load_chunk(cx, cz, neutron_parity::DimSpec::OVERWORLD)? else {
             continue;
         };
         // Only palette members matter: walk sections' distinct names via the
@@ -68,7 +94,7 @@ fn ref_block_palettes_fully_mapped() {
     }
     let mut unknown: BTreeSet<String> = BTreeSet::new();
     for dir in refs {
-        let (blocks, _) = collect_ref_names(dir).expect("decode ref");
+        let (blocks, _) = collect_ref_names(&dir).expect("decode ref");
         for n in blocks {
             if !vanilla_resolves(&n) {
                 unknown.insert(n);
@@ -110,10 +136,12 @@ fn ref_biome_palettes_fully_mapped() {
     }
     let mut missing: BTreeSet<String> = BTreeSet::new();
     for dir in refs {
-        let (_, biomes) = collect_ref_names(dir).expect("decode ref");
+        let (_, biomes) = collect_ref_names(&dir).expect("decode ref");
         for n in biomes {
-            if !n.is_empty() && !known.contains(n.as_str()) {
-                missing.insert(n);
+            // Refs store namespaced names; our table uses bare ids' names.
+            let bare = n.trim_start_matches("minecraft:").to_string();
+            if !bare.is_empty() && !known.contains(bare.as_str()) {
+                missing.insert(bare);
             }
         }
     }

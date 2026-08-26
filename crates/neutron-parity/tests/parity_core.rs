@@ -4,25 +4,25 @@
 use neutron_parity::compare::{
     classify, zone_of, GapClass, GapKey, RegionAccumulator, Zone,
 };
-use neutron_parity::refdata::{BiomeGrid, BlockGrid, RefChunk};
+use neutron_parity::refdata::{BiomeGrid, BlockGrid, DimSpec, RefChunk};
 use std::collections::BTreeMap;
 
 fn name_grid(fill: impl Fn(u32, i32, u32) -> &'static str) -> BlockGrid {
-    let mut names = vec!["minecraft:air".to_string(); neutron_parity::CHUNK_CELLS];
-    for y in neutron_parity::WORLD_BOTTOM..neutron_parity::WORLD_TOP {
+    let dim = DimSpec::OVERWORLD;
+    let mut names = vec!["minecraft:air".to_string(); dim.cells()];
+    for y in dim.bottom()..dim.top() {
         for z in 0..16u32 {
             for x in 0..16u32 {
-                let i = ((y - neutron_parity::WORLD_BOTTOM) * 256 + z as i32 * 16 + x as i32)
-                    as usize;
+                let i = ((y - dim.min_y) * 256 + z as i32 * 16 + x as i32) as usize;
                 names[i] = fill(x, y, z).to_string();
             }
         }
     }
-    BlockGrid { names }
+    BlockGrid { names, dim }
 }
 
 fn ref_chunk(blocks: BlockGrid) -> RefChunk {
-    RefChunk { status: "minecraft:full".into(), blocks, biomes: None }
+    RefChunk { status: "minecraft:full".into(), blocks, biomes: None, structure_starts: Vec::new() }
 }
 
 /// Core zone is exactly the interior 6x6 columns (d >= 5).
@@ -117,20 +117,34 @@ fn vanilla_resolves_tripwire() {
     assert!(!neutron_parity::vanilla_resolves("minecraft:not_a_block_26_3"));
 }
 
-/// Biome quart indexing round-trips.
+/// Biome quart indexing round-trips (per-dimension geometry).
 #[test]
 fn biome_grid_indexing() {
-    let total = (neutron_parity::QUARTS_Y * 16) as usize;
-    let names: Vec<String> = (0..total)
-        .map(|i| format!("b{i}"))
-        .collect::<Vec<_>>();
-    let g = BiomeGrid { names: names.clone() };
-    for qy in 0..neutron_parity::QUARTS_Y {
-        for qz in 0..4u32 {
-            for qx in 0..4u32 {
-                let i = ((qy * 4 + qz as i32) * 4 + qx as i32) as usize;
-                assert_eq!(g.get(qx, qy, qz), names[i], "qx={qx} qy={qy} qz={qz}");
+    for dim in [DimSpec::OVERWORLD, DimSpec::NETHER, DimSpec::END] {
+        let total = (dim.quarts_y() * 16) as usize;
+        let names: Vec<String> = (0..total).map(|i| format!("b{i}")).collect();
+        let g = BiomeGrid { names: names.clone(), dim };
+        for qy in 0..dim.quarts_y() {
+            for qz in 0..4u32 {
+                for qx in 0..4u32 {
+                    let i = (((qy * 4 + qz as i32) * 4 + qx as i32)) as usize;
+                    assert_eq!(g.get(qx, qy, qz), names[i], "qx={qx} qy={qy} qz={qz}");
+                }
             }
         }
     }
+}
+
+/// Dimension specs match vanilla 26.2 noise_settings geometry.
+#[test]
+fn dimension_specs_match_vanilla() {
+    assert_eq!(DimSpec::OVERWORLD.bottom(), -64);
+    assert_eq!(DimSpec::OVERWORLD.top(), 320);
+    assert_eq!(DimSpec::NETHER.bottom(), 0);
+    assert_eq!(DimSpec::NETHER.height, 128); // noise height, not dim-type 256
+    assert_eq!(DimSpec::END.height, 128);
+    assert_eq!(DimSpec::parse("overworld"), Some(DimSpec::OVERWORLD));
+    assert_eq!(DimSpec::parse("the_nether"), Some(DimSpec::NETHER));
+    assert_eq!(DimSpec::parse("the_end"), Some(DimSpec::END));
+    assert_eq!(DimSpec::parse("minecraft:skulk_realm_26_5"), None);
 }

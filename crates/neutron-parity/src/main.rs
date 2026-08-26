@@ -1,19 +1,22 @@
 //! parity — the single Neutron-vs-vanilla comparison CLI.
 //!
 //! Usage:
-//!   parity --ref DIR [--seed N] [--center CX,CZ] [--radius N]   # window audit
-//!   parity --ref DIR --scan [STEP]                              # whole-ref audit
-//!   parity --ref DIR --biomes ...                               # + quart biome diff
+//!   parity --ref DIR [--dimension overworld|the_nether|the_end]
+//!          [--seed N] [--center CX,CZ] [--radius N]   # window audit
+//!   parity --ref DIR --scan [STEP]                    # whole-ref audit
+//!   parity --ref DIR --biomes ...                     # + quart biome diff
 //!   parity --ledger FILE.csv --json FILE.json --strict --min-core 98.0
+//!   parity gate BASE.json NEW.json                    # refactor protocol:
+//!          exit 0 iff both runs are cell-identical (see docs/PARITY.md)
 //!
-//! Exit codes: 0 ok · 1 --min-core threshold · 2 --strict violations /
-//! decode errors. Deterministic: identical inputs -> identical stdout, JSON,
-//! CSV (gap order is total: count desc then key asc).
+//! Exit codes: 0 ok · 1 --min-core threshold / gate differences ·
+//! 2 --strict violations / decode errors. Deterministic: identical inputs ->
+//! identical stdout, JSON, CSV (gap order is total: count desc then key asc).
 
 use neutron_parity::compare::{compare_chunk, compare_chunk_biomes};
-use neutron_parity::refdata::RegionSet;
+use neutron_parity::refdata::{discover_dimension_dirs, DimSpec, RegionSet};
 use neutron_parity::{
-    build_summary, print_stdout, write_json, RegionAccumulator, RunMeta,
+    build_summary, gate_diff, print_stdout, write_json, RegionAccumulator, RunMeta, Summary,
 };
 use neutron_worldgen::{ChunkGenerator, NoiseCache};
 use std::io::Write;
@@ -31,6 +34,7 @@ struct Args {
     min_core: Option<f64>,
     top_gaps: usize,
     refs: String,
+    dim_name: String,
 }
 
 fn usage() -> ! {
@@ -56,12 +60,14 @@ fn parse_args() -> Args {
         top_gaps: 30,
         refs: "tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region"
             .into(),
+        dim_name: "overworld".into(),
     };
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
         let mut val = || it.next().unwrap_or_else(|| usage());
         match arg.as_str() {
             "--ref" => a.refs = val(),
+            "--dimension" => a.dim_name = val(),
             "--seed" => a.seed = val().parse().unwrap_or_else(|_| usage()),
             "--center" => {
                 let v = val();
@@ -92,7 +98,41 @@ fn parse_args() -> Args {
 }
 
 fn main() {
+    // Subcommand form: `parity gate BASE.json NEW.json`
+    let mut raw = std::env::args().skip(1);
+    if raw.next().as_deref() == Some("gate") {
+        let a: PathBuf = raw.next().expect("gate: missing BASE.json").into();
+        let b: PathBuf = raw.next().expect("gate: missing NEW.json").into();
+        return run_gate(&a, &b);
+    }
     let args = parse_args();
+    let dim = match DimSpec::parse(&args.dim_name) {
+        Some(d) => d,
+        None => {
+            eprintln!(
+                "parity: unknown dimension {:?} (known: overworld, the_nether, the_end)",
+                args.dim_name
+            );
+            std::process::exit(2);
+        }
+    };
+    // New-dimension tripwire: refs covering a dimension we cannot compare
+    // must be loud, not silent.
+    if let Some(dims) = discover_dimension_dirs(std::path::Path::new(&args.refs)) {
+        let unknown: Vec<_> = dims
+            .iter()
+            .filter(|d| !DimSpec::KNOWN_NAMES.contains(&d.as_str()))
+            .collect();
+        if !unknown.is_empty() {
+            eprintln!(
+                "parity: ref contains UNKNOWN dimension(s) {unknown:?} — no DimSpec entry, \
+                 they are NOT being compared. Add the dimension to refdata.rs."
+            );
+            if args.strict {
+                std::process::exit(2);
+            }
+        }
+    }
     let mut regions = match RegionSet::open(&args.refs) {
         Ok(r) => r,
         Err(e) => {
@@ -144,6 +184,8 @@ fn main() {
     let gen = ChunkGenerator::new(args.seed);
     let mut acc = RegionAccumulator::default();
     let mut ledger_rows: u64 = 0;
+    let mut protos_skipped: usize = 0;
+    let mut structure_counts: std::collections::BTreeMap<String, u64> = Default::default();
     const BATCH: usize = 64;
 
     println!(
@@ -169,7 +211,7 @@ fn main() {
             eprintln!("scan {}/{}", acc.chunks_compared as usize + generated.len(), coords.len());
         }
         for (ccx, ccz, chunk) in generated {
-            let van = match regions.load_chunk(ccx, ccz) {
+            let van = match regions.load_chunk(ccx, ccz, dim) {
                 Ok(v) => v,
                 Err(e) => {
                     eprintln!("parity: chunk {ccx},{ccz}: {e}");
@@ -209,6 +251,9 @@ fn main() {
             if args.biomes {
                 compare_chunk_biomes(&mut acc, &gen, ccx, ccz, &van);
             }
+            for s in &van.structure_starts {
+                *structure_counts.entry(s.clone()).or_insert(0) += 1;
+            }
             let pct = |t: &neutron_parity::Tally| t.pct();
             println!(
                 "{ccx:>5},{ccz:>4} {:>8.2}% {:>8.2}% {:>8.2}% {:>8.2}%",
@@ -234,6 +279,26 @@ fn main() {
     };
     let summary = build_summary(meta, &acc, args.top_gaps, 10);
     print_stdout(&summary);
+
+    if !structure_counts.is_empty() {
+        println!("STRUCTURE STARTS (ref inventory):");
+        let mut unknown_structs = Vec::new();
+        for (name, n) in &structure_counts {
+            println!("  {n:>4}× {name}");
+            if !neutron_parity::KNOWN_STRUCTURE_TYPES.contains(&name.as_str()) {
+                unknown_structs.push(name.clone());
+            }
+        }
+        if !unknown_structs.is_empty() {
+            eprintln!(
+                "parity: structure type(s) present in refs but not in KNOWN_STRUCTURE_TYPES \
+                 (new vanilla structure?): {unknown_structs:?}"
+            );
+            if args.strict {
+                std::process::exit(2);
+            }
+        }
+    }
 
     if let Some(p) = &args.json {
         write_json(p, &summary).expect("write json");
@@ -270,4 +335,37 @@ fn main() {
         }
     }
     std::process::exit(exit);
+}
+
+/// Refactor protocol: a refactor is parity-neutral iff two full runs produce
+/// identical summaries. `parity gate BASE.json NEW.json` answers that with an
+/// itemized diff and exit code 0/1.
+fn run_gate(base_path: &PathBuf, new_path: &PathBuf) -> ! {
+    let load = |p: &PathBuf| -> Summary {
+        let text = std::fs::read_to_string(p).unwrap_or_else(|e| {
+            eprintln!("parity gate: cannot read {}: {e}", p.display());
+            std::process::exit(2);
+        });
+        serde_json::from_str(&text).unwrap_or_else(|e| {
+            eprintln!("parity gate: {} is not a parity summary JSON: {e}", p.display());
+            std::process::exit(2);
+        })
+    };
+    let base = load(base_path);
+    let new = load(new_path);
+    let diffs = gate_diff(&base, &new);
+    if diffs.is_empty() {
+        println!(
+            "GATE PASS: cell-identical across {} chunks (core {:.4}% == {:.4}%)",
+            new.meta.chunks_compared,
+            base.blocks.core.pct,
+            new.blocks.core.pct
+        );
+        std::process::exit(0);
+    }
+    println!("GATE FAIL: {} divergence(s):", diffs.len());
+    for d in &diffs {
+        println!("  - {d}");
+    }
+    std::process::exit(1);
 }

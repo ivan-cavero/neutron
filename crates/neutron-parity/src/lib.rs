@@ -12,5 +12,11 @@ pub use compare::{
     compare_chunk, compare_chunk_biomes, vanilla_resolves, BiomeChunkMetrics, ChunkMetrics,
     GapClass, GapKey, GapStat, LedgerRow, RegionAccumulator, Tally, Zone,
 };
-pub use refdata::{BiomeGrid, BlockGrid, ParityError, RefChunk, RegionSet, CHUNK_CELLS, QUARTS_Y, WORLD_BOTTOM, WORLD_TOP};
-pub use report::{build_summary, print_stdout, write_json, write_ledger_csv, RunMeta, Summary};
+pub use refdata::{
+    discover_dimension_dirs, BiomeGrid, BlockGrid, DimSpec, KNOWN_STRUCTURE_TYPES, ParityError,
+    RefChunk, RegionSet, WORLD_DIM,
+};
+pub use report::{
+    build_summary, gate_diff, print_stdout, write_json, write_ledger_csv, GapJson, RunMeta,
+    Summary,
+};

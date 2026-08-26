@@ -6,7 +6,7 @@ use crate::compare::{BiomeChunkMetrics, ChunkMetrics, GapKey, GapStat, LedgerRow
 use serde::Serialize;
 use std::io::Write;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct RunMeta {
     pub seed: i64,
     /// "window" or "scan"
@@ -23,7 +23,7 @@ pub struct RunMeta {
     pub protos_skipped: usize,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct ZonePct {
     pub pct: f64,
     pub equal: u64,
@@ -36,7 +36,7 @@ impl ZonePct {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct MetricsJson {
     pub all: ZonePct,
     pub base: ZonePct,
@@ -55,7 +55,7 @@ impl MetricsJson {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct BiomesJson {
     pub pct: f64,
     pub equal: u64,
@@ -72,7 +72,7 @@ impl BiomesJson {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct GapJson {
     pub class: crate::compare::GapClass,
     pub vanilla: String,
@@ -83,14 +83,14 @@ pub struct GapJson {
     pub bbox: [i32; 6],
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct WorstChunkJson {
     pub cx: i32,
     pub cz: i32,
     pub mismatches: u64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct Summary {
     pub meta: RunMeta,
     pub blocks: MetricsJson,
@@ -175,6 +175,81 @@ pub fn write_ledger_csv(path: &std::path::Path, rows: &[LedgerRow]) -> std::io::
     }
     w.flush()?;
     Ok(rows.len() as u64)
+}
+
+/// Refactor-gate comparison: two summaries must be IDENTICAL for a refactor
+/// to be parity-neutral. Every divergence is reported with its numbers so the
+/// reviewer sees exactly what moved. Order-stable output.
+pub fn gate_diff(base: &Summary, new: &Summary) -> Vec<String> {
+    let mut d = Vec::new();
+    let b = &base.meta;
+    let n = &new.meta;
+    if b.chunks_compared != n.chunks_compared {
+        d.push(format!(
+            "meta.chunks_compared: {} -> {}",
+            b.chunks_compared, n.chunks_compared
+        ));
+    }
+    if b.chunks_missing != n.chunks_missing {
+        d.push(format!(
+            "meta.chunks_missing: {} -> {}",
+            b.chunks_missing, n.chunks_missing
+        ));
+    }
+    let pb = &base.blocks;
+    let pn = &new.blocks;
+    for (name, a, c) in [
+        ("core", pb.core.pct, pn.core.pct),
+        ("base", pb.base.pct, pn.base.pct),
+        ("all", pb.all.pct, pn.all.pct),
+        ("border", pb.border.pct, pn.border.pct),
+    ] {
+        if a.to_bits() != c.to_bits() {
+            d.push(format!("blocks.{name}%: {a:.4} -> {c:.4}"));
+        }
+    }
+    match (&base.biomes, &new.biomes) {
+        (Some(x), Some(y)) => {
+            if x.pct.to_bits() != y.pct.to_bits() {
+                d.push(format!("biomes%: {:.4} -> {:.4}", x.pct, y.pct));
+            }
+        }
+        (None, Some(_)) => d.push("biomes: absent -> present".into()),
+        (Some(_), None) => d.push("biomes: present -> absent".into()),
+        (None, None) => {}
+    }
+    let key = |g: &GapJson| format!("{:?}|{}|{}", g.class, g.vanilla, g.neutron);
+    let bm: std::collections::BTreeMap<String, &GapJson> =
+        base.gaps.iter().map(|g| (key(g), g)).collect();
+    let nm: std::collections::BTreeMap<String, &GapJson> =
+        new.gaps.iter().map(|g| (key(g), g)).collect();
+    for (k, bg) in &bm {
+        match nm.get(k) {
+            None => d.push(format!("gap disappeared: {k} (was {} cells)", bg.n)),
+            Some(ng) => {
+                if bg.n != ng.n {
+                    d.push(format!("gap count: {k}: {} -> {}", bg.n, ng.n));
+                }
+            }
+        }
+    }
+    for k in nm.keys() {
+        if !bm.contains_key(k) {
+            d.push(format!("gap appeared: {k}"));
+        }
+    }
+    let bw: Vec<_> = base.worst_chunks.iter().map(|w| (w.cx, w.cz, w.mismatches)).collect();
+    let nw: Vec<_> = new.worst_chunks.iter().map(|w| (w.cx, w.cz, w.mismatches)).collect();
+    if bw != nw {
+        d.push(format!("worst_chunks changed: {bw:?} -> {nw:?}"));
+    }
+    if base.unmapped_vanilla_names != new.unmapped_vanilla_names {
+        d.push(format!(
+            "unmapped_vanilla_names: {:?} -> {:?}",
+            base.unmapped_vanilla_names, new.unmapped_vanilla_names
+        ));
+    }
+    d
 }
 
 /// Human summary on stdout. Headline is CORE% (deterministic interior);
