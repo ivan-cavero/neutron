@@ -280,6 +280,52 @@ pub(crate) fn blocks_motion(b: BlockId) -> bool {
             | BlockId::BigDripleafStem
             | BlockId::Vine
             | BlockId::GlowLichen
+            // Palette-completeness sweep: plants and non-collidable decor.
+            | BlockId::Dandelion
+            | BlockId::Poppy
+            | BlockId::AzureBluet
+            | BlockId::Allium
+            | BlockId::Cornflower
+            | BlockId::OxeyeDaisy
+            | BlockId::OrangeTulip
+            | BlockId::PinkTulip
+            | BlockId::RedTulip
+            | BlockId::WhiteTulip
+            | BlockId::LilyOfTheValley
+            | BlockId::RoseBush
+            | BlockId::Lilac
+            | BlockId::Peony
+            | BlockId::Sunflower
+            | BlockId::PinkPetals
+            | BlockId::Wildflowers
+            | BlockId::Bush
+            | BlockId::FireflyBush
+            | BlockId::ShortDryGrass
+            | BlockId::TallDryGrass
+            | BlockId::ClosedEyeblossom
+            | BlockId::Fern
+            | BlockId::LargeFern
+            | BlockId::DeadBush
+            | BlockId::SugarCane
+            | BlockId::LilyPad
+            | BlockId::RedMushroom
+            | BlockId::BrownMushroom
+            | BlockId::SporeBlossom
+            | BlockId::CactusFlower
+            | BlockId::CrimsonRoots
+            | BlockId::WarpedRoots
+            | BlockId::NetherSprouts
+            | BlockId::Fire
+            | BlockId::SoulFire
+            | BlockId::MangrovePropagule
+            | BlockId::OakSapling
+            | BlockId::BirchSapling
+            | BlockId::SpruceSapling
+            | BlockId::JungleSapling
+            | BlockId::AcaciaSapling
+            | BlockId::DarkOakSapling
+            | BlockId::CherrySapling
+            | BlockId::PaleOakSapling
     )
 }
 

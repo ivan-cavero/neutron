@@ -116,6 +116,104 @@ pub fn block_state_id(internal: u16) -> i32 {
         116 => 15062, // kelp
         117 => 15088, // kelp_plant
         118 => 3368,  // mossy_cobblestone
+        // 26.2 default-state wire ids (generated/reports/blocks.json via
+        // `net.minecraft.data.Main --reports`; default = the state flagged
+        // "default", i.e. Block.getId(defaultState())):
+        86 => 30306,  // moss_carpet
+        87 => 30302,  // cave_vines_plant (default berries=false)
+        88 => 30250,  // cave_vines (default berries=false, age=0)
+        89 => 158,    // pale_oak_log (axis=y)
+        90 => 475,    // pale_oak_leaves
+        91 => 32196,  // pale_moss_block
+        92 => 32197,  // pale_moss_carpet (BASE=true, sides NONE)
+        93 => 30304,  // azalea
+        94 => 30305,  // flowering_azalea
+        95 => 30413,  // hanging_roots
+        96 => 30414,  // rooted_dirt
+        97 => 32359,  // pale_hanging_moss
+        98 => 3896,   // creaking_heart (default state)
+        // 140 tall_grass (half=lower), 141 pale_moss_carpet topper — same
+        // vanilla block as 92, sent with the carpet's base state.
+        140 => 12924,
+        141 => 32197,
+        142 => 7830,  // red_mushroom_block (default all-true faces)
+        143 => 7766,  // brown_mushroom_block
+        144 => 7894,  // mushroom_stem
+        145 => 37,   // acacia_sapling
+        146 => 2326,   // allium
+        147 => 21819,   // ancient_debris
+        148 => 531,   // azalea_leaves
+        149 => 2327,   // azure_bluet
+        150 => 7001,   // basalt
+        151 => 33,   // birch_sapling
+        152 => 21831,   // blackstone
+        153 => 2325,   // blue_orchid
+        154 => 2336,   // brown_mushroom
+        155 => 2251,   // bush
+        156 => 6929,   // cactus
+        157 => 6945,   // cactus_flower
+        158 => 39,   // cherry_sapling
+        159 => 32362,   // closed_eyeblossom
+        160 => 2333,   // cornflower
+        161 => 20975,   // crimson_fungus
+        162 => 20974,   // crimson_nylium
+        163 => 21031,   // crimson_roots
+        164 => 20963,   // crimson_stem
+        165 => 2321,   // dandelion
+        166 => 41,   // dark_oak_sapling
+        167 => 2250,   // dead_bush
+        168 => 9574,   // deepslate_emerald_ore
+        169 => 9573,   // emerald_ore
+        170 => 2249,   // fern
+        171 => 3406,   // fire
+        172 => 32365,   // firefly_bush
+        173 => 559,   // flowering_azalea_leaves
+        174 => 12894,   // hay_block
+        175 => 7023,   // jack_o_lantern
+        176 => 35,   // jungle_sapling
+        177 => 12926,   // large_fern
+        178 => 12918,   // lilac
+        179 => 2335,   // lily_of_the_valley
+        180 => 8920,   // lily_pad
+        181 => 14845,   // magma_block
+        182 => 50,   // mangrove_propagule
+        183 => 164,   // mangrove_roots
+        184 => 8333,   // melon
+        185 => 166,   // muddy_mangrove_roots
+        186 => 135,   // nether_gold_ore
+        187 => 11312,   // nether_quartz_ore
+        188 => 20961,   // nether_sprouts
+        189 => 14846,   // nether_wart_block
+        190 => 6997,   // netherrack
+        191 => 29,   // oak_sapling
+        192 => 2329,   // orange_tulip
+        193 => 2332,   // oxeye_daisy
+        194 => 43,   // pale_oak_sapling
+        195 => 12922,   // peony
+        196 => 30307,   // pink_petals
+        197 => 2331,   // pink_tulip
+        198 => 2324,   // poppy
+        199 => 8332,   // pumpkin
+        200 => 2337,   // red_mushroom
+        201 => 2328,   // red_tulip
+        202 => 12920,   // rose_bush
+        203 => 2252,   // short_dry_grass
+        204 => 20976,   // shroomlight
+        205 => 3887,   // soul_fire
+        206 => 6998,   // soul_sand
+        207 => 30303,   // spore_blossom
+        208 => 31,   // spruce_sapling
+        209 => 6947,   // sugar_cane
+        210 => 12916,   // sunflower
+        211 => 20941,   // sweet_berry_bush
+        212 => 2253,   // tall_dry_grass
+        213 => 20958,   // warped_fungus
+        214 => 20957,   // warped_nylium
+        215 => 20960,   // warped_roots
+        216 => 20946,   // warped_stem
+        217 => 20959,   // warped_wart_block
+        218 => 2330,   // white_tulip
+        219 => 30323,   // wildflowers
         136 => 30399, // small_dripleaf (default facing=north,half=lower,waterlogged=false)
         137 => 30357, // big_dripleaf (default facing=north,tilt=none,waterlogged=false)
         138 => 30389, // big_dripleaf_stem (default facing=north,waterlogged=false)
