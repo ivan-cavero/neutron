@@ -411,7 +411,7 @@ pub(crate) fn decoration_origin_order(
         // granite/diorite/andesite swaps -76..-97% vs spawn-spiral). The old
         // per-buffer centre-first "spiral" remains available as an explicit
         // NEUTRON_SCULK_ORIGIN_ORDER=spiral for A/B measurement.
-        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "world_origin".into());
+        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "canonical_pregen".into());
     match order.as_str() {
         "row" => {
             for czl in 0..chunks {
@@ -513,6 +513,38 @@ pub(crate) fn decoration_origin_order(
             v.sort();
             out.extend(v.into_iter().map(|(_, cxl, czl)| (cxl, czl)));
         }
+        // Faithful model of the CANONICAL ref pregen procedure
+        // (`new-mc-version.sh`): ONE inner 16×16-chunk forceload square
+        // covering chunks (-8..7)², settle, then FOUR outer-ring strip
+        // commands in fixed order (west, east, south, north). Ticket
+        // insertion order ≈ ChunkPos.rangeClosed iteration (x fastest, z
+        // outer, from each command's min corner), which is what decoration
+        // completion approximates. Cross-origin overwrites resolve
+        // last-writer-wins along this sequence.
+        "canonical_pregen" => {
+            let mut v: Vec<(i32, i64, i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
+            for czl in 0..chunks {
+                for cxl in 0..chunks {
+                    let cx = (origin_x >> 4) + cxl;
+                    let cz = (origin_z >> 4) + czl;
+                    let phase = if (-8..=7).contains(&cx) && (-8..=7).contains(&cz) {
+                        0 // inner forceload square
+                    } else if (-12..=-11).contains(&cx) {
+                        1 // west strip
+                    } else if (10..=11).contains(&cx) {
+                        2 // east strip
+                    } else if (-12..=-11).contains(&cz) {
+                        3 // south strip
+                    } else {
+                        4 // north strip
+                    };
+                    // ChunkPos.rangeClosed cursor: x fastest within a command.
+                    v.push((phase, (cz * 64 + cx) as i64, czl, cxl));
+                }
+            }
+            v.sort();
+            out.extend(v.into_iter().map(|(_, _, czl, cxl)| (cxl, czl)));
+        }
         "custom" => {
             // NEUTRON_DECO_CUSTOM_ORDER="dx,dz;dx,dz;..." — explicit origin
             // order as neighbor offsets relative to the center (order search).
@@ -565,11 +597,11 @@ mod tests {
 
     #[test]
     fn decoration_origin_order_default_world_origin() {
-        // Default = `world_origin` ticket-wavefront approximation (canonical
-        // concentric-square pregen; agentH measured granite/diorite/andesite
-        // family swaps -76..-97% vs the old spawn-spiral default). Ties break
-        // x-then-z. The old per-buffer centre-first order remains selectable
-        // as NEUTRON_SCULK_ORIGIN_ORDER=spiral.
+        // Default = `canonical_pregen`: faithful model of the canonical ref
+        // pregen (inner forceload square (-8..7)² then west/east/south/north
+        // ring strips, x-fastest within each command). agentH/agentI windows:
+        // stone-blob swaps -76..-97% vs spawn-spiral; best of all presets on
+        // worst chunks. spiral/world_origin remain selectable via env.
         let o = decoration_origin_order(3, 0, 0);
         assert_eq!(o.len(), 9);
         // World centres (origin 0,0): distance² from (0,0) ascending,
