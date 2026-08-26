@@ -1,3 +1,0 @@
-[cell-write] (104,1,-32) Stone -> minecraft:granite by [3@(96,-32).spiral]
-[cell-write] (104,1,-32) Granite -> minecraft:diorite by [5@(96,-32).spiral]
-[cell-write] (104,1,-32) Diorite -> minecraft:granite by [3@(96,-48).spiral]

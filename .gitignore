@@ -196,3 +196,14 @@ javaflat*.*
 javaset*.txt
 javaskip*.txt
 bin/
+
+# accidental jar extraction + server/probe run residue
+/net/
+ore_*.txt
+oreflow_*
+oracle_*/
+*_step6*.txt
+cell_writes.txt
+runs/*-evidence-*.txt
+tools/worldgen-probe/*.txt
+tools/worldgen-probe/*.log
