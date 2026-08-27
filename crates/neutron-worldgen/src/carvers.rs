@@ -639,12 +639,18 @@ fn canyon_from_chunk(
     );
 }
 
-/// TrapezoidFloat(min=0, max=6, plateau=2) approximate sample.
+/// `TrapezoidFloat(min=0, max=6, plateau=2)` sample.
+/// `TrapezoidFloat.sample` (TrapezoidFloat.java:35-40):
+/// range=max-min; plateauStart=(range-plateau)/2; plateauEnd=range-plateauStart;
+/// return min + nextFloat()*plateauEnd + nextFloat()*plateauStart.
 fn sample_trapezoid_thickness(rng: &mut LegacyRandom) -> f32 {
-    // Vanilla TrapezoidFloat: sample with plateau weight. Simple rejection:
-    // use (nextFloat + nextFloat) * 3 which peaks around 3, clamp to [0,6].
-    let t = (rng.next_f32() + rng.next_f32()) * 3.0;
-    t.clamp(0.0, 6.0)
+    let min = 0.0f32;
+    let max = 6.0f32;
+    let plateau = 2.0f32;
+    let range = max - min;
+    let plateau_start = (range - plateau) / 2.0;
+    let plateau_end = range - plateau_start;
+    min + rng.next_f32() * plateau_end + rng.next_f32() * plateau_start
 }
 
 fn do_canyon(
