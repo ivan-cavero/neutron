@@ -17,6 +17,7 @@ pub mod biome;
 pub mod carvers;
 pub mod datapack_data;
 pub mod datapack_fs;
+pub mod deco_schedule;
 pub mod deco_util;
 pub mod density;
 pub mod feature_catalog;

@@ -71,6 +71,15 @@ PYEOF
 # Concentric centered squares: inner 16x16-chunk square (block area exactly
 # 256 chunks, at the command cap), wait, then one outer ring in 4 strips
 # (each <=256 chunks). Full coverage: chunks x,z in [-12, +11].
+#
+# NOTE (27 Aug 2026, deco-schedule work): the CURRENT canonical ref
+# vanilla-fresh-424242 was NOT made with the ring below — its server log
+# shows square-only, then ONE west strip 31 s later. Disk footprint is the
+# forced set + vanilla's Chebyshev-2 auto-promoted halo (528 slots;
+# distance-3 cells decorate via neighbor sweeps but drop unsaved). The
+# ticket_sim origin-order simulator (crates/neutron-worldgen/src/deco_schedule.rs)
+# ingests THE ACTUAL sequence (square; +west strip) to reproduce it. Keep
+# whatever you run here stable per ref world; do not mix procedures.
 rcon "forceload add -128 -128 127 127"
 sleep 150
 rcon "forceload add -192 -192 -161 191" \

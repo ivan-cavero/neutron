@@ -412,14 +412,13 @@ pub(crate) fn decoration_origin_order(
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
     let order =
-        // Default = global ticket-wavefront approximation: refs pregenned with
-        // concentric forceload squares centred on the world origin decorate
-        // origins in ascending distance from (0,0), and cross-origin blob /
-        // tree overwrites resolve last-writer-wins in that order (agentH:
-        // granite/diorite/andesite swaps -76..-97% vs spawn-spiral). The old
-        // per-buffer centre-first "spiral" remains available as an explicit
-        // NEUTRON_SCULK_ORIGIN_ORDER=spiral for A/B measurement.
-        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "canonical_pregen".into());
+        // Default = ticket-wavefront simulation (`deco_schedule.rs`) of
+        // vanilla 26.2's chunk scheduler under the canonical ref pregen
+        // (validated: 95.01% pairwise order consistency vs the mined
+        // precedence CSV, 96.04% interior; ref disk footprint matched
+        // exactly; ore-swap clusters drop to 0 and the (0,0)-diag case
+        // resolves). Prior presets remain selectable via env for A/B.
+        std::env::var("NEUTRON_SCULK_ORIGIN_ORDER").unwrap_or_else(|_| "ticket_sim".into());
     match order.as_str() {
         "row" => {
             for czl in 0..chunks {
@@ -553,6 +552,12 @@ pub(crate) fn decoration_origin_order(
             v.sort();
             out.extend(v.into_iter().map(|(_, _, czl, cxl)| (cxl, czl)));
         }
+        // Ticket-wavefront simulation of vanilla 26.2's chunk scheduler under
+        // the canonical ref pregen (deco_schedule.rs): origins sorted by
+        // their simulated global decorate sequence.
+        "ticket_sim" => {
+            out.extend(crate::deco_schedule::window_order(chunks, origin_x, origin_z));
+        }
         "custom" => {
             // NEUTRON_DECO_CUSTOM_ORDER="dx,dz;dx,dz;..." — explicit origin
             // order as neighbor offsets relative to the center (order search).
@@ -604,31 +609,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decoration_origin_order_default_world_origin() {
-        // Default = `canonical_pregen`: faithful model of the canonical ref
-        // pregen (inner forceload square (-8..7)² then west/east/south/north
-        // ring strips, x-fastest within each command). agentH/agentI windows:
-        // stone-blob swaps -76..-97% vs spawn-spiral; best of all presets on
-        // worst chunks. spiral/world_origin remain selectable via env.
+    fn decoration_origin_order_default_ticket_sim() {
+        // Default = `ticket_sim` (deco_schedule.rs): origins sorted by the
+        // simulated global decorate sequence. A 3x3 buffer at origin (0,0)
+        // lies inside the forceload square; its origins decorate in
+        // packed-key (x-major) FIFO order there.
         let o = decoration_origin_order(3, 0, 0);
         assert_eq!(o.len(), 9);
-        // A 3x3 buffer at origin (0,0) lies entirely inside the inner
-        // forceload square ⇒ phase 0 for all origins ⇒ plain row-major
-        // (z outer, x fastest), matching ChunkPos.rangeClosed insertion.
         assert_eq!(
             o,
             vec![
                 (0, 0),
-                (1, 0),
-                (2, 0),
                 (0, 1),
-                (1, 1),
-                (2, 1),
                 (0, 2),
+                (1, 0),
+                (1, 1),
                 (1, 2),
+                (2, 0),
+                (2, 1),
                 (2, 2),
             ]
         );
+        // canonical_pregen stays selectable for A/B.
+        std::env::set_var("NEUTRON_SCULK_ORIGIN_ORDER", "canonical_pregen");
+        let o = decoration_origin_order(3, 0, 0);
+        std::env::remove_var("NEUTRON_SCULK_ORIGIN_ORDER");
+        assert_eq!(o[0], (0, 0));
     }
 
     #[test]
