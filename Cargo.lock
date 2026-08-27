@@ -679,6 +679,7 @@ dependencies = [
  "neutron-worldgen",
  "serde",
  "serde_json",
+ "xxhash-rust",
 ]
 
 [[package]]
