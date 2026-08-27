@@ -42,6 +42,7 @@ pub fn decorate_region_origin_major(
     state: &WorldgenState,
     order: &[(i32, i32)],
     center: (i32, i32),
+    rp_plans: &crate::ruined_portal::Plans,
 ) {
     let (cx, cz) = center;
     let mut faces: crate::multiface_spreader::FaceMap = std::collections::HashMap::new();
@@ -92,6 +93,11 @@ pub fn decorate_region_origin_major(
             "plains",
         );
         let t_ustr = ts3.elapsed().as_millis();
+        // Step 4 — SURFACE_STRUCTURES: ruined portal complexes (vanilla runs
+        // structure pieces interleaved per decoration step, before the step's
+        // features; anchor chunks place their own complex). Plans were frozen
+        // pre-decoration (vanilla queries raw noise columns at start time).
+        crate::ruined_portal::apply_step_origin(region, state, rp_plans, ox0, oz0);
         let ts4 = std::time::Instant::now();
         // Step 6 — ores + disks (dedicated OreFeature port).
         features::apply_underground_ores_origin(region, state.seed, ox0, oz0, undecorated);
@@ -416,7 +422,13 @@ impl ChunkGenerator {
             .copied()
             .filter(|&(cxl, czl)| (cxl - mid).abs() <= 1 && (czl - mid).abs() <= 1)
             .collect();
-        crate::generator::decorate_region_origin_major(&mut region, &self.state, &inner, (cx, cz));
+        // Frozen ruined-portal plans (decided against the pristine buffer).
+        let rpx0 = region.origin_x >> 4;
+        let rpz0 = region.origin_z >> 4;
+        let rp_owners: Vec<(i32, i32)> =
+            inner.iter().map(|&(a, b)| (rpx0 + a, rpz0 + b)).collect();
+        let rp_plans = crate::ruined_portal::prepare_region_plans(&self.state, &region, &rp_owners);
+        crate::generator::decorate_region_origin_major(&mut region, &self.state, &inner, (cx, cz), &rp_plans);
         let (blocks, heightmap) = region.take_chunk(cx, cz);
         let writers = region.take_chunk_writers(cx, cz);
         GeneratedChunk {

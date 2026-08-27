@@ -23,6 +23,8 @@ pub const MASK: u16 = 1;
 pub const SCULK_PATCH: u16 = 60;
 pub const CARVER: u16 = 70;
 pub const MINESHAFT: u16 = 71;
+/// Ruined portal complexes (`RuinedPortalPiece`).
+pub const RUINED_PORTAL: u16 = 72;
 pub const ORE: u16 = 30;
 pub const DISK: u16 = 31;
 pub const UNDERWATER_MAGMA: u16 = 45;
@@ -140,6 +142,11 @@ pub const WRITERS: &[(u16, &str, &str)] = &[
         71,
         "mineshaft",
         "net/minecraft/world/level/levelgen/structure/structures/MineshaftPieces.java",
+    ),
+    (
+        72,
+        "ruined_portal",
+        "net/minecraft/world/level/levelgen/structure/structures/RuinedPortalPiece.java",
     ),
 ];
 

@@ -33,6 +33,7 @@ pub mod noise;
 pub mod ore_vein;
 pub mod positional;
 pub mod region_buf;
+pub mod ruined_portal;
 pub mod rng;
 pub mod sculk;
 pub mod surface;
