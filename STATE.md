@@ -7,70 +7,62 @@
 
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world (`new-mc-version.sh`).
+
 | Measurement | Value |
 | --- | --- |
-| window (7,2) r=1 before→after ruined_portal | chunk 95.58% → **97.79%**, window 98.48% → **98.73%** |
-| SCAN 525 **with** trapezoid+ruined_portal | **98.71%**, `ledger_v7.csv`, 665,800 cells (−47.5k vs v6-era 713k) |
-| SCAN 525 pre-fixes (same commits otherwise) | 98.67%; histo top dark_oak ±104k, pale_oak ±66k |
+| SCAN 525, **ticket_sim default** (a5021c8) | **98.84%**, `ledger_v8.csv`, 599,711 cells |
+| SCAN 525, pre-ticket_sim (5d20d60+16af6e7) | 98.71%, `ledger_v7.csv`, 665,800 cells |
+| window (7,2) before→after ruined_portal | chunk 95.58% → **97.79%**, window 98.48% → 98.73% |
+| histo v8 top | trees both ways still #1 (−10%/class vs v7); moss↔stone ~11k next |
 
-## Closed this session (git log has evidence)
+## Closed today (git log has evidence)
 
-- **Canyon pipeline BIT-EXACT**: JVM probe ↔ Rust trace of all 4 firing
-  canyon starts near (7,2) — seeding/order/pos/angles/thickness/radii/
-  width factors/canReach: 268 records byte-identical, ZERO reach (7,2).
-  The "missing-carve" mass there was misattributed: it is a ruined portal.
-- **TrapezoidFloat exact** (5d20d60): was `(f1+f2)*3` clamp; now exact
-  (TrapezoidFloat.java:35-40).
-- **ruined_portal overworld PORTED** (16af6e7): plans frozen pre-decoration,
-  placed at owner origin between steps 3/4; start = floorDiv(8,40)*40 +
+- **ticket_sim origin order = NEW DEFAULT** (a5021c8): deterministic port of
+  the 26.2 ticket/dispatcher wavefront (deco_schedule.rs; FORCED batch +
+  level propagation + ChunkTaskPriorityQueue lowest-bucket×insertion-age +
+  ChunkPyramid gating; phases instead of wall-clock). Consistency vs 45,391
+  mined precedence pairs: **95.01% all / 96.04% interior** (row baseline
+  81.00/90.22; canonical_pregen 76.08). Ore swaps → 0 incl. the (0,0)
+  diag-before-center case; (3,-4) residual is vanilla resolving like
+  world_origin (only known parametric miss). Gate: SCAN 98.71→**98.84%**,
+  ledger −66,089 cells.
+- **Ref procedure CORRECTED** (a5021c8, script comment): actual ref was made
+  square([-8..7]²)+ONE west strip 31 s later (server log), not the 4-strip
+  ring; disk = forced ∪ Chebyshev-2 auto-promoted halo (528 slots; d3 cells
+  decorate via neighbor sweeps, drop unsaved). deco_schedule ingests this.
+- **ruined_portal overworld PORTED** (16af6e7): start floorDiv(8,40)*40 +
   LegacyRandom(salt=34222645) nextInt(25)x2 ⇒ (8,2); giant_portal_2 ROT NONE
-  FRONT_BACK TP(128,45,32) air_pocket=1 cold=0 mossiness .2 — matches saved
-  `structures.starts` field-for-field. Chest placed (loot out of scope);
-  stair/slab blockstate props unmodeled. Residual debris-pattern cells ride
-  `NEUTRON_RP_STEP_INDEX` + surface microdiffs.
+  FRONT_BACK TP(128,45,32) air_pocket=1 cold=0 mossiness .2 (matches saved
+  `structures.starts`). Chest placed (loot out of scope); stair/slab props
+  unmodeled. `NEUTRON_RP_STEP_INDEX` sweep ≈ flat (±0.03%).
+- **Canyon pipeline BIT-EXACT** + **TrapezoidFloat exact** (5d20d60): probe
+  ↔ trace 268 records identical; "missing-carve" at (7,2) was the portal.
 
-## Closed earlier this week (git log / runs/)
+## Order residual (next frontier, do not reopen without these)
 
-SWDF floor predicate · #air tag incl. cave_air · env_scan out-of-world
-semantics · TreeDecorator java_hash_order THEN stable Y sort · WorldGenRegion
-xoroshiro draw-for-draw vs JVM probe (nextBoolean = LOW bit) · pale_moss_
-carpet placeAt/topper; tall_grass DoublePlant (BlockId 140) · GEODE polarity
-+ codec defaults + Cursor3D x-fastest + DOWN-first crystals.
-
-## Order findings (do not reopen casually)
-
-No static NEUTRON_SCULK_ORIGIN_ORDER preset collapses worst chunks on the
-canonical ref (spiral/row/col within ±0.09% at (7,2),(8,0)). Vanilla's true
-order = ticket-scheduler interleave; ref-procedure dependence in c9bd433.
-
-NEW evidence for the scheduler work (ore dump): granite/diorite/andesite/
-tuff swaps are NOT rng/predicate/upstream — identical blobs draw-for-draw,
-only pass ORDER differs. Vanilla ≈ world_origin-ascending at sampled
-chunks. world_origin zeroes swap clusters but breaks a 37-cell case at
-(0,0): vanilla decorates diag-chunk (-1,+1) BEFORE center — no static
-preset produces it ⇒ ticket-scheduler is the only faithful model. Ore
-shared-sim already 96.7–97.7%.
+ticket_sim leaves 4.99% pairs inconsistent: (a) same-ring-epoch ties that
+vanilla resolved via nproc−1 worker races (ref-side noise; core stays
+deterministic); (b) light-queue epochs merged away in sim; (c) families not
+covered by ore/tuff mining (trees contribute only weak evidence). Trees/lush
+mass shrinks only via these + upstream microdiffs.
 
 ## Causal chain (standing)
 
 Streams align draw-for-draw when inputs match (oracle traces). Remaining
-displacement = gate-input flips from upstream terrain microdiffs + origin
-order interleave. v7 ledger ranking: trees both ways ~230k, worst chunks
-(-13,4) 15.8k · (0,6) 14.4k · (-12,4) 14.3k (dark_oak/oak canopy classes,
-border-heavy) · lush/sculk family ~60k, pool at (-2..0,-3..-1). Trees/lush
-close only via order work + remaining terrain microdiffs.
+displacement = origin-order residual + upstream terrain microdiffs feeding
+tree would_survive / lush first-accept gates.
 
 ## Next
 
-1. Ticket-scheduler wavefront — OWNED by parallel agent
-   (decoration_origin_order); v7 tree/lush mass is its target metric.
-2. Ruined portal polish: step-index debris pattern, chest loot tables,
-   blockstate properties if metric ever compares them.
-3. (7,2) residuals: rooted_dirt/moss/tuff dig-site shaft x122..126 z37..41;
-   tree foliage diffs y74..92 (fold into tree/order chain).
-4. When carvers.rs is touched next: match vanilla applyCarvers dx-outer/dz-
-   inner iteration order (harmless today, zero mask).
-5. Re-run `cargo test --workspace` before any push.
+1. Validate ticket_sim on OTHER seeds vs existing refs
+   (tools/nbt-ref/vanilla-fresh-12345 & -777, paths have no `world/` prefix)
+   — the any-seed contract; mine precedence pairs per seed like 424242.
+2. Characterize ring-epoch ties: sample same-bucket completion races vs the
+   pairs CSV; if bounded, pick the epoch tie-break vanilla observed.
+3. Lush/sculk pool (-2..0,-3..-1): first-accept gate dump under ticket_sim.
+4. Ruined portal polish: loot tables; blockstate props if metric evolves.
+5. When carvers.rs touched: applyCarvers dx-outer/dz-inner iteration order.
+6. Re-run `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
