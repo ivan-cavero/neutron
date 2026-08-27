@@ -10,10 +10,17 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 
 | Measurement | Value |
 | --- | --- |
-| SCAN 525, **ticket_sim default** (a5021c8) | **98.84%**, `ledger_v8.csv`, 599,711 cells |
-| SCAN 525, pre-ticket_sim (5d20d60+16af6e7) | 98.71%, `ledger_v7.csv`, 665,800 cells |
+| SCAN 525, ticket_sim default (a5021c8) | **98.84%**, `ledger_v8.csv`, 599,711 cells |
+| SCAN 528, seed **12345** fresh ref | ticket_sim **98.45%** vs canonical_pregen 98.41% (−20.6k cells) |
+| SCAN 527, seed **777** fresh ref | ticket_sim **98.41%** vs canonical_pregen 98.31% (−49.6k cells) |
 | window (7,2) before→after ruined_portal | chunk 95.58% → **97.79%**, window 98.48% → 98.73% |
-| histo v8 top | trees both ways still #1 (−10%/class vs v7); moss↔stone ~11k next |
+
+New refs 12345/777 provisioned 27 Aug with same jar+procedure (square+west
+strip; bundler re-extract — 424242's libraries/ was pruned to probe set).
+Cross-seed consistency vs mined pairs (`ticket_sim_anyseed.rs`): 95.01 /
+85.08 / 91.69 % all-pairs — beats row (81.0/80.8/80.6) everywhere; interior
+flag: 12345 ticket_sim 86.91 < row 88.68 (proxy only; block parity still
+wins). v8 histo top: trees both ways (−10%/class vs v7); moss↔stone ~11k.
 
 ## Closed today (git log has evidence)
 
@@ -38,30 +45,35 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 - **Canyon pipeline BIT-EXACT** + **TrapezoidFloat exact** (5d20d60): probe
   ↔ trace 268 records identical; "missing-carve" at (7,2) was the portal.
 
-## Order residual (next frontier, do not reopen without these)
+## Order residual (cross-seed verified; next levers)
 
-ticket_sim leaves 4.99% pairs inconsistent: (a) same-ring-epoch ties that
-vanilla resolved via nproc−1 worker races (ref-side noise; core stays
-deterministic); (b) light-queue epochs merged away in sim; (c) families not
-covered by ore/tuff mining (trees contribute only weak evidence). Trees/lush
-mass shrinks only via these + upstream microdiffs.
+ticket_sim wins all-seed on block parity (see Now table). Pair-proxy
+residuals: (a) same-ring-epoch ties vanilla resolved via nproc−1 worker
+races (ref-side noise; core deterministic); (b) light-queue epochs merged
+in sim; (c) phase boundary: 424242's west strip landed ~31 s after the
+square, new refs' at 150 s — parameterize if chasing the last %.
 
 ## Causal chain (standing)
 
-Streams align draw-for-draw when inputs match (oracle traces). Remaining
-displacement = origin-order residual + upstream terrain microdiffs feeding
-tree would_survive / lush first-accept gates.
+Streams align draw-for-draw when inputs match (oracle traces). Lush/sculk
+pool at (−1,−2)-area: MASK EMULATION REJECTED with numbers (inert by
+default; NEUTRON_TMP_MASK=1 breaks 448 correct cells, window 9095→9550).
+Real mechanism = per-origin placement parity: ore-blob coverage edges
+(coal misses a cell by 1 at dx+1) + TERRAIN bucket where vanilla placed
+and neutron never wrote (356 center / 3,339 3×3) = roll/placement
+divergence. Biome grid NOT the cause (7,679/7,680 quarts match incl.
+worst tree chunks). Artifacts: /tmp/opencode/mask_zone_cells.csv,
+examples mask_zone_probe.rs + moss_clay_dump.rs (untracked).
 
 ## Next
 
-1. Validate ticket_sim on OTHER seeds vs existing refs
-   (tools/nbt-ref/vanilla-fresh-12345 & -777, paths have no `world/` prefix)
-   — the any-seed contract; mine precedence pairs per seed like 424242.
-2. Characterize ring-epoch ties: sample same-bucket completion races vs the
-   pairs CSV; if bounded, pick the epoch tie-break vanilla observed.
-3. Lush/sculk pool (-2..0,-3..-1): first-accept gate dump under ticket_sim.
+1. Lush/sculk winner-flips: reconstruct placement streams for the TERRAIN
+   bucket + the coal-edge off-by-1 (see artifacts above).
+2. Ring-epoch ties: sample same-bucket completion races vs the three
+   seeds' pairs CSVs; fix epoch tie-break if bounded.
+3. Tree mass: dark_oak/oak displacement both ways remains top class.
 4. Ruined portal polish: loot tables; blockstate props if metric evolves.
-5. When carvers.rs touched: applyCarvers dx-outer/dz-inner iteration order.
+5. When carvers.rs touched: applyCarvers dx-outer/dz-inner order.
 6. Re-run `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
