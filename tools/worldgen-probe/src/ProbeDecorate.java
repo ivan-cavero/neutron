@@ -242,8 +242,30 @@ public class ProbeDecorate {
                 b -> b.value().getGenerationSettings().features(), true);
         int featureStepCount = featuresPerStep.size();
 
-        for (int ocz = CCZ - 1; ocz <= CCZ + 1; ocz++) {
-            for (int ocx = CCX - 1; ocx <= CCX + 1; ocx++) {
+        // Origin iteration order. Default = row sweep (z outer, x inner).
+        // PROBE_ORDER_FILE: one "orx,orz" per line (ticket_sim wavefront order
+        // exported by the Rust side) reproduces vanilla's simulated decorate
+        // sequence so oracle-vs-neutron attempt streams are order-aligned.
+        java.util.List<int[]> probeOrigins = new java.util.ArrayList<>();
+        String probeOrderFile = System.getenv("PROBE_ORDER_FILE");
+        if (probeOrderFile != null) {
+            for (String line : java.nio.file.Files.readAllLines(
+                    java.nio.file.Path.of(probeOrderFile))) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String[] pp = line.split(",");
+                probeOrigins.add(new int[]{Integer.parseInt(pp[0]), Integer.parseInt(pp[1])});
+            }
+        } else {
+            for (int ocz = CCZ - 1; ocz <= CCZ + 1; ocz++) {
+                for (int ocx = CCX - 1; ocx <= CCX + 1; ocx++) {
+                    probeOrigins.add(new int[]{ocx, ocz});
+                }
+            }
+        }
+        for (int[] probeOrigin : probeOrigins) {
+            final int ocx = probeOrigin[0], ocz = probeOrigin[1];
+            {
                 ChunkAccess center = chunkAt(ocx, ocz);
                 var sectionPos = SectionPos.of(center.getPos(), MINY >> 4);
                 BlockPos origin = new BlockPos(
@@ -303,17 +325,21 @@ public class ProbeDecorate {
                         // replicate PlacedFeature.placeWithContext, logging every
                         // post-modifier position fed into Feature.place.
                         String tname = null;
-                        if (stepIndex == 7 && ocx == CCX && ocz == CCZ) {
+                        boolean sculkAll = System.getenv("PROBE_SCULK_ALL") != null;
+                        if (stepIndex == 7 && ((ocx == CCX && ocz == CCZ) || sculkAll)) {
                             String fn = String.valueOf(pf);
                             if (fn.contains("sculk_patch")) tname = "patch";
                             else if (fn.contains("sculk_vein")) tname = "vein";
                         }
                         if (stepIndex == 9 || stepIndex == 6) {
                             String fn = String.valueOf(pf);
-                            if (stepIndex == 6 || fn.contains("vegetation")
+                            if (stepIndex == 6
+                                    || (stepIndex == 9
+                                        && System.getenv("PROBE_TRACE_ALL9") != null)
+                                    || fn.contains("vegetation")
                                     || fn.contains("patch") || fn.contains("flower")
                                     || fn.contains("grass") || fn.contains("disk")) {
-                                tname = "veg" + gif;
+                                tname = "s" + stepIndex + "v" + gif;
                                 System.out.println("VTRACE " + tname
                                         + " feat=" + fn.replaceAll(
                                                 ".*configured_feature / ", "")
@@ -401,11 +427,13 @@ public class ProbeDecorate {
                                         cur.isEmpty() ? null : cur.get(0);
                                 cur.forEach(bp -> {
                                     LOG.append("M|ATT|").append(tn).append('|')
+                                       .append(TAG_ORX).append('|').append(TAG_ORZ).append('|')
                                        .append(bp.getX()).append('|').append(bp.getY())
                                        .append('|').append(bp.getZ()).append('\n');
                                     System.out.println("ATT " + tn + " "
                                             + bp.getX() + " " + bp.getY() + " " + bp.getZ());
                                     boolean ok2 = cf.place((WorldGenLevel) levelProxy, generator, random, bp);
+                                    LOG.append("M|RES|").append(tn).append('|').append(ok2).append('\n');
                                     if ((tn.equals("veg27") || tn.equals("veg0") || tn.equals("veg1"))
                                             && focx == CCX && focz == CCZ) {
                                         System.out.println("ATTPLACE " + tn + " "
