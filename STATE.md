@@ -15,12 +15,11 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | SCAN 527, seed **777** fresh ref | ticket_sim **98.41%** vs canonical_pregen 98.31% (−49.6k cells) |
 | window (7,2) before→after ruined_portal | chunk 95.58% → **97.79%**, window 98.48% → 98.73% |
 
-New refs 12345/777 provisioned 27 Aug with same jar+procedure (square+west
-strip; bundler re-extract — 424242's libraries/ was pruned to probe set).
-Cross-seed consistency vs mined pairs (`ticket_sim_anyseed.rs`): 95.01 /
-85.08 / 91.69 % all-pairs — beats row (81.0/80.8/80.6) everywhere; interior
-flag: 12345 ticket_sim 86.91 < row 88.68 (proxy only; block parity still
-wins). v8 histo top: trees both ways (−10%/class vs v7); moss↔stone ~11k.
+New refs 12345/777 provisioned 27 Aug (same jar + square+west-strip
+procedure; bundler re-extract — 424242's libraries/ was pruned to probe
+set). Cross-seed pair consistency (`ticket_sim_anyseed.rs`): 95.01 /
+85.08 / 91.69 % all — beats row (81.0/80.8/80.6) everywhere; interior
+flag: 12345 ticket_sim 86.91 < row 88.68 (proxy only; block parity wins).
 
 ## Closed today (git log has evidence)
 
@@ -60,17 +59,14 @@ pool at (−1,−2)-area: MASK EMULATION REJECTED with numbers (inert by
 default; NEUTRON_TMP_MASK=1 breaks 448 correct cells, window 9095→9550).
 Real mechanism = per-origin placement parity: ore-blob coverage edges
 (coal misses a cell by 1 at dx+1) + TERRAIN bucket where vanilla placed
-and neutron never wrote (356 center / 3,339 3×3) = roll/placement
-divergence. Biome grid NOT the cause (7,679/7,680 quarts match incl.
-worst tree chunks). Artifacts: /tmp/opencode/mask_zone_cells.csv,
-examples mask_zone_probe.rs + moss_clay_dump.rs (untracked).
+and neutron never wrote (356 center / 3,339 3×3). Biome grid NOT the
+cause (7,679/7,680 quarts match).
 
 ## Next
 
 1. Lush/sculk winner-flips: reconstruct placement streams for the TERRAIN
    bucket + the coal-edge off-by-1 (see artifacts above).
-2. Ring-epoch ties: sample same-bucket completion races vs the three
-   seeds' pairs CSVs; fix epoch tie-break if bounded.
+2. Ring-epoch ties: sample same-bucket races vs the three seeds' pairs CSVs.
 3. Tree mass: dark_oak/oak displacement both ways remains top class.
 4. Ruined portal polish: loot tables; blockstate props if metric evolves.
 5. When carvers.rs touched: applyCarvers dx-outer/dz-inner order.
