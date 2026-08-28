@@ -14,8 +14,66 @@ pub(super) fn apply_decorators(ctx: &mut TreeCtx<'_>, decorators: &[Value]) {
             "minecraft:place_on_ground" => place_on_ground(ctx, dec),
             "minecraft:pale_moss" => place_pale_moss(ctx, dec),
             "minecraft:creaking_heart" => place_creaking_heart(ctx, dec),
-            // trunk_vine / leave_vine / attached_to_leaves: no vine BlockId — skip.
+            "minecraft:trunk_vine" => place_trunk_vine(ctx),
+            "minecraft:attached_to_logs" => place_attached_to_logs(ctx, dec),
+            // leave_vine / attached_to_leaves: not used by placed features in
+            // this region set yet — skip.
             _ => {}
+        }
+    }
+}
+
+/// `TrunkVineDecorator.place` (26.2): per log, west/east/north/south in that
+/// order — each rolls `nextInt(3) > 0` ALWAYS (draw unconditional), then
+/// vine placed iff the neighbor is air.
+fn place_trunk_vine(ctx: &mut TreeCtx<'_>) {
+    for i in 0..ctx.trunks.len() {
+        let (x, y, z) = ctx.trunks[i];
+        for &(dx, dz) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            if ctx.rng.next_int(3) > 0 && ctx.region.get(x + dx, y, z + dz).is_air() {
+                ctx.region.set(x + dx, y, z + dz, BlockId::Vine);
+            }
+        }
+    }
+}
+
+/// `AttachedToLogsDecorator.place` (26.2): `Util.shuffledCopy(logs, random)`
+/// (Fisher-Yates, draws n-1), then PER LOG: `Util.getRandom(directions)`
+/// draw ALWAYS, `nextFloat() <= probability` ALWAYS, and only then
+/// isAir + weighted block_provider draw + set.
+fn place_attached_to_logs(ctx: &mut TreeCtx<'_>, dec: &Value) {
+    let probability = dec["probability"].as_f64().unwrap_or(0.0) as f32;
+    let mut shuffled: Vec<(i32, i32, i32)> = ctx.trunks.clone();
+    crate::deco_util::shuffle(&mut shuffled, ctx.rng);
+    let dirs: Vec<(i32, i32, i32)> = dec["directions"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|d| match d.as_str()? {
+                    "up" => Some((0, 1, 0)),
+                    "down" => Some((0, -1, 0)),
+                    "north" => Some((0, 0, -1)),
+                    "south" => Some((0, 0, 1)),
+                    "west" => Some((-1, 0, 0)),
+                    "east" => Some((1, 0, 0)),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if dirs.is_empty() {
+        return;
+    }
+    for &(lx, ly, lz) in &shuffled {
+        let di = ctx.rng.next_int(dirs.len() as i32);
+        let (ddx, ddy, ddz) = dirs[di as usize];
+        let (px, py, pz) = (lx + ddx, ly + ddy, lz + ddz);
+        if ctx.rng.next_f32() <= probability && ctx.region.get(px, py, pz).is_air() {
+            if let Some(st) =
+                crate::feature_dispatch::sampling::block_from_to_place(ctx.rng, &dec["block_provider"])
+            {
+                ctx.region.set(px, py, pz, st);
+            }
         }
     }
 }

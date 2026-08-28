@@ -546,7 +546,7 @@ fn patch_is_exposed(region: &RegionBuf, x: i32, y: i32, z: i32) -> bool {
 
 /// 26.2 `BlockState.isFaceSturdy` for the worldgen palette (ProbeSolidFaces).
 /// Azalea is sturdy on UP only — floor `below` checks add that at the call site.
-fn is_face_sturdy(b: BlockId) -> bool {
+pub(crate) fn is_face_sturdy(b: BlockId) -> bool {
     match b {
         BlockId::PointedDripstone | BlockId::SculkVein | BlockId::Bamboo => false,
         BlockId::OakLeaves

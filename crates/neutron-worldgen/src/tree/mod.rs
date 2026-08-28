@@ -418,6 +418,109 @@ pub(super) fn mth_floor_f64(v: f64) -> i32 {
     v.floor() as i32
 }
 
+/// Port of `FallenTreeFeature` (26.2). `place()` returns true unconditionally;
+/// the RNG sequence always runs in full: stump log, stump decorators
+/// (trunk_vine rolls), horizontal direction, logLength, start offset. The
+/// horizontal log only places when `canPlaceEntireFallenLog` passes
+/// (validTreePos per cell, non-sturdy ground gap <= 2).
+pub fn place_fallen_tree_from_config(
+    rng: &mut FeatureRandom,
+    region: &mut RegionBuf,
+    state: Option<&WorldgenState>,
+    x: i32,
+    y: i32,
+    z: i32,
+    config: &Value,
+) -> bool {
+    let cfg = &config["config"];
+    let log = block_from_provider(&cfg["trunk_provider"]).unwrap_or(BlockId::OakLog);
+
+    // placeStump: placeLogBlock at origin (simple provider -> no draws).
+    region.set(x, y, z, log);
+    let mut ctx = TreeCtx {
+        rng,
+        region,
+        state,
+        log,
+        leaves: log,
+        trunks: vec![(x, y, z)],
+        foliage: Vec::new(),
+    };
+    if let Some(decs) = cfg["stump_decorators"].as_array() {
+        apply_decorators(&mut ctx, decs);
+    }
+
+    // Direction.Plane.HORIZONTAL.getRandomDirection: N, E, S, W.
+    let dir = ctx.rng.next_int(4);
+    let (dx, dz) = match dir {
+        0 => (0, -1),
+        1 => (1, 0),
+        2 => (0, 1),
+        _ => (-1, 0),
+    };
+    let log_length = parse_int_provider(&cfg["log_length"], 1).sample(ctx.rng) - 2;
+    let start = 2 + ctx.rng.next_int(2);
+    let (mut lx, mut ly, mut lz) = (x + dx * start, y, z + dz * start);
+
+    // setGroundHeightForFallenLogStartPos: UP 1 then up to 6 downward steps
+    // of mayPlaceOn (validTreePos && isOverSolidGround).
+    ly += 1;
+    for _ in 0..6 {
+        if valid_tree_pos(ctx.region.get(lx, ly, lz))
+            && crate::feature_dispatch::vegetation::is_face_sturdy(
+                ctx.region.get(lx, ly - 1, lz),
+            )
+        {
+            break;
+        }
+        ly -= 1;
+    }
+
+    // canPlaceEntireFallenLog: non-sturdy-ground gap <= 2 over valid cells.
+    let mut gap = 0;
+    let (mut cx, mut cy, mut cz) = (lx, ly, lz);
+    let mut ok = true;
+    for _ in 0..log_length {
+        if !valid_tree_pos(ctx.region.get(cx, cy, cz)) {
+            ok = false;
+            break;
+        }
+        if !crate::feature_dispatch::vegetation::is_face_sturdy(
+            ctx.region.get(cx, cy - 1, cz),
+        ) {
+            gap += 1;
+            if gap > 2 {
+                ok = false;
+                break;
+            }
+        } else {
+            gap = 0;
+        }
+        cx += dx;
+        cz += dz;
+    }
+    if !ok {
+        return true;
+    }
+
+    // placeFallenLog (sideways axis property is not modeled — same cell set).
+    let mut logs = Vec::with_capacity(log_length.max(0) as usize);
+    let (mut px, py, mut pz) = (lx, ly, lz);
+    for _ in 0..log_length {
+        ctx.region.set(px, py, pz, log);
+        logs.push((px, py, pz));
+        px += dx;
+        pz += dz;
+    }
+
+    // decorateLogs(fallenLog, log_decorators).
+    if let Some(decs) = cfg["log_decorators"].as_array() {
+        ctx.trunks = logs;
+        apply_decorators(&mut ctx, decs);
+    }
+    true
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -680,6 +680,9 @@ pub(crate) fn dispatch_configured(
         "minecraft:tree" => {
             tree::place_tree_from_config(rng, region, state, x, y, z, cfg);
         }
+        "minecraft:fallen_tree" => {
+            tree::place_fallen_tree_from_config(rng, region, state, x, y, z, cfg);
+        }
         "minecraft:random_selector" => {
             // weighted chance features then default
             if let Some(features) = cfg["config"]["features"].as_array() {
@@ -1096,8 +1099,8 @@ fn place_resolved_placed(
 
 mod fluids;
 mod predicates;
-mod sampling;
-mod vegetation;
+pub(crate) mod sampling;
+pub(crate) mod vegetation;
 
 pub(crate) use fluids::*;
 pub use predicates::biome_id_to_name;
