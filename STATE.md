@@ -11,9 +11,9 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | Measurement | Value |
 | --- | --- |
 | SCAN 525, 28 Aug (77b27a2) | **98.842%**, ledger **597,355** cells (was 599,711) |
-| 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port, no regression) |
-| SCAN 525, seed 12345 full | 98.45% (ticket_sim, 27 Aug) — re-scan pending |
-| SCAN 525, seed 777 full | 98.41% (ticket_sim, 27 Aug) — re-scan pending |
+| SCAN 528, seed **12345** fresh (28 Aug) | ticket_sim **98.45%** (= 27 Aug, no regression) |
+| SCAN 527, seed **777** fresh (28 Aug) | ticket_sim **98.41%** (= 27 Aug, no regression) |
+| 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port) |
 
 Meter speedup (6ae05e2): worker pool (cores−2 default, `PARITY_WORKERS`
 overrides), streaming compare, vanilla NBT prefetch thread, per-worker
@@ -55,14 +55,19 @@ exactly on these features' gates).
 
 ## Next
 
-1. **Carver-edge microdiff hunt** (foundation): 1-cell carve misses feeding
-   step-6..9 gates; `carver_edge_dump.rs` exists (untracked); applyCarvers
-   dx-outer/dz-inner order when touching carvers.rs.
-2. **Aquifer/water cell parity** — water@Y mismatches flip patch gates
-   (water→moss reverse rows).
-3. Re-scan 12345/777 full with the fast meter; cross-seed confirm.
-4. Fallen tree polish: sideways axis props if metric evolves.
-5. Ruined portal: loot tables (out of metric).
+1. **Cave-carver tunnel RNG parity** (the single surviving root): our density
+   is solid where the final world is air at surface gate cells — e.g.
+   (17,96,-5) neu density +0.0094 (solid) but carved; vanilla keeps
+   grass_block. Raw pre-feature carve jitter = 419 cells / 25-chunk window
+   (214 miss + 205 extra, 55% boundary-pair within Chebyshev 2, y med −13);
+   everything else in van_air/solid classes is feature-block flips.
+   Tool path: carve_from_chunk tunnel walk vs ProbeCarveHits; next dump =
+   tunnel-cell trace for source chunks carving chunk (1,-1).
+2. Waterlogged clay-pool top-fill: (34,5,13) clay-identical, van water vs
+   neu clay at surface cell — per-column cascade inside the patch.
+3. Fallen tree polish: sideways axis props if metric evolves.
+4. Ruined portal: loot tables (out of metric).
+5. AGENTS.md ref paths for 12345/777 DO have `world/` prefix (stale doc).
 6. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
