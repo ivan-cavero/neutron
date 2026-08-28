@@ -54,13 +54,33 @@ pub fn apply_surface_rules(
                 .map(|n| n.get_value(world_x as f64, 0.0, world_z as f64))
                 .unwrap_or(0.0);
 
-            // preliminary surface level (density) for above_preliminary_surface
-            let prelim = {
-                let mut env = DensityEnv::new(world_x, 0, world_z, st.noises.noises());
-                crate::density::compute(&st.router.preliminary_surface_level, &mut env) as i32
+            // SurfaceRules.Context.getMinSurfaceLevel: bilinear lerp of the
+            // 16x16 surface-cell corner preliminary surface levels. Each corner
+            // is the preliminary_surface_level density function evaluated at
+            // the quart-quantized corner block (NoiseChunk.preliminarySurfaceLevel:
+            // QuartPos.toBlock(fromBlock(x)) = x & !3), floored and cached.
+            // lerp alphas are f32 ((x & 15) / 16.0F); result floored, then
+            // + surfaceDepth - 8.
+            let corner_prelim = |cx: i32, cz: i32| -> i32 {
+                let mut env = DensityEnv::new(cx & !3, 0, cz & !3, st.noises.noises());
+                let v = crate::density::compute(&st.router.preliminary_surface_level, &mut env);
+                v.floor() as i32
             };
-            // minSurfaceLevel ≈ prelim + surfaceDepth - 8 (lerp cache simplified)
-            let min_surface_level = prelim + surface_depth - 8;
+            let cell_x = world_x >> 4;
+            let cell_z = world_z >> 4;
+            let tx = (world_x & 15) as f32 / 16.0f32;
+            let tz = (world_z & 15) as f32 / 16.0f32;
+            let p00 = corner_prelim(cell_x << 4, cell_z << 4) as f64;
+            let p10 = corner_prelim((cell_x + 1) << 4, cell_z << 4) as f64;
+            let p01 = corner_prelim(cell_x << 4, (cell_z + 1) << 4) as f64;
+            let p11 = corner_prelim((cell_x + 1) << 4, (cell_z + 1) << 4) as f64;
+            let lerp = |a: f64, b: f64, c: f64| b + a * (c - b);
+            let prelim = lerp(
+                tz as f64,
+                lerp(tx as f64, p00, p10),
+                lerp(tx as f64, p01, p11),
+            );
+            let min_surface_level = (prelim.floor() as i32) + surface_depth - 8;
 
             // Surface biome at top of column (cave biomes re-sampled only deep below).
             let surface_biome = sample_biome(st, world_x, surface_y.max(WORLD_BOTTOM), world_z);
