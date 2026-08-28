@@ -54,14 +54,15 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **Walk the tree cascade upstream**: the first-flip oracle DOES work (the
-   probe is stateful over the shared chunk — earlier origins' tree writes
-   shape later origins' gates, same as vanilla). Origin (1,1) draw 1:
-   vanilla REJECT (below=pale_oak_leaves from origin (1,0)'s tree) vs
-   neutron ACCEPT → **origin (1,0)'s tree output differs from vanilla's**.
-   Next: diff origin (1,0) tree writes vs ref, then (1,-1), until the first
-   genuinely divergent tree — that is the last port bug before the cascade
-   collapses.
+1. **Tree cascade root = surface height ±1 at draw columns** (proven cell
+   level, origin (1,0) draw 1): our pre-decoration surface tops at y=94 at
+   (19,10) vs vanilla 93 → our tree origin y=95 vs 94 → trunk rows, branches
+   (z=12/x=21 extra), leaf count (119 vs 366) and the whole origin RNG
+   cascade diverge. Draw 1 position (19,10) MATCHES; the flip is the +1
+   surface block. Next: audit getSurfaceDepth (surface noise *2.75 + 3 + 
+   positional-random jitter *0.25) and the bilinear min_surface_level
+   residual against vanilla SurfaceSystem at the mismatched columns
+   (e.g. (19,10): ours grass@94 / vanilla top@93).
 2. Fix ProbeTreeFirstFlip dump loader index confusion (document the stateful
    semantics in its header).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
