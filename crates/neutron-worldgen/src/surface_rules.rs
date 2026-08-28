@@ -177,19 +177,17 @@ pub fn apply_surface_rules(
 }
 
 fn is_steep(heightmap: &[i16], lx: usize, lz: usize) -> bool {
-    let h = heightmap[lz * 16 + lx] as i32;
-    let z0 = lz.saturating_sub(1);
-    let z1 = (lz + 1).min(15);
-    let x0 = lx.saturating_sub(1);
-    let x1 = (lx + 1).min(15);
-    let hn = heightmap[z0 * 16 + lx] as i32;
-    let hs = heightmap[z1 * 16 + lx] as i32;
-    if hs >= hn + 4 || hn >= hs + 4 {
+    // SurfaceRules.Context.SteepMaterialCondition: WORLD_SURFACE_WG heightmap,
+    // ONE-directional — south >= north + 4, else west >= east + 4. Chunk-edge
+    // neighbors clamp to the block's own row (equal heights -> false).
+    let hn = heightmap[lz.saturating_sub(1) * 16 + lx] as i32;
+    let hs = heightmap[(lz + 1).min(15) * 16 + lx] as i32;
+    if hs >= hn + 4 {
         return true;
     }
-    let hw = heightmap[lz * 16 + x0] as i32;
-    let he = heightmap[lz * 16 + x1] as i32;
-    he >= hw + 4 || hw >= he + 4 || (h - hn).abs() >= 4 || (h - hs).abs() >= 4
+    let hw = heightmap[lz * 16 + lx.saturating_sub(1)] as i32;
+    let he = heightmap[lz * 16 + (lx + 1).min(15)] as i32;
+    hw >= he + 4
 }
 
 fn is_stone_like(b: BlockId) -> bool {
