@@ -603,6 +603,17 @@ fn main() {
             std::env::set_var("NEUTRON_DECO_TREE_TRACE", "1");
             let gen = ChunkGenerator::new(seed);
             let mut region = build_stripped_buffer(&gen, ccx, ccz, &side, &region_dir);
+            if let Ok(cv) = std::env::var("TREE_FIRST_FLIP_COL") {
+                let mut it = cv.split(',');
+                let cx0: i32 = it.next().and_then(|s| s.parse().ok()).unwrap_or(25);
+                let cz0: i32 = it.next().and_then(|s| s.parse().ok()).unwrap_or(19);
+                for y in 85..=105 {
+                    let b = region.get(cx0, y, cz0);
+                    if b != BlockId::Air && b != BlockId::CaveAir {
+                        eprintln!("REPLAYCOL {cx0} {y} {cz0} {}", vanilla_name(b));
+                    }
+                }
+            }
             let order = inner_order(ccx, ccz);
             println!(
                 "ORDER {}",

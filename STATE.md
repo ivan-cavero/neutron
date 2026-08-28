@@ -54,13 +54,16 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **Rebuild the tree first-flip oracle on the REAL pipeline** — the
-   tree_first_flip replay harness is UNRELIABLE (documented): the probe's
-   dump loader reads phantom pale_oak_leaves (index bug) and the replay's
-   stripped scene yields y values inconsistent with its own strip. Use
-   per-origin NEUTRON_TRACE_TREES on generate_chunk_cached (region random
-   intact) vs ref trunk bases via the meter-grade loader.
-2. Fix ProbeTreeFirstFlip dump loader index bug.
+1. **Walk the tree cascade upstream**: the first-flip oracle DOES work (the
+   probe is stateful over the shared chunk — earlier origins' tree writes
+   shape later origins' gates, same as vanilla). Origin (1,1) draw 1:
+   vanilla REJECT (below=pale_oak_leaves from origin (1,0)'s tree) vs
+   neutron ACCEPT → **origin (1,0)'s tree output differs from vanilla's**.
+   Next: diff origin (1,0) tree writes vs ref, then (1,-1), until the first
+   genuinely divergent tree — that is the last port bug before the cascade
+   collapses.
+2. Fix ProbeTreeFirstFlip dump loader index confusion (document the stateful
+   semantics in its header).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
 4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
 5. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
