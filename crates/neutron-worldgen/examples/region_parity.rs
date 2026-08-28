@@ -5,14 +5,17 @@
 //   region_parity [seed] [cx] [cz] [radius] [region_dir]      # 3×3 window
 //   PARITY_SCAN=[step] region_parity <seed> 0 0 0 <region_dir># all ref chunks
 // Env: PARITY_LEDGER=<csv> cell-exact gap list · PARITY_HISTO=1 class histogram
+//      PARITY_WORKERS=<n> generation pool size (default = cores - 2)
 use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
 use neutron_world::nbt::{compound_get, read_nbt};
 use neutron_world::Region;
 use neutron_worldgen::surface::{is_vegetation_name, vanilla_name, BlockId};
 use neutron_worldgen::{ChunkGenerator, NoiseCache};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::mpsc;
+use std::sync::Arc;
 
 fn load_vanilla_chunk(
     regions: &mut HashMap<(i32, i32), Region>,
@@ -239,25 +242,33 @@ fn main() {
     let scan_step: usize =
         std::env::var_os("PARITY_SCAN").map(|v| v.to_str().and_then(|s| s.parse().ok()).unwrap_or(1)).unwrap_or(0);
 
+    // Fixed worker pool: default = cores - 2 so the box stays responsive
+    // (PARITY_WORKERS overrides). Generated chunks stream out through a
+    // bounded channel as they finish instead of materializing whole 64-chunk
+    // batches, and vanilla NBT decoding is prefetched on a dedicated thread
+    // so it overlaps generation.
+    let n_workers: usize = std::env::var_os("PARITY_WORKERS")
+        .and_then(|v| v.to_str().and_then(|s| s.parse::<usize>().ok()))
+        .filter(|&n| n > 0)
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(4)
+                .saturating_sub(2)
+                .max(1)
+        });
+    println!("workers={n_workers} (cores-2; PARITY_WORKERS overrides)");
+
     let gen = ChunkGenerator::new(seed);
-    let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
-    let coords: Vec<(i32, i32)> = if scan_step > 0 {
-        let mut c = discover_chunks(&mut regions, &region_dir);
-        if scan_step > 1 {
-            c = c.into_iter().step_by(scan_step).collect();
-        }
-        println!("seed={seed} SCAN {} comparable chunks (step {scan_step})", c.len());
-        c
+    let window: Option<Vec<(i32, i32)>> = if scan_step > 0 {
+        None
     } else {
-        println!("seed={seed} center=({cx},{cz}) radius={radius}");
-        (cz - radius..=cz + radius)
-            .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
-            .collect()
+        Some(
+            (cz - radius..=cz + radius)
+                .flat_map(|z| (cx - radius..=cx + radius).map(move |x| (x, z)))
+                .collect(),
+        )
     };
-    println!(
-        "{:>10} {:>9} {:>9} {:>9} {:>9}",
-        "chunk", "ALL", "BASE", "core", "border"
-    );
 
     let mut histogram: Option<HashMap<String, u64>> =
         if std::env::var_os("PARITY_HISTO").is_some() {
@@ -278,35 +289,120 @@ fn main() {
         println!("LEDGER -> {}", p.display());
     }
 
+    let (coords_tx, coords_rx) = mpsc::channel::<std::sync::Arc<Vec<(i32, i32)>>>();
+    let (van_tx, van_rx) =
+        mpsc::sync_channel::<(usize, Option<HashMap<(u8, i32, u8), String>>)>(4);
+
     let wb = neutron_worldgen::generator::WORLD_BOTTOM;
     let wt = neutron_worldgen::generator::WORLD_TOP;
     let mut tot = [0u64; 2];
     let mut chunks = 0u64;
     let mut worst: HashMap<(i32, i32), u64> = HashMap::new();
-    const BATCH: usize = 64;
-    for batch in coords.chunks(BATCH) {
-        // Generate the batch in parallel (each with its own noise cache), then
-        // compare serially in deterministic order. `gen` is borrowed by the
-        // scoped threads (ChunkGenerator is Sync: density nodes are Arc).
-        let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
-            std::thread::scope(|s| {
-                let gen = &gen;
-                let mut handles = Vec::with_capacity(batch.len());
-                for &(ccx, ccz) in batch {
-                    handles.push(s.spawn(move || {
-                        let mut cache = NoiseCache::new();
-                        let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
-                        (ccx, ccz, chunk)
-                    }));
+
+    std::thread::scope(|s| {
+        // Loader thread: owns the region-file cache, discovers the comparable
+        // chunk list in scan mode, then decodes vanilla NBT a few chunks ahead
+        // of the comparator (bounded channel) so decode overlaps generation.
+        let scan_dir = region_dir.clone();
+        s.spawn(move || {
+            let mut regions: HashMap<(i32, i32), Region> = HashMap::new();
+            let coords = std::sync::Arc::new(match window {
+                Some(c) => c,
+                None => {
+                    let mut c = discover_chunks(&mut regions, &scan_dir);
+                    if scan_step > 1 {
+                        c = c.into_iter().step_by(scan_step).collect();
+                    }
+                    c
                 }
-                handles.into_iter().map(|h| h.join().unwrap()).collect()
             });
+            if coords_tx.send(Arc::clone(&coords)).is_err() {
+                return;
+            }
+            for (i, &(ccx, ccz)) in coords.iter().enumerate() {
+                let map = load_vanilla_chunk(&mut regions, &scan_dir, ccx, ccz);
+                if van_tx.send((i, map)).is_err() {
+                    return;
+                }
+            }
+        });
+
+        let coords: std::sync::Arc<Vec<(i32, i32)>> = coords_rx.recv().expect("chunk discovery");
         if scan_step > 0 {
-            eprintln!("scan {}/{}", chunks as usize + generated.len(), coords.len());
+            println!(
+                "seed={seed} SCAN {} comparable chunks (step {scan_step})",
+                coords.len()
+            );
+        } else {
+            println!("seed={seed} center=({cx},{cz}) radius={radius}");
         }
-        for (ccx, ccz, chunk) in generated {
-            let Some(van) = load_vanilla_chunk(&mut regions, &region_dir, ccx, ccz) else {
+        println!(
+            "{:>10} {:>9} {:>9} {:>9} {:>9}",
+            "chunk", "ALL", "BASE", "core", "border"
+        );
+
+        // Generation pool: contiguous coord blocks per worker (sorted coords
+        // make consecutive chunks share ~80% of their 5x5 noise neighbourhood,
+        // so each worker keeps one persistent NoiseCache across its block and
+        // refill work drops ~5x). Results stream out through a bounded
+        // channel; comparison happens on this thread in coords order, so
+        // output and ledger ordering are deterministic.
+        let (gen_tx, gen_rx) = mpsc::sync_channel::<(usize, (i32, i32), neutron_worldgen::GeneratedChunk)>(
+            n_workers * 2,
+        );
+        let gen_ref = &gen;
+        let n = coords.len();
+        let block = n.div_ceil(n_workers);
+        for w in 0..n_workers {
+            let tx = gen_tx.clone();
+            let gen = gen_ref;
+            let coords = Arc::clone(&coords);
+            let lo = w * block;
+            let hi = ((w + 1) * block).min(n);
+            if lo >= hi {
+                break;
+            }
+            s.spawn(move || {
+                let mut cache = NoiseCache::with_cap(48);
+                for i in lo..hi {
+                    let (ccx, ccz) = coords[i];
+                    let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
+                    if tx.send((i, (ccx, ccz), chunk)).is_err() {
+                        break;
+                    }
+                }
+            });
+        }        drop(gen_tx);
+
+        let mut pending: BTreeMap<usize, (i32, i32, neutron_worldgen::GeneratedChunk)> =
+            BTreeMap::new();
+        let mut next_idx = 0usize;
+        'compare: while next_idx < coords.len() {
+            while !pending.contains_key(&next_idx) {
+                match gen_rx.recv() {
+                    Ok((i, (ccx, ccz), chunk)) => {
+                        pending.insert(i, (ccx, ccz, chunk));
+                    }
+                    Err(_) => {
+                        eprintln!(
+                            "generation pool ended early at {next_idx}/{}",
+                            coords.len()
+                        );
+                        break 'compare;
+                    }
+                }
+            }
+            let (ccx, ccz, chunk) = pending.remove(&next_idx).unwrap();
+            let (_vi, van) = match van_rx.recv() {
+                Ok(v) => v,
+                Err(_) => {
+                    eprintln!("vanilla loader ended early at {next_idx}/{}", coords.len());
+                    break 'compare;
+                }
+            };
+            let Some(van) = van else {
                 println!("{ccx:>5},{ccz:>4}     missing");
+                next_idx += 1;
                 continue;
             };
             let mut all = [0u64; 2];
@@ -366,8 +462,19 @@ fn main() {
                 pct(core),
                 pct(border)
             );
+            next_idx += 1;
+            if scan_step > 0 {
+                eprintln!("scan {}/{}", next_idx, coords.len());
+            }
         }
-    }
+        if next_idx < coords.len() {
+            // Aborted early: unblock the loader (it may be parked on a full
+            // van channel) and let remaining workers finish, then drain.
+            while let Ok((_i, m)) = van_rx.recv() {
+                let _ = m;
+            }
+        }
+    });
     if tot[0] + tot[1] > 0 {
         println!(
             "REGION ALL: {:.2}% over {chunks} chunks",
