@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 27 Aug 2026 (Linux box).**
+> **Updated 28 Aug 2026 (Linux box).**
 
 ## Now
 
@@ -10,71 +10,65 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 
 | Measurement | Value |
 | --- | --- |
-| SCAN 525, ticket_sim default (a5021c8) | **98.84%**, `ledger_v8.csv`, 599,711 cells |
-| SCAN 528, seed **12345** fresh ref | ticket_sim **98.45%** vs canonical_pregen 98.41% (−20.6k cells) |
-| SCAN 527, seed **777** fresh ref | ticket_sim **98.41%** vs canonical_pregen 98.31% (−49.6k cells) |
-| window (7,2) before→after ruined_portal | chunk 95.58% → **97.79%**, window 98.48% → 98.73% |
+| SCAN 525, 28 Aug (77b27a2) | **98.842%**, ledger **597,355** cells (was 599,711) |
+| 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port, no regression) |
+| SCAN 525, seed 12345 full | 98.45% (ticket_sim, 27 Aug) — re-scan pending |
+| SCAN 525, seed 777 full | 98.41% (ticket_sim, 27 Aug) — re-scan pending |
 
-New refs 12345/777 provisioned 27 Aug (same jar + square+west-strip
-procedure; bundler re-extract — 424242's libraries/ was pruned to probe
-set). Cross-seed pair consistency (`ticket_sim_anyseed.rs`): 95.01 /
-85.08 / 91.69 % all — beats row (81.0/80.8/80.6) everywhere; interior
-flag: 12345 ticket_sim 86.91 < row 88.68 (proxy only; block parity wins).
+Meter speedup (6ae05e2): worker pool (cores−2 default, `PARITY_WORKERS`
+overrides), streaming compare, vanilla NBT prefetch thread, per-worker
+persistent NoiseCache over contiguous coord blocks. Full SCAN ~24 min →
+**~4 min**, 2 cores free, output byte-identical, ledger identical.
 
-## Closed today (git log has evidence)
+## Closed 28 Aug (git log has evidence)
 
-- **ticket_sim origin order = NEW DEFAULT** (a5021c8): deterministic port of
-  the 26.2 ticket/dispatcher wavefront (deco_schedule.rs; FORCED batch +
-  level propagation + ChunkTaskPriorityQueue lowest-bucket×insertion-age +
-  ChunkPyramid gating; phases instead of wall-clock). Consistency vs 45,391
-  mined precedence pairs: **95.01% all / 96.04% interior** (row baseline
-  81.00/90.22; canonical_pregen 76.08). Ore swaps → 0 incl. the (0,0)
-  diag-before-center case; (3,-4) residual is vanilla resolving like
-  world_origin (only known parametric miss). Gate: SCAN 98.71→**98.84%**,
-  ledger −66,089 cells.
-- **Ref procedure CORRECTED** (a5021c8, script comment): actual ref was made
-  square([-8..7]²)+ONE west strip 31 s later (server log), not the 4-strip
-  ring; disk = forced ∪ Chebyshev-2 auto-promoted halo (528 slots; d3 cells
-  decorate via neighbor sweeps, drop unsaved). deco_schedule ingests this.
-- **ruined_portal overworld PORTED** (16af6e7): start floorDiv(8,40)*40 +
-  LegacyRandom(salt=34222645) nextInt(25)x2 ⇒ (8,2); giant_portal_2 ROT NONE
-  FRONT_BACK TP(128,45,32) air_pocket=1 cold=0 mossiness .2 (matches saved
-  `structures.starts`). Chest placed (loot out of scope); stair/slab props
-  unmodeled. `NEUTRON_RP_STEP_INDEX` sweep ≈ flat (±0.03%).
-- **Canyon pipeline BIT-EXACT** + **TrapezoidFloat exact** (5d20d60): probe
-  ↔ trace 268 records identical; "missing-carve" at (7,2) was the portal.
+- **FallenTreeFeature PORTED** (77b27a2): was unknown-type no-op. Stump +
+  horizontal log + `canPlaceEntireFallenLog` (validTreePos walk, non-sturdy
+  gap ≤2) + trunk_vine + attached_to_logs decorators, RNG order exact.
+  First flip at (2,0) gif17 draw5 now ACCEPTs. Ledger −1,022.
+- **validTreePos = full 26.2 replaceable_by_trees tag** (013a17a): tall_grass,
+  ferns, large_fern, flowers, bush/firefly/dead_bush, dry grass, seagrass,
+  roots, vine/glow_lichen now free — previously (now-ID'd blocks) they
+  REJECTED trees vanilla replaces-and-places. + CountPlacement count 0 =
+  empty stream (trees_plains 0w19/1w1). Ledger −1,334.
+- **Tree displacement mechanism proven** (tree_trunks_dump): missing trunk
+  bases are ≥97% matched by a same-type extra within 8 blocks, offsets
+  scattered ±3 → CASCADE, not different sets. First-flip oracle
+  (tree_first_flip + ProbeTreeFirstFlip): flips are GATE-INPUT (terrain cell
+  under draw), STREAM (decorator-cell drift inside earlier trees), or the
+  port gaps above. Port is draw-exact when terrain matches (16/16 draws).
+- **Lush caves: port is draw-exact** (moss_terrain_stream + lush_chain_dump
+  re-run): 0 never-attempted cells; 79/94 TERRAIN-bucket cells in (0,-1)
+  lost to per-column gates of `VegetationPatchFeature.placeGroundPatch/
+  placeGround` evaluated on a scene already diverged upstream; 15/94 died at
+  environment_scan; biome gate 0. Root = carver-edge + aquifer/water
+  microdiffs (chain dump: step-6 `van_pre=air neu_pre=stone`).
 
-## Order residual (cross-seed verified; next levers)
+## Standing causal map (updated)
 
-ticket_sim wins all-seed on block parity (see Now table). Pair-proxy
-residuals: (a) same-ring-epoch ties vanilla resolved via nproc−1 worker
-races (ref-side noise; core deterministic); (b) light-queue epochs merged
-in sim; (c) phase boundary: 424242's west strip landed ~31 s after the
-square, new refs' at 150 s — parameterize if chasing the last %.
-
-## Causal chain (standing)
-
-Streams align draw-for-draw when inputs match (oracle traces). Lush/sculk
-pool at (−1,−2)-area: MASK EMULATION REJECTED with numbers (inert by
-default; NEUTRON_TMP_MASK=1 breaks 448 correct cells, window 9095→9550).
-Real mechanism = per-origin placement parity: ore-blob coverage edges
-(coal misses a cell by 1 at dx+1) + TERRAIN bucket where vanilla placed
-and neutron never wrote (356 center / 3,339 3×3). Biome grid NOT the
-cause (7,679/7,680 quarts match).
+Streams align draw-for-draw when inputs match (proven for trees, lush,
+canyon). The remaining ledger is: (1) trees ~46% — cascade from gate-input
+terrain flips; (2) lush/sculk clay+moss+cave_vines ~13% — scene microdiffs;
+(3) pale garden patch ~3.5%. All three converge on **base-terrain parity:
+carver edges + aquifer/water cells** (BASE is 99.64%; the missing cells sit
+exactly on these features' gates).
 
 ## Next
 
-1. Lush/sculk winner-flips: reconstruct placement streams for the TERRAIN
-   bucket + the coal-edge off-by-1 (see artifacts above).
-2. Ring-epoch ties: sample same-bucket races vs the three seeds' pairs CSVs.
-3. Tree mass: dark_oak/oak displacement both ways remains top class.
-4. Ruined portal polish: loot tables; blockstate props if metric evolves.
-5. When carvers.rs touched: applyCarvers dx-outer/dz-inner order.
-6. Re-run `cargo test --workspace` before any push.
+1. **Carver-edge microdiff hunt** (foundation): 1-cell carve misses feeding
+   step-6..9 gates; `carver_edge_dump.rs` exists (untracked); applyCarvers
+   dx-outer/dz-inner order when touching carvers.rs.
+2. **Aquifer/water cell parity** — water@Y mismatches flip patch gates
+   (water→moss reverse rows).
+3. Re-scan 12345/777 full with the fast meter; cross-seed confirm.
+4. Fallen tree polish: sideways axis props if metric evolves.
+5. Ruined portal: loot tables (out of metric).
+6. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
-Single-chunk gen 11.5 s; `NEUTRON_STEP_TIMING=1` per-phase ms.
-Rust 1.98 · Temurin 25 · vineflower 1.12 (src at tools/mc-decompiler/output/
-26.2/src) · probe classpath jar under tools/nbt-ref/vanilla-fresh-424242/
-versions/26.2/. Update playbook: docs/PARITY.md (+ worldgen-json-diff.sh).
+8 cores; meter default leaves 2 free (`PARITY_WORKERS`). Chunk gen ~9.5 s
+cold, ~5 s with warm neighbor cache. Rust 1.98 · Temurin 25 · vineflower
+1.12 (src at tools/mc-decompiler/output/26.2/src) · probe classpath jar at
+tools/nbt-ref/vanilla-fresh-424242/versions/26.2/. Playbook:
+docs/PARITY.md.
