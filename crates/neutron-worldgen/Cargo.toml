@@ -155,3 +155,9 @@ name = "decorate_oracle"
 [[example]]
 name = "sculk_counts"
 
+
+[[example]]
+name = "tree_trunks_dump"
+
+[[example]]
+name = "tree_first_flip"

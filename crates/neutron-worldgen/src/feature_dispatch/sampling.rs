@@ -22,7 +22,9 @@ pub(super) fn placement_count(rng: &mut FeatureRandom, placed: &Value) -> i32 {
     for m in mods {
         let ty = m["type"].as_str().unwrap_or("");
         if ty == "minecraft:count" {
-            product *= sample_count_value(rng, &m["count"]).max(1);
+            // RepeatingPlacement.getPositions = IntStream.range(0, count):
+            // count 0 is a legal empty stream (e.g. trees_plains 0w19/1w1).
+            product *= sample_count_value(rng, &m["count"]);
             saw = true;
         } else if ty == "minecraft:noise_threshold_count" {
             let below = m["below_noise"].as_i64().unwrap_or(5) as i32;

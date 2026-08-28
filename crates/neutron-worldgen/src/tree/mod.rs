@@ -291,10 +291,15 @@ fn size_at_height(size: &FeatureSizeCfg, tree_height: i32, yo: i32) -> i32 {
 
 pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
     // TreeFeature.validTreePos: isAir || REPLACEABLE_BY_TREES (not fluids).
-    // 26.2 tag values with a BlockId here: leaves, pale_moss_carpet,
-    // short_grass, hanging_roots, leaf_litter, water. Blocks without a
-    // BlockId (ferns, tall_grass, flowers, vines, ...) read back as Air
-    // (RegionBuf.get), which is free — matching the tag.
+    // 26.2 tag (data/minecraft/tags/block/replaceable_by_trees.json): leaves,
+    // small_flowers, pale_moss_carpet, short_grass, fern, dead_bush, vine,
+    // glow_lichen, sunflower, lilac, rose_bush, peony, tall_grass,
+    // large_fern, hanging_roots, pitcher_plant, water, seagrass,
+    // tall_seagrass, bush, firefly_bush, warped_roots, nether_sprouts,
+    // crimson_roots, leaf_litter, short_dry_grass, tall_dry_grass.
+    // Tag members without a BlockId (pitcher_plant, open_eyeblossom,
+    // wither_rose, torchflower) read back as Air (RegionBuf.get) — free,
+    // matching vanilla.
     matches!(
         b,
         BlockId::Air
@@ -308,7 +313,40 @@ pub(crate) fn valid_tree_pos(b: BlockId) -> bool {
             | BlockId::AcaciaLeaves
             | BlockId::MangroveLeaves
             | BlockId::CherryLeaves
+            | BlockId::AzaleaLeaves
+            | BlockId::FloweringAzaleaLeaves
             | BlockId::ShortGrass
+            | BlockId::Fern
+            | BlockId::LargeFern
+            | BlockId::TallGrass
+            | BlockId::ShortDryGrass
+            | BlockId::TallDryGrass
+            | BlockId::Bush
+            | BlockId::FireflyBush
+            | BlockId::DeadBush
+            | BlockId::Vine
+            | BlockId::GlowLichen
+            | BlockId::Seagrass
+            | BlockId::TallSeagrass
+            | BlockId::WarpedRoots
+            | BlockId::CrimsonRoots
+            | BlockId::NetherSprouts
+            | BlockId::Dandelion
+            | BlockId::Poppy
+            | BlockId::BlueOrchid
+            | BlockId::Allium
+            | BlockId::AzureBluet
+            | BlockId::RedTulip
+            | BlockId::OrangeTulip
+            | BlockId::WhiteTulip
+            | BlockId::PinkTulip
+            | BlockId::OxeyeDaisy
+            | BlockId::Cornflower
+            | BlockId::LilyOfTheValley
+            | BlockId::Sunflower
+            | BlockId::Lilac
+            | BlockId::RoseBush
+            | BlockId::Peony
             | BlockId::LeafLitter
             | BlockId::PaleMossCarpet
             | BlockId::HangingRoots
