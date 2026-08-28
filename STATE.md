@@ -53,22 +53,41 @@ terrain flips; (2) lush/sculk clay+moss+cave_vines ~13% — scene microdiffs;
 carver edges + aquifer/water cells** (BASE is 99.64%; the missing cells sit
 exactly on these features' gates).
 
+## Closed 28 Aug (git log has evidence) — session 2
+
+- **minSurfaceLevel = vanilla bilinear** (312ed67): 16x16 surface-cell corner
+  lerp of quart-quantized preliminary surface levels, f32 alphas, floor —
+  was per-block direct eval with trunc. Ledger −2,464.
+- **steep = vanilla one-directional** (0c7386b+): south>=north+4 else
+  west>=east+4, chunk-clamped — was symmetric incl. self-row deltas.
+  Ledger −579. Cumulative today: 599,711 → **594,312** (98.85%).
+- **Carve geometry PROVEN identical** (b81b047): ProbeCarveTrace (real
+  CaveWorldCarver over stone ProtoChunk + real aquifer) vs NEUTRON_CARVE_TRACE:
+  56/56 source streams bit-identical for target (1,-1). The (17,96,-5) cell:
+  density bit-exact (+0.00944026 both), aquifer both=air, ZERO ellipsoids
+  cover it — earlier "our carver opened it" was wrong; that column matches in
+  production per the meter ledger.
+- **Aquifer exonerated twice** (16 probe cells + carve-path); **ocean/cold_ocean
+  have NO carvers in vanilla** — our port carves from every source (does not
+  affect this seed: 0 ocean sources region-wide; fix pending for coasts).
+- **tree_first_flip replay harness UNRELIABLE** (documented, not yet fixed):
+  ProbeTreeFirstFlip dump loader reads phantom pale_oak_leaves (index bug);
+  build_stripped_buffer strips pale oak family while the OCEAN_FLOOR
+  heightmap path in the replay yields y values inconsistent with the stripped
+  scene; the "first diver at draw N" table is void until the oracle is
+  rebuilt on the real pipeline. Trunk-base displacement itself is real
+  (meter ledger: pale_oak leaves 30k/31k missing/extra).
+
 ## Next
 
-1. **Cave-carver tunnel RNG parity** (the single surviving root): our density
-   is solid where the final world is air at surface gate cells — e.g.
-   (17,96,-5) neu density +0.0094 (solid) but carved; vanilla keeps
-   grass_block. Raw pre-feature carve jitter = 419 cells / 25-chunk window
-   (214 miss + 205 extra, 55% boundary-pair within Chebyshev 2, y med −13);
-   everything else in van_air/solid classes is feature-block flips.
-   Tool path: carve_from_chunk tunnel walk vs ProbeCarveHits; next dump =
-   tunnel-cell trace for source chunks carving chunk (1,-1).
-2. Waterlogged clay-pool top-fill: (34,5,13) clay-identical, van water vs
-   neu clay at surface cell — per-column cascade inside the patch.
-3. Fallen tree polish: sideways axis props if metric evolves.
-4. Ruined portal: loot tables (out of metric).
-5. AGENTS.md ref paths for 12345/777 DO have `world/` prefix (stale doc).
-6. `cargo test --workspace` before any push.
+1. **Rebuild the tree first-flip oracle on the REAL pipeline**: per-origin
+   NEUTRON_TRACE_TREES on generate_chunk_cached (region random intact) vs
+   ref trunk bases via the meter-grade loader; align draw-for-draw only on
+   origins whose chunk matches vanilla at base (BASE 99.7%+).
+2. Fix ProbeTreeFirstFlip dump loader index bug (phantom leaves).
+3. Ocean/cold_ocean carver-list gating (coastal seeds).
+4. Waterlogged clay-pool top-fill per-column cascade (34,5,13-type cells).
+5. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
