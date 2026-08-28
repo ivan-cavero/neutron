@@ -276,6 +276,8 @@ fn replay_origin_step9(
 // ---- gate-input evaluation helpers (replicate tree/mod.rs gates) ----
 
 fn valid_tree_pos(b: BlockId) -> bool {
+    // Mirror of crates/neutron-worldgen/src/tree/mod.rs valid_tree_pos
+    // (26.2 replaceable_by_trees tag) — kept in sync by hand.
     matches!(
         b,
         BlockId::Air
@@ -289,7 +291,40 @@ fn valid_tree_pos(b: BlockId) -> bool {
             | BlockId::AcaciaLeaves
             | BlockId::MangroveLeaves
             | BlockId::CherryLeaves
+            | BlockId::AzaleaLeaves
+            | BlockId::FloweringAzaleaLeaves
             | BlockId::ShortGrass
+            | BlockId::Fern
+            | BlockId::LargeFern
+            | BlockId::TallGrass
+            | BlockId::ShortDryGrass
+            | BlockId::TallDryGrass
+            | BlockId::Bush
+            | BlockId::FireflyBush
+            | BlockId::DeadBush
+            | BlockId::Vine
+            | BlockId::GlowLichen
+            | BlockId::Seagrass
+            | BlockId::TallSeagrass
+            | BlockId::WarpedRoots
+            | BlockId::CrimsonRoots
+            | BlockId::NetherSprouts
+            | BlockId::Dandelion
+            | BlockId::Poppy
+            | BlockId::BlueOrchid
+            | BlockId::Allium
+            | BlockId::AzureBluet
+            | BlockId::RedTulip
+            | BlockId::OrangeTulip
+            | BlockId::WhiteTulip
+            | BlockId::PinkTulip
+            | BlockId::OxeyeDaisy
+            | BlockId::Cornflower
+            | BlockId::LilyOfTheValley
+            | BlockId::Sunflower
+            | BlockId::Lilac
+            | BlockId::RoseBush
+            | BlockId::Peony
             | BlockId::LeafLitter
             | BlockId::PaleMossCarpet
             | BlockId::HangingRoots

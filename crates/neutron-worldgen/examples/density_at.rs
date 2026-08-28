@@ -92,6 +92,27 @@ fn density_at(
 }
 
 fn main() {
+    // density_at [seed] [wx] [y0] [y1] [wz] — density profile down one column.
+    // No args = legacy fixed-point dump (seed 12345 diagnostics).
+    let mut args = std::env::args().skip(1);
+    let seed: i64 = args.next().and_then(|s| s.parse().ok()).unwrap_or(12345);
+    if let (Some(wx), Some(y0), Some(y1), Some(wz)) = (
+        args.next().and_then(|s| s.parse::<i32>().ok()),
+        args.next().and_then(|s| s.parse::<i32>().ok()),
+        args.next().and_then(|s| s.parse::<i32>().ok()),
+        args.next().and_then(|s| s.parse::<i32>().ok()),
+    ) {
+        let gen = ChunkGenerator::new(seed);
+        let st = &gen.state;
+        let cx = wx.div_euclid(16);
+        let cz = wz.div_euclid(16);
+        println!("wx,y,wz  squeezed  final  solid?");
+        for y in y0..=y1 {
+            let (_i, a, f) = density_at(st, cx, cz, wx, y, wz);
+            println!("{wx:4},{y:4},{wz:4}  {a:.8}  {f:.8}  {}", f > 0.0);
+        }
+        return;
+    }
     let gen = ChunkGenerator::new(12345);
     let st = &gen.state;
     let cx = 6;

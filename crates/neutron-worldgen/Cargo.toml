@@ -161,3 +161,9 @@ name = "tree_trunks_dump"
 
 [[example]]
 name = "tree_first_flip"
+
+[[example]]
+name = "carver_pre_diff"
+
+[[example]]
+name = "aquifer_water_diff"
