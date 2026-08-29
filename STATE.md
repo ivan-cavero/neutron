@@ -54,15 +54,16 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **FULL vanilla decoration replay** (the last tool needed): extend
-   ProbePreDecorate to run ALL feature steps (1..9) with the region proxy
-   over the real pre-decoration scene — producing true vanilla per-draw
-   traces. Rationale (all verified this session): terrain pre-deco is
-   bit-compatible (density, aquifer, cave+canyon geometry 61/61 and 68/68
-   sources, surface rule), yet real trees diverge — the first flip lives in
-   the feature-phase CONTEXT (steps 1-8 writes interacting with step-9
-   draws). predecorate_diff residual (0.478%) = probe lacks mineshaft
-   pieces (ours has them) — not a terrain bug.
+1. **Isolate the glow_lichen (gif 0) write divergence**: over an IDENTICAL
+   scene (our export_predecorate fed to vanilla via SCENE_PREDC1), vanilla
+   rejects pale trees (max_free fail) where we accept — and the scene at
+   tree-time differs only in earlier feature writes. Compare the probe's
+   PROBE_WRITE_LOG (tag=origin, writes before gif 13) vs our writers plane
+   (NEUTRON_WRITERS=1) for origin (1,-1): first differing glow_lichen cell =
+   the bug. Toolchain complete: ProbeFullDecorate (real pipeline + real
+   biomes + global tag binding + SCENE_PREDC1 scene override),
+   predecorate_diff --dump-ours, single-thread trace runs
+   (PARITY_WORKERS=1 — traces interleave across workers otherwise!).
 2. Fix ProbeTreeFirstFlip dump loader (document stateful semantics).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
 4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
