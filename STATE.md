@@ -54,17 +54,17 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **Tree cascade root = surface height ±1 at draw columns** (proven cell
-   level, origin (1,0) draw 1): our pre-decoration surface tops at y=94 at
-   (19,10) vs vanilla 93 → our tree origin y=95 vs 94 → trunk rows, branches
-   (z=12/x=21 extra), leaf count (119 vs 366) and the whole origin RNG
-   cascade diverge. Draw 1 position (19,10) MATCHES; the flip is the +1
-   surface block. Next: audit getSurfaceDepth (surface noise *2.75 + 3 + 
-   positional-random jitter *0.25) and the bilinear min_surface_level
-   residual against vanilla SurfaceSystem at the mismatched columns
-   (e.g. (19,10): ours grass@94 / vanilla top@93).
-2. Fix ProbeTreeFirstFlip dump loader index confusion (document the stateful
-   semantics in its header).
+1. **Surface ±1 residual audit** (the tree-cascade root, proven at (1,0)
+   draw 1): topo_diff (fd8d65f) measures pre-decoration column-top parity:
+   95.79% exact / 34 off-by-1 in a 2304-column window. Each fixed column
+   un-cascades an origin (16 draws x ~400 cells). Audit the 34: our surface
+   rule output vs vanilla SurfaceSystem per column (min_surface_level
+   bilinear + steep + surface_depth all verified bit-exact individually —
+   the diff is in the rule APPLICATION, e.g. pale_garden default-grass
+   branch or stone_depth semantics). NOTE: topo_diff's deep-column decode
+   (underground tops) disagrees with the meter ledger — verify the
+   export_predecorate index layout before trusting off_ge_2 rows.
+2. Fix ProbeTreeFirstFlip dump loader (document stateful semantics).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
 4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
 5. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
