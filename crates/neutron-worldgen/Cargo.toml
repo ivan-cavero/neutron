@@ -166,6 +166,9 @@ name = "tree_first_flip"
 name = "topo_diff"
 
 [[example]]
+name = "predecorate_diff"
+
+[[example]]
 name = "carver_pre_diff"
 
 [[example]]
