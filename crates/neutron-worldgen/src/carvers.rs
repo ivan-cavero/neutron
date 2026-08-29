@@ -35,6 +35,8 @@ pub static CARVE_BAND_NONE: AtomicU32 = AtomicU32::new(0);
 pub static CARVE_BAND_WRITE: AtomicU32 = AtomicU32::new(0);
 /// Set true to bypass canReach (diagnostic only).
 pub static DIAG_SKIP_CAN_REACH: AtomicU32 = AtomicU32::new(0);
+/// Diagnostic: disable the canyon carver entirely.
+pub static DIAG_DISABLE_CANYON: AtomicU32 = AtomicU32::new(0);
 
 /// Lava carver fill: `above_bottom: 8` → Y = -56.
 const LAVA_Y: i32 = WORLD_BOTTOM + 8;
@@ -44,6 +46,19 @@ const APPLY_RANGE: i32 = 8;
 
 /// Enable after parity verification.
 pub const CARVERS_ENABLED: bool = true;
+
+/// NEUTRON_CARVE_TRACE="<cx>,<cz>" — print SRC/EL trace lines for that target
+/// chunk matching ProbeCarveTrace.java's format (cave carvers only).
+fn carve_trace_target() -> Option<(i32, i32)> {
+    static T: OnceLock<Option<(i32, i32)>> = OnceLock::new();
+    *T.get_or_init(|| {
+        let v = std::env::var("NEUTRON_CARVE_TRACE").ok()?;
+        let mut it = v.split(',');
+        let cx: i32 = it.next()?.trim().parse().ok()?;
+        let cz: i32 = it.next()?.trim().parse().ok()?;
+        Some((cx, cz))
+    })
+}
 
 // ---------------------------------------------------------------------------
 // Mth.sin / Mth.cos — vanilla 65536-entry table
@@ -107,6 +122,9 @@ pub fn apply_carvers_region(region: &mut RegionBuf, st: &WorldgenState) {
     }
 
     let level_seed = st.seed;
+    if std::env::var_os("NEUTRON_DISABLE_CANYON").is_some() {
+        DIAG_DISABLE_CANYON.store(1, Ordering::Relaxed);
+    }
 
     // Biome carvers order (typical overworld biomes):
     // 0: cave, 1: cave_extra_underground, 2: canyon
@@ -149,6 +167,7 @@ fn apply_carvers_for_target(
     target_cz: i32,
     cave_cfgs: &[CaveCfg],
 ) {
+    let trace = carve_trace_target() == Some((target_cx, target_cz));
     for dz in -APPLY_RANGE..=APPLY_RANGE {
         for dx in -APPLY_RANGE..=APPLY_RANGE {
             let source_cx = target_cx + dx;
@@ -165,6 +184,9 @@ fn apply_carvers_for_target(
                     continue;
                 }
                 CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
+                if trace {
+                    eprintln!("SRC {source_cx} {source_cz} {index}");
+                }
                 carve_from_chunk(
                     &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz, cfg,
                 );
@@ -175,9 +197,11 @@ fn apply_carvers_for_target(
                 rng.set_large_feature_seed(level_seed.wrapping_add(2), source_cx, source_cz);
                 if rng.next_f32() <= 0.01 {
                     CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
-                    canyon_from_chunk(
-                        &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz,
-                    );
+                    if DIAG_DISABLE_CANYON.load(Ordering::Relaxed) == 0 {
+                        canyon_from_chunk(
+                            &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz,
+                        );
+                    }
                 }
             }
         }
@@ -480,6 +504,11 @@ fn carve_ellipsoid(
     floor_level: f64,
 ) {
     CARVE_ELLIPSOIDS.fetch_add(1, Ordering::Relaxed);
+    if let Some((tcx, tcz)) = carve_trace_target() {
+        if tcx == target_cx && tcz == target_cz {
+            eprintln!("EL {cx:.6} {cy:.6} {cz:.6} {horiz:.6} {vert:.6}");
+        }
+    }
     if horiz <= 0.0 || vert <= 0.0 {
         return;
     }

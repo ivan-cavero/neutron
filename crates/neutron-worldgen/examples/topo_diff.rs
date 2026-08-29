@@ -67,10 +67,13 @@ fn load_vanilla_blocks(region_dir: &str, cx: i32, cz: i32) -> Option<Vec<u16>> {
             blocks[bi] = bid;
         }
     }
-    // Strip ONLY the tree/vegetation output whose height matters for the
-    // pre-tree comparison, KEEPING moss_block/pale_moss_block: the pale_moss
-    // patch (gif 14, AFTER trees) paints moss on the surface cell the surface
-    // rule gave grass — same Y, so it marks the pre-tree terrain height.
+    // Strip trees/vegetation. KEEP moss_block/pale_moss_block (the pale_moss
+    // patch paints moss on the surface cell the rule gave grass — same Y).
+    // ALSO neutralize the below-trunk dirt: a tree converts the block under
+    // its trunk to dirt; in the stripped column that dirt floats where the
+    // terrain is actually cave air. Detect: stripped-air cell whose RAW
+    // neighbor above was a log.
+    let raw = blocks.clone();
     for v in blocks.iter_mut() {
         if let Some(b) = BlockId::from_u16(*v) {
             let strip = matches!(
@@ -101,6 +104,35 @@ fn load_vanilla_blocks(region_dir: &str, cx: i32, cz: i32) -> Option<Vec<u16>> {
             );
             if strip {
                 *v = BlockId::Air.as_u16();
+            }
+        }
+    }
+    let is_log = |b: BlockId| {
+        matches!(
+            b,
+            BlockId::OakLog
+                | BlockId::DarkOakLog
+                | BlockId::PaleOakLog
+                | BlockId::BirchLog
+                | BlockId::SpruceLog
+        )
+    };
+    for lz in 0..16usize {
+        for lx in 0..16usize {
+            for ly in (1..383usize).rev() {
+                let i = ly * 256 + lz * 16 + lx;
+                if blocks[i] != BlockId::Air.as_u16() {
+                    continue;
+                }
+                let raw_above = BlockId::from_u16(raw[i + 256]).unwrap_or(BlockId::Air);
+                if is_log(raw_above) {
+                    // the stripped cell below a log: if it is dirt, it is the
+                    // tree's below-trunk dirt — hide it.
+                    let j = i - 256;
+                    if BlockId::from_u16(blocks[j]).unwrap_or(BlockId::Air) == BlockId::Dirt {
+                        blocks[j] = BlockId::Air.as_u16();
+                    }
+                }
             }
         }
     }
