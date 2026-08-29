@@ -54,18 +54,15 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **BUILD THE VANILLA PRE-DECORATION DUMPER** (the decisive tool): Java
-   probe running the REAL pipeline up to carvers — fillFromNoise +
-   buildSurface + applyCarvers over a 5x5 (ProtoChunk + real NoiseChunk;
-   stubs pattern from ProbeCarveTrace/ProbeDecorate) — dump NDEC-style.
-   Diff cell-level vs our export_predecorate. Every diff = a concrete fix
-   target (surface rule application, steps 1-8, ticket_sim residual).
-   Rationale: stripped-final replays CANNOT reconstruct the pre-tree scene
-   (trees/patches modify the terrain they sit on — proven repeatedly:
-   below-trunk dirt, patch moss, probe replay artifacts). All terrain
-   components verified bit-exact individually: density, aquifer substance,
-   cave-carve geometry (56/56 + 59/59 sources), surface_depth, canyon y-range
-   (no canyon reaches the audited cells).
+1. **FULL vanilla decoration replay** (the last tool needed): extend
+   ProbePreDecorate to run ALL feature steps (1..9) with the region proxy
+   over the real pre-decoration scene — producing true vanilla per-draw
+   traces. Rationale (all verified this session): terrain pre-deco is
+   bit-compatible (density, aquifer, cave+canyon geometry 61/61 and 68/68
+   sources, surface rule), yet real trees diverge — the first flip lives in
+   the feature-phase CONTEXT (steps 1-8 writes interacting with step-9
+   draws). predecorate_diff residual (0.478%) = probe lacks mineshaft
+   pieces (ours has them) — not a terrain bug.
 2. Fix ProbeTreeFirstFlip dump loader (document stateful semantics).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
 4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
