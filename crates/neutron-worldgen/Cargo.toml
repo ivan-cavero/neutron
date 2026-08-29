@@ -163,6 +163,9 @@ name = "tree_trunks_dump"
 name = "tree_first_flip"
 
 [[example]]
+name = "topo_diff"
+
+[[example]]
 name = "carver_pre_diff"
 
 [[example]]
