@@ -197,6 +197,9 @@ fn apply_carvers_for_target(
                 rng.set_large_feature_seed(level_seed.wrapping_add(2), source_cx, source_cz);
                 if rng.next_f32() <= 0.01 {
                     CARVE_STARTS.fetch_add(1, Ordering::Relaxed);
+                    if trace {
+                        eprintln!("SRC {source_cx} {source_cz} 2");
+                    }
                     if DIAG_DISABLE_CANYON.load(Ordering::Relaxed) == 0 {
                         canyon_from_chunk(
                             &mut rng, region, aquifer, source_cx, source_cz, target_cx, target_cz,
@@ -792,6 +795,11 @@ fn carve_ellipsoid_canyon(
     vert: f64,
     width_factors: &[f32],
 ) {
+    if let Some((tcx, tcz)) = carve_trace_target() {
+        if tcx == target_cx && tcz == target_cz {
+            eprintln!("CEL {cx:.6} {cy:.6} {cz:.6} {horiz:.6} {vert:.6}");
+        }
+    }
     if horiz <= 0.0 || vert <= 0.0 {
         return;
     }
