@@ -14,6 +14,32 @@ fn main() {
     let ccz: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
     let dump_path = args.next().expect("dump path");
     let _ = seed;
+    if dump_path == "--dump-ours" {
+        let out = args.next().expect("out path");
+        let gen = ChunkGenerator::new(seed);
+        let (pals, blocks, _bio, _names) = gen.export_predecorate(ccx, ccz);
+        let mut out_bytes: Vec<u8> = Vec::new();
+        out_bytes.extend_from_slice(b"PREDC1");
+        out_bytes.extend_from_slice(&seed.to_be_bytes());
+        out_bytes.extend_from_slice(&ccx.to_be_bytes());
+        out_bytes.extend_from_slice(&ccz.to_be_bytes());
+        for c in 0..25 {
+            let pal = &pals[c];
+            let idxs = &blocks[c];
+            out_bytes.extend_from_slice(&(pal.len() as u16).to_be_bytes());
+            for nm in pal {
+                let b = nm.as_bytes();
+                out_bytes.extend_from_slice(&(b.len() as u16).to_be_bytes());
+                out_bytes.extend_from_slice(b);
+            }
+            for v in idxs {
+                out_bytes.extend_from_slice(&v.to_be_bytes());
+            }
+        }
+        std::fs::write(&out, out_bytes).unwrap();
+        println!("ours dumped -> {out}");
+        return;
+    }
 
     // ---- load vanilla dump ----
     let mut buf = Vec::new();
