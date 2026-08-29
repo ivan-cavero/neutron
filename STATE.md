@@ -54,16 +54,18 @@ draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
 
 ## Next
 
-1. **Surface ±1 residual audit** (the tree-cascade root, proven at (1,0)
-   draw 1): topo_diff (fd8d65f) measures pre-decoration column-top parity:
-   95.79% exact / 34 off-by-1 in a 2304-column window. Each fixed column
-   un-cascades an origin (16 draws x ~400 cells). Audit the 34: our surface
-   rule output vs vanilla SurfaceSystem per column (min_surface_level
-   bilinear + steep + surface_depth all verified bit-exact individually —
-   the diff is in the rule APPLICATION, e.g. pale_garden default-grass
-   branch or stone_depth semantics). NOTE: topo_diff's deep-column decode
-   (underground tops) disagrees with the meter ledger — verify the
-   export_predecorate index layout before trusting off_ge_2 rows.
+1. **BUILD THE VANILLA PRE-DECORATION DUMPER** (the decisive tool): Java
+   probe running the REAL pipeline up to carvers — fillFromNoise +
+   buildSurface + applyCarvers over a 5x5 (ProtoChunk + real NoiseChunk;
+   stubs pattern from ProbeCarveTrace/ProbeDecorate) — dump NDEC-style.
+   Diff cell-level vs our export_predecorate. Every diff = a concrete fix
+   target (surface rule application, steps 1-8, ticket_sim residual).
+   Rationale: stripped-final replays CANNOT reconstruct the pre-tree scene
+   (trees/patches modify the terrain they sit on — proven repeatedly:
+   below-trunk dirt, patch moss, probe replay artifacts). All terrain
+   components verified bit-exact individually: density, aquifer substance,
+   cave-carve geometry (56/56 + 59/59 sources), surface_depth, canyon y-range
+   (no canyon reaches the audited cells).
 2. Fix ProbeTreeFirstFlip dump loader (document stateful semantics).
 3. Ocean/cold_ocean carver-list gating (coastal seeds).
 4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
