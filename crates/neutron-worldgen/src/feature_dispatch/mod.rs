@@ -280,217 +280,333 @@ pub(crate) fn place_placed_feature_step(
     } else {
         placed.get("feature").filter(|v| v.is_object())
     };
-    let base_count = placement_count(rng, &placed);
     static TRACE_TREES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     let trace_trees = *TRACE_TREES.get_or_init(|| std::env::var_os("NEUTRON_TRACE_TREES").is_some());
+    // Placement modifiers form a lazy stream pipeline in vanilla
+    // (`PlacementModifier.getPositions` chained via flatMap). A `count` is a
+    // RepeatingPlacement that duplicates each *current* stream position N
+    // times; modifiers AFTER the count apply per duplicated copy. This is NOT
+    // the same as multiplying all counts (the product stream applies every
+    // filter to every final copy — wrong RNG consumption, wrong accept rate).
+    //
+    // We implement the pipeline by walking modifiers left to right and
+    // recursing at each `count`: positions in the stream are processed one at
+    // a time, filters drop them, and a count fans each survivor out N times
+    // (the nested modifiers then run per copy).
+    let mods = placed["placement"].as_array().cloned().unwrap_or_default();
     if trace_trees {
-        eprintln!(
-            "[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count={base_count}"
-        );
-    }
-    let mut draw_no = 0;
-    for _ in 0..base_count {
-        draw_no += 1;
-        let mut x = origin_min_x;
-        let mut z = origin_min_z;
-        let mut y = 0i32;
-        let mut ok = true;
-        let mut has_xz = false;
-        let mut has_y = false;
-
-        if let Some(mods) = placed["placement"].as_array() {
-            for m in mods {
-                let ty = m["type"].as_str().unwrap_or("");
-                match ty {
-                    "minecraft:count" | "minecraft:count_on_every_layer" => {}
-                    "minecraft:in_square" => {
-                        x = origin_min_x + rng.next_int(16);
-                        z = origin_min_z + rng.next_int(16);
-                        has_xz = true;
+        // Upper-bound estimate ONLY — sampling the count here would consume
+        // RNG and desync the real pipeline.
+        let mut n = 1i64;
+        for m in &mods {
+            if m["type"].as_str() == Some("minecraft:count") {
+                let v = &m["count"];
+                let bound = if v.is_i64() {
+                    v.as_i64().unwrap_or(0)
+                } else if let Some(obj) = v.as_object() {
+                    match obj.get("type").and_then(|t| t.as_str()) {
+                        Some("minecraft:uniform") => obj["max_inclusive"].as_i64().unwrap_or(0),
+                        Some("minecraft:weighted_list") => obj["distribution"]
+                            .as_array()
+                            .and_then(|d| d.last())
+                            .and_then(|e| e["data"].as_i64())
+                            .unwrap_or(1),
+                        _ => 1,
                     }
-                    "minecraft:height_range" => {
-                        y = sample_height(rng, &m["height"]);
-                        has_y = true;
-                    }
-                    "minecraft:heightmap" => {
-                        if !has_xz {
-                            x = origin_min_x + rng.next_int(16);
-                            z = origin_min_z + rng.next_int(16);
-                            has_xz = true;
-                        }
-                        // WorldGenRegion.getHeight = ChunkAccess.getHeight + 1
-                        // = Heightmap.getFirstAvailable (one above highest opaque).
-                        let kind = parse_heightmap_kind(m["heightmap"].as_str().unwrap_or(""));
-                        if let Some(sy) = heightmap_top(region, x, z, kind) {
-                            y = sy + 1;
-                            has_y = true;
-                        } else {
-                            ok = false;
-                        }
-                    }
-                    "minecraft:random_offset" => {
-                        // Java RandomOffsetPlacement.getPositions samples in order
-                        // scatterX (xz_spread), scatterY (y_spread), scatterZ (xz_spread).
-                        let ox = sample_int_provider(rng, &m["xz_spread"]);
-                        let oy = sample_int_provider(rng, &m["y_spread"]);
-                        let oz = sample_int_provider(rng, &m["xz_spread"]);
-                        x += ox;
-                        y += oy;
-                        z += oz;
-                    }
-                    "minecraft:environment_scan" => {
-                        // EnvironmentScanPlacement: scan from current y in
-                        // direction_of_search while allowed_search_condition holds
-                        // (up to max_steps), stopping at the first target_condition
-                        // match. No RNG consumed.
-                        let dir = m["direction_of_search"].as_str().unwrap_or("down");
-                        let max_steps = m["max_steps"].as_i64().unwrap_or(12) as i32;
-                        let allowed = m.get("allowed_search_condition");
-                        let target = &m["target_condition"];
-                        let true_pred = serde_json::json!({"type":"minecraft:true"});
-                        let allowed = allowed.unwrap_or(&true_pred);
-                        let mut py = y;
-                        let mut found = None;
-                        // Vanilla EnvironmentScanPlacement.getPositions:
-                        // leaving the build height returns Stream.empty()
-                        // IMMEDIATELY — the final target re-check after the
-                        // loop must not run on an out-of-world Y.
-                        let mut out_of_world = false;
-                        if !eval_block_predicate(region, x, py, z, allowed) {
-                            ok = false;
-                            break;
-                        }
-                        for _ in 0..max_steps {
-                            if eval_block_predicate(region, x, py, z, target) {
-                                found = Some(py);
-                                break;
-                            }
-                            py += if dir == "down" { -1 } else { 1 };
-                            if py < WORLD_BOTTOM || py >= WORLD_TOP {
-                                out_of_world = true;
-                                break;
-                            }
-                            if !eval_block_predicate(region, x, py, z, allowed) {
-                                break;
-                            }
-                        }
-                        // Tail check: reached by loop exhaustion or the
-                        // `!allowed` break (vanilla still tests the target at
-                        // that position once) but NOT after leaving the world.
-                        if !out_of_world
-                            && found.is_none()
-                            && eval_block_predicate(region, x, py, z, target)
-                        {
-                            found = Some(py);
-                        }
-                        match found {
-                            Some(fy) => {
-                                y = fy;
-                                has_y = true;
-                            }
-                            None => ok = false,
-                        }
-                    }
-                    "minecraft:biome" => {
-                        let bname = biome_name_at(state, x, y, z);
-                        let step_list = feature_catalog::features_at_step(
-                            &bname,
-                            gen_step,                        );
-                        let id = strip(placed_id);
-                        if !step_list.iter().any(|f| strip(f) == id) {
-                            ok = false;
-                        }
-                    }
-                    "minecraft:block_predicate_filter" => {
-                        if !eval_block_predicate(region, x, y, z, &m["predicate"]) {
-                            ok = false;
-                        }
-                    }
-                    "minecraft:surface_water_depth_filter" => {
-                        // SurfaceWaterDepthFilter: WORLD_SURFACE - OCEAN_FLOOR <= max.
-                        let max = m["max_water_depth"].as_i64().unwrap_or(0) as i32;
-                        if column_water_depth(region, x, z) > max {
-                            ok = false;
-                        }
-                    }
-                    "minecraft:noise_threshold_count" => {
-                        // already expanded into base_count via placement_count
-                    }
-                    "minecraft:rarity_filter" => {
-                        // 26.2: nextFloat() < 1.0f / chance
-                        let chance = m["chance"].as_i64().unwrap_or(1) as i32;
-                        if chance <= 0 || rng.next_f32() >= 1.0 / chance as f32 {
-                            ok = false;
-                        }
-                    }
-                    "minecraft:surface_relative_threshold_filter" => {
-                        // SurfaceRelativeThresholdFilter.shouldPlace: Java long
-                        // add so omitted min=Integer.MIN_VALUE does not wrap.
-                        // getHeight = Heightmap.getFirstAvailable = solid Y + 1.
-                        let kind = parse_heightmap_kind(m["heightmap"].as_str().unwrap_or(""));
-                        let min_inc = m["min_inclusive"].as_i64().unwrap_or(i32::MIN as i64);
-                        let max_inc = m["max_inclusive"].as_i64().unwrap_or(i32::MAX as i64);
-                        let surface = heightmap_top(region, x, z, kind)
-                            .map(|s| s as i64 + 1)
-                            .unwrap_or(i64::MIN / 4);
-                        let yy = y as i64;
-                        if !(surface + min_inc <= yy && yy <= surface + max_inc) {
-                            ok = false;
-                        }
-                    }
-                    _ => {}
-                }
+                } else {
+                    1
+                };
+                n = n.saturating_mul(bound.max(1));
+            } else if m["type"].as_str() == Some("minecraft:noise_threshold_count") {
+                n = n.saturating_mul(11); // upper bound for the trace estimate
             }
         }
+        eprintln!(
+            "[trace] chunk=({origin_min_x},{origin_min_z}) placed={placed_id} count~={n}"
+        );
+    }
+    let mut draw_no = 0u64;
+    let mut ctx = PlacePipeline {
+        rng,
+        region,
+        state,
+        gen_step,
+        placed_id,
+        placed,
+        configured,
+        feature_ref: feature_ref.as_deref(),
+        trace_trees,
+        origin_min_x,
+        origin_min_z,
+        draw_no: &mut draw_no,
+    };
+    // The stream starts as a single position at the origin, then modifiers run.
+    ctx.run_modifiers(&mods[..], origin_min_x, origin_min_z, 0, false, false);
+}
+
+struct PlacePipeline<'a> {
+    rng: &'a mut FeatureRandom,
+    region: &'a mut RegionBuf,
+    state: &'a WorldgenState,
+    gen_step: i32,
+    placed_id: &'a str,
+    placed: &'a Value,
+    configured: Option<&'a Value>,
+    feature_ref: Option<&'a str>,
+    trace_trees: bool,
+    origin_min_x: i32,
+    origin_min_z: i32,
+    draw_no: &'a mut u64,
+}
+
+impl<'a> PlacePipeline<'a> {
+    /// Run `mods` over one stream position (all remaining modifiers).
+    fn run_modifiers(
+        &mut self,
+        mods: &[Value],
+        mut x: i32,
+        mut z: i32,
+        mut y: i32,
+        mut has_xz: bool,
+        mut has_y: bool,
+    ) {
+        let mut ok = true;
+        let mut i = 0usize;
+        while i < mods.len() {
+            let m = &mods[i];
+            let ty = m["type"].as_str().unwrap_or("");
+            match ty {
+                "minecraft:count" | "minecraft:count_on_every_layer" => {
+                    let n = sample_count_value(self.rng, &m["count"]);
+                    // Vanilla RepeatingPlacement: the SAME position fans out N
+                    // times; each copy continues through the remaining
+                    // modifiers. Inner modifiers are re-applied per copy
+                    // (RNG consumed per copy).
+                    for _ in 0..n.max(0) {
+                        self.run_modifiers_after_count(
+                            &mods[i + 1..],
+                            x,
+                            z,
+                            y,
+                            has_xz,
+                            has_y,
+                        );
+                    }
+                    return;
+                }
+                "minecraft:in_square" => {
+                    x = self.origin_min_x() + self.rng.next_int(16);
+                    z = self.origin_min_z() + self.rng.next_int(16);
+                    has_xz = true;
+                }
+                "minecraft:height_range" => {
+                    y = sample_height(self.rng, &m["height"]);
+                    has_y = true;
+                }
+                "minecraft:heightmap" => {
+                    if !has_xz {
+                        x = self.origin_min_x() + self.rng.next_int(16);
+                        z = self.origin_min_z() + self.rng.next_int(16);
+                        has_xz = true;
+                    }
+                    let kind = parse_heightmap_kind(m["heightmap"].as_str().unwrap_or(""));
+                    if let Some(sy) = heightmap_top(self.region, x, z, kind) {
+                        y = sy + 1;
+                        has_y = true;
+                    } else {
+                        ok = false;
+                    }
+                }
+                "minecraft:random_offset" => {
+                    let ox = sample_int_provider(self.rng, &m["xz_spread"]);
+                    let oy = sample_int_provider(self.rng, &m["y_spread"]);
+                    let oz = sample_int_provider(self.rng, &m["xz_spread"]);
+                    x += ox;
+                    y += oy;
+                    z += oz;
+                }
+                "minecraft:environment_scan" => {
+                    let dir = m["direction_of_search"].as_str().unwrap_or("down");
+                    let max_steps = m["max_steps"].as_i64().unwrap_or(12) as i32;
+                    let allowed = m.get("allowed_search_condition");
+                    let target = &m["target_condition"];
+                    let true_pred = serde_json::json!({"type":"minecraft:true"});
+                    let allowed = allowed.unwrap_or(&true_pred);
+                    let mut py = y;
+                    let mut found = None;
+                    let mut out_of_world = false;
+                    if !eval_block_predicate(self.region, x, py, z, allowed) {
+                        ok = false;
+                        break;
+                    }
+                    for _ in 0..max_steps {
+                        if eval_block_predicate(self.region, x, py, z, target) {
+                            found = Some(py);
+                            break;
+                        }
+                        py += if dir == "down" { -1 } else { 1 };
+                        if py < WORLD_BOTTOM || py >= WORLD_TOP {
+                            out_of_world = true;
+                            break;
+                        }
+                        if !eval_block_predicate(self.region, x, py, z, allowed) {
+                            break;
+                        }
+                    }
+                    if !out_of_world
+                        && found.is_none()
+                        && eval_block_predicate(self.region, x, py, z, target)
+                    {
+                        found = Some(py);
+                    }
+                    match found {
+                        Some(fy) => {
+                            y = fy;
+                            has_y = true;
+                        }
+                        None => ok = false,
+                    }
+                }
+                "minecraft:biome" => {
+                    let bname = biome_name_at(self.state, x, y, z);
+                    let step_list =
+                        feature_catalog::features_at_step(&bname, self.gen_step);
+                    let id = strip(self.placed_id);
+                    if !step_list.iter().any(|f| strip(f) == id) {
+                        ok = false;
+                    }
+                }
+                "minecraft:block_predicate_filter" => {
+                    if !eval_block_predicate(self.region, x, y, z, &m["predicate"]) {
+                        ok = false;
+                    }
+                }
+                "minecraft:surface_water_depth_filter" => {
+                    let max = m["max_water_depth"].as_i64().unwrap_or(0) as i32;
+                    if column_water_depth(self.region, x, z) > max {
+                        ok = false;
+                    }
+                }
+                "minecraft:noise_threshold_count" => {
+                    // Vanilla NoiseThresholdCountPlacement expands inline
+                    // (like a count), so a position fans out here too.
+                    let below = m["below_noise"].as_i64().unwrap_or(5) as i32;
+                    let above = m["above_noise"].as_i64().unwrap_or(10) as i32;
+                    let n = self.rng.next_f64() * 2.0 - 1.0;
+                    let level = m["noise_level"].as_f64().unwrap_or(-0.8);
+                    let count = if n < level { below } else { above };
+                    for _ in 0..count.max(0) {
+                        self.run_modifiers_after_count(&mods[i + 1..], x, z, y, has_xz, has_y);
+                    }
+                    return;
+                }
+                "minecraft:rarity_filter" => {
+                    let chance = m["chance"].as_i64().unwrap_or(1) as i32;
+                    if chance <= 0 || self.rng.next_f32() >= 1.0 / chance as f32 {
+                        ok = false;
+                    }
+                }
+                "minecraft:surface_relative_threshold_filter" => {
+                    let kind = parse_heightmap_kind(m["heightmap"].as_str().unwrap_or(""));
+                    let min_inc = m["min_inclusive"].as_i64().unwrap_or(i32::MIN as i64);
+                    let max_inc = m["max_inclusive"].as_i64().unwrap_or(i32::MAX as i64);
+                    let surface = heightmap_top(self.region, x, z, kind)
+                        .map(|s| s as i64 + 1)
+                        .unwrap_or(i64::MIN / 4);
+                    let yy = y as i64;
+                    if !(surface + min_inc <= yy && yy <= surface + max_inc) {
+                        ok = false;
+                    }
+                }
+                _ => {}
+            }
+            if !ok {
+                break;
+            }
+            i += 1;
+        }
         if !has_xz {
-            x = origin_min_x + rng.next_int(16);
-            z = origin_min_z + rng.next_int(16);
+            x = self.origin_min_x() + self.rng.next_int(16);
+            z = self.origin_min_z() + self.rng.next_int(16);
         }
         if !has_y {
-            y = heightmap_top(region, x, z, HeightmapKind::OceanFloor)
+            y = heightmap_top(self.region, x, z, HeightmapKind::OceanFloor)
                 .map(|s| s + 1)
                 .unwrap_or(64);
         }
         if !ok {
-            if trace_trees {
-                eprintln!("[trace]   draw {draw_no} REJECT (x={x},z={z},y={y})");
+            if self.trace_trees {
+                *self.draw_no += 1;
+                eprintln!(
+                    "[trace]   draw {} REJECT (x={x},z={z},y={y})",
+                    *self.draw_no
+                );
             }
-            continue;
+            return;
         }
+        self.place_one(x, y, z);
+    }
+
+    /// Process the modifier suffix after a `count` fan-out for one copy.
+    /// After a count, the duplicated position keeps the x/z/y computed by
+    /// the modifiers before the count (they are "set"), and the remaining
+    /// modifiers run per copy.
+    fn run_modifiers_after_count(
+        &mut self,
+        rest: &[Value],
+        x: i32,
+        z: i32,
+        y: i32,
+        _has_xz: bool,
+        _has_y: bool,
+    ) {
+        self.run_modifiers(rest, x, z, y, true, true);
+    }
+
+    fn origin_min_x(&self) -> i32 {
+        self.origin_min_x
+    }
+
+    fn origin_min_z(&self) -> i32 {
+        self.origin_min_z
+    }
+
+    fn place_one(&mut self, x: i32, y: i32, z: i32) {
         let mut tree_placed = false;
-        // NEUTRON_DECO_SKIP_TREE_DRAWS=N (diagnostic): reject the first N
-        // draws at the feature gate (no tree RNG consumed) — simulates the
-        // "draws rejected by decoration-time terrain" hypothesis for the
-        // vanilla-stream derivation (deco_stream_probe).
         static SKIP_TREE_DRAWS: std::sync::OnceLock<Option<i32>> = std::sync::OnceLock::new();
         if let Some(skip) = *SKIP_TREE_DRAWS.get_or_init(|| {
             std::env::var("NEUTRON_DECO_SKIP_TREE_DRAWS")
                 .ok()
                 .and_then(|s| s.parse::<i32>().ok())
         }) {
-            if draw_no <= skip {
-                if trace_trees {
-                    eprintln!("[trace]   draw {draw_no} SKIP (x={x},z={z},y={y})");
+            *self.draw_no += 1;
+            if *self.draw_no <= skip as u64 {
+                if self.trace_trees {
+                    eprintln!(
+                        "[trace]   draw {} SKIP (x={x},z={z},y={y})",
+                        *self.draw_no
+                    );
                 }
-                continue;
+                return;
             }
         }
-        if let Some(ref cfg) = configured {
-            dispatch_configured(rng, region, Some(state), x, y, z, cfg, gen_step);
+        if let Some(cfg) = self.configured {
+            dispatch_configured(self.rng, self.region, Some(self.state), x, y, z, cfg, self.gen_step);
             tree_placed = true;
-        } else if let Some(ref id) = feature_ref {
-            // nested placed
+        } else if let Some(id) = self.feature_ref {
             if let Some(inner) = feature_catalog::load_placed_feature(id) {
                 if let Some(cid) = inner["feature"].as_str() {
                     if let Some(cfg) = feature_catalog::load_configured_feature(cid) {
-                        dispatch_configured(rng, region, Some(state), x, y, z, &cfg, gen_step);
+                        dispatch_configured(self.rng, self.region, Some(self.state), x, y, z, &cfg, self.gen_step);
                     }
                 }
             }
         }
-        if trace_trees {
+        if self.trace_trees {
+            *self.draw_no += 1;
             eprintln!(
-                "[trace]   draw {draw_no} ACCEPT x={x} z={z} y={y} tree_feature={tree_placed}"
+                "[trace]   draw {} ACCEPT x={x} z={z} y={y} tree_feature={tree_placed}",
+                *self.draw_no
             );
         }
     }
@@ -1111,7 +1227,7 @@ pub(crate) use vegetation::*;
 use fluids::{place_block_column, place_spring};
 
 #[allow(unused_imports)]
-use sampling::{placement_count, resolve_anchor, sample_count_value};
+use sampling::{resolve_anchor, sample_count_value};
 mod tests {
     use super::*;
 
@@ -1168,6 +1284,61 @@ mod tests {
         assert_eq!(
             heightmap_top(&region, 4, 4, HeightmapKind::OceanFloor).map(|s| s + 1),
             Some(71)
+        );
+    }
+
+    /// Nested counts: a `count` is a RepeatingPlacement that fans out the
+    /// CURRENT stream position; filters BETWEEN two counts run per base
+    /// position, NOT per final copy. This is the regression that let
+    /// wildflowers_birch_forest (count:3 → rarity 1/2 → count:64) place 54
+    /// blocks where vanilla places 0 (rarity was consumed 192 times instead
+    /// of 3, desyncing trees_birch downstream).
+    #[test]
+    fn nested_count_rarity_consumes_per_base_position() {
+        let mut rng = FeatureRandom::new(424242);
+        let dec = rng.set_decoration_seed(424242, 16, -16);
+        rng.set_feature_seed(dec, 22, 9);
+        let placed = serde_json::json!({
+            "feature": "minecraft:simple_block",
+            "placement": [
+                {"type": "minecraft:count", "count": 3},
+                {"type": "minecraft:rarity_filter", "chance": 2},
+                {"type": "minecraft:in_square"},
+                {"type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR"},
+                {"type": "minecraft:biome"},
+                {"type": "minecraft:count", "count": 64},
+                {"type": "minecraft:block_predicate_filter",
+                 "predicate": {"type": "minecraft:matching_block_tag", "tag": "minecraft:air"}}
+            ]
+        });
+        // The first count fans out to 3 base positions; rarity runs once PER
+        // base position (3 nextFloat draws), not once per 192 final copies.
+        let mut region = RegionBuf::new(1, -1, 2);
+        for dz in -2..=2i32 {
+            for dx in -2..=2i32 {
+                let (b, hm, _) = crate::ChunkGenerator::new(424242)
+                    .generate_noise_and_surface(1 + dx, -1 + dz);
+                region.put_chunk(1 + dx, -1 + dz, &b, &hm);
+            }
+        }
+        let state = crate::ChunkGenerator::new(424242).state;
+        let before = rng.draw_count();
+        place_placed_feature_step(
+            &mut rng,
+            &mut region,
+            &state,
+            16,
+            -16,
+            "minecraft:test_nested",
+            9,
+        );
+        let draws = rng.draw_count() - before;
+        // 3 rarity draws (one per base position) + in_square/heightmap for
+        // the survivors + fan-out counts (0 draws for constant counts).
+        // If rarity were consumed per final copy we'd see ~3*64 draws.
+        assert!(
+            draws < 300,
+            "rarity must be consumed per base position, got {draws} draws"
         );
     }
 }

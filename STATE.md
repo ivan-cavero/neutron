@@ -10,8 +10,9 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 
 | Measurement | Value |
 | --- | --- |
+| SCAN 525, 31 Aug (nested-count pipeline) | **98.86%**, ledger **588,823** cells |
 | SCAN 525, 28 Aug s2 (9d58a2e) | **98.85%**, ledger **594,312** cells |
-| Session delta | 599,711 → 594,312 (**−5,399**) |
+| Session delta | 594,312 → 588,823 (**−5,489**) |
 | SCAN 528, seed **12345** (28 Aug) | ticket_sim **98.45%** (no regression) |
 | SCAN 527, seed **777** (28 Aug) | ticket_sim **98.41%** (no regression) |
 | 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port) |
@@ -44,32 +45,34 @@ compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
   effect this seed: 0 ocean sources region-wide; fix pending).
 - **Tree displacement mechanism** (tree_trunks_dump): ≥97% of missing trunk
   bases have a same-type extra within 8 blocks, offsets scattered → CASCADE.
+- **Nested-count placement pipeline** (31 Aug): `count` modifiers are now a
+  RepeatingPlacement fan-out per stream position (rarity/biome filters run per
+  base position, then the next count replicates survivors) instead of the old
+  count-product loop. `wildflowers_birch_forest` (count:3→rarity 1/2→count:64)
+  placed 54 blocks where vanilla places 0 — the rarity was consumed 192 times
+  instead of 3, desyncing `trees_birch` downstream (the dark_oak gap root
+  cause). Ledger −5,489.
 
 ## Standing causal map
 
 Streams align draw-for-draw when inputs match. Remaining ledger: trees ~44%
 (cascade from gate-input flips), lush/sculk ~13% (scene microdiffs; port
 draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
-(surface rules fixed today — biggest single win).
+(surface rules fixed today — biggest single win). The nested-count pipeline
+removed the placement-stream desync; tree foliage count now matches per-tree
+(logs 40/40), remaining leaves diff is canopy-shape microdiffs.
 
 ## Next
 
-1. **Isolate the glow_lichen (gif 0) write divergence**: over an IDENTICAL
-   scene (our export_predecorate fed to vanilla via SCENE_PREDC1), vanilla
-   rejects pale trees (max_free fail) where we accept — and the scene at
-   tree-time differs only in earlier feature writes. Compare the probe's
-   PROBE_WRITE_LOG (tag=origin, writes before gif 13) vs our writers plane
-   (NEUTRON_WRITERS=1) for origin (1,-1): first differing glow_lichen cell =
-   the bug. Toolchain complete: ProbeFullDecorate (real pipeline + real
-   biomes + global tag binding + SCENE_PREDC1 scene override),
-   predecorate_diff --dump-ours, single-thread trace runs
-   (PARITY_WORKERS=1 — traces interleave across workers otherwise!).
-2. Fix ProbeTreeFirstFlip dump loader (document stateful semantics).
-3. Ocean/cold_ocean carver-list gating (coastal seeds).
-4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
-5. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+1. **Canopy-shape foliage diff** (birch blob): tree logs match 40/40 per
+   origin but leaves differ (vanilla 339 vs neutron 331 for origin -14,-15;
+   missing z=-224 edge / extra z=-230..-234). Compare blob foliage radius
+   RNG draw stream per tree — the remaining ~52 cells per origin.
+2. Ocean/cold_ocean carver-list gating (coastal seeds).
+3. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
+4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-6. `cargo test --workspace` before any push.
+5. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 

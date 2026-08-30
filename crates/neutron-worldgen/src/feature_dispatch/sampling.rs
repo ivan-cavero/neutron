@@ -11,37 +11,7 @@ use crate::worldgen::WorldgenState;
 use serde_json::Value;
 
 
-pub(super) fn placement_count(rng: &mut FeatureRandom, placed: &Value) -> i32 {
-    let Some(mods) = placed["placement"].as_array() else {
-        return 1;
-    };
-    // Sequential CountPlacement / NoiseThresholdCount compose as a product.
-    // Sample each provider **once** (the previous double loop consumed RNG twice).
-    let mut product = 1i32;
-    let mut saw = false;
-    for m in mods {
-        let ty = m["type"].as_str().unwrap_or("");
-        if ty == "minecraft:count" {
-            // RepeatingPlacement.getPositions = IntStream.range(0, count):
-            // count 0 is a legal empty stream (e.g. trees_plains 0w19/1w1).
-            product *= sample_count_value(rng, &m["count"]);
-            saw = true;
-        } else if ty == "minecraft:noise_threshold_count" {
-            let below = m["below_noise"].as_i64().unwrap_or(5) as i32;
-            let above = m["above_noise"].as_i64().unwrap_or(10) as i32;
-            let n = rng.next_f64() * 2.0 - 1.0;
-            let level = m["noise_level"].as_f64().unwrap_or(-0.8);
-            product *= if n < level { below } else { above };
-            saw = true;
-        }
-    }
-    if saw {
-        product.min(512)
-    } else {
-        1
-    }
-}
-
+/// Sample a count value provider (constant / uniform / weighted_list).
 pub(super) fn sample_count_value(rng: &mut FeatureRandom, v: &Value) -> i32 {
     if let Some(n) = v.as_i64() {
         return n as i32;

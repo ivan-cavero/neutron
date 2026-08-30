@@ -41,6 +41,12 @@ pub struct RegionBuf {
     /// Id of the feature/stage currently running; stamped by drivers and by
     /// dispatch_configured. Default TERRAIN.
     pub current_writer: u16,
+    /// Write buffer for decoration: accumulates writes during a step,
+    /// applied atomically at step boundaries. Fixes scene-dependent
+    /// feature acceptance (e.g., pale garden trees).
+    write_buffer: std::collections::HashMap<(i32, i32, i32), u16>,
+    /// Current decoration step (0-10). Flushed on advance.
+    decoration_step: u8,
 }
 
 impl RegionBuf {
@@ -65,6 +71,8 @@ impl RegionBuf {
             region_random: std::cell::RefCell::new(None),
             writers: attribution.then(|| vec![crate::writers::TERRAIN; volume]),
             current_writer: crate::writers::TERRAIN,
+            write_buffer: std::collections::HashMap::new(),
+            decoration_step: 0,
         }
     }
 
@@ -100,12 +108,56 @@ impl RegionBuf {
         )
     }
 
-    pub fn get(&self, x: i32, y: i32, z: i32) -> BlockId {
-        match self.index(x, y, z) {
-            Some(i) => BlockId::from_u16(self.blocks[i]).unwrap_or(BlockId::Air),
-            None => BlockId::Air,
+        pub fn get(&self, x: i32, y: i32, z: i32) -> BlockId {
+            match self.index(x, y, z) {
+                Some(i) => BlockId::from_u16(self.blocks[i]).unwrap_or(BlockId::Air),
+                None => BlockId::Air,
+            }
         }
-    }
+
+        /// Read block with write-buffer overlay. Used by predicates
+        /// (would_survive, matching_block_tag) to see pending writes
+        /// from the same decoration step.
+        pub fn get_buffered(&self, x: i32, y: i32, z: i32) -> BlockId {
+            if let Some(&block_u16) = self.write_buffer.get(&(x, y, z)) {
+                return BlockId::from_u16(block_u16).unwrap_or(BlockId::Air);
+            }
+            self.get(x, y, z)
+        }
+
+        /// Buffer a write during decoration (not applied immediately).
+        /// Use for features that should not affect later features' acceptance
+        /// decisions until the step boundary.
+        pub fn buffer_write(&mut self, x: i32, y: i32, z: i32, b: BlockId) {
+            let idx = self.index(x, y, z);
+            self.write_buffer.insert((x, y, z), b.as_u16());
+            if let (Some(w), Some(i)) = (&mut self.writers, idx) {
+                w[i] = self.current_writer;
+            }
+        }
+
+        /// Flush write buffer to main storage (at step boundary).
+        pub fn flush_buffer(&mut self) {
+            let entries: Vec<_> = self.write_buffer.drain().collect();
+            for ((x, y, z), block_u16) in entries {
+                if let Some(i) = self.index(x, y, z) {
+                    self.blocks[i] = block_u16;
+                }
+            }
+        }
+
+        /// Advance decoration step (triggers flush when step increases).
+        pub fn advance_step(&mut self, new_step: u8) {
+            if new_step > self.decoration_step {
+                self.flush_buffer();
+                self.decoration_step = new_step;
+            }
+        }
+
+        /// Get current decoration step.
+        pub fn current_step(&self) -> u8 {
+            self.decoration_step
+        }
 
     pub fn set(&mut self, x: i32, y: i32, z: i32, b: BlockId) {
         if let Some(i) = self.index(x, y, z) {
@@ -116,6 +168,15 @@ impl RegionBuf {
         }
         if crate::sculk::SET_TRACE.load(std::sync::atomic::Ordering::Relaxed) {
             eprintln!("W {x},{y},{z} {}", b.block_name());
+        }
+        // NEUTRON_SET_LOG=1: stream every feature write (writer-id tagged) for
+        // two-sided diffing against the Java probes' PROBE_WRITE_LOG.
+        static SET_LOG_ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if *SET_LOG_ENABLED.get_or_init(|| std::env::var_os("NEUTRON_SET_LOG").is_some()) {
+            eprintln!(
+                "NSET {}|{}|{}|{}|{}|{}|{}",
+                x, y, z, b.block_name(), self.current_writer, self.origin_x, self.origin_z
+            );
         }
     }
 

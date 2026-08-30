@@ -108,7 +108,8 @@ pub(crate) fn eval_block_predicate(
             //  muddy_mangrove_roots; moss_blocks = moss_block, pale_moss_block;
             //  grass_blocks = grass_block, podzol, mycelium). Farmland has no
             //  BlockId in surface.rs (surface trees never sit on farmland).
-            let below = region.get(x, y - 1, z);
+            // Use get_buffered to see pending writes from same decoration step.
+            let below = region.get_buffered(x, y - 1, z);
             supports_vegetation(below)
         }
         "minecraft:true" => true,
