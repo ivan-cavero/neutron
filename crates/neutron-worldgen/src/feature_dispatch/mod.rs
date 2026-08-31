@@ -222,6 +222,9 @@ fn place_feature_list(
 ) {
     let mut rng = FeatureRandom::new(level_seed);
     let decoration_seed = rng.set_decoration_seed(level_seed, ox0, oz0);
+    // Attribute NSET writes to this origin (the region origin is constant).
+    region.pass_origin_x = ox0;
+    region.pass_origin_z = oz0;
     // Vanilla places in increasing FeatureSorter global index.
     let mut indexed: Vec<(i32, &String)> = list
         .iter()

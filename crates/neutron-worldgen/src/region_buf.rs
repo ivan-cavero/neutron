@@ -41,6 +41,11 @@ pub struct RegionBuf {
     /// Id of the feature/stage currently running; stamped by drivers and by
     /// dispatch_configured. Default TERRAIN.
     pub current_writer: u16,
+    /// Decoration-origin block coordinate of the CURRENT pass (set by
+    /// `place_feature_list`). Used by the NSET write log to attribute a write
+    /// to the origin that actually made it (the region origin is constant).
+    pub pass_origin_x: i32,
+    pub pass_origin_z: i32,
     /// Write buffer for decoration: accumulates writes during a step,
     /// applied atomically at step boundaries. Fixes scene-dependent
     /// feature acceptance (e.g., pale garden trees).
@@ -71,6 +76,8 @@ impl RegionBuf {
             region_random: std::cell::RefCell::new(None),
             writers: attribution.then(|| vec![crate::writers::TERRAIN; volume]),
             current_writer: crate::writers::TERRAIN,
+            pass_origin_x: origin_x,
+            pass_origin_z: origin_z,
             write_buffer: std::collections::HashMap::new(),
             decoration_step: 0,
         }
@@ -175,7 +182,7 @@ impl RegionBuf {
         if *SET_LOG_ENABLED.get_or_init(|| std::env::var_os("NEUTRON_SET_LOG").is_some()) {
             eprintln!(
                 "NSET {}|{}|{}|{}|{}|{}|{}",
-                x, y, z, b.block_name(), self.current_writer, self.origin_x, self.origin_z
+                x, y, z, b.block_name(), self.current_writer, self.pass_origin_x, self.pass_origin_z
             );
         }
     }

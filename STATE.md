@@ -57,17 +57,27 @@ compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
 
 Streams align draw-for-draw when inputs match. Remaining ledger: trees ~44%
 (cascade from gate-input flips), lush/sculk ~13% (scene microdiffs; port
-draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs
-(surface rules fixed today — biggest single win). The nested-count pipeline
-removed the placement-stream desync; tree foliage count now matches per-tree
-(logs 40/40), remaining leaves diff is canopy-shape microdiffs.
+draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs.
+
+**dark_oak gap root cause (31 Aug)**: `wildflowers_birch_forest` (gif 22)
+places MORE wildflowers than vanilla (origin -240,-224: neutron 67 vs
+vanilla 22). Each wildflower raises `WORLD_SURFACE` in
+`surface_water_depth_filter`, so depth goes 0→2 and the NEXT origin's
+`trees_birch` (gif 24) is rejected where vanilla accepts (e.g. (-232,-211)).
+One rejected draw desyncs the whole stream → 48k missing ≈ 48k extra
+dark_oak_leaves. The nested-count pipeline fixed the placement fan-out but
+the wildflower acceptance itself still differs (45 extra per origin).
+`place_below_trunk` dirt in trunks is CORRECT (vanilla trunkSetter adds it).
+PROBE_WRITE_LOG only logs blocks that change — unusable for ore attribution.
 
 ## Next
 
-1. **Canopy-shape foliage diff** (birch blob): tree logs match 40/40 per
-   origin but leaves differ (vanilla 339 vs neutron 331 for origin -14,-15;
-   missing z=-224 edge / extra z=-230..-234). Compare blob foliage radius
-   RNG draw stream per tree — the remaining ~52 cells per origin.
+1. **wildflowers_birch_forest acceptance**: 67 vs 22 wildflowers from origin
+   (-240,-224). Same RNG (2/3 bases survive rarity, 128 copies), so the diff
+   is in the per-copy gate (random_offset + `block_predicate_filter air` +
+   simple_block canSurvive). Dump the 128-copy draw stream vs the probe
+   (PROBE_WRITE_LOG has the placed cells) to find the first diverging copy.
+   Fix unblocks trees_birch of the next origin → 48k dark_oak cells.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
 4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
