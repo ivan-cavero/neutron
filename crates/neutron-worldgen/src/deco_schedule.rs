@@ -53,12 +53,12 @@
 //! distance-4 cells (level 35 = CARVERS cap) can never decorate.
 //!
 //! Deterministic replacements for thread/wall-clock effects (same seams the
-//! probe documents): ticket-level propagation evaluated at its fixed point
-//! per command tick (point sources ⇒ level = 31 + chebyshev distance),
-//! `changedHolders`/promotion waves replayed in ascending packed-key order,
-//! worker pool serialized FIFO.
+//! probe documents): ticket-level propagation evaluated as the BFS wavefront
+//! of the tracker's LeveledPriorityQueue (forceload ingestion order, not a
+//! packed-key sort), `changedHolders`/promotion waves replayed in that
+//! wavefront order, worker pool serialized FIFO.
 
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::OnceLock;
 
 // ---- constants mirrored from the 26.2 decompile ---------------------------
@@ -360,7 +360,6 @@ struct Blocker {
 
 struct Sim {
     holders: HashMap<i64, Holder>,
-    tickets: HashSet<i64>,
     /// Scheduled generation tasks by center key (one per cell).
     tasks: HashMap<i64, usize>,
     pending_tasks: VecDeque<usize>,
@@ -372,7 +371,6 @@ struct Sim {
     exec: VecDeque<Item>,
     active_group: usize,
     level_field: HashMap<i64, i32>,
-    field_dirty: bool,
     decorated: HashSet<i64>,
     events: Vec<(i32, i32)>,
 }
@@ -381,7 +379,6 @@ impl Sim {
     fn new() -> Self {
         Self {
             holders: HashMap::new(),
-            tickets: HashSet::new(),
             tasks: HashMap::new(),
             pending_tasks: VecDeque::new(),
             parked: Vec::new(),
@@ -392,7 +389,6 @@ impl Sim {
             exec: VecDeque::new(),
             active_group: 0,
             level_field: HashMap::new(),
-            field_dirty: true,
             decorated: HashSet::new(),
             events: Vec::new(),
         }
@@ -410,50 +406,29 @@ impl Sim {
         idx
     }
 
-    fn ingest_commands(&mut self, batch: &Batch) {
+    /// Wavefront-settle the freshly ingested batch's tickets (LoadingChunkTracker
+    /// runDistanceUpdates → DynamicGraphMinFixedPoint.runUpdates, ChunkTracker
+    /// :46-48 / DynamicGraphMinFixedPoint.java:124-150). The tracker's
+    /// LeveledPriorityQueue pops by priority = min(level, computedLevel) with
+    /// LongLinkedOpenHashSet insertion order per bucket, so the order in which
+    /// `setLevel` materializes holders is the BFS wavefront expanding from the
+    /// batch's tickets in forceload ingestion order (x outer asc, z inner asc) —
+    /// NOT a packed-key sort. The wavefront order is what determines the order
+    /// of `changedHolders` → updateFutures → resort + task creation, hence the
+    /// decorate order. Returns the newly-settled keys in wavefront order.
+    fn apply_distance_updates(&mut self, batch: &Batch) -> Vec<i64> {
+        let mut settled: Vec<i64> = Vec::new();
+        let mut dq: VecDeque<i64> = VecDeque::new();
         for (cx, cz) in batch.coords() {
             let key = pack(cx, cz);
-            if !self.tickets.insert(key) {
-                continue;
+            match self.level_field.get(&key) {
+                Some(&cur) if cur <= FORCED_TICKET_LEVEL => continue,
+                _ => {
+                    self.level_field.insert(key, FORCED_TICKET_LEVEL);
+                    dq.push_back(key);
+                    settled.push(key);
+                }
             }
-            self.field_dirty = true;
-        }
-    }
-
-    /// Converged point-source field min(31 + chebyshev) over FORCED tickets —
-    /// the exact fixed point of LoadingChunkTracker's DynamicGraphMinFixedPoint
-    /// propagation for this source set (probe steadyStateLoadLevel).
-    fn apply_distance_updates(&mut self, changed: &mut BTreeSet<i64>) {
-        if self.field_dirty {
-            self.rebuild_level_field();
-            self.field_dirty = false;
-        }
-        // LoadingChunkTracker.setLevel materializes ChunkHolders along the
-        // decreasing wave: every ticket-reachable cell gets a holder at its
-        // converged level (default TRACKER_MAX_LEVEL elsewhere).
-        for (&key, &lvl) in self.level_field.iter() {
-            self.holders.entry(key).or_insert(Holder {
-                ticket_level: lvl,
-                queue_level: lvl,
-                completed: -1,
-            });
-        }
-        for key in self.holders.keys().copied().collect::<Vec<i64>>() {
-            let tl = self.steady_level(key);
-            let h = self.holders.get_mut(&key).unwrap();
-            if tl != h.ticket_level {
-                h.ticket_level = tl;
-                changed.insert(key);
-            }
-        }
-    }
-
-    fn rebuild_level_field(&mut self) {
-        self.level_field.clear();
-        let mut dq: VecDeque<i64> = VecDeque::new();
-        for &k in &self.tickets {
-            dq.push_back(k);
-            self.level_field.insert(k, FORCED_TICKET_LEVEL);
         }
         while let Some(k) = dq.pop_front() {
             let l = self.level_field[&k];
@@ -473,13 +448,29 @@ impl Sim {
                         _ => {
                             self.level_field.insert(nb, nl);
                             dq.push_back(nb);
+                            settled.push(nb);
                         }
                     }
                 }
             }
         }
+        // Materialize a holder per settled cell and record the level changes.
+        // Every settled cell is a "changed holder" in vanilla (its level dropped
+        // from MAX_LEVEL to the settled value), so the returned order is the
+        // full wavefront order of changedHolders.
+        for key in &settled {
+            let tl = self.level_field[key];
+            let h = self.holders.entry(*key).or_insert(Holder {
+                ticket_level: tl,
+                queue_level: tl,
+                completed: -1,
+            });
+            if tl != h.ticket_level {
+                h.ticket_level = tl;
+            }
+        }
+        settled
     }
-
     fn dispatch_resort(&mut self, key: i64, new_level: i32) {
         self.disp_schedule(DispOp::Resort { key, new_level });
     }
@@ -628,13 +619,11 @@ impl Sim {
         }
     }
 
-    /// One simulated phase: ingest batch → distance updates → resorts →
-    /// promotion cascade → FIFO runGenerationTasks → parked revival → drain.
+    /// One simulated phase: ingest batch → wavefront distance updates →
+    /// resorts → promotion cascade → FIFO runGenerationTasks → parked
+    /// revival → drain.
     fn run_phase(&mut self, batch: &Batch) {
-        self.ingest_commands(batch);
-
-        let mut changed = BTreeSet::new();
-        self.apply_distance_updates(&mut changed);
+        let changed = self.apply_distance_updates(batch);
 
         // Promotion cascade (ChunkHolder.updateFutures → prepareAccessibleChunk):
         // every cell whose ticket level reached FULL accessibility gets a
@@ -642,17 +631,21 @@ impl Sim {
         // whose queue level changed get resorted; distance-3 cells
         // (level 34, FEATURES-capable) get no own task — they decorate via
         // their neighbours' ±1 FEATURES sweeps and are dropped unsaved.
+        // Both the resorts and the task creation follow the wavefront order of
+        // `changedHolders` (DynamicGraphMinFixedPoint setLevel order), which
+        // is what vanilla's queue-level resort and task submission use.
         for &key in &changed {
             let new_level = self.holders.get(&key).map(|h| h.ticket_level).unwrap_or(TRACKER_MAX_LEVEL);
             self.dispatch_resort(key, new_level);
         }
-        let mut keys: Vec<i64> = self
-            .holders
-            .iter()
-            .filter(|(k, h)| h.ticket_level <= FULL_CHUNK_LEVEL && !self.tasks.contains_key(*k))
-            .map(|(k, _)| *k)
+        let keys: Vec<i64> = changed
+            .into_iter()
+            .filter(|k| {
+                self.holders.get(k).map(|h| h.ticket_level).unwrap_or(TRACKER_MAX_LEVEL)
+                    <= FULL_CHUNK_LEVEL
+                    && !self.tasks.contains_key(k)
+            })
             .collect();
-        keys.sort_unstable();
         for key in keys {
             let (cx, cz) = (unpack_x(key), unpack_z(key));
             let task = self.spawn_task(cx, cz);
