@@ -74,10 +74,20 @@ pub(crate) fn sample_int_provider(rng: &mut FeatureRandom, v: &Value) -> i32 {
         Some("minecraft:trapezoid") => {
             let min = obj["min"].as_i64().unwrap_or(0) as i32;
             let max = obj["max"].as_i64().unwrap_or(0) as i32;
-            // average of two uniforms
-            let a = min + rng.next_int((max - min + 1).max(1));
-            let b = min + rng.next_int((max - min + 1).max(1));
-            (a + b) / 2
+            let plateau = obj["plateau"].as_i64().unwrap_or(0) as i32;
+            // TrapezoidInt.sample (26.2): a triangle with plateau=0 over a
+            // symmetric range is `nextInt(max+1) - nextInt(max+1)`, NOT the
+            // average of two uniforms. The average biases toward the middle.
+            if plateau == 0 && max == -min {
+                return rng.next_int(max + 1) - rng.next_int(max + 1);
+            }
+            let range = max - min;
+            if plateau == range {
+                return min + rng.next_int(range + 1);
+            }
+            let plateau_start = (range - plateau) / 2;
+            let plateau_end = range - plateau_start;
+            min + rng.next_int(plateau_end + 1) + rng.next_int(plateau_start + 1)
         }
         Some("minecraft:constant") => obj["value"].as_i64().unwrap_or(0) as i32,
         Some("minecraft:weighted_list") => {

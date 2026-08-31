@@ -118,7 +118,7 @@ pub(crate) fn eval_block_predicate(
 }
 
 /// `BlockTags.SUPPORTS_VEGETATION` — what a sapling may place on.
-fn supports_vegetation(b: BlockId) -> bool {
+pub(super) fn supports_vegetation(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Dirt
@@ -250,7 +250,7 @@ pub(crate) enum HeightmapKind {
 }
 
 pub(crate) fn parse_heightmap_kind(name: &str) -> HeightmapKind {
-    match name.strip_prefix("minecraft:").unwrap_or(name) {
+    match name.strip_prefix("minecraft:").unwrap_or(name).to_ascii_lowercase().as_str() {
         "world_surface" | "world_surface_wg" => HeightmapKind::WorldSurface,
         "ocean_floor" | "ocean_floor_wg" => HeightmapKind::OceanFloor,
         "motion_blocking" => HeightmapKind::MotionBlocking,

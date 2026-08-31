@@ -776,7 +776,36 @@ pub(crate) fn dispatch_configured(
                                     region.set(x, y + 1, z, b);
                                 }
                             } else {
-                                region.set(x, y, z, b);
+                                // SimpleBlockFeature.place (26.2): place ONLY if
+                                // `state.canSurvive(level, origin)`. For
+                                // VegetationBlock plants (wildflowers, flowers,
+                                // short_grass, ...) canSurvive = below ∈
+                                // #supports_vegetation (dirt family). Without the
+                                // gate we planted on air over WATER (y 66-68),
+                                // which vanilla rejects.
+                                let below = region.get(x, y - 1, z);
+                                let plant = matches!(
+                                    b,
+                                    BlockId::Wildflowers
+                                        | BlockId::ShortGrass
+                                        | BlockId::Dandelion
+                                        | BlockId::Poppy
+                                        | BlockId::AzureBluet
+                                        | BlockId::Allium
+                                        | BlockId::Cornflower
+                                        | BlockId::OxeyeDaisy
+                                        | BlockId::LilyOfTheValley
+                                        | BlockId::FireflyBush
+                                        | BlockId::ClosedEyeblossom
+                                );
+                                let can = if plant {
+                                    supports_vegetation(below)
+                                } else {
+                                    true
+                                };
+                                if can {
+                                    region.set(x, y, z, b);
+                                }
                             }
                         }
                     }

@@ -10,9 +10,9 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 
 | Measurement | Value |
 | --- | --- |
-| SCAN 525, 31 Aug (nested-count pipeline) | **98.86%**, ledger **588,823** cells |
+| SCAN 525, 31 Aug (placement-fix session) | **98.86%**, ledger **586,152** cells |
 | SCAN 525, 28 Aug s2 (9d58a2e) | **98.85%**, ledger **594,312** cells |
-| Session delta | 594,312 → 588,823 (**−5,489**) |
+| Session delta | 588,823 → 586,152 (**−2,671**) |
 | SCAN 528, seed **12345** (28 Aug) | ticket_sim **98.45%** (no regression) |
 | SCAN 527, seed **777** (28 Aug) | ticket_sim **98.41%** (no regression) |
 | 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port) |
@@ -52,6 +52,18 @@ compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
   placed 54 blocks where vanilla places 0 — the rarity was consumed 192 times
   instead of 3, desyncing `trees_birch` downstream (the dark_oak gap root
   cause). Ledger −5,489.
+- **Placement acceptance fixes** (31 Aug, after SCAN 588,823): three root
+  causes of the dark_oak canopy cascade found via per-origin RNG diffing:
+  (1) `TrapezoidInt.sample` for plateau=0 symmetric ranges is
+  `nextInt(max+1) - nextInt(max+1)`, not the average of two uniforms — the
+  average biased offsets toward the middle and shifted every wildflower/tree
+  offset; (2) `parse_heightmap_kind` lowercased the heightmap name so
+  `MOTION_BLOCKING` no longer fell back to OCEAN_FLOOR (which ignores water —
+  plants were placed over water); (3) the generic `simple_block` branch placed
+  without `canSurvive`, planting wildflowers on air over water where vanilla
+  rejects. With all three, origin (-240,-224) wildflowers match vanilla 22=22
+  exactly and the dark_oak tree cascade largely aligns (5/9 origins now
+  identical). Ledger −2,671.
 
 ## Standing causal map
 
@@ -72,12 +84,12 @@ PROBE_WRITE_LOG only logs blocks that change — unusable for ore attribution.
 
 ## Next
 
-1. **wildflowers_birch_forest acceptance**: 67 vs 22 wildflowers from origin
-   (-240,-224). Same RNG (2/3 bases survive rarity, 128 copies), so the diff
-   is in the per-copy gate (random_offset + `block_predicate_filter air` +
-   simple_block canSurvive). Dump the 128-copy draw stream vs the probe
-   (PROBE_WRITE_LOG has the placed cells) to find the first diverging copy.
-   Fix unblocks trees_birch of the next origin → 48k dark_oak cells.
+1. **Remaining dark_oak canopy diff**: origins (-224,-240) and (-224,-208)
+   still miss dark_oak trees (vanilla 9/32 logs vs neutron 0). Their
+   `dark_forest_vegetation` rejects every draw with a high `y` (77) from a
+   canopy already placed by an earlier origin — the cascade persists at the
+   origin boundary. Dump the dark_oak trunk RNG for those origins vs the
+   probe.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
 4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
