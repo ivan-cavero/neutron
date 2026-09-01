@@ -88,18 +88,20 @@ block_column dispatch (writer block_column, 18k ledger cells) matches
 the truncation + height sampling. Neutron dripleaf positions:
 (42,84..87,143) stems etc.; vanilla: (42,86,149) one stem.
 
-**lush_caves_clay biome-gate hypothesis DISPROVEN (1 Sep s10)**: the
-"origin (2,8) vanilla 0 clay vs neutron 1281" was an ORACLE GRID
-ARTIFACT: ProbeFullDecorate reads the biome grid from the
-decorate_oracle .ndec export, whose chunk (2,8) grid rejected all 62
-bases - but (a) vanilla BiomeManager.getBiome and neutron
-biome_id_at_block AGREE (lush_caves) at all 12 divergent positions,
-and (b) the REF WORLD chunk (2,8) HAS the clay (ledger only 19
-stone-to-clay extra, 30 clay-to-stone) - vanilla placed it from origin
-(2,8) too. The export's biome grid is miscalibrated for gate-fidelity
-captures. Caution: gate-biome-sensitive per-origin capture results from
-the .ndec export are suspect until the export writes the chunk's stored
-quart grid correctly.
+**lush_caves_clay biome-gate divergence (UNRESOLVED, corrected 1 Sep
+s11)**: origin (2,8) = vanilla 0 clay / 0 bases passed the biome gate vs
+neutron 1281 clay (~20 bases accepted). The biome check happens at the
+POST-SCAN position (environment_scan moves down <=12 then random_offset
++-1), NOT at the pre-scan height draw. My earlier check that found 12
+lush_caves positions evaluated the PRE-scan y - invalid. Both sides use
+live voronoi (WorldGenRegion's BiomeManager = getUncachedNoiseBiome with
+voronoi, probe BIOME_MGR identical). Ref world chunk (2,8) HAS clay
+(ledger 19 stone-to-clay / 30 clay-to-stone only) - vanilla's real gate
+accepted some bases there. NEXT: evaluate the biome at the POST-scan
+positions - from the vanilla capture, the post-scan y is not logged;
+instead compute it per base by replaying the scan against the dump
+terrain (air-scan down <=12, then +-1), then compare vanilla vs neutron
+biome verdicts at those corrected positions.
 
 ## Next
 
