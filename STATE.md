@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 7.**
+> **Updated 1 Sep 2026 (Linux box), session 8.**
 
 ## Now
 
@@ -46,37 +46,32 @@ ProbeTreeAttempts, whose per-origin replay order is ROW-MAJOR (center runs
 mined ore precedence; the violated pair A/B regressed twice — single-pair
 reorders are DEAD as a lever.
 
-## Standing causal map (1 Sep s7)
+## Standing causal map (1 Sep s8)
 
 Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
-zone** (dark_oak 42692/5543 border/core, pale_oak 25346/4075); 350 chunks.
-Remaining writers: vegetation_patch 59k, simple_block 38k, ore 18k,
-block_column 18k.
+zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
+simple_block 38k, ore 18k, block_column 18k.
 
-**Waterlogged patch interior (PRIMARY, 2 iterations in)**:
-lush_caves_clay (gif 29) in chunk (2,9): neutron clay 2758 vs vanilla
-1116; water 355 vs vanilla 2708 — neutron's `surface_pts=interior` set is
-~15% of vanilla's, so pools stay dry and gif-30 moss later covers them
-(ledger signature: moss→water 252, clay→water 303). Streams MATCH through
-290 draws (17 bases' in_square/height-raw y+64, selector booleans,
-xz_radius identical). A/B PROVEN this session: removing the legacy `+1`
-on the sampled xz radius (vegetation.rs:423-424, a run-045 calibration
-hack predating the parity meter) shrank clay to 1388 but REGRESSED window
-parity 96.9→96.20% (water 355→62) — REVERTED; keep the +1 until the real
-divergence is fixed.
+**Waterlogged patch interior (PRIMARY, 3 iterations in)**: lush_caves_clay
+(gif 29) in chunk (2,9): neutron clay 2758 vs vanilla 1116; water 355 vs
+2708. Streams MATCH through 290 draws. Base-17 instrumentation
+(NEUTRON_PATCH_DUMP) PROVES the exposure test works there: origin
+(39,84,145), r=5 (vanilla r=5), interior=62 all flooded ≈ vanilla's 68
+water cells in the same bounds. BUT the other 61 bases flood ~0 in
+neutron (both radii) vs vanilla ~44/base — the divergence is PER-BASE,
+not the exposure rule itself. A/B PROVEN: removing the legacy `+1` radius
+(vegetation.rs:423-424, run-045 hack) regressed 96.9→96.20% — keep it.
 
 ## Next
 
-1. **Waterlogged patch interior/exposure (PRIMARY)**: instrument
-   `patch_is_exposed` (vegetation.rs:541) to dump per-column exposure
-   verdicts for one patch — base 17: origin (47,86,145), pool variant,
-   xz_radius 5 — and compare against the vanilla water columns in
-   /tmp/opencode/stream_clay.log (gif=29 capture, origin 2,9).
-   Suspects: (a) neighbor sturdiness at surface level for columns whose
-   ground placement failed, (b) scan-back-out off-by-one on exactly-full
-   vertical_range gaps, (c) whole-block vs per-direction opposite-face
-   sturdiness (vanilla `isFaceSturdy(dir.getOpposite())`).
-   Oracle: /tmp/opencode/eo_c29.ndec; probe rebuild recipe in Perf.
+1. **Waterlogged patch interior (PRIMARY)**: re-add the NEUTRON_PATCH_DUMP
+   instrumentation (gate on base x,z; loop `x,y,z` over pool bases) and
+   dump ALL pool bases' (origin, r, surface, interior) triples in the
+   (2,9) window; diff per-base against vanilla's water counts from
+   /tmp/opencode/stream_clay.log (gif=29 capture, origin 2,9). The stream
+   diff diverged at draw 290 (one extra ground-loop roll in vanilla),
+   so bases 18+ are UNVERIFIED — find which bases diverge and why (scan
+   landing, edge-ring geometry, or per-base position drift).
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
