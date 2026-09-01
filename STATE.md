@@ -93,5 +93,5 @@ but NOT for gate verdicts where the biome grid matters.
 ## Perf / Environment (this box)
 
 8 cores; meter default leaves 2 free (`PARITY_WORKERS`). Chunk gen ~9.5
-s cold, ~5 s warm. Rust 1.98 · Temurin25 · vinerlower 1.12. Probe
-rebuild recipe in tools/worldgn-probe. Playbook: docs/PaRITY.md.
+s cold, ~5 s warm. Rust 1.98 · Temurin 25 · vineflower 1.12. Probe
+rebuild recipe in tools/worldgen-probe/src. Playbook: docs/PARITY.md.
