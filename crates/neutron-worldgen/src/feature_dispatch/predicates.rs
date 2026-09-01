@@ -112,6 +112,26 @@ pub(crate) fn eval_block_predicate(
             let below = region.get_buffered(x, y - 1, z);
             supports_vegetation(below)
         }
+        "minecraft:matching_fluids" => {
+            // MatchingFluidsPredicate: block at (origin + offset) must be in
+            // `fluids` (typically #minecraft:water ⊇ water + flowing_water).
+            // The region buffer stores a single Water id (no flow level), so
+            // both match Water. Missing offset = (0,0,0).
+            let off = pred["offset"].as_array();
+            let ox = off
+                .and_then(|a| a.first())
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oy = off
+                .and_then(|a| a.get(1))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oz = off
+                .and_then(|a| a.get(2))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            region.get(x + ox, y + oy, z + oz) == BlockId::Water
+        }
         "minecraft:true" => true,
         _ => true,
     }
