@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 6.**
+> **Updated 1 Sep 2026 (Linux box), session 7.**
 
 ## Now
 
@@ -42,45 +42,41 @@ after 119 matching draws.
 **dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
 "origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
 ProbeTreeAttempts, whose per-origin replay order is ROW-MAJOR (center runs
-5th) — NOT the ref-world order. Ref world has NO trunk at the probe's
-(-214,-225) base. "van=N" figures were per-origin totals, not target-chunk
-counts. Sim window order validated 6/7 against mined ore precedence;
-the violated pair A/B regressed twice — single-pair reorders are DEAD.
+5th) — NOT the ref-world order. Sim window order validated 6/7 against
+mined ore precedence; the violated pair A/B regressed twice — single-pair
+reorders are DEAD as a lever.
 
-## Standing causal map (1 Sep s6)
+## Standing causal map (1 Sep s7)
 
 Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone** (dark_oak 42692/5543 border/core, pale_oak 25346/4075); 350 chunks.
 Remaining writers: vegetation_patch 59k, simple_block 38k, ore 18k,
 block_column 18k.
 
-**NEXT TARGET (1 Sep s6, evidence on disk, no fix yet)**:
-lush_caves_clay (gif 29) in chunk (2,9) — neutron 2758 clay writes vs
-vanilla 1116 from origin (32,144) alone; ledger swaps stone→clay 1478,
-moss→water 252, clay→water 303. Streams MATCH through 290 draws (17 bases'
-in_square/height raws — raw height = y+64, uniform 0..320, above_bottom 0 —
-plus every selector boolean identical). Divergence: vanilla's waterlogged
-patch floods a long run of interior columns (float-run of per-column rolls
-continues) while neutron's `surface_pts=interior` set comes up short →
-dry moss/clay where vanilla has water. Suspect: `patch_is_exposed`
-checks `is_face_sturdy(neighbor)` as a whole block, vanilla checks the
-SPECIFIC opposite face `isFaceSturdy(dir.getOpposite())` — fluids/leaves/
-dripleaf neighbours are sturdy on NO face but may be sturdy elsewhere;
-also verify surface_pts iteration order (vanilla java HashSet hash order)
-for the vegetation rolls — the first divergent roll is the patch's 6th.
-
-Wildflowers gif 22: fan matches vanilla 15/16 positions for origin
-(-240,-240); residual diffs are origin-order spillover state. Ledger
-impact 38 cells. Do not chase.
+**Waterlogged patch interior (PRIMARY, 2 iterations in)**:
+lush_caves_clay (gif 29) in chunk (2,9): neutron clay 2758 vs vanilla
+1116; water 355 vs vanilla 2708 — neutron's `surface_pts=interior` set is
+~15% of vanilla's, so pools stay dry and gif-30 moss later covers them
+(ledger signature: moss→water 252, clay→water 303). Streams MATCH through
+290 draws (17 bases' in_square/height-raw y+64, selector booleans,
+xz_radius identical). A/B PROVEN this session: removing the legacy `+1`
+on the sampled xz radius (vegetation.rs:423-424, a run-045 calibration
+hack predating the parity meter) shrank clay to 1388 but REGRESSED window
+parity 96.9→96.20% (water 355→62) — REVERTED; keep the +1 until the real
+divergence is fixed.
 
 ## Next
 
-1. **Waterlogged patch interior/exposure (PRIMARY)**: implement
-   face-specific sturdiness in `patch_is_exposed` (vanilla
-   `isFaceSturdy(dir.getOpposite())` per direction), then re-diff the
-   gif=29 stream for origin (2,9) — oracle on disk:
-   /tmp/opencode/stream_clay.log, /tmp/neu_clay_draws3.txt,
-   dump /tmp/opencode/eo_c29.ndec (probe rebuild recipe in Perf).
+1. **Waterlogged patch interior/exposure (PRIMARY)**: instrument
+   `patch_is_exposed` (vegetation.rs:541) to dump per-column exposure
+   verdicts for one patch — base 17: origin (47,86,145), pool variant,
+   xz_radius 5 — and compare against the vanilla water columns in
+   /tmp/opencode/stream_clay.log (gif=29 capture, origin 2,9).
+   Suspects: (a) neighbor sturdiness at surface level for columns whose
+   ground placement failed, (b) scan-back-out off-by-one on exactly-full
+   vertical_range gaps, (c) whole-block vs per-direction opposite-face
+   sturdiness (vanilla `isFaceSturdy(dir.getOpposite())`).
+   Oracle: /tmp/opencode/eo_c29.ndec; probe rebuild recipe in Perf.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
