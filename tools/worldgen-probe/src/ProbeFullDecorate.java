@@ -107,14 +107,18 @@ public class ProbeFullDecorate {
         TAG_MEMO.put(tag, out);
         return out;
     }
-
     public static void main(String[] args) throws Exception {
         SEED = Long.parseLong(args[0]);
         CCX = Integer.parseInt(args[1]);
         CCZ = Integer.parseInt(args[2]);
         String dumpPath = args[3];
         List<int[]> origins = new ArrayList<>();
+        int rngTraceGif = -1;
         for (int i = 4; i < args.length; i++) {
+            if (args[i].startsWith("gif=")) {
+                rngTraceGif = Integer.parseInt(args[i].substring(4));
+                continue;
+            }
             String[] pp = args[i].split(",");
             origins.add(new int[]{Integer.parseInt(pp[0]), Integer.parseInt(pp[1])});
         }
@@ -372,6 +376,25 @@ public class ProbeFullDecorate {
                     long decorationSeed = random.setDecorationSeed(SEED, origin.getX(), origin.getZ());
                     random.setFeatureSeed(decorationSeed, gif, step);
                     String fname = ProbeTreeFirstFlip.idOfPlaced(pf);
+                    // RNG-STREAM capture for one gif (e.g. wildflowers gif=22):
+                    // runs REAL vanilla placement (placeWithBiomeCheck) while
+                    // logging every primitive draw — the faithful oracle the
+                    // staged traceFeature probes cannot provide for
+                    // multi-output modifiers (count fans).
+                    if (step == 9 && gif == rngTraceGif) {
+                        random.logging = true;
+                        int log0 = ProbeDecorate.LOG.length();
+                        try {
+                            pf.placeWithBiomeCheck(level, generator, random, origin);
+                        } catch (Throwable t) {
+                            System.out.println("ERROR step=" + step + " gif=" + gif + " " + t);
+                        }
+                        random.logging = false;
+                        System.out.print("STREAM gif=" + gif + " origin=" + ocx + "," + ocz
+                                + " draws=" + ProbeTreeFirstFlip.tail(random.draws, 0) + "\n");
+                        System.out.print(ProbeDecorate.LOG.substring(log0));
+                        continue;
+                    }
                     if (step == 9 && ProbeTreeFirstFlip.treeish(pf)) {
                         System.out.print("STEP " + step + " ORIGIN " + ocx + " " + ocz + "\n");
                         ProbeTreeFirstFlip.traceFeature(fname, gif, pf, level, generator, random, origin, ocx, ocz);

@@ -333,7 +333,7 @@ public class ProbeTreeAttempts {
                         PlacedFeature pf = stepData.features().get(gif);
                         random.setFeatureSeed(decorationSeed, gif, stepIndex);
                         boolean trace = centerPass && stepIndex == 9
-                                && (gif == 13 || gif == 17);
+                                && (gif == 13 || gif == 17 || gif == 22);
                         if (trace) {
                             traceFeature(idOfPlaced(pf), gif, pf, level, generator,
                                     random, origin);
