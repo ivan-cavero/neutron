@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 28 Aug 2026 (Linux box), session 2.**
+> **Updated 1 Sep 2026 (Linux box), session 3.**
 
 ## Now
 
@@ -10,12 +10,12 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 
 | Measurement | Value |
 | --- | --- |
-| SCAN 525, 31 Aug (placement-fix session) | **98.86%**, ledger **586,152** cells |
-| SCAN 525, 28 Aug s2 (9d58a2e) | **98.85%**, ledger **594,312** cells |
-| Session delta | 588,823 → 586,152 (**−2,671**) |
+| SCAN 525, 1 Sep (evidence session, f99effe) | **98.90%**, ledger **568,429** cells |
+| SCAN 525, 31 Aug (placement-fix session) | 98.86%, ledger 586,152 cells |
+| f99effe delta | 583,032 → 568,429 (**−14,603**, 7x7 window + ref-footprint filter) |
 | SCAN 528, seed **12345** (28 Aug) | ticket_sim **98.45%** (no regression) |
 | SCAN 527, seed **777** (28 Aug) | ticket_sim **98.41%** (no regression) |
-| 12345 window (6,-2) r=2 | 98.47 → **98.49%** (fallen_tree port) |
+| Chunk (-14,-14) window r=0, 1 Sep | **99.08%** (baseline, unchanged) |
 
 Meter speedup (6ae05e2): worker pool (cores−2, `PARITY_WORKERS`), streaming
 compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
@@ -65,36 +65,55 @@ compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
   exactly and the dark_oak tree cascade largely aligns (5/9 origins now
   identical). Ledger −2,671.
 
-## Standing causal map
+## Standing causal map (rewritten 1 Sep)
 
-Streams align draw-for-draw when inputs match. Remaining ledger: trees ~44%
-(cascade from gate-input flips), lush/sculk ~13% (scene microdiffs; port
-draw-exact), pale garden ~3.5%. All converge on 1-cell terrain diffs.
+Tree-gap ledger attribution (SCAN 525 with `--writers`, /tmp/before_ledger.csv):
+**87-89% of ALL tree-gap cells sit in the chunk BORDER zone** (dark_oak
+42692/5543 border/core, pale_oak 25346/4075, tree-writer 149177/22560).
+Missing canopy spread over 350 chunks at 300-400 cells each — diffuse stream
+cascade, not a single cluster. Terrain writer 245k, tree 172k,
+vegetation_patch 59k, simple_block 38k, ore 18k.
 
-**dark_oak gap root cause (31 Aug)**: `wildflowers_birch_forest` (gif 22)
-places MORE wildflowers than vanilla (origin -240,-224: neutron 67 vs
-vanilla 22). Each wildflower raises `WORLD_SURFACE` in
-`surface_water_depth_filter`, so depth goes 0→2 and the NEXT origin's
-`trees_birch` (gif 24) is rejected where vanilla accepts (e.g. (-232,-211)).
-One rejected draw desyncs the whole stream → 48k missing ≈ 48k extra
-dark_oak_leaves. The nested-count pipeline fixed the placement fan-out but
-the wildflower acceptance itself still differs (45 extra per origin).
+**dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
+"origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
+ProbeTreeAttempts, whose per-origin replay order is ROW-MAJOR (center runs
+5th, after (-14,-15)) — NOT the ref-world order. Ref world has NO trunk at
+the probe's (-214,-225) base (0 logs y68-70, only y71+ fragments from other
+trees); the only trunk the probe's n0 could see a canopy over, (-215,-223),
+IS present in the ref and matches neutron's center draw-1 ACCEPT at y=68
+(52 trunks). Per-origin "van=N" figures were per-ORIGIN totals across the
+3x3 region, not target-chunk counts.
+
+**Sim order validated against mined ore precedence (1 Sep)**: deco_pairs CSV
+(45k mined ore-overwrite pairs, winner=later) constrains the (-14,-14) 5x5
+window with 7 pairs; sim satisfies 6/7. The violated pair (-13,-14)<(-14,-14),
+76 votes, was A/B tested twice via NEUTRON_DECO_CUSTOM_ORDER: both reorders
+REGRESS chunk (-14,-14) parity (99.08 → 99.03 / 98.95). The 76-vote pair is
+tainted by the very cascade it was mined from (contested-cell replay uses
+neutron heightfield; tree-cascade windows corrupt it). Single-pair reorders
+are DEAD as a lever; the remaining border gap needs the full constraint set
+or a different mechanism.
+
+Prior root cause stands: `wildflowers_birch_forest` (gif 22) acceptance still
+differs (45 extra per origin), each wildflower raises WORLD_SURFACE in
+`surface_water_depth_filter` and desyncs the NEXT origin's stream.
 `place_below_trunk` dirt in trunks is CORRECT (vanilla trunkSetter adds it).
-PROBE_WRITE_LOG only logs blocks that change — unusable for ore attribution.
 
 ## Next
 
-1. **Remaining dark_oak canopy diff**: origins (-224,-240) and (-224,-208)
-   still miss dark_oak trees (vanilla 9/32 logs vs neutron 0). Their
-   `dark_forest_vegetation` rejects every draw with a high `y` (77) from a
-   canopy already placed by an earlier origin — the cascade persists at the
-   origin boundary. Dump the dark_oak trunk RNG for those origins vs the
-   probe.
-2. Ocean/cold_ocean carver-list gating (coastal seeds).
-3. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type).
-4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+1. **Wildflower acceptance diff (gif 22)**: root of the border cascade —
+   find why `dark_forest_vegetation`'s own placement accepts 45 extra
+   wildflowers per origin (neutron heightmap/biome at draw time vs vanilla).
+   Two-sided draw dump per origin, same method as the 31 Aug session.
+2. **Border-zone mechanism**: 87% of tree-gap cells are in the chunk border.
+   After (1), re-check whether the 7x7 window order still mispredicts any
+   mined pair en masse (full-CSV constraint fit per window, not single pairs).
+3. Ocean/cold_ocean carver-list gating (coastal seeds).
+4. Waterlogged clay-pool top-fill per-column cascade ((34,5,13)-type);
+   worst chunk on SCAN 525 is (2,9) (stone→clay 486, moss/water swaps).
+5. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-5. `cargo test --workspace` before any push.
+6. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
