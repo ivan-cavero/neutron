@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 10.**
+> **Updated 1 Sep 2026 (Linux box), session 11.**
 
 ## Now
 
@@ -35,16 +35,7 @@ was missing from `eval_block_predicate` (`_ => true`). Proven: vanilla
 trees_birch n=8 ACCEPT (-219,-226,y=68) vs neutron REJECT y=0 at the
 identical stream index after 119 matching draws.
 
-**Waterlogged patch interior**: exposure rule PROVEN correct (base-17
-instrumentation: origin (39,84,145), r=5, interior 62 all flooded ≈
-vanilla's 68 water cells). The `+1` radius (vegetation.rs:423-424,
-run-045 hack) A/B: removal regresses 96.9→96.20% — keep.
-
-**lush_caves_clay biome-gate hypothesis DISPROVEN (1 Sep s10)**: the
-"origin (2,8) vanilla 0 clay vs neutron 1281" was an ORACLE GRID
-ARTIFACT: ProbeFullDecorate reads the biome grid from the decorate_oracle
-.ndec export, whose chunk (2,8) grid rejected all 62 bases — but (a)
-vanilla `BiomeManager.getBiome` and neutron `biome_id_at_block` AGREE
+**Waterlogged patch interior (PRIMARY, 4 iterations in)**: RADIUS
 (lush_caves) at all 12 divergent positions (40,15,135 / 32,18,132 /
 33,11,130 / 37,59,131 / 47,73,139 / 46,6,138 / 45,42,129 / 39,83,142 /
 43,34,137 / 40,22,131 / 46,33,128 / 43,70,140), and (b) the REF WORLD
@@ -56,6 +47,19 @@ suspect until the export writes the chunk's stored quart grid correctly.
 
 **dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
 "origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
+
+`sample(random) + 1`; neutron's `+1` (vegetation.rs:429-430) is CORRECT
+and must stay. Streams match through draw 290 (bases, booleans, radius
+draws identical; vanilla processes dx=-6..6 same as neutron). The
+divergence = ONE extra vanilla float at idx 290 (0.0633 < 0.1 = a
+vegetation PASS) → vanilla's base-17 surface set has ONE point neutron
+lacks (neutron 127 dumped via NEUTRON_COL_DUMP=39,145 — instrumentation
+now committed, env-gated). Next: diff vanilla's base-17 surface (68
+water cells + dry clay tops from the capture, bbox x[34..44]
+z[140..150]) against neutron's 127 points; examine the missing column's
+scan landing. Per-base clay in bbox: neutron 925 vs vanilla 367.
+.ndec export, whose chunk (2,8) grid rejected all 62 bases — but (a)
+vanilla `BiomeManager.getBiome` and neutron `biome_id_at_block` AGREE
 ProbeTreeAttempts' row-major replay, not the ref-world order. Single-pair
 reorders are DEAD as a lever.
 
@@ -65,12 +69,31 @@ Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
-The real lush_caves_clay divergences remain: stone→clay 1478 (chunk
-(2,9)), moss→water 252, clay→water 303 — the per-base stream diff for
-origin (2,9) matched through draw 290 and diverged inside base 17's
-ground/vegetation roll loop (one roll difference). Bases 18+ unverified.
-The capture oracle is usable for RNG streams (draws are grid-independent)
-but NOT for gate verdicts where the biome grid matters.
+**Waterlogged patch interior (PRIMARY, 4 iterations in)**: RADIUS
+SETTLED - vanilla VegetationPatchFeature.place() line 28-29 is
+`sample(random) + 1`; neutron's `+1` (vegetation.rs:429-430) is CORRECT
+and must stay. Streams match through draw 290 (bases, booleans, radius
+draws identical; vanilla processes dx=-6..6 same as neutron). The
+divergence = ONE extra vanilla float at idx 290 (0.0633 < 0.1 = a
+vegetation PASS) - vanilla's base-17 surface set has ONE point neutron
+lacks (neutron 127 dumped via NEUTRON_COL_DUMP=39,145 - instrumentation
+now committed, env-gated). Next: diff vanilla's base-17 surface (68
+water cells + dry clay tops from the capture, bbox x[34..44]
+z[140..150]) against neutron's 127 points; examine the missing column's
+scan landing. Per-base clay in bbox: neutron 925 vs vanilla 367.
+
+**lush_caves_clay biome-gate hypothesis DISPROVEN (1 Sep s10)**: the
+"origin (2,8) vanilla 0 clay vs neutron 1281" was an ORACLE GRID
+ARTIFACT: ProbeFullDecorate reads the biome grid from the
+decorate_oracle .ndec export, whose chunk (2,8) grid rejected all 62
+bases - but (a) vanilla BiomeManager.getBiome and neutron
+biome_id_at_block AGREE (lush_caves) at all 12 divergent positions,
+and (b) the REF WORLD chunk (2,8) HAS the clay (ledger only 19
+stone-to-clay extra, 30 clay-to-stone) - vanilla placed it from origin
+(2,8) too. The export's biome grid is miscalibrated for gate-fidelity
+captures. Caution: gate-biome-sensitive per-origin capture results from
+the .ndec export are suspect until the export writes the chunk's stored
+quart grid correctly.
 
 ## Next
 
