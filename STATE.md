@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 8.**
+> **Updated 1 Sep 2026 (Linux box), session 9.**
 
 ## Now
 
@@ -46,32 +46,40 @@ ProbeTreeAttempts, whose per-origin replay order is ROW-MAJOR (center runs
 mined ore precedence; the violated pair A/B regressed twice — single-pair
 reorders are DEAD as a lever.
 
-## Standing causal map (1 Sep s8)
+## Standing causal map (1 Sep s9)
 
 Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
-**Waterlogged patch interior (PRIMARY, 3 iterations in)**: lush_caves_clay
-(gif 29) in chunk (2,9): neutron clay 2758 vs vanilla 1116; water 355 vs
-2708. Streams MATCH through 290 draws. Base-17 instrumentation
-(NEUTRON_PATCH_DUMP) PROVES the exposure test works there: origin
-(39,84,145), r=5 (vanilla r=5), interior=62 all flooded ≈ vanilla's 68
-water cells in the same bounds. BUT the other 61 bases flood ~0 in
-neutron (both radii) vs vanilla ~44/base — the divergence is PER-BASE,
-not the exposure rule itself. A/B PROVEN: removing the legacy `+1` radius
-(vegetation.rs:423-424, run-045 hack) regressed 96.9→96.20% — keep it.
+**Waterlogged patch interior**: exposure rule itself PROVEN correct —
+base-17 instrumentation: origin (39,84,145), r=5 (vanilla r=5), interior
+62 all flooded ≈ vanilla's 68 water cells. The `+1` radius (vegetation.rs
+:423-424, run-045 hack) A/B tested: removal REGRESSES 96.9→96.20% — keep.
+
+**lush_caves_clay (gif 29) — biome-check divergence (PRIMARY, isolated
+1 Sep s9)**: per-origin clay/water table for chunk (2,9)'s 9 origins
+(vanilla vs neutron): (2,8) = vanilla **0 clay / 0 bases passed** vs
+NEUTRON 1281 clay; neutron ~2x clay per origin elsewhere (1762/565,
+2618/1317, 2758/1095). Root: the `minecraft:biome` placement check
+verdicts differ — vanilla rejects ALL 62 bases of origin (2,8), neutron
+accepts ~20. Chunk (2,8) sits at a lush/surface biome boundary.
+Evidence on disk: /tmp/opencode/stream_clay_c29.log (vanilla gif=29
+STREAM captures, per-origin draws), /tmp/opencode/van_28_bases.txt (the
+62 base positions of origin (2,8), x|y|z), /tmp/opencode/pool_dump_c29.log
+(neutron [pool] per-base triples), pool_dump2_c29.log (NSET with pass
+origins).
 
 ## Next
 
-1. **Waterlogged patch interior (PRIMARY)**: re-add the NEUTRON_PATCH_DUMP
-   instrumentation (gate on base x,z; loop `x,y,z` over pool bases) and
-   dump ALL pool bases' (origin, r, surface, interior) triples in the
-   (2,9) window; diff per-base against vanilla's water counts from
-   /tmp/opencode/stream_clay.log (gif=29 capture, origin 2,9). The stream
-   diff diverged at draw 290 (one extra ground-loop roll in vanilla),
-   so bases 18+ are UNVERIFIED — find which bases diverge and why (scan
-   landing, edge-ring geometry, or per-base position drift).
+1. **Biome-check divergence for lush_caves_clay (PRIMARY)**: for origin
+   (2,8)'s 62 base positions (van_28_bases.txt), compare vanilla's
+   biome@position (3D voronoi, quart resolution) vs neutron
+   `biome_name_at`/`biome_id_at_block` at the same points. Suspects:
+   quart-vs-block sampling, y-shift at biome boundaries, or the scan
+   landing differing because terrain in chunk (2,8) differs (terrain was
+   only proven bit-exact in the (-14,-14) window — verify with
+   dump_terrain for (2,9) window first).
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
