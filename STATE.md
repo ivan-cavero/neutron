@@ -69,18 +69,24 @@ Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
-**Waterlogged patch interior (PRIMARY, 4 iterations in)**: RADIUS
+**Waterlogged patch interior (PRIMARY, 5 iterations in)**: RADIUS
 SETTLED - vanilla VegetationPatchFeature.place() line 28-29 is
-`sample(random) + 1`; neutron's `+1` (vegetation.rs:429-430) is CORRECT
-and must stay. Streams match through draw 290 (bases, booleans, radius
-draws identical; vanilla processes dx=-6..6 same as neutron). The
-divergence = ONE extra vanilla float at idx 290 (0.0633 < 0.1 = a
-vegetation PASS) - vanilla's base-17 surface set has ONE point neutron
-lacks (neutron 127 dumped via NEUTRON_COL_DUMP=39,145 - instrumentation
-now committed, env-gated). Next: diff vanilla's base-17 surface (68
-water cells + dry clay tops from the capture, bbox x[34..44]
-z[140..150]) against neutron's 127 points; examine the missing column's
-scan landing. Per-base clay in bbox: neutron 925 vs vanilla 367.
+`sample(random) + 1`; neutron's `+1` is CORRECT. Surface-set diff (base
+17, origin (39,84,145)): neutron 127 points (NEUTRON_COL_DUMP), vanilla
+94+ in the clipped bbox 34..44/140..150 - the earlier vanilla-only
+extraction was bbox-clipped (r=6 spans 33..45/139..151); re-extract
+unclipped. The extra vanilla float at draw 290 (0.0633 < 0.1) is a
+vegetation PASS. The vegetation divergence is now isolated to the
+dripleaf feature: vanilla 16 dripleaf writes from origin (2,9) vs
+neutron 60 (3.75x). dripleaf = simple_random_selector(small_dripleaf
+simple_block, block_column big_dripleaf); the selector (nextInt(2)) and
+patch loop match through draw 290. Next: diff BlockColumnFeature
+placement for big_dripleaf stems - vanilla samples each layer height
+(RNG), truncates on allowed_placement failure, and the
+supports_big_dripleaf tag governs allowed_placement; verify neutron's
+block_column dispatch (writer block_column, 18k ledger cells) matches
+the truncation + height sampling. Neutron dripleaf positions:
+(42,84..87,143) stems etc.; vanilla: (42,86,149) one stem.
 
 **lush_caves_clay biome-gate hypothesis DISPROVEN (1 Sep s10)**: the
 "origin (2,8) vanilla 0 clay vs neutron 1281" was an ORACLE GRID
