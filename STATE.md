@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 9.**
+> **Updated 1 Sep 2026 (Linux box), session 10.**
 
 ## Now
 
@@ -31,55 +31,60 @@ compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
   25c4708 matching_fluids predicate (−320; ratchet improved both seeds).
 
 **Phantom firefly bushes SOLVED (25c4708)**: `matching_fluids` predicate
-was missing from `eval_block_predicate` (`_ => true`), so the near-water
-gate of `patch_firefly_bush_near_water` passed unconditionally. 40 phantom
-bushes per 7x7 window (vanilla: 0); each raises WORLD_SURFACE above
-OCEAN_FLOOR so `surface_water_depth_filter` rejected vanilla-accepted
-trees on those columns. Proven: vanilla trees_birch n=8 ACCEPT
-(-219,-226,y=68) vs neutron REJECT y=0 at the identical stream index
-after 119 matching draws.
+was missing from `eval_block_predicate` (`_ => true`). Proven: vanilla
+trees_birch n=8 ACCEPT (-219,-226,y=68) vs neutron REJECT y=0 at the
+identical stream index after 119 matching draws.
+
+**Waterlogged patch interior**: exposure rule PROVEN correct (base-17
+instrumentation: origin (39,84,145), r=5, interior 62 all flooded ≈
+vanilla's 68 water cells). The `+1` radius (vegetation.rs:423-424,
+run-045 hack) A/B: removal regresses 96.9→96.20% — keep.
+
+**lush_caves_clay biome-gate hypothesis DISPROVEN (1 Sep s10)**: the
+"origin (2,8) vanilla 0 clay vs neutron 1281" was an ORACLE GRID
+ARTIFACT: ProbeFullDecorate reads the biome grid from the decorate_oracle
+.ndec export, whose chunk (2,8) grid rejected all 62 bases — but (a)
+vanilla `BiomeManager.getBiome` and neutron `biome_id_at_block` AGREE
+(lush_caves) at all 12 divergent positions (40,15,135 / 32,18,132 /
+33,11,130 / 37,59,131 / 47,73,139 / 46,6,138 / 45,42,129 / 39,83,142 /
+43,34,137 / 40,22,131 / 46,33,128 / 43,70,140), and (b) the REF WORLD
+chunk (2,8) HAS the clay (ledger only 19 stone→clay extra, 30
+clay→stone) — vanilla placed it from origin (2,8) too. The export's
+biome grid is miscalibrated for gate-fidelity captures. Caution: any
+gate-biome-sensitive per-origin capture result from the .ndec export is
+suspect until the export writes the chunk's stored quart grid correctly.
 
 **dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
 "origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
-ProbeTreeAttempts, whose per-origin replay order is ROW-MAJOR (center runs
-5th) — NOT the ref-world order. Sim window order validated 6/7 against
-mined ore precedence; the violated pair A/B regressed twice — single-pair
+ProbeTreeAttempts' row-major replay, not the ref-world order. Single-pair
 reorders are DEAD as a lever.
 
-## Standing causal map (1 Sep s9)
+## Standing causal map (1 Sep s10)
 
 Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
-**Waterlogged patch interior**: exposure rule itself PROVEN correct —
-base-17 instrumentation: origin (39,84,145), r=5 (vanilla r=5), interior
-62 all flooded ≈ vanilla's 68 water cells. The `+1` radius (vegetation.rs
-:423-424, run-045 hack) A/B tested: removal REGRESSES 96.9→96.20% — keep.
-
-**lush_caves_clay (gif 29) — biome-check divergence (PRIMARY, isolated
-1 Sep s9)**: per-origin clay/water table for chunk (2,9)'s 9 origins
-(vanilla vs neutron): (2,8) = vanilla **0 clay / 0 bases passed** vs
-NEUTRON 1281 clay; neutron ~2x clay per origin elsewhere (1762/565,
-2618/1317, 2758/1095). Root: the `minecraft:biome` placement check
-verdicts differ — vanilla rejects ALL 62 bases of origin (2,8), neutron
-accepts ~20. Chunk (2,8) sits at a lush/surface biome boundary.
-Evidence on disk: /tmp/opencode/stream_clay_c29.log (vanilla gif=29
-STREAM captures, per-origin draws), /tmp/opencode/van_28_bases.txt (the
-62 base positions of origin (2,8), x|y|z), /tmp/opencode/pool_dump_c29.log
-(neutron [pool] per-base triples), pool_dump2_c29.log (NSET with pass
-origins).
+The real lush_caves_clay divergences remain: stone→clay 1478 (chunk
+(2,9)), moss→water 252, clay→water 303 — the per-base stream diff for
+origin (2,9) matched through draw 290 and diverged inside base 17's
+ground/vegetation roll loop (one roll difference). Bases 18+ unverified.
+The capture oracle is usable for RNG streams (draws are grid-independent)
+but NOT for gate verdicts where the biome grid matters.
 
 ## Next
 
-1. **Biome-check divergence for lush_caves_clay (PRIMARY)**: for origin
-   (2,8)'s 62 base positions (van_28_bases.txt), compare vanilla's
-   biome@position (3D voronoi, quart resolution) vs neutron
-   `biome_name_at`/`biome_id_at_block` at the same points. Suspects:
-   quart-vs-block sampling, y-shift at biome boundaries, or the scan
-   landing differing because terrain in chunk (2,8) differs (terrain was
-   only proven bit-exact in the (-14,-14) window — verify with
-   dump_terrain for (2,9) window first).
+1. **lush_caves_clay per-base stream diff, part 2 (PRIMARY)**: the
+   gif=29 RNG stream for origin (2,9) matched 290 draws; resume from
+   draw 290: identify the ONE extra roll vanilla takes inside base 17's
+   loop (edge/bottom/vegetation roll count) — options: iterate
+   vegetation rolls in java-HashSet order vs neutron
+   JavaBlockPosSet order (the sets differ by ≥1 surface point);
+   or the ground-loop edge-selection consumed 1 extra roll.
+   Evidence: /tmp/opencode/stream_clay_c29.log, /tmp/neu_clay_sws3.txt,
+   dump /tmp/opencode/eo_c29.ndec. After the roll-order fix, re-check
+   per-origin clay counts against the REF WORLD (ledger), NOT the
+   grid-biased capture.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
@@ -87,11 +92,6 @@ origins).
 
 ## Perf / Environment (this box)
 
-8 cores; meter default leaves 2 free (`PARITY_WORKERS`). Chunk gen ~9.5 s
-cold, ~5 s warm. Rust 1.98 · Temurin 25 · vineflower 1.12 (src at
-tools/mc-decompiler/output/26.2/src) · probe classpath jar at
-tools/nbt-ref/vanilla-fresh-424242/versions/26.2/. Playbook: docs/PARITY.md.
-Probe rebuild: javac -cp "<all library jars>:<server.jar>" -d
-tools/worldgen-probe/bin src/ProbeFullDecorate.java src/ProbeDecorate.java
-src/ProbeTreeFirstFlip.java src/ProbePaleFlow.java; run with `gif=N` arg
-for RNG-stream capture of one placed feature.
+8 cores; meter default leaves 2 free (`PARITY_WORKERS`). Chunk gen ~9.5
+s cold, ~5 s warm. Rust 1.98 · Temurin25 · vinerlower 1.12. Probe
+rebuild recipe in tools/worldgn-probe. Playbook: docs/PaRITY.md.
