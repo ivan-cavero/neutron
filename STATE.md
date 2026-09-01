@@ -103,17 +103,18 @@ quart grid correctly.
 
 ## Next
 
-1. **lush_caves_clay per-base stream diff, part 2 (PRIMARY)**: the
-   gif=29 RNG stream for origin (2,9) matched 290 draws; resume from
-   draw 290: identify the ONE extra roll vanilla takes inside base 17's
-   loop (edge/bottom/vegetation roll count) — options: iterate
-   vegetation rolls in java-HashSet order vs neutron
-   JavaBlockPosSet order (the sets differ by ≥1 surface point);
-   or the ground-loop edge-selection consumed 1 extra roll.
-   Evidence: /tmp/opencode/stream_clay_c29.log, /tmp/neu_clay_sws3.txt,
-   dump /tmp/opencode/eo_c29.ndec. After the roll-order fix, re-check
-   per-origin clay counts against the REF WORLD (ledger), NOT the
-   grid-biased capture.
+1. **lush_caves_clay per-base surface attribution (PRIMARY)**: streams
+   match through draw 290; the ONE extra vanilla roll at 290 = a
+   vegetation PASS for a surface point neutron's set lacks (neutron 127
+   vs vanilla ~128). block_column dispatch VERIFIED identical to vanilla
+   BlockColumnFeature (height sampling, allowed_placement truncation,
+   prioritize_tip direction all match; dripleaf config uses
+   weighted_list(uniform(0,4) w2, 0 w1) — neutron's weighted_list +
+   uniform sampling matches). The per-base write attribution is blocked
+   by overlapping patches in the capture's write log. Next: java-side
+   per-base surface dump in ProbeFullDecorate (print each pool base's
+   waterSurface set after placeGroundPatch) — then the 1-point delta
+   column falls out directly.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
