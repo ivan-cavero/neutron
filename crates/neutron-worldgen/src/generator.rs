@@ -350,13 +350,14 @@ impl ChunkGenerator {
         // Vanilla `WorldGenRegion` for FEATURES: the decorated chunk is the
         // center of a 3×3 whose neighbours are at CARVERS, but each of those
         // 8 neighbours is itself decorated as the center of ITS OWN 3×3, which
-        // reaches one chunk further out. A 5×5 buffer puts every one of the 9
-        // decoration origins' 3×3 fully in-buffer, so the ring origins never
-        // read out-of-bounds air where vanilla reads real terrain. The outer
-        // ring is only ever CARVERS (terrain + carvers + structures, no feature
-        // output of its own); it accumulates the inner origins' cross-chunk
-        // writes (vanilla persists those writes in the shared chunk data).
-        const FEATURE_RADIUS: i32 = 2;
+        // reaches one chunk further out. A 7×7 buffer puts every one of the
+        // 5×5 ring of decoration origins' 3×3 fully in-buffer, so the ring
+        // origins never read out-of-bounds air where vanilla reads real
+        // terrain. The extra ring-2 origins (local distance 2) are themselves
+        // decorated in ticket order when they lie inside the ref world's
+        // decorated footprint; their cross-chunk writes are visible to the
+        // inner origins exactly as vanilla's shared chunk data persists them.
+        const FEATURE_RADIUS: i32 = 3;
         let mut region = RegionBuf::new(cx, cz, FEATURE_RADIUS);
         let mut center_biomes = vec![0u8; CHUNK_BIOME_VOLUME];
         let prof = std::env::var_os("NEUTRON_STEP_TIMING").is_some();
@@ -417,10 +418,19 @@ impl ChunkGenerator {
         // re-enables the mask for A/B diagnostics.
         let order = crate::sculk::decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
         let mid = region.chunks / 2;
+        // Only origins that the ref world actually decorated may run their own
+        // pass here. `window_order` ranks footprint cells by their simulated
+        // decorate time and trails any cell outside the ref's decorated set
+        // (u64::MAX). Running those phantom origins would write trees the real
+        // world never had (e.g. the (-16,*) column west of the ref's halo).
+        let footprint = crate::deco_schedule::decorate_footprint();
         let inner: Vec<(i32, i32)> = order
             .iter()
             .copied()
-            .filter(|&(cxl, czl)| (cxl - mid).abs() <= 1 && (czl - mid).abs() <= 1)
+            .filter(|&(cxl, czl)| (cxl - mid).abs() <= 2 && (czl - mid).abs() <= 2)
+            .filter(|&(cxl, czl)| {
+                footprint.contains(&((region.origin_x >> 4) + cxl, (region.origin_z >> 4) + czl))
+            })
             .collect();
         // Frozen ruined-portal plans (decided against the pristine buffer).
         let rpx0 = region.origin_x >> 4;
