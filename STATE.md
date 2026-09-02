@@ -112,23 +112,21 @@ biome verdicts at those corrected positions.
 
 ## Next
 
-1. **lush_caves_clay per-base surface attribution (PRIMARY, 1 Sep s12)**:
-streams match through draw 290. block_column dispatch VERIFIED vs
-vanilla source. Surface-set diff for base 17 (origin (39,84,145), r=6
-both sides - vanilla decompile place() line 28-29 = sample+1, neutron
-+1 CORRECT): vanilla water 82 vs neutron flooded 71 in bbox 33..45/
-139..151; 75 cells common; vanilla-only 7 (interior y84/82 cells),
-neutron-only 45 (mostly the x=33/z=151 outer-ring cells that neutron
-flooded and vanilla left as clay/exposed). The exposure verdicts
-diverge on RING columns: neutron's patch_is_exposed passes (not
-exposed) where vanilla's per-direction `isFaceSturdy(dir.getOpposite())`
-fails. Suspect: neutron checks whole-block sturdiness on the NEIGHBOR
-at surface level; vanilla checks the opposite face of the neighbor AND
-the neighbor may be air (air = no sturdy face -> exposed). Also:
-vanilla radius draws confirmed (1,1) -> sample 5 +1 = 6, loop -6..6.
-NEXT: dump the neighbor blocks at the divergent ring columns
-(x=33/z=151 ring) from the dump terrain at the surface y, and compare
-vanilla isFaceSturdy per-direction vs neutron is_face_sturdy.
+1. **lush_caves_clay per-base attribution CLOSED (1 Sep s13 — mechanism
+identified)**: the surface-set diff (vanilla 94 vs neutron 127 points;
+neutron-only 45 cells on the x=33/z=151 ring) is the decoration ORIGIN
+ORDER mechanism, not a patch-code bug. Proof: base (39,84,145)'s ring
+columns (x=33) flood in neutron but not vanilla because the ground
+placement for those columns depends on prior origins' spillover (earlier
+patches filled the floor), which differs between vanilla's real order
+and neutron's sim order. The patch internals (radius+1, depth loop,
+same-block skip, exposure test, block_column) are all VERIFIED identical
+to vanilla source. The lush_caves_clay divergence is a downstream symptom
+of the border-zone/order divergence already tracked — same root as the
+tree gap. No further patch-level work; the lever remains the origin
+order model (part of the 87%-border cluster).
+
+
 
 ## Perf / Environment (this box)
 
