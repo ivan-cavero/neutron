@@ -113,7 +113,11 @@ simple_block 38k, ore 18k, block_column 18k.
    reorders REGRESS per fit A/B). The 95.85% fit is the order-model
    floor absent a faithful concurrent-execution model of vanilla's
    ChunkTaskDispatcher. The halo residual (~4%) is accepted.
-2. Ocean/cold_ocean carver-list gating (coastal seeds).
+2. Ocean carver gating CLOSED (1 Sep s17): DISPROVEN — the 26.2
+   datapack gives ALL 60 overworld biomes identical carvers (cave,
+   cave_extra_underground, canyon); the old "ocean/cold_ocean have NO
+   carvers" claim is stale (older-version fact). Neutron already carves
+   every chunk without a biome gate — matching vanilla. No change.
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
 4. `cargo test --workspace` before any push.
