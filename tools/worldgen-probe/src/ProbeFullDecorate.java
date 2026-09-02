@@ -393,6 +393,28 @@ public class ProbeFullDecorate {
                         System.out.print("STREAM gif=" + gif + " origin=" + ocx + "," + ocz
                                 + " draws=" + ProbeTreeFirstFlip.tail(random.draws, 0) + "\n");
                         System.out.print(ProbeDecorate.LOG.substring(log0));
+                        // Reflection dump of the placed feature's internal
+                        // surface set: for VegetationPatchFeature the
+                        // waterSurface (flooded interior) set is exactly what
+                        // neutron's NEUTRON_PATCH_DUMP emits — the 1-point
+                        // delta column falls out of this diff.
+                        try {
+                            Object cfgObj = ProbeTreeFirstFlip.fieldOf(
+                                    pf.feature().value(), "config");
+                            Object patch = ProbeTreeFirstFlip.fieldOf(cfgObj, "feature");
+                            Object placed = patch.getClass().getMethod("value").invoke(patch);
+                            Object feature = placed.getClass().getMethod("value").invoke(placed);
+                            Object f = ProbeTreeFirstFlip.fieldOf(feature, "feature");
+                            Object vf = f.getClass().getMethod("value").invoke(f);
+                            java.lang.reflect.Field fsf = vf.getClass().getDeclaredField("surface");
+                            fsf.setAccessible(true);
+                            Object surfaceSet = fsf.get(vf);
+                            System.out.print("SURFACE origin=" + ocx + "," + ocz + " set="
+                                    + surfaceSet + "\n");
+                        } catch (Throwable t) {
+                            System.out.println("SURFACE origin=" + ocx + "," + ocz
+                                    + " unavailable: " + t);
+                        }
                         continue;
                     }
                     if (step == 9 && ProbeTreeFirstFlip.treeish(pf)) {
