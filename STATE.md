@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 14.**
+> **Updated 2 Sep 2026 (Linux box), session 15. 63 commits pushed to origin main (d3af1c1..9cd96ad). Workspace tests 280 passed.**
 
 ## Now
 
