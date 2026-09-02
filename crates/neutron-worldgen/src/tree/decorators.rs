@@ -274,6 +274,12 @@ fn place_on_ground(ctx: &mut TreeCtx<'_>, dec: &Value) {
         let above = (px, py + 1, pz);
         let here = ctx.region.get(px, py, pz);
         let above_b = ctx.region.get(above.0, above.1, above.2);
+        // Vanilla attemptToPlaceBlockAbove (PlaceOnGroundDecorator.java:80)
+        // accepts above ∈ {air, VINE}. Accepting vine here was TESTED and
+        // REJECTED: 424242 regressed 568,109 → 568,965 (+856). Neutron's vine
+        // positions diverge from vanilla's (origin-order cascade), so the
+        // extra accepts write leaf_litter where vanilla has air. Keep the
+        // strict air gate until the origin-order mechanism is resolved.
         if !above_b.is_air() {
             continue;
         }

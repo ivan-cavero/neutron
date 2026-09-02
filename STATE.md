@@ -1,7 +1,9 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 2 Sep 2026 (Linux box), session 15. 63 commits pushed to origin main (d3af1c1..9cd96ad). Workspace tests 280 passed.**
+> **Updated 2 Sep 2026 (Linux box), session 19. Parity unchanged: 424242
+> 568,109 / 98.8992%. Origin-order model CLOSED (race-outcome proof);
+> vine-acceptance fix tested and reverted (+856). Workspace tests green.**
 
 ## Now
 
@@ -135,26 +137,37 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **Origin order model (PRIMARY, closed 1 Sep s16 at 95.85% fit)**: the
-   sim's decorate sequence fits 95.85% of the 45,391 mined pairs (1,870
-   violations; 50 distinct pairs). Classification of all 50: 30 are
-   rank_gap=1 (adjacent in sim), 26 of those with the winner directly
-   NORTH (dz=-1) of the loser — vanilla decorates the SOUTH cell first
-   in those halo adjacencies, i.e. vanilla's concurrent task execution
-   interleaves the BFS deque differently than the deterministic FIFO
-   sim. Remaining large-gap pairs (12 of 50) span different wavefront
-   tiers. No structural sweep rule reproduces the inversions (row-major
-   reorders REGRESS per fit A/B). The 95.85% fit is the order-model
-   floor absent a faithful concurrent-execution model of vanilla's
-   ChunkTaskDispatcher. The halo residual (~4%) is accepted.
-2. Ocean carver gating CLOSED (1 Sep s17): DISPROVEN — the 26.2
-   datapack gives ALL 60 overworld biomes identical carvers (cave,
-   cave_extra_underground, canyon); the old "ocean/cold_ocean have NO
-   carvers" claim is stale (older-version fact). Neutron already carves
-   every chunk without a biome gate — matching vanilla. No change.
-3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+1. **Origin order model CLOSED — residual PROVEN to be per-run race
+   outcomes (2 Sep s19)**: re-mined all three seeds' pair CSVs against the
+   sim ranks. Fit: 424242 95.88%, 12345 89.79%, 777 92.44%. The residual
+   inversions FLIP DIRECTION between seeds on the same adjacencies —
+   e.g. (-13,1) later than (-14,1) in 424242 (280 votes) and 777 (262),
+   but the REVERSE in 12345 (268); (-5,5)/(-5,6) flips 424242 vs
+   12345/777. Only 1 gap-1 swap pair is common to all three seeds (and
+   even that has agreeing-direction mass elsewhere). Gap-1 swaps: 29
+   pairs / 1,188 votes on 424242 (559 interior N/S, 345 strip W/E, rest
+   strip-halo), all with ZERO reverse rows within a seed — consistent
+   with one fixed race sample per world run, not a procedural rule.
+   Conclusion: vanilla's worker-pool completion order is not
+   reproducible deterministically; the sim's fit IS the procedural
+   floor. No further order-model work.
+2. **place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19)**:
+   vanilla PlaceOnGroundDecorator.java:80 accepts above ∈ {air, VINE};
+   neutron only air. Enabling vine acceptance regressed 424242 to
+   568,965 (+856) — neutron's vine positions diverge from vanilla's
+   (origin-order cascade), so extra accepts write leaf_litter where
+   vanilla has air. Reverted; decision recorded in
+   tree/decorators.rs (place_on_ground comment).
+3. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
+   stop)**: top writers unchanged — terrain-missing (dark_oak_leaves
+   19.5k, dark_oak_log 7.6k, pale_oak_leaves 6.4k, oak_leaves 5.6k,
+   leaf_litter 4.6k), tree-extra, vegetation_patch, simple_block,
+   block_column. ALL dominated by the border/origin-order cascade;
+   simple_block confusions (short_grass↔moss_carpet, water→short_grass
+   in lush pools) trace to the same chain. No new independent writer.
+4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-4. `cargo test --workspace` before any push.
+5. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
