@@ -101,12 +101,16 @@ simple_block 38k, ore 18k, block_column 18k.
 
 ## Next
 
-1. **Origin order model (PRIMARY)**: the lever for both the tree gap and
-   the lush_caves_clay divergence. Probes available:
-   ProbeFullDecorate gif=N RNG-stream capture; NEUTRON_COL_DUMP /
-   NEUTRON_PATCH_DUMP; mined precedence pairs. Constraint: single-pair
-   reorders and naive reorders REGRESS (proven A/B) — needs a structural
-   model of vanilla 26.2's chunk scheduler wavefront.
+1. **Origin order model (PRIMARY, global fit measured 1 Sep s15)**: the
+   sim's decorate sequence fits **95.85%** of the 45,391 mined precedence
+   pairs (1,870 violations; sim_fit_tmp analysis). Violations cluster by
+   loser distance: forced interior (dist 0) 2.9%, dist 1 0.1%, **dist 2
+   13.5%**, dist 3 46%. Structural reorder attempts DISPROVEN by fit A/B:
+   row-major dist-2 tier 90.13% (regress), row-major dist>=3 halo no
+   change. The residual inversions are LOCAL adjacent pairs
+   (wrank = lrank - 1) — vanilla's concurrent task execution, not any
+   sweep model. Remaining lever: model the specific adjacency inversions
+   or accept the ~4% halo residual as the order-model floor.
 2. Ocean/cold_ocean carver-list gating (coastal seeds).
 3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
