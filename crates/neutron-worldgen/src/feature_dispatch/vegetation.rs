@@ -444,13 +444,13 @@ pub(crate) fn place_vegetation_patch(
                 edge_roll = Some(r);
                 if r > extra_edge {
                     if (*DUMP_COL) == Some((x, z)) {
-                        eprintln!("[col] dx={dx} dz={dz} edge_roll={r:.7} SKIP");
+                        eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} edge_roll={r:.7} SKIP");
                     }
                     continue;
                 }
             }
             if (*DUMP_COL) == Some((x, z)) {
-                eprintln!("[col] dx={dx} dz={dz} edge_roll={:?}", edge_roll.map(|r| format!("{r:.7}")));
+                eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} edge_roll={:?}", edge_roll.map(|r| format!("{r:.7}")));
             }
             let (mut px, mut py, mut pz) = (x + dx, y, z + dz);
             // Scan through air inwards (isEmptyBlock == isAir, incl. cave_air).
@@ -478,18 +478,18 @@ pub(crate) fn place_vegetation_patch(
             // (ProbeSolidFaces 26.2) so a floor can sit on it.
             let bottom_extra = if extra_bottom > 0.0 && rng.next_f32() < extra_bottom {
                 if (*DUMP_COL) == Some((x, z)) {
-                    eprintln!("[col] dx={dx} dz={dz} bottom=+1");
+                    eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} bottom=+1");
                 }
                 1
             } else {
                 if (*DUMP_COL) == Some((x, z)) {
-                    eprintln!("[col] dx={dx} dz={dz} bottom=+0");
+                    eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} bottom=+0");
                 }
                 0
             };
             let mut depth = sample_int_provider(rng, depth_prov).max(0) + bottom_extra;
             if (*DUMP_COL) == Some((x, z)) {
-                eprintln!("[col] dx={dx} dz={dz} depth={depth}");
+                eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} depth={depth}");
             }
             // VegetationPatchFeature.placeGround: same-block skips set+move.
             // Return value (26.2): full loop -> TRUE even when nothing changed
@@ -521,7 +521,7 @@ pub(crate) fn place_vegetation_patch(
             if ground_ret {
                 surface_pts.insert(gx0, gy0, gz0);
                 if (*DUMP_COL) == Some((x, z)) {
-                    eprintln!("[col] dx={dx} dz={dz} surface=({gx0},{gy0},{gz0}) depth={depth}");
+                    eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} surface=({gx0},{gy0},{gz0}) depth={depth}");
                 }
             }
         }
