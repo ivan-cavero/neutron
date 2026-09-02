@@ -35,18 +35,22 @@ was missing from `eval_block_predicate` (`_ => true`). Proven: vanilla
 trees_birch n=8 ACCEPT (-219,-226,y=68) vs neutron REJECT y=0 at the
 identical stream index after 119 matching draws.
 
-**Waterlogged patch interior (PRIMARY, 5 iterations in)**: RADIUS
-SETTLED - vanilla place() line 28-29 = `sample(random) + 1`; neutron's
-`+1` CORRECT. Streams match through draw 290. Origin (2,9) clay/water:
-vanilla 1095/555-ish vs neutron 2758/355. Instrumentation now tagged
-with the waterlogged variant (wl=true/false) in NEUTRON_COL_DUMP:
-origin (2,9) base 17 (39,84,145) = pool, 159 columns, depth sum 1089,
-surface 127, interior 71, all flooded. The remaining gap: which bases
-are DRY vs POOL on each side (selector booleans 50/50 per base - vanilla
-n=16/28/34 all pool=false) and the per-column depth distribution. Next:
-tag-gated diff of pool bases (vanilla n=16/28/34 vs neutron's tagged
-dump) - per-base clay = sum of depth over non-broken columns; neutron
-base 17 clay = depth sum of its 159 columns minus the flooded tops.
+**Waterlogged patch interior (PRIMARY, 6 iterations in)**: RADIUS
+SETTLED (vanilla place() line 28-29 = `sample(random) + 1`; neutron's
+`+1` CORRECT). CONFIRMED: the gif=29 RNG streams for origin (2,9) align
+1:1 through draw 290 (per-column rolls identical: neutron's per-column
+dump values 0.9608/0.3672/0.8671/0.9499/0.5471... match vanilla's float
+sequence exactly). The divergence = vanilla's 291st draw: a vegetation
+roll 0.0633 < 0.1 = PASS on ONE extra surface point that neutron's
+surface set lacks (neutron 127 vs vanilla 128). The missing point is
+the LAST in vanilla's java-HashSet iteration order. Consequence: no
+dripleaf at that column in neutron, and base 18+ RNG states diverge.
+NEXT (needs java work in ProbeFullDecorate): print the returned
+waterSurface set per pool base by reflectively invoking
+WaterloggedVegetationPatchFeature.placeGroundPatch (protected, returns
+Set<BlockPos>) after replicating the selector boolean + radius draws -
+the set diff vs neutron's 127 names the missing column, then examine
+that column's scan/below-sturdiness.
 
 **dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
 "origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
