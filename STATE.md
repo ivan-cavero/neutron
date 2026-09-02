@@ -80,6 +80,25 @@ reorders are DEAD as a lever.
   grid artifact; vanilla getBiome and neutron biome_id_at_block AGREE at
   all 12 divergent positions; ref world chunk (2,8) HAS the clay).
 
+## REGRESSION FOUND (2 Sep, s16 — three-seed ratchet)
+
+The 424242 ratchet scan REGRESSED: 683,546 cells (98.68%) vs the
+568,109 baseline (98.90%) — +115,437. Root cause: the per-column
+diagnostics committed in f2cfbcf RESTRUCTURED the corner/edge skip in
+place_vegetation_patch. The original:
+
+    if is_corner || (is_edge_not_corner && (extra_edge == 0.0
+        || rng.next_f32() > extra_edge)) { continue; }
+
+became TWO branches that (a) no longer skip CORNERS unconditionally
+(corners now fall through into the scan/placement!) and (b) skip the
+extra_edge roll when extra_edge == 0.0 instead of always skipping those
+columns. Every vegetation patch since f2cfbcf has wrong corners/edges.
+
+ACTION: restore the original skip condition (keep logging), re-run the
+424242 ratchet, and re-baseline. The A/B tests run between f2cfbcf and
+now measured a REGRESSED baseline and must be re-evaluated.
+
 ## Standing causal map (1 Sep s14)
 
 **pale_garden short_grass excess = same origin-order mechanism (1 Sep
