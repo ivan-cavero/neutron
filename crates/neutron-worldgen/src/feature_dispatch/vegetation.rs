@@ -426,6 +426,7 @@ pub(crate) fn place_vegetation_patch(
     });
 
     let waterlogged = cfg["type"].as_str() == Some("minecraft:waterlogged_vegetation_patch");
+
     let xr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
     let zr = sample_int_provider(rng, &c["xz_radius"]).max(0) + 1;
 
@@ -438,19 +439,20 @@ pub(crate) fn place_vegetation_patch(
             let is_edge = is_x_edge || is_z_edge;
             let is_corner = is_x_edge && is_z_edge;
             let is_edge_not_corner = is_edge && !is_corner;
-            let mut edge_roll = None;
-            if is_edge_not_corner && extra_edge != 0.0 {
-                let r = rng.next_f32();
-                edge_roll = Some(r);
-                if r > extra_edge {
+            if is_corner
+                || (is_edge_not_corner && (extra_edge == 0.0 || {
+                    let r = rng.next_f32();
                     if (*DUMP_COL) == Some((x, z)) {
-                        eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} edge_roll={r:.7} SKIP");
+                        let tag = if r > extra_edge { " SKIP" } else { "" };
+                        eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} edge_roll={r:.7}{tag}");
                     }
-                    continue;
+                    r > extra_edge
+                }))
+            {
+                if (*DUMP_COL) == Some((x, z)) && is_corner {
+                    eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} corner SKIP");
                 }
-            }
-            if (*DUMP_COL) == Some((x, z)) {
-                eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} edge_roll={:?}", edge_roll.map(|r| format!("{r:.7}")));
+                continue;
             }
             let (mut px, mut py, mut pz) = (x + dx, y, z + dz);
             // Scan through air inwards (isEmptyBlock == isAir, incl. cave_air).
@@ -476,20 +478,20 @@ pub(crate) fn place_vegetation_patch(
             // belowState.isFaceSturdy(..., outwards). Full cubes yes; leaves /
             // pointed dripstone / sculk_vein / bamboo no. Azalea is sturdy on UP
             // (ProbeSolidFaces 26.2) so a floor can sit on it.
-            let bottom_extra = if extra_bottom > 0.0 && rng.next_f32() < extra_bottom {
+            let below = region.get(bx, by, bz);
+            if !(is_face_sturdy(below)
+                || matches!(below, BlockId::Azalea | BlockId::FloweringAzalea))
+            {
+                continue;
+            }
+            let mut depth = sample_int_provider(rng, depth_prov).max(0);
+            if extra_bottom > 0.0 && rng.next_f32() < extra_bottom {
                 if (*DUMP_COL) == Some((x, z)) {
                     eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} bottom=+1");
                 }
-                1
-            } else {
-                if (*DUMP_COL) == Some((x, z)) {
-                    eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} bottom=+0");
-                }
-                0
-            };
-            let mut depth = sample_int_provider(rng, depth_prov).max(0) + bottom_extra;
-            if (*DUMP_COL) == Some((x, z)) {
-                eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} depth={depth}");
+                depth += 1;
+            } else if (*DUMP_COL) == Some((x, z)) {
+                eprintln!("[col] wl={waterlogged} dx={dx} dz={dz} bottom=+0");
             }
             // VegetationPatchFeature.placeGround: same-block skips set+move.
             // Return value (26.2): full loop -> TRUE even when nothing changed

@@ -80,24 +80,20 @@ reorders are DEAD as a lever.
   grid artifact; vanilla getBiome and neutron biome_id_at_block AGREE at
   all 12 divergent positions; ref world chunk (2,8) HAS the clay).
 
-## REGRESSION FOUND (2 Sep, s16 — three-seed ratchet)
+## REGRESSION FIXED (2 Sep, s16)
 
-The 424242 ratchet scan REGRESSED: 683,546 cells (98.68%) vs the
-568,109 baseline (98.90%) — +115,437. Root cause: the per-column
-diagnostics committed in f2cfbcf RESTRUCTURED the corner/edge skip in
-place_vegetation_patch. The original:
+The instrumentation committed in f2cfbcf RESTRUCTURED the corner/edge
+skip in place_vegetation_patch (corners fell through; extra_edge==0.0
+skipped the column-skip instead of the roll). Caught by the three-seed
+ratchet: 424242 regressed to 683,546. FIXED in vegetation.rs — original
+logic restored with env-gated logging only; 424242 back to exactly
+568,109 / 98.8992% (bit-identical to the pre-instrumentation baseline).
+All A/B conclusions drawn from the regressed window (s11-s15) are
+INVALID and were re-verified or retracted in the sections above.
 
-    if is_corner || (is_edge_not_corner && (extra_edge == 0.0
-        || rng.next_f32() > extra_edge)) { continue; }
-
-became TWO branches that (a) no longer skip CORNERS unconditionally
-(corners now fall through into the scan/placement!) and (b) skip the
-extra_edge roll when extra_edge == 0.0 instead of always skipping those
-columns. Every vegetation patch since f2cfbcf has wrong corners/edges.
-
-ACTION: restore the original skip condition (keep logging), re-run the
-424242 ratchet, and re-baseline. The A/B tests run between f2cfbcf and
-now measured a REGRESSED baseline and must be re-evaluated.
+Three-seed ratchet (post-fix): 424242 = 568,109 / 98.8992% (unchanged);
+12345 = 756,361 / 98.5428% (unchanged); 777 = 717,926 / 98.6142%
+(unchanged).
 
 ## Standing causal map (1 Sep s14)
 
