@@ -471,8 +471,14 @@ pub(crate) fn place_vegetation_patch(
                 pz += out_dz;
                 off += 1;
             }
+            if (*DUMP_COL) == Some((x, z)) {
+                eprintln!("[scan] dx={dx} dz={dz} landed=({px},{py},{pz}) air_off={off}");
+            }
             let (bx, by, bz) = (px + in_dx, py + in_dy, pz + in_dz);
             if !region.get(px, py, pz).is_air() {
+                if (*DUMP_COL) == Some((x, z)) {
+                    eprintln!("[skip] dx={dx} dz={dz} reason=no-air-after-scan pos=({px},{py},{pz}) block={:?}", region.get(px, py, pz));
+                }
                 continue;
             }
             // belowState.isFaceSturdy(..., outwards). Full cubes yes; leaves /
@@ -482,6 +488,9 @@ pub(crate) fn place_vegetation_patch(
             if !(is_face_sturdy(below)
                 || matches!(below, BlockId::Azalea | BlockId::FloweringAzalea))
             {
+                if (*DUMP_COL) == Some((x, z)) {
+                    eprintln!("[skip] dx={dx} dz={dz} reason=below-not-sturdy below=({bx},{by},{bz}) block={:?}", below);
+                }
                 continue;
             }
             let mut depth = sample_int_provider(rng, depth_prov).max(0);
