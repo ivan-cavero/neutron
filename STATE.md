@@ -35,15 +35,18 @@ was missing from `eval_block_predicate` (`_ => true`). Proven: vanilla
 trees_birch n=8 ACCEPT (-219,-226,y=68) vs neutron REJECT y=0 at the
 identical stream index after 119 matching draws.
 
-**Waterlogged patch interior (PRIMARY, 4 iterations in)**: RADIUS
-(lush_caves) at all 12 divergent positions (40,15,135 / 32,18,132 /
-33,11,130 / 37,59,131 / 47,73,139 / 46,6,138 / 45,42,129 / 39,83,142 /
-43,34,137 / 40,22,131 / 46,33,128 / 43,70,140), and (b) the REF WORLD
-chunk (2,8) HAS the clay (ledger only 19 stone→clay extra, 30
-clay→stone) — vanilla placed it from origin (2,8) too. The export's
-biome grid is miscalibrated for gate-fidelity captures. Caution: any
-gate-biome-sensitive per-origin capture result from the .ndec export is
-suspect until the export writes the chunk's stored quart grid correctly.
+**Waterlogged patch interior (PRIMARY, 5 iterations in)**: RADIUS
+SETTLED - vanilla place() line 28-29 = `sample(random) + 1`; neutron's
+`+1` CORRECT. Streams match through draw 290. Origin (2,9) clay/water:
+vanilla 1095/555-ish vs neutron 2758/355. Instrumentation now tagged
+with the waterlogged variant (wl=true/false) in NEUTRON_COL_DUMP:
+origin (2,9) base 17 (39,84,145) = pool, 159 columns, depth sum 1089,
+surface 127, interior 71, all flooded. The remaining gap: which bases
+are DRY vs POOL on each side (selector booleans 50/50 per base - vanilla
+n=16/28/34 all pool=false) and the per-column depth distribution. Next:
+tag-gated diff of pool bases (vanilla n=16/28/34 vs neutron's tagged
+dump) - per-base clay = sum of depth over non-broken columns; neutron
+base 17 clay = depth sum of its 159 columns minus the flooded tops.
 
 **dark_oak boundary objective was a ghost (1 Sep, PROVEN)**: the handoff's
 "origins (-224,-240)/(-224,-208) place 0 logs vs vanilla 9/32" came from
