@@ -82,6 +82,13 @@ reorders are DEAD as a lever.
 
 ## Standing causal map (1 Sep s14)
 
+**pale_garden short_grass excess = same origin-order mechanism (1 Sep
+s18)**: the air→short_grass cells (7431) cluster in pale_garden chunks
+(e.g. (0,-2): 124). Vanilla 26.2 pale_garden DOES include
+patch_grass_forest (datapack verified; neutron's feature list matches —
+glow_lichen at line 73 ✓). The excess = patch surface sets differing by
+origin order, same as lush_caves_clay. No independent fix.
+
 **lush_caves_clay attribution CLOSED — mechanism is origin-order
 spillover**: the surface-set diff (base 17: vanilla 94 vs neutron 127
 points; neutron-only 45 cells on the x=33/z=151 ring) is the decoration
