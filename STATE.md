@@ -1,9 +1,10 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 2 Sep 2026 (Linux box), session 19. Parity unchanged: 424242
-> 568,109 / 98.8992%. Origin-order model CLOSED (race-outcome proof);
-> vine-acceptance fix tested and reverted (+856). Workspace tests green.**
+> **Updated 2 Sep 2026 (Linux box), session 20. Parity unchanged: 424242
+> 568,109 / 98.8992%. Ratchet verified bit-identical on 12345/777;
+> workspace 280 passed; db2c19c pushed. Origin-order model CLOSED
+> (race-outcome proof); vine-acceptance tested and reverted (+856).**
 
 ## Now
 
@@ -13,8 +14,8 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | Measurement | Value |
 | --- | --- |
 | SCAN 525, 1 Sep s5 (matching_fluids fix 25c4708) | **98.90%**, ledger **568,109** cells (−320) |
-| seed **12345** ratchet, 1 Sep | **98.54%** (was 98.45% 28 Aug — improved) |
-| seed **777** ratchet, 1 Sep | **98.61%** (was 98.41% 28 Aug — improved) |
+| seed **12345** ratchet, 2 Sep s20 | **98.5428%** / 756,361 — bit-identical to 1 Sep |
+| seed **777** ratchet, 2 Sep s20 | **98.6142%** / 717,926 — bit-identical to 1 Sep |
 | Chunk (-14,-14) window r=0 | **99.09%** |
 | Chunk (2,9) window r=0 (worst) | 96.9% (lush clay patches; order-driven) |
 
