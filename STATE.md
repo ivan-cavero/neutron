@@ -1,7 +1,7 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 1 Sep 2026 (Linux box), session 11.**
+> **Updated 1 Sep 2026 (Linux box), session 14.**
 
 ## Now
 
@@ -14,7 +14,7 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | seed **12345** ratchet, 1 Sep | **98.54%** (was 98.45% 28 Aug — improved) |
 | seed **777** ratchet, 1 Sep | **98.61%** (was 98.41% 28 Aug — improved) |
 | Chunk (-14,-14) window r=0 | **99.09%** |
-| Chunk (2,9) window r=0 | 96.9% (worst; lush clay patches) |
+| Chunk (2,9) window r=0 (worst) | 96.9% (lush clay patches; order-driven) |
 
 Meter speedup (6ae05e2): worker pool (cores−2, `PARITY_WORKERS`), streaming
 compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
@@ -70,63 +70,47 @@ vanilla `BiomeManager.getBiome` and neutron `biome_id_at_block` AGREE
 ProbeTreeAttempts' row-major replay, not the ref-world order. Single-pair
 reorders are DEAD as a lever.
 
-## Standing causal map (1 Sep s10)
+## Closed (1 Sep s6-s13: lush_caves_clay chain)
+
+- matching_fluids predicate implemented (25c4708, −320; ratchet improved
+  both seeds) · radius `+1` SETTLED as correct (vanilla place() line
+  28-29 = `sample(random) + 1`) · exposure test PROVEN correct (base-17:
+  interior 62 all flooded ≈ vanilla 68) · block_column dispatch VERIFIED
+  identical to vanilla source · biome-gate hypothesis DISPROVEN (oracle
+  grid artifact; vanilla getBiome and neutron biome_id_at_block AGREE at
+  all 12 divergent positions; ref world chunk (2,8) HAS the clay).
+
+## Standing causal map (1 Sep s14)
+
+**lush_caves_clay attribution CLOSED — mechanism is origin-order
+spillover**: the surface-set diff (base 17: vanilla 94 vs neutron 127
+points; neutron-only 45 cells on the x=33/z=151 ring) is the decoration
+ORIGIN ORDER mechanism, not a patch-code bug. Proof: base (39,84,145)'s
+ring columns flood in neutron but not vanilla because their ground
+placement depends on prior origins' spillover (earlier patches filled
+the floor), which differs between vanilla's real order and neutron's sim
+order. ALL patch internals verified identical to vanilla source (radius
++1, depth loop incl. same-block skip, exposure test, block_column).
+The lush_caves_clay divergence is a downstream symptom of the
+border-zone/order divergence — same root as the tree gap. Lever remains
+the origin order model (part of the 87%-border cluster).
 
 Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
-**Waterlogged patch interior (PRIMARY, 5 iterations in)**: RADIUS
-SETTLED - vanilla VegetationPatchFeature.place() line 28-29 is
-`sample(random) + 1`; neutron's `+1` is CORRECT. Surface-set diff (base
-17, origin (39,84,145)): neutron 127 points (NEUTRON_COL_DUMP), vanilla
-94+ in the clipped bbox 34..44/140..150 - the earlier vanilla-only
-extraction was bbox-clipped (r=6 spans 33..45/139..151); re-extract
-unclipped. The extra vanilla float at draw 290 (0.0633 < 0.1) is a
-vegetation PASS. The vegetation divergence is now isolated to the
-dripleaf feature: vanilla 16 dripleaf writes from origin (2,9) vs
-neutron 60 (3.75x). dripleaf = simple_random_selector(small_dripleaf
-simple_block, block_column big_dripleaf); the selector (nextInt(2)) and
-patch loop match through draw 290. Next: diff BlockColumnFeature
-placement for big_dripleaf stems - vanilla samples each layer height
-(RNG), truncates on allowed_placement failure, and the
-supports_big_dripleaf tag governs allowed_placement; verify neutron's
-block_column dispatch (writer block_column, 18k ledger cells) matches
-the truncation + height sampling. Neutron dripleaf positions:
-(42,84..87,143) stems etc.; vanilla: (42,86,149) one stem.
-
-**lush_caves_clay biome-gate divergence (UNRESOLVED, corrected 1 Sep
-s11)**: origin (2,8) = vanilla 0 clay / 0 bases passed the biome gate vs
-neutron 1281 clay (~20 bases accepted). The biome check happens at the
-POST-SCAN position (environment_scan moves down <=12 then random_offset
-+-1), NOT at the pre-scan height draw. My earlier check that found 12
-lush_caves positions evaluated the PRE-scan y - invalid. Both sides use
-live voronoi (WorldGenRegion's BiomeManager = getUncachedNoiseBiome with
-voronoi, probe BIOME_MGR identical). Ref world chunk (2,8) HAS clay
-(ledger 19 stone-to-clay / 30 clay-to-stone only) - vanilla's real gate
-accepted some bases there. NEXT: evaluate the biome at the POST-scan
-positions - from the vanilla capture, the post-scan y is not logged;
-instead compute it per base by replaying the scan against the dump
-terrain (air-scan down <=12, then +-1), then compare vanilla vs neutron
-biome verdicts at those corrected positions.
-
 ## Next
 
-1. **lush_caves_clay per-base attribution CLOSED (1 Sep s13 — mechanism
-identified)**: the surface-set diff (vanilla 94 vs neutron 127 points;
-neutron-only 45 cells on the x=33/z=151 ring) is the decoration ORIGIN
-ORDER mechanism, not a patch-code bug. Proof: base (39,84,145)'s ring
-columns (x=33) flood in neutron but not vanilla because the ground
-placement for those columns depends on prior origins' spillover (earlier
-patches filled the floor), which differs between vanilla's real order
-and neutron's sim order. The patch internals (radius+1, depth loop,
-same-block skip, exposure test, block_column) are all VERIFIED identical
-to vanilla source. The lush_caves_clay divergence is a downstream symptom
-of the border-zone/order divergence already tracked — same root as the
-tree gap. No further patch-level work; the lever remains the origin
-order model (part of the 87%-border cluster).
-
-
+1. **Origin order model (PRIMARY)**: the lever for both the tree gap and
+   the lush_caves_clay divergence. Probes available:
+   ProbeFullDecorate gif=N RNG-stream capture; NEUTRON_COL_DUMP /
+   NEUTRON_PATCH_DUMP; mined precedence pairs. Constraint: single-pair
+   reorders and naive reorders REGRESS (proven A/B) — needs a structural
+   model of vanilla 26.2's chunk scheduler wavefront.
+2. Ocean/cold_ocean carver-list gating (coastal seeds).
+3. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+   12345/777 DO have `world/` prefix (stale doc).
+4. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
