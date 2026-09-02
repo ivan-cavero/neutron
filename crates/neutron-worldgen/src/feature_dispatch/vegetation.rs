@@ -402,6 +402,17 @@ pub(crate) fn place_vegetation_patch(
     gen_step: i32,
 ) {
     let c = &cfg["config"];
+    static PATCH_LOG: std::sync::LazyLock<Option<i32>> = std::sync::LazyLock::new(|| {
+        std::env::var("NEUTRON_PATCH_LOG")
+            .ok()
+            .and_then(|s| s.parse().ok())
+    });
+    if let Some(want_x) = *PATCH_LOG {
+        if x == want_x {
+            let wl = cfg["type"].as_str() == Some("minecraft:waterlogged_vegetation_patch");
+            eprintln!("[base] x={x} y={y} z={z} wl={wl}");
+        }
+    }
     let surface = c["surface"].as_str().unwrap_or("floor");
     // inwards = surface direction (floor -> down, ceiling -> up).
     let (in_dx, in_dy, in_dz) = if surface == "ceiling" {

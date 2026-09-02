@@ -121,6 +121,18 @@ Tree-gap attribution: **87-89% of tree-gap cells sit in the chunk BORDER
 zone**; 350 chunks affected. Remaining writers: vegetation_patch 59k,
 simple_block 38k, ore 18k, block_column 18k.
 
+**Per-base evidence chain CLOSED (2 Sep s17)**: NEUTRON_PATCH_LOG now
+logs every place_vegetation_patch call (base position + variant). For
+origin (2,9): bases 0-16 have IDENTICAL positions and verdicts in both
+sides (base 17 = (39,84,145) pool, accepted in both); bases 18+ diverge
+because vanilla's 291st draw (vegetation PASS 0.0633 on its 128th
+surface point in java-hash order) shifts the RNG state. The 28-point
+surface deficit in neutron's base 17 (100 vs ~128) traces to prior
+origins' spillover at those columns — the origin-order mechanism,
+confirmed at per-column granularity. All patch internals verified vs
+vanilla source. The chain is fully attributed: origin order is the sole
+root cause of the lush_caves_clay divergence.
+
 ## Next
 
 1. **Origin order model (PRIMARY, closed 1 Sep s16 at 95.85% fit)**: the
