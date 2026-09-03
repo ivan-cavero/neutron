@@ -37,6 +37,30 @@ pub fn apply_surface_rules(
                 continue;
             }
 
+            // Vanilla `height` in buildSurface is WORLD_SURFACE_WG + 1, which
+            // INCLUDES fluids (SurfaceSystem.java:112,119). The caller's
+            // heightmap is fluid-exclusive, so recompute the fluid-inclusive
+            // top here: without it the y-loop starts below the water column,
+            // water_height stays MIN at deep floors, the Water(-6) condition
+            // returns true (vanilla treats MIN as exposed), and sediment
+            // (dirt/sand) overwrites the stone floor vanilla leaves intact
+            // (1.2M `stone->dirt` ledger cells across the 30-seed gate).
+            let mut surface_y_fluid = surface_y;
+            for y in (surface_y..WORLD_TOP).rev() {
+                let b = BlockId::from_u16(
+                    blocks[block_index(lx, y, lz)],
+                )
+                .unwrap_or(BlockId::Air);
+                if !b.is_air() {
+                    surface_y_fluid = y;
+                    break;
+                }
+            }
+            let surface_y = surface_y_fluid;
+            if surface_y < WORLD_BOTTOM {
+                continue;
+            }
+
             // surfaceDepth = (int)(surfaceNoise*2.75 + 3.0 + random.at(x,0,z).nextDouble()*0.25)
             let surface_noise = st
                 .noises
