@@ -1,11 +1,11 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 3 Sep 2026 (Linux box), session 21. 30-seed validation DONE:
-> 29/30 in 98.54–99.76% (mean 99.10); outlier 55555 = 96.92% (missing
-> deep_frozen_ocean bergs, 727k). frozenOceanExtension port: 55555
-> −423,814 but 123 +45,387 → REVERTED pending noise/height two-sided
-> dump. 424242 baseline 568,109 / 98.8992% intact; workspace tests green.**
+> **Updated 4 Sep 2026 (Linux box), session 24. HEIGHTMAP FIX LANDED
+> (3d66868): surface y-loop now uses fluid-inclusive WORLD_SURFACE_WG+1.
+> 424242 562,139 / 98.9108%; 12345 448,459 / 99.1360%; 777 674,071 /
+> 98.6989%; 40000 130,108 / 99.7489% (−435k). Worldgen tests green.**
+> Prior state: 568,109 / 98.8992% (2 Sep).
 
 ## Now
 
@@ -139,8 +139,19 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
-   the canonical procedure (square + west strip, gen_one.sh). Results:
+1. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
+   buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
+   (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
+   so the surface y-loop started below the water column, water_height stayed
+   MIN at deep ocean floors, the Water(-6) condition passed (MIN = exposed)
+   and sediment dirt/sand overwrote stone floors. Fix: apply_surface_rules
+   recomputes the fluid-inclusive top per column before the y-loop.
+   Measured: 424242 568,109→562,139 (98.9108%); 12345 756,361→448,459
+   (**99.1360%**); 777 717,926→674,071 (98.6989%); 40000 565,427→130,108
+   (**99.7489%**). Aggregated `stone->dirt` across 30 seeds: 1.20M cells.
+   NEXT: re-run the full 30-seed gate with this fix (expect ~1M cell drop);
+   iceberg chain still parked.
+3. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
    29/30 seeds in 98.54–99.76% (mean 99.10); 17 seeds ≥99.0; best 33333
    99.7587/124,776. Outlier: **55555 = 96.9196/1,589,788** — deep_frozen_ocean
    packed-ice bergs (727k cells = 51% of its gap; zero reverse cells) plus
@@ -150,7 +161,7 @@ root cause of the lush_caves_clay divergence.
    iceberg_surface/iceberg_pillar(x*1.28)/iceberg_pillar_roof(x*1.17) noises
    build giant snow/packed-ice columns — was never ported (noises ARE in
    datapack_data.rs:79-82).
-2. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
+4. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
    cap)**: port tested: 55555 **−423,814** (96.92→97.74%), 424242
    bit-identical, 123 **+45,387** → reverted per ratchet rule. Live-server
    experiment (probe-123 world, real 26.2 jar, forceload) proved the ref
@@ -167,25 +178,25 @@ root cause of the lush_caves_clay divergence.
    too large for the iteration budget; revisit if the gate moves above
    99.5 on the other 29 seeds. Port stays reverted; probe evidence
    committed (ProbeIcebergNoise/Msl/BiomeAtXY).
-3. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
+5. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
-4. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
+6. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
    vanilla PlaceOnGroundDecorator.java:80 accepts above ∈ {air, VINE};
    neutron only air. Enabling vine acceptance regressed 424242 to
    568,965 (+856) — neutron's vine positions diverge from vanilla's
    (origin-order cascade), so extra accepts write leaf_litter where
    vanilla has air. Reverted; decision recorded in
-5. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
+7. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
    stop)**: top writers unchanged — terrain-missing (dark_oak_leaves
    19.5k, dark_oak_log 7.6k, pale_oak_leaves 6.4k, oak_leaves 5.6k,
    leaf_litter 4.6k), tree-extra, vegetation_patch, simple_block,
    block_column. ALL dominated by the border/origin-order cascade;
    simple_block confusions (short_grass↔moss_carpet, water→short_grass
    in lush pools) trace to the same chain. No new independent writer.
-6. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+8. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-7. `cargo test --workspace` before any push.
+9. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
