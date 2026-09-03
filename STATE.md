@@ -151,16 +151,29 @@ root cause of the lush_caves_clay divergence.
    build giant snow/packed-ice columns — was never ported (noises ARE in
    datapack_data.rs:79-82).
 2. **frozenOceanExtension port TESTED and REVERTED (3 Sep s21)**: faithful
-   port in surface_rules.rs (per-column, after rule pass; melt −2 via
-   deep_frozen temperature 0.5). Measured: 55555 1,589,788→1,165,974
-   (**−423,814**, 96.92→97.74%); 424242 bit-identical 568,109 (no frozen
-   mass); **123 REGRESSED 600,455→645,842 (+45,387)** → reverted per
-   ratchet rule. Deltas prove the mechanism; residual = berg SHAPE/offset
-   divergence (55555 water↔ice now balanced 157k/137k). NEXT: two-sided
-   dump of extension inputs (iceberg noise samples, top/bottom bands,
-   `height` argument) on a regressed 123 column vs a Java probe of the
-   same noises; suspect `height` (vanilla uses context height, not
-   WORLD_SURFACE+1) or noise coordinate scaling.
+   port in surface_rules.rs. Measured: 55555 **−423,814** (96.92→97.74%);
+   424242 bit-identical; **123 +45,387** → reverted per ratchet rule.
+   TWO-SIDED DUMP DONE (3 Sep s21): iceberg noise values match vanilla
+   EXACTLY (ProbeIcebergNoise vs neutron at 5 seed-123 columns: s*8.25,
+   p*15, roof*1.5 identical to 4dp; berg gate fires=true at (-218,-222),
+   (-223,-224), (-224,-224)); neutron voronoi biome = frozen_ocean(15) at
+   all of them. `height` = WORLD_SURFACE_WG+1 in BOTH (SurfaceSystem
+   .java:119). Yet the REF world has NO ice above sea at (-160,64) where
+   vanilla math says top=79 (berg=4.97>1.8) — ref ice only in a narrow
+   submerged band y≈53-55, plus separate feature-berg clusters
+   (-158..-156, -149..-150). CONTRADICTION: vanilla's own math demands
+   fills the ref lacks. VERDICT: the ref's bergs come from the
+   iceberg_packed placed FEATURE (rarity 1/16) + a NARROW extension band;
+   the extension's air-fill branch appears NOT to have executed in the
+   ref. Hypotheses for next iteration: (a) ref generated with a datapack
+   that overrides the frozen_ocean surface (check ref server jar's vanilla
+   SurfaceSystem — same 26.2, unlikely); (b) the extension's `height` in
+   the ref was the POST-FEATURE height where column tops are ABOVE top,
+   making max(height,top+1) start BELOW... no. (c) DECISIVE EXPERIMENT:
+   run a real vanilla 26.2 server on a flat-ish frozen_ocean seed, force
+   one berg column, dump the column — measure the true extension behavior
+   instead of decompile inference. The noise-match dump remains in
+   ProbeIcebergNoise.java (tools/worldgen-probe/src).
 3. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
