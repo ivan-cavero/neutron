@@ -153,21 +153,21 @@ root cause of the lush_caves_clay divergence.
 2. **frozenOceanExtension port TESTED and REVERTED (3 Sep s21)**: faithful
    port in surface_rules.rs. Measured: 55555 **−423,814** (96.92→97.74%);
    424242 bit-identical; **123 +45,387** → reverted per ratchet rule.
-   TWO-SIDED DUMP DONE (3 Sep s21): iceberg noise values match vanilla
-   EXACTLY; neutron voronoi biome = frozen_ocean at contested columns;
-   `height` = WORLD_SURFACE_WG+1 in both. **NEW (3 Sep s22): ProbeIcebergMsl
-   runs the REAL vanilla extension math (real NoiseChunk
-   .preliminarySurfaceLevel + real noises) for seed 123: msl=28, berg=4.97,
-   fills band [40..79] at (-160,64)** — yet the REF world has NO ice above
-   sea there (ref ice only: submerged band y≈53-55 + feature-berg clusters
-   -158..-156 / -149..-150 matching iceberg_packed placed feature rarity
-   1/16). ALL inputs verified identical (noise 4dp, biome, height, rng
-   factory, sea 63); the decompiled code path demands fills the ref lacks.
-   OBJECTIVE PARKED per 5-iteration rule: next lever is the DECISIVE
-   live-server experiment (boot vanilla 26.2 on seed 123, forceload the
-   (-10,4) area, dump column (-160,64) y 40..80 directly) to establish
-   whether a real 26.2 server executes the extension. Probes committed:
-   ProbeIcebergNoise.java, ProbeIcebergMsl.java, ProbeBiomeAtXY.java.
+   **DECISIVE LIVE-SERVER EXPERIMENT DONE (3 Sep s22)**: booted a real
+   vanilla 26.2 server on seed 123 (probe-123 world, forceload chunks
+   -11..-10 × 3..5) and compared its chunks against vanilla-fresh-123:
+   byte-identical berg columns (tops 67-79, submerged base ~54) at
+   (-160,64), (-160,70), (-157,66), (-150,78). The ref IS correct vanilla.
+   But the decompile-derived fill math (berg=4.97>1.8 → fill [40..79]) is
+   CONTRADICTED by real servers: water 35..53 stays water. So the real
+   extension's gate/fill differs from the naive decompile reading — the
+   actual bergs (tops 67-79, underwater base ~54, overwater ≤13) match the
+   iceberg_packed placed FEATURE shape instead. REF Bergs = placed feature
+   (rarity 1/16, IcebergFeature.place) — and neutron's feature dispatch
+   traces as running. NEXT: why does neutron's iceberg_packed feature not
+   reproduce the ref bergs — trace rarity/gate per chunk on 55555/123 and
+   two-sided IcebergFeature.place dumps (neutron place_iceberg vs ref
+   columns). Port stays reverted until the feature path is fixed.
 3. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
