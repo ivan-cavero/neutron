@@ -1,10 +1,11 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 2 Sep 2026 (Linux box), session 20. Parity unchanged: 424242
-> 568,109 / 98.8992%. Ratchet verified bit-identical on 12345/777;
-> workspace 280 passed; db2c19c pushed. Origin-order model CLOSED
-> (race-outcome proof); vine-acceptance tested and reverted (+856).**
+> **Updated 3 Sep 2026 (Linux box), session 21. 30-seed validation DONE:
+> 29/30 in 98.54–99.76% (mean 99.10); outlier 55555 = 96.92% (missing
+> deep_frozen_ocean bergs, 727k). frozenOceanExtension port: 55555
+> −423,814 but 123 +45,387 → REVERTED pending noise/height two-sided
+> dump. 424242 baseline 568,109 / 98.8992% intact; workspace tests green.**
 
 ## Now
 
@@ -138,37 +139,47 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **Origin order model CLOSED — residual PROVEN to be per-run race
-   outcomes (2 Sep s19)**: re-mined all three seeds' pair CSVs against the
-   sim ranks. Fit: 424242 95.88%, 12345 89.79%, 777 92.44%. The residual
-   inversions FLIP DIRECTION between seeds on the same adjacencies —
-   e.g. (-13,1) later than (-14,1) in 424242 (280 votes) and 777 (262),
-   but the REVERSE in 12345 (268); (-5,5)/(-5,6) flips 424242 vs
-   12345/777. Only 1 gap-1 swap pair is common to all three seeds (and
-   even that has agreeing-direction mass elsewhere). Gap-1 swaps: 29
-   pairs / 1,188 votes on 424242 (559 interior N/S, 345 strip W/E, rest
-   strip-halo), all with ZERO reverse rows within a seed — consistent
-   with one fixed race sample per world run, not a procedural rule.
-   Conclusion: vanilla's worker-pool completion order is not
-   reproducible deterministically; the sim's fit IS the procedural
-   floor. No further order-model work.
-2. **place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19)**:
+1. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
+   the canonical procedure (square + west strip, gen_one.sh). Results:
+   29/30 seeds in 98.54–99.76% (mean 99.10); 17 seeds ≥99.0; best 33333
+   99.7587/124,776. Outlier: **55555 = 96.9196/1,589,788** — deep_frozen_ocean
+   packed-ice bergs (727k cells = 51% of its gap; zero reverse cells) plus
+   frozen floor surface rules (stone→dirt 201k, gravel→dirt/sand).
+   Seed 123 also carries 143k packed-ice gap. ROOT CAUSE: vanilla
+   `SurfaceSystem.frozenOceanExtension` (SurfaceSystem.java:235-284) —
+   iceberg_surface/iceberg_pillar(x*1.28)/iceberg_pillar_roof(x*1.17) noises
+   build giant snow/packed-ice columns — was never ported (noises ARE in
+   datapack_data.rs:79-82).
+2. **frozenOceanExtension port TESTED and REVERTED (3 Sep s21)**: faithful
+   port in surface_rules.rs (per-column, after rule pass; melt −2 via
+   deep_frozen temperature 0.5). Measured: 55555 1,589,788→1,165,974
+   (**−423,814**, 96.92→97.74%); 424242 bit-identical 568,109 (no frozen
+   mass); **123 REGRESSED 600,455→645,842 (+45,387)** → reverted per
+   ratchet rule. Deltas prove the mechanism; residual = berg SHAPE/offset
+   divergence (55555 water↔ice now balanced 157k/137k). NEXT: two-sided
+   dump of extension inputs (iceberg noise samples, top/bottom bands,
+   `height` argument) on a regressed 123 column vs a Java probe of the
+   same noises; suspect `height` (vanilla uses context height, not
+   WORLD_SURFACE+1) or noise coordinate scaling.
+3. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
+   ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
+   at established per-seed baselines until the iceberg chain lands.
+4. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
    vanilla PlaceOnGroundDecorator.java:80 accepts above ∈ {air, VINE};
    neutron only air. Enabling vine acceptance regressed 424242 to
    568,965 (+856) — neutron's vine positions diverge from vanilla's
    (origin-order cascade), so extra accepts write leaf_litter where
    vanilla has air. Reverted; decision recorded in
-   tree/decorators.rs (place_on_ground comment).
-3. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
+5. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
    stop)**: top writers unchanged — terrain-missing (dark_oak_leaves
    19.5k, dark_oak_log 7.6k, pale_oak_leaves 6.4k, oak_leaves 5.6k,
    leaf_litter 4.6k), tree-extra, vegetation_patch, simple_block,
    block_column. ALL dominated by the border/origin-order cascade;
    simple_block confusions (short_grass↔moss_carpet, water→short_grass
    in lush pools) trace to the same chain. No new independent writer.
-4. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+6. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-5. `cargo test --workspace` before any push.
+7. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
