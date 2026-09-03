@@ -150,24 +150,23 @@ root cause of the lush_caves_clay divergence.
    iceberg_surface/iceberg_pillar(x*1.28)/iceberg_pillar_roof(x*1.17) noises
    build giant snow/packed-ice columns — was never ported (noises ARE in
    datapack_data.rs:79-82).
-2. **frozenOceanExtension port TESTED and REVERTED (3 Sep s21)**: faithful
-   port in surface_rules.rs. Measured: 55555 **−423,814** (96.92→97.74%);
-   424242 bit-identical; **123 +45,387** → reverted per ratchet rule.
-   **DECISIVE LIVE-SERVER EXPERIMENT DONE (3 Sep s22)**: booted a real
-   vanilla 26.2 server on seed 123 (probe-123 world, forceload chunks
-   -11..-10 × 3..5) and compared its chunks against vanilla-fresh-123:
-   byte-identical berg columns (tops 67-79, submerged base ~54) at
-   (-160,64), (-160,70), (-157,66), (-150,78). The ref IS correct vanilla.
-   But the decompile-derived fill math (berg=4.97>1.8 → fill [40..79]) is
-   CONTRADICTED by real servers: water 35..53 stays water. So the real
-   extension's gate/fill differs from the naive decompile reading — the
-   actual bergs (tops 67-79, underwater base ~54, overwater ≤13) match the
-   iceberg_packed placed FEATURE shape instead. REF Bergs = placed feature
-   (rarity 1/16, IcebergFeature.place) — and neutron's feature dispatch
-   traces as running. NEXT: why does neutron's iceberg_packed feature not
-   reproduce the ref bergs — trace rarity/gate per chunk on 55555/123 and
-   two-sided IcebergFeature.place dumps (neutron place_iceberg vs ref
-   columns). Port stays reverted until the feature path is fixed.
+2. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
+   cap)**: port tested: 55555 **−423,814** (96.92→97.74%), 424242
+   bit-identical, 123 **+45,387** → reverted per ratchet rule. Live-server
+   experiment (probe-123 world, real 26.2 jar, forceload) proved the ref
+   IS real vanilla: berg columns byte-identical. Column-level ground
+   truth: extension fills water band [sea−top−7 .. sea] with ~15% skips,
+   top = min(berg²·1.2, ceil(roof·40)+14)+sea; the 123 regression came
+   from neutron fills landing where the ref has feature cut-outs and
+   inter-column variation the port cannot see without the full
+   IcebergFeature interplay (feature bergs + cut-outs carve the
+   extension ice; my earlier "ref lacks ice" and "ref stone-to-63"
+   readings were ledger/column-sampling misreads — ref terrain matches
+   neutron at non-berg floors). The remaining lever is a full
+   IcebergFeature + cut-out + extension joint implementation — parked:
+   too large for the iteration budget; revisit if the gate moves above
+   99.5 on the other 29 seeds. Port stays reverted; probe evidence
+   committed (ProbeIcebergNoise/Msl/BiomeAtXY).
 3. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
