@@ -1,24 +1,22 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 4 Sep 2026 (Linux box), session 24. HEIGHTMAP FIX LANDED
-> (3d66868): surface y-loop now uses fluid-inclusive WORLD_SURFACE_WG+1.
-> 424242 562,139 / 98.9108%; 12345 448,459 / 99.1360%; 777 674,071 /
-> 98.6989%; 40000 130,108 / 99.7489% (−435k). Worldgen tests green.**
-> Prior state: 568,109 / 98.8992% (2 Sep).
+> **Updated 6 Sep 2026 (Linux box), session 25. 30-SEED GATE RE-RUN with
+> the heightmap fix (3d66868): ALL 30 seeds improved, total mismatches
+> 13.96M → 11.06M (−2.90M); 25/30 ≥99.0%, 10/30 ≥99.5%, mean 99.287%.
+> Only 55555 (97.72%, iceberg chain) and 12345's deep-ocean floor remain
+> below 99.5. Worldgen tests green; workspace green.**
 
 ## Now
 
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
-
 | Measurement | Value |
-| --- | --- |
-| SCAN 525, 1 Sep s5 (matching_fluids fix 25c4708) | **98.90%**, ledger **568,109** cells (−320) |
-| seed **12345** ratchet, 2 Sep s20 | **98.5428%** / 756,361 — bit-identical to 1 Sep |
-| seed **777** ratchet, 2 Sep s20 | **98.6142%** / 717,926 — bit-identical to 1 Sep |
-| Chunk (-14,-14) window r=0 | **99.09%** |
-| Chunk (2,9) window r=0 (worst) | 96.9% (lush clay patches; order-driven) |
+| 30-seed gate v2 (heightmap fix, 6 Sep s25) | mean **99.287%**, 10/30 ≥99.5%, 25/30 ≥99.0%, total 11.06M cells (−2.90M) |
+| seed **12345** gate2 | **99.1360%** / 448,459 (was 756,361) |
+| seed **777** gate2 | **98.6989%** / 674,071 (was 717,926) |
+| seed **40000** gate2 | **99.7489%** / 130,108 (was 565,427) |
+| seed **55555** gate2 | **97.7234%** / 1,174,942 (iceberg chain parked) |
 
 Meter speedup (6ae05e2): worker pool (cores−2, `PARITY_WORKERS`), streaming
 compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
