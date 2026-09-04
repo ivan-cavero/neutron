@@ -1,9 +1,19 @@
 # AGENTS.md — Neutron: how we work
 
-> v2.0 · 20 Aug 2026 · Read at task start. Docs in English.
+> v2.1 · 4 Sep 2026 · Read at task start. Docs in English.
 > Default harness can be pi, Grok, Cursor, Codex — this file is the contract, not a pi playbook.
 
-## 0. Working directory
+## 0. Loop prompt (READ FIRST, EVERY TIME)
+
+**Before doing anything else, read `PROMPT.md` in full.** It is the autonomous loop
+protocol: crash recovery, resources, root-cause methodology, objectives, verification,
+commit rules, and completion criteria. `PROMPT.md` overrides any conflicting guidance
+below. If `PROMPT.md` was already injected as the loop prompt, re-read the file from
+disk anyway — it may have been updated since the last iteration.
+
+After reading `PROMPT.md`, read `STATE.md` for current numbers and the next objective.
+
+## 0b. Working directory
 
 Repository root only. Never write outside it. If work exists on an external path, bring it in or ask.
 
