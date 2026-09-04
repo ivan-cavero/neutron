@@ -472,13 +472,18 @@ Update `STATE.md` with:
 Keep STATE.md ≤ 80 lines. Rewrite the facts section when they change; do not append.
 History stays in `runs/` if someone wants it.
 
-### Step 10: Push (Periodically)
-Push when there are 2-3 solid commits with actual code changes accumulated:
+### Step 10: Push (MANDATORY after every code fix)
+After EVERY iteration that commits a code change, push immediately:
 ```bash
 git push origin main
 ```
 
-Do NOT push STATE.md-only commits. Only push when there are real code fixes.
+Rules:
+- Push after every `fix(worldgen)` commit. No batching, no waiting.
+- If the push fails (network, auth, conflict), note it in STATE.md and retry next iteration. Do NOT let unpushed commits accumulate beyond 3.
+- STATE.md-only commits do not require a separate push (they ride along with the next code-fix push), but if 3+ unpushed commits accumulate for any reason, push.
+- Before push, verify `git status` is clean of unintended files (no `target/`, no jars, no `tools/nbt-ref/vanilla-*/`, no `tools/worldgen-probe/bin/`, no `logs/`).
+- The remote is the backup. A crash without push = lost work. Push is crash recovery.
 
 ---
 
@@ -493,6 +498,10 @@ Do NOT push STATE.md-only commits. Only push when there are real code fixes.
 
 3. **NEVER commit without verification.** Run `cargo test -p neutron-worldgen` at minimum.
    Run `cargo test --workspace` before push.
+
+3b. **ALWAYS push after a code-fix commit.** `git push origin main` is part of every
+    iteration that changes code. The remote is the backup — unpushed work is lost work
+    on crash. Never accumulate more than 3 unpushed commits.
 
 4. **NEVER work on multiple causal chains simultaneously.** If trees and water are both
    wrong, they may share a root cause (terrain density). Fix terrain first, THEN trees.
