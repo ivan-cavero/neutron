@@ -107,9 +107,6 @@ name = "dump_terrain"
 name = "neu_biome"
 
 [[example]]
-name = "sim_fit2_tmp"
-
-[[example]]
 name = "water_ref_scan"
 
 [[example]]
