@@ -74,14 +74,14 @@ pub(crate) fn apply_step_origin(
     undecorated: &[(i32, i32)],
     primary_biome: &str,
 ) {
-    let features = feature_catalog::features_at_step(primary_biome, gen_step);
-    if features.is_empty() {
-        return;
-    }
     let level_seed = state.seed;
     // Union of the biomes present in the sections of the 3×3 chunks around
     // this origin (clamped to the buffer), then the union of their feature
     // lists in global FeatureSorter index order.
+    // NOTE: computed BEFORE the primary-biome early return — the primary
+    // biome (e.g. plains) can have an empty step list while a neighbouring
+    // cave biome in the 3×3 (e.g. dripstone_caves step 7) does not; an
+    // early return there silently skipped the whole step for the origin.
     let biomes = origin_biome_union_memo(region, state, ox0, oz0);
     let mut merged: Vec<(i32, String)> = Vec::new();
     for b in &biomes {
@@ -92,6 +92,15 @@ pub(crate) fn apply_step_origin(
                 }
             }
         }
+    }
+    let features = if feature_catalog::features_at_step(primary_biome, gen_step).is_empty()
+    {
+        Vec::new()
+    } else {
+        feature_catalog::features_at_step(primary_biome, gen_step)
+    };
+    if merged.is_empty() && features.is_empty() {
+        return;
     }
     merged.sort_by_key(|(i, _)| *i);
     let list: Vec<String> = merged.into_iter().map(|(_, s)| s).collect();
@@ -269,6 +278,9 @@ pub(crate) fn place_placed_feature_step(
     placed_id: &str,
     gen_step: i32,
 ) {
+    if std::env::var_os("NEUTRON_ICE_LOG").is_some() && placed_id.contains("dripstone") {
+        eprintln!("[step7] {placed_id} step={gen_step} origin=({origin_min_x},{origin_min_z})");
+    }
     let Some(placed) = feature_catalog::load_placed_feature(placed_id) else {
         return;
     };

@@ -27,7 +27,11 @@ pub(crate) fn place_speleothem_cluster(
     cfg: &Value,
 ) {
     let c = &cfg["config"];
+    let ice_log = std::env::var_os("NEUTRON_ICE_LOG").is_some();
     if !is_empty_or_water(region, x, y, z) {
+        if ice_log {
+            eprintln!("[speleothem] x={x} y={y} z={z} REJECT origin-not-empty");
+        }
         return;
     }
     let height = sample_int_provider(rng, &c["height"]);
@@ -35,6 +39,11 @@ pub(crate) fn place_speleothem_cluster(
     let density = sample_float_provider(rng, &c["density"]);
     let x_radius = sample_int_provider(rng, &c["radius"]);
     let z_radius = sample_int_provider(rng, &c["radius"]);
+    if ice_log {
+        eprintln!(
+            "[speleothem] x={x} y={y} z={z} FIRE h={height} wet={wetness:.3} dens={density:.3} rx={x_radius} rz={z_radius}"
+        );
+    }
     for dx in -x_radius..=x_radius {
         for dz in -z_radius..=z_radius {
             let chance = chance_of_speleothem(x_radius, z_radius, dx, dz, c);
