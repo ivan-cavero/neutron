@@ -1,11 +1,12 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 6 Sep 2026 (Linux box), session 25. 30-SEED GATE RE-RUN with
-> the heightmap fix (3d66868): ALL 30 seeds improved, total mismatches
-> 13.96M → 11.06M (−2.90M); 25/30 ≥99.0%, 10/30 ≥99.5%, mean 99.287%.
-> Only 55555 (97.72%, iceberg chain) and 12345's deep-ocean floor remain
-> below 99.5. Worldgen tests green; workspace green.**
+> **Updated 4 Sep 2026 (Linux box), session 26. STEP-7 UNION FIX LANDED
+> (5b03feb): apply_step_origin no longer skips a decoration step when the
+> primary biome's step list is empty (dripstone_cluster now fires; 70707
+> −81,717 cells → 99.4376%). Combined with the heightmap fix (3d66868):
+> 424242 562,057 / 98.9109%; 12345 448,365 / 99.1362%; 777 671,026 /
+> 98.7047%. Worldgen tests green.**
 
 ## Now
 
@@ -137,7 +138,18 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
+1. **STEP-7 UNION FIX LANDED (4 Sep s26, commit 5b03feb)**:
+   apply_step_origin early-returned when features_at_step(primary_biome,
+   gen_step) was empty (plains step 7 = []) BEFORE building the 3x3
+   biome-union feature list — silently skipping the whole decoration step
+   for origins whose neighbours included cave biomes (dripstone_caves step
+   7 = dripstone_cluster + pointed_dripstone; ~951k dripstone cells across
+   12 seeds). Fix: union computed first; early-return only when both union
+   and primary list are empty. Measured: 70707 371,432→289,715
+   (**99.4376%**, −81,717); 777 674,071→671,026 (98.7047%); 12345
+   448,459→448,365 (99.1362%); 424242 562,139→562,057 (98.9109%). All
+   improved. NEXT: re-run the remaining gate seeds with the union fix.
+2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
    so the surface y-loop started below the water column, water_height stayed
