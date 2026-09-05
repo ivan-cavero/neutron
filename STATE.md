@@ -263,16 +263,14 @@ root cause of the lush_caves_clay divergence.
    vanilla 31/31 root calls. But chunk (2,-1): vanilla places a mangrove
    tree, neutron never fires it (0 root calls) — stream already desynced
    upstream. Full 789 with verified port: 98.9972% (+27,956) still
-   negative. TRUE ROOT CAUSE (ProbeClimateAt + climate_at example): at
-   (-20,75,9) ALL SIX climate parameters differ — vanilla temp=1888
-   humid=-1830 cont=2557 eros=5356 depth=-17382 weird=-2774 vs neutron
-   temp=2009 humid=-1682 cont=3491 eros=5567 depth=+436 weird=-3050.
-   Neutron's depth ≈ 0 at y=75 where vanilla has -17382 (well above
-   surface) → biome lookup gives mangrove_swamp (neutron) vs savanna
-   (vanilla) → surface rule flips (mud vs dirt/grass) → tree walk
-   diverges. SCOPE CHARACTERIZED (5 Sep s28, 3-point probe on 424242): at
-   (0,64,0) ALL SIX params match vanilla EXACTLY (temp=1337 humid=5238
-   cont=1339 eros=-2515 depth differs — wait, depth@0,64,0: vanilla
+   negative. CLIMATE PARAM MYTH BUSTED (ProbeClimateAt, quart coords): the
+   earlier all-6-params reading was an ARTIFACT (sampler.sample takes QUART
+   coords, not block). With quart coords vanilla == neutron EXACTLY on all
+   six params at every probed point. LIVE TREE DIFF (authoritative write
+   log vs neutron final): origin (-2,0) tree = 24/26 root positions EXACT
+   (S-direction 2-cell diff: (-23,76,10) missing, (-23,75,11) mud-vs-muddy).
+   The tree port is essentially correct; the 789 regression (+27,956 with
+   port) comes from OTHER origins whose upstream streams desync. PARKED.
    -12025 vs neutron +2974 — DEPTH DIFFERS EVERYWHERE); temp matches at
    origin but differs at (100,70,100) and (-200,70,-200). Summary: depth
    is globally wrong (sign+scale), temperature/vegetation diverge only
