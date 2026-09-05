@@ -1,0 +1,304 @@
+[10:40:36] [main/INFO]: [STDOUT]: TAGS BOUND for 1132 blocks
+[10:40:39] [main/INFO]: [STDOUT]: dump loaded: center=(-2,0) biomes=55
+[10:40:39] [main/INFO]: [STDOUT]: TAGCHECK deepslate∈sculk_replaceable_world_gen = true
+[10:40:40] [main/INFO]: [STDOUT]: fillFromNoise done
+[10:40:40] [main/INFO]: [STDOUT]: buildSurface done
+[10:40:40] [main/INFO]: [STDOUT]: applyCarvers done
+[10:40:40] [main/INFO]: [STDOUT]: scene synced to store
+[10:40:40] [main/INFO]: [STDOUT]: ORIGIN -2 0
+STEP 9 ORIGIN -2 0
+== TRACE trees_savanna gif=9 originMin=(-32,0)
+attempts=2 chain=5
+ATTEMPT o=-2,0 feat=trees_savanna gif=9 n=0 x=-23 z=14 y=83 ws=83 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_savanna gif=9 n=1 x=-21 z=15 y=83 ws=83 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+STEP 9 ORIGIN -2 0
+== TRACE trees_windswept_hills gif=45 originMin=(-32,0)
+attempts=0 chain=5
+STEP 9 ORIGIN -2 0
+== TRACE trees_mangrove gif=47 originMin=(-32,0)
+attempts=25 chain=5
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=0 x=-30 z=14 y=68 ws=68 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=1 x=-31 z=7 y=70 ws=70 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=2 x=-29 z=15 y=69 ws=69 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=3 x=-31 z=8 y=69 ws=69 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=4 x=-21 z=13 y=83 ws=83 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=5 x=-23 z=9 y=74 ws=74 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.6160519<0.85 sub=tall_mangrove_checked tree_height=8 (4+0+4) pred=true place_ok=true below=minecraft:mud blocks={mangrove_leaves:706,mangrove_log:11,mangrove_propagule:1,mangrove_roots:22,moss_carpet:6,muddy_mangrove_roots:3,vine:78} nwrites=827
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=6 x=-22 z=2 y=76 ws=76 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=7 x=-23 z=10 y=87 ws=87 biome=savanna DROP@BiomeFilter below=minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=8 x=-21 z=4 y=76 ws=76 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=9 x=-17 z=5 y=79 ws=79 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.08696687<0.85 sub=tall_mangrove_checked tree_height=7 (4+1+2) pred=true place_ok=false below=minecraft:mud
+NB y=78 dx=1 dz=-2 minecraft:grass_block
+NB y=78 dx=2 dz=-2 minecraft:grass_block
+NB y=78 dx=-1 dz=-1 minecraft:short_grass
+NB y=78 dx=1 dz=-1 minecraft:grass_block
+NB y=78 dx=2 dz=-1 minecraft:grass_block
+NB y=78 dx=0 dz=0 minecraft:mud
+NB y=78 dx=1 dz=0 minecraft:mud
+NB y=78 dx=2 dz=0 minecraft:mud
+NB y=78 dx=0 dz=1 minecraft:mud
+NB y=78 dx=1 dz=1 minecraft:mud
+NB y=78 dx=2 dz=1 minecraft:mud
+NB y=78 dx=-1 dz=2 minecraft:mud
+NB y=78 dx=0 dz=2 minecraft:mud
+NB y=78 dx=1 dz=2 minecraft:mud
+NB y=78 dx=2 dz=2 minecraft:stone
+NB y=79 dx=2 dz=0 minecraft:mud
+NB y=79 dx=1 dz=1 minecraft:mud
+NB y=79 dx=2 dz=1 minecraft:mud
+NB y=79 dx=1 dz=2 minecraft:mud
+NB y=79 dx=2 dz=2 minecraft:mud
+NB y=80 dx=2 dz=2 minecraft:mud
+NB y=81 dx=2 dz=2 minecraft:mud
+NB y=84 dx=-2 dz=2 minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=10 x=-25 z=12 y=72 ws=72 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.5752185<0.85 sub=tall_mangrove_checked tree_height=12 (4+0+8) pred=true place_ok=false below=minecraft:mud
+NB y=71 dx=0 dz=-2 minecraft:grass_block
+NB y=71 dx=1 dz=-2 minecraft:dirt
+NB y=71 dx=2 dz=-2 minecraft:stone
+NB y=71 dx=0 dz=-1 minecraft:mud
+NB y=71 dx=1 dz=-1 minecraft:dirt
+NB y=71 dx=2 dz=-1 minecraft:stone
+NB y=71 dx=0 dz=0 minecraft:mud
+NB y=71 dx=1 dz=0 minecraft:mud
+NB y=71 dx=2 dz=0 minecraft:stone
+NB y=71 dx=-1 dz=1 minecraft:mud
+NB y=71 dx=0 dz=1 minecraft:mud
+NB y=71 dx=1 dz=1 minecraft:stone
+NB y=71 dx=2 dz=1 minecraft:stone
+NB y=71 dx=-1 dz=2 minecraft:mud
+NB y=71 dx=0 dz=2 minecraft:stone
+NB y=71 dx=1 dz=2 minecraft:stone
+NB y=71 dx=2 dz=2 minecraft:stone
+NB y=72 dx=1 dz=-2 minecraft:grass_block
+NB y=72 dx=2 dz=-2 minecraft:mud
+NB y=72 dx=1 dz=-1 minecraft:grass_block
+NB y=72 dx=2 dz=-1 minecraft:stone
+NB y=72 dx=1 dz=0 minecraft:mud
+NB y=72 dx=2 dz=0 minecraft:stone
+NB y=72 dx=1 dz=1 minecraft:stone
+NB y=72 dx=2 dz=1 minecraft:stone
+NB y=72 dx=0 dz=2 minecraft:stone
+NB y=72 dx=1 dz=2 minecraft:stone
+NB y=72 dx=2 dz=2 minecraft:stone
+NB y=73 dx=2 dz=-2 minecraft:mud
+NB y=73 dx=2 dz=-1 minecraft:mud
+NB y=73 dx=1 dz=0 minecraft:mud
+NB y=73 dx=2 dz=0 minecraft:stone
+NB y=73 dx=1 dz=1 minecraft:stone
+NB y=73 dx=2 dz=1 minecraft:stone
+NB y=73 dx=0 dz=2 minecraft:stone
+NB y=73 dx=1 dz=2 minecraft:stone
+NB y=73 dx=2 dz=2 minecraft:stone
+NB y=74 dx=2 dz=-2 minecraft:mud
+NB y=74 dx=2 dz=-1 minecraft:mud
+NB y=74 dx=2 dz=0 minecraft:stone
+NB y=74 dx=1 dz=1 minecraft:stone
+NB y=74 dx=2 dz=1 minecraft:stone
+NB y=74 dx=0 dz=2 minecraft:stone
+NB y=74 dx=1 dz=2 minecraft:stone
+NB y=74 dx=2 dz=2 minecraft:stone
+NB y=75 dx=2 dz=-1 minecraft:muddy_mangrove_roots
+NB y=75 dx=2 dz=0 minecraft:stone
+NB y=75 dx=1 dz=1 minecraft:stone
+NB y=75 dx=2 dz=1 minecraft:stone
+NB y=75 dx=0 dz=2 minecraft:stone
+NB y=75 dx=1 dz=2 minecraft:stone
+NB y=75 dx=2 dz=2 minecraft:stone
+NB y=76 dx=2 dz=-2 minecraft:mangrove_roots
+NB y=76 dx=0 dz=-1 minecraft:vine
+NB y=76 dx=2 dz=-1 minecraft:mangrove_roots
+NB y=76 dx=2 dz=0 minecraft:stone
+NB y=76 dx=1 dz=1 minecraft:stone
+NB y=76 dx=2 dz=1 minecraft:stone
+NB y=76 dx=0 dz=2 minecraft:stone
+NB y=76 dx=1 dz=2 minecraft:stone
+NB y=76 dx=2 dz=2 minecraft:stone
+NB y=77 dx=1 dz=-2 minecraft:mangrove_leaves
+NB y=77 dx=2 dz=-2 minecraft:mangrove_roots
+NB y=77 dx=0 dz=-1 minecraft:vine
+NB y=77 dx=1 dz=-1 minecraft:mangrove_leaves
+NB y=77 dx=2 dz=-1 minecraft:moss_carpet
+NB y=77 dx=2 dz=0 minecraft:mud
+NB y=77 dx=1 dz=1 minecraft:stone
+NB y=77 dx=2 dz=1 minecraft:stone
+NB y=77 dx=0 dz=2 minecraft:stone
+NB y=77 dx=1 dz=2 minecraft:stone
+NB y=77 dx=2 dz=2 minecraft:stone
+NB y=78 dx=1 dz=-2 minecraft:mangrove_leaves
+NB y=78 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=78 dx=0 dz=-1 minecraft:vine
+NB y=78 dx=2 dz=0 minecraft:mud
+NB y=78 dx=1 dz=1 minecraft:mud
+NB y=78 dx=2 dz=1 minecraft:stone
+NB y=78 dx=0 dz=2 minecraft:mud
+NB y=78 dx=1 dz=2 minecraft:stone
+NB y=78 dx=2 dz=2 minecraft:stone
+NB y=79 dx=1 dz=-2 minecraft:mangrove_leaves
+NB y=79 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=79 dx=0 dz=-1 minecraft:vine
+NB y=79 dx=2 dz=-1 minecraft:mangrove_leaves
+NB y=79 dx=2 dz=0 minecraft:mud
+NB y=79 dx=1 dz=1 minecraft:mud
+NB y=79 dx=2 dz=1 minecraft:dirt
+NB y=79 dx=0 dz=2 minecraft:mud
+NB y=79 dx=1 dz=2 minecraft:mud
+NB y=79 dx=2 dz=2 minecraft:stone
+NB y=80 dx=1 dz=-2 minecraft:vine
+NB y=80 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=80 dx=-1 dz=-1 minecraft:vine
+NB y=80 dx=0 dz=-1 minecraft:vine
+NB y=80 dx=1 dz=-1 minecraft:mangrove_leaves
+NB y=80 dx=2 dz=-1 minecraft:mangrove_leaves
+NB y=80 dx=1 dz=1 minecraft:mud
+NB y=80 dx=2 dz=1 minecraft:dirt
+NB y=80 dx=0 dz=2 minecraft:mud
+NB y=80 dx=1 dz=2 minecraft:mud
+NB y=80 dx=2 dz=2 minecraft:mud
+NB y=81 dx=1 dz=-2 minecraft:mangrove_leaves
+NB y=81 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=81 dx=-1 dz=-1 minecraft:vine
+NB y=81 dx=2 dz=-1 minecraft:mangrove_leaves
+NB y=81 dx=2 dz=1 minecraft:grass_block
+NB y=81 dx=1 dz=2 minecraft:mud
+NB y=81 dx=2 dz=2 minecraft:mud
+NB y=82 dx=-1 dz=-2 minecraft:vine
+NB y=82 dx=1 dz=-2 minecraft:vine
+NB y=82 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=82 dx=-1 dz=-1 minecraft:vine
+NB y=82 dx=2 dz=-1 minecraft:mangrove_leaves
+NB y=82 dx=2 dz=2 minecraft:grass_block
+NB y=83 dx=-1 dz=-2 minecraft:vine
+NB y=83 dx=-1 dz=-1 minecraft:vine
+NB y=83 dx=0 dz=-1 minecraft:mangrove_propagule
+NB y=84 dx=-1 dz=-2 minecraft:vine
+NB y=84 dx=0 dz=-2 minecraft:mangrove_leaves
+NB y=84 dx=1 dz=-2 minecraft:mangrove_leaves
+NB y=84 dx=2 dz=-2 minecraft:mangrove_leaves
+NB y=84 dx=-1 dz=-1 minecraft:vine
+NB y=84 dx=0 dz=-1 minecraft:mangrove_leaves
+NB y=84 dx=2 dz=-1 minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=11 x=-29 z=1 y=79 ws=80 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=12 x=-27 z=14 y=71 ws=71 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.16314393<0.85 sub=tall_mangrove_checked tree_height=5 (4+1+0) pred=true place_ok=false below=minecraft:mud
+NB y=70 dx=0 dz=-2 minecraft:mud
+NB y=70 dx=1 dz=-2 minecraft:mud
+NB y=70 dx=2 dz=-2 minecraft:mud
+NB y=70 dx=0 dz=-1 minecraft:mud
+NB y=70 dx=1 dz=-1 minecraft:mud
+NB y=70 dx=2 dz=-1 minecraft:mud
+NB y=70 dx=0 dz=0 minecraft:mud
+NB y=70 dx=1 dz=0 minecraft:mud
+NB y=70 dx=2 dz=0 minecraft:stone
+NB y=70 dx=0 dz=1 minecraft:mud
+NB y=70 dx=1 dz=1 minecraft:mud
+NB y=70 dx=2 dz=1 minecraft:stone
+NB y=70 dx=-1 dz=2 minecraft:grass_block
+NB y=70 dx=0 dz=2 minecraft:dirt
+NB y=70 dx=1 dz=2 minecraft:stone
+NB y=70 dx=2 dz=2 minecraft:stone
+NB y=71 dx=2 dz=-2 minecraft:mud
+NB y=71 dx=1 dz=-1 minecraft:mud
+NB y=71 dx=2 dz=-1 minecraft:mud
+NB y=71 dx=1 dz=0 minecraft:mud
+NB y=71 dx=2 dz=0 minecraft:stone
+NB y=71 dx=1 dz=1 minecraft:mud
+NB y=71 dx=2 dz=1 minecraft:stone
+NB y=71 dx=0 dz=2 minecraft:grass_block
+NB y=71 dx=1 dz=2 minecraft:stone
+NB y=71 dx=2 dz=2 minecraft:stone
+NB y=72 dx=2 dz=0 minecraft:stone
+NB y=72 dx=2 dz=1 minecraft:stone
+NB y=72 dx=1 dz=2 minecraft:stone
+NB y=72 dx=2 dz=2 minecraft:stone
+NB y=73 dx=2 dz=0 minecraft:stone
+NB y=73 dx=2 dz=1 minecraft:stone
+NB y=73 dx=1 dz=2 minecraft:stone
+NB y=73 dx=2 dz=2 minecraft:stone
+NB y=74 dx=2 dz=0 minecraft:stone
+NB y=74 dx=2 dz=1 minecraft:stone
+NB y=74 dx=1 dz=2 minecraft:stone
+NB y=74 dx=2 dz=2 minecraft:stone
+NB y=75 dx=2 dz=0 minecraft:stone
+NB y=75 dx=2 dz=1 minecraft:stone
+NB y=75 dx=1 dz=2 minecraft:stone
+NB y=75 dx=2 dz=2 minecraft:stone
+NB y=76 dx=2 dz=0 minecraft:stone
+NB y=76 dx=1 dz=1 minecraft:stone
+NB y=76 dx=2 dz=1 minecraft:stone
+NB y=76 dx=0 dz=2 minecraft:stone
+NB y=76 dx=1 dz=2 minecraft:stone
+NB y=76 dx=2 dz=2 minecraft:stone
+NB y=77 dx=2 dz=0 minecraft:stone
+NB y=77 dx=1 dz=1 minecraft:stone
+NB y=77 dx=2 dz=1 minecraft:stone
+NB y=77 dx=0 dz=2 minecraft:stone
+NB y=77 dx=1 dz=2 minecraft:stone
+NB y=77 dx=2 dz=2 minecraft:stone
+NB y=78 dx=2 dz=0 minecraft:mud
+NB y=78 dx=1 dz=1 minecraft:mud
+NB y=78 dx=2 dz=1 minecraft:stone
+NB y=78 dx=-1 dz=2 minecraft:stone
+NB y=78 dx=0 dz=2 minecraft:stone
+NB y=78 dx=1 dz=2 minecraft:stone
+NB y=78 dx=2 dz=2 minecraft:stone
+NB y=79 dx=2 dz=0 minecraft:mud
+NB y=79 dx=1 dz=1 minecraft:mud
+NB y=79 dx=2 dz=1 minecraft:mud
+NB y=79 dx=-1 dz=2 minecraft:mud
+NB y=79 dx=0 dz=2 minecraft:mud
+NB y=79 dx=1 dz=2 minecraft:stone
+NB y=79 dx=2 dz=2 minecraft:stone
+NB y=80 dx=2 dz=0 minecraft:mud
+NB y=80 dx=1 dz=1 minecraft:mud
+NB y=80 dx=2 dz=1 minecraft:mud
+NB y=80 dx=-1 dz=2 minecraft:mud
+NB y=80 dx=0 dz=2 minecraft:mud
+NB y=80 dx=1 dz=2 minecraft:mud
+NB y=80 dx=2 dz=2 minecraft:mud
+NB y=81 dx=2 dz=1 minecraft:mud
+NB y=81 dx=-1 dz=2 minecraft:mud
+NB y=81 dx=0 dz=2 minecraft:mud
+NB y=81 dx=1 dz=2 minecraft:mud
+NB y=81 dx=2 dz=2 minecraft:mud
+NB y=82 dx=1 dz=2 minecraft:mud
+NB y=82 dx=2 dz=2 minecraft:mud
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=13 x=-28 z=12 y=70 ws=70 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=14 x=-21 z=2 y=76 ws=76 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=15 x=-31 z=14 y=67 ws=67 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=16 x=-20 z=5 y=76 ws=76 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=17 x=-20 z=11 y=83 ws=83 biome=swamp DROP@BiomeFilter below=minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=18 x=-19 z=14 y=83 ws=83 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=19 x=-22 z=5 y=75 ws=75 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=20 x=-31 z=8 y=69 ws=69 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=21 x=-30 z=14 y=68 ws=68 biome=swamp DROP@BiomeFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=22 x=-21 z=7 y=86 ws=86 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.62027717<0.85 sub=tall_mangrove_checked tree_height=? draws_tail=[] pred=false place_ok=false below=minecraft:mangrove_leaves
+NB y=85 dx=0 dz=-1 minecraft:vine
+NB y=85 dx=-2 dz=0 minecraft:vine
+NB y=85 dx=-1 dz=0 minecraft:mangrove_leaves
+NB y=85 dx=0 dz=0 minecraft:mangrove_leaves
+NB y=85 dx=-2 dz=1 minecraft:mangrove_leaves
+NB y=85 dx=-1 dz=1 minecraft:mangrove_leaves
+NB y=85 dx=0 dz=1 minecraft:vine
+NB y=85 dx=-2 dz=2 minecraft:mangrove_leaves
+NB y=85 dx=-1 dz=2 minecraft:mangrove_leaves
+NB y=86 dx=-2 dz=0 minecraft:mangrove_leaves
+NB y=86 dx=-2 dz=1 minecraft:mangrove_leaves
+NB y=86 dx=-2 dz=2 minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=23 x=-24 z=8 y=87 ws=87 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.053957283<0.85 sub=tall_mangrove_checked tree_height=? draws_tail=[] pred=false place_ok=false below=minecraft:mangrove_leaves
+NB y=86 dx=0 dz=-1 minecraft:vine
+NB y=86 dx=1 dz=-1 minecraft:mangrove_leaves
+NB y=86 dx=0 dz=0 minecraft:mangrove_leaves
+NB y=86 dx=1 dz=0 minecraft:mangrove_leaves
+NB y=86 dx=-1 dz=1 minecraft:mangrove_leaves
+NB y=86 dx=1 dz=1 minecraft:mangrove_leaves
+NB y=86 dx=-2 dz=2 minecraft:vine
+NB y=86 dx=-1 dz=2 minecraft:mangrove_leaves
+NB y=86 dx=1 dz=2 minecraft:mangrove_leaves
+ATTEMPT o=-2,0 feat=trees_mangrove gif=47 n=24 x=-27 z=13 y=71 ws=71 biome=mangrove_swamp sel=tall_mangrove_checked selroll=[f<chance] f0=0.49995285<0.85 sub=tall_mangrove_checked tree_height=13 (4+1+8) pred=true place_ok=true below=minecraft:mud blocks={air:1,mangrove_leaves:926,mangrove_log:16,mangrove_propagule:5,mangrove_roots:42,moss_carpet:8,muddy_mangrove_roots:4,vine:127} nwrites=1129
+STEP 9 ORIGIN -2 0
+== TRACE trees_swamp gif=48 originMin=(-32,0)
+attempts=2 chain=6
+ATTEMPT o=-2,0 feat=trees_swamp gif=48 n=0 x=-21 z=12 y=83 ws=86 biome=swamp DROP@SurfaceWaterDepthFilter below=minecraft:grass_block
+ATTEMPT o=-2,0 feat=trees_swamp gif=48 n=1 x=-19 z=5 y=77 ws=77 biome=savanna DROP@BiomeFilter below=minecraft:grass_block
+STEP 9 ORIGIN -2 0
+== TRACE trees_plains gif=52 originMin=(-32,0)
+attempts=0 chain=6
+[10:40:41] [main/INFO]: [STDOUT]: FULL DECORATION DONE

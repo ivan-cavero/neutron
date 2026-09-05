@@ -185,9 +185,23 @@ root cause of the lush_caves_clay divergence.
    decoration RNG stream is ALREADY desynced before tree selection (the
    no-op was accidentally absorbing the desync). Trees are downstream of
    the real divergence — root cause sits EARLIER in the per-origin step
-   chain (steps 1..6: placement-modifier draws). NEXT: two-sided dump of a
-   mangrove_swamp origin RNG stream vs ProbeFullDecorate to find the first
-   diverging draw in steps 1-6 (before any tree port can land).
+   chain (steps 1..6: placement-modifier draws). STREAM DUMP DONE (5 Sep
+   s28, oracle789b.ndec + pfd-mang.out + neu-789-trace.log, origin (-2,0)):
+   the stream matches THROUGH tree selection — vanilla n=5 mangrove at
+   (-23,9,y74): selroll 0.6160519<0.85 → tall_mangrove_checked, height
+   4+0+4=8 — neutron draw 6: identical roll, identical nextInt(2)=0,
+   nextInt(10)=4, ACCEPT at the same cell. The divergence starts INSIDE the
+   accepted tree: vanilla then consumes the full tree's draws (mangrove
+   roots simulate, trunk branches, 70 foliage attempts, decorators → 827
+   writes) while neutron's Unknown-trunk no-op consumes ~0, so the NEXT
+   attempt's in_square draws diverge (van n=6 = (10,2), neu = (9,8)). The
+   earlier mangrove port REGRESSED because its INTERNAL draw order didn't
+   match vanilla's (root placer/above-root/foliage sequence), not because
+   selection desyncs. NEXT (iteration 4): re-land the mangrove port with
+   exact vanilla draw order, verified draw-by-draw against pfd-mang.out
+   (this trace has every draw). Also: 456's mega-jungle port had the same
+   root cause — the trees_jungle trace (pfd--2_0 pattern) can verify it the
+   same way.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
