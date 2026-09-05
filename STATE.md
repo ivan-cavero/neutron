@@ -286,6 +286,13 @@ root cause of the lush_caves_clay divergence.
    climate_at example). Mangrove port stays PARKED until climate parity
    lands (re-apply is mechanical — bugs #1-#3 + dir order documented;
    VANILLA_NDEC_OUT export hook fixed, LE writer verified).
+   WG-FROZEN FIX LANDED (6 Sep s29, 36427c5): WORLD_SURFACE_WG reads the
+   frozen post-surface snapshot (RegionBuf per-chunk heightmaps) instead
+   of the live buffer — vanilla ChunkStatus.SURFACE re-primes WG maps
+   then freezes them (final maps stay live-tracked). Ratchet: 456
+   −23,548 (→98.9177%), 789 −1,746 (→99.0546%, crosses 99.0), 424242
+   −17,279 (→98.9444%), 70707 +972 (→99.4357%, small mangrove-adjacent
+   exception). Net −41,501 across the 4 seeds; tests green.
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
    BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
    remaining gap across every 99.0-99.4 seed is the border origin-order
