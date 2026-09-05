@@ -225,7 +225,13 @@ root cause of the lush_caves_clay divergence.
    terrain micro-parity lands). OBJECTIVE MOVES TO PHASE 1: quantify and
    fix the stone/dirt-boundary micro-diffs in mangrove_swamp (789) and
    jungle floor (456) — doFill/surface level, BEFORE any tree port can
-   net-positive. ProbeMangroveRootTrace committed (tools/).
+   net-positive. ProbeMangroveRootTrace committed (tools/); AUTHORITATIVE
+   vanilla root walk captured (evidence/stream789/vanilla-root-walk-
+   authoritative.txt, ROOTWALK=1 in-scene): N 6 roots, E 3, S 3, W 8, first
+   candidate (-23,77,7) via else-bool(true), all canPlace results logged.
+   NEXT (iteration 6): re-apply the port, run NEUTRON_ROOT_TRACE, diff
+   position-for-position against this trace to find the first neutron walk
+   deviation, fix, verify full-stream alignment, then measure 789.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,

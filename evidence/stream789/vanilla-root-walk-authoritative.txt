@@ -1,0 +1,30 @@
+[14:46:42] [main/INFO]: [STDOUT]: ROOTWALK trunkOrigin=-23,77,9 dice=10580
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,77,7 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,76,7 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,76,6 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,75,6 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,75,5 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,74,5 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,73,5 canPlace=false
+[14:46:42] [main/INFO]: [STDOUT]: ROOTWALK dir=north ok=true positions=6
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-21,77,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-21,76,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-20,76,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-20,75,9 canPlace=false
+[14:46:42] [main/INFO]: [STDOUT]: ROOTWALK dir=east ok=true positions=3
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,76,10 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,76,11 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,75,11 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-23,75,12 canPlace=false
+[14:46:42] [main/INFO]: [STDOUT]: ROOTWALK dir=south ok=true positions=3
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-24,76,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-24,75,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-24,74,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-25,74,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-25,73,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-25,72,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-25,71,9 canPlace=false
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-26,72,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-26,71,9 canPlace=true
+[14:46:42] [main/INFO]: [STDOUT]: ROOTCALL pos=-26,70,9 canPlace=false
+[14:46:42] [main/INFO]: [STDOUT]: ROOTWALK dir=west ok=true positions=8

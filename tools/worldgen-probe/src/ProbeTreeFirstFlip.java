@@ -517,6 +517,18 @@ public class ProbeTreeFirstFlip {
                .append(" below=").append(blockAt(x, p.getY() - 1, z))
                .append(summarizeWrites(ProbeDecorate.LOG.substring(log0)))
                .append('\n');
+            if (fname.contains("mangrove") && System.getenv("ROOTWALK") != null && ok) {
+                java.util.List<Object> dr = draws;
+                int sel = -1;
+                for (int di = 0; di < dr.size(); di++) {
+                    if (dr.get(di) instanceof Float f && Math.abs(f - 0.6160519f) < 1e-4) { sel = di; break; }
+                }
+                if (sel >= 0 && sel + 4 <= dr.size()) {
+                    int offRes = (Integer) dr.get(sel + 3);
+                    ProbeMangroveRootTrace.traceWalk(level, p,
+                        3 + offRes, dr.subList(sel + 4, dr.size()));
+                }
+            }
             if (!ok) {
                 dumpNeighborhood(x, p.getY(), z);
             }

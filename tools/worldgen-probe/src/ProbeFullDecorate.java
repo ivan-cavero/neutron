@@ -392,6 +392,33 @@ public class ProbeFullDecorate {
                         random.logging = false;
                         System.out.print("STREAM gif=" + gif + " origin=" + ocx + "," + ocz
                                 + " draws=" + ProbeTreeFirstFlip.tail(random.draws, 0) + "\n");
+                        if (fname.contains("mangrove") && System.getenv("ROOTWALK") != null) {
+                            // derive feature origin from the lowest mangrove_log write
+                            int logY = Integer.MIN_VALUE; int lx = 0, lz = 0;
+                            for (String ln : ProbeDecorate.LOG.substring(log0).split("\n")) {
+                                String[] parts = ln.split("\\|");
+                                if (parts.length >= 4 && parts[3].equals("minecraft:mangrove_log")) {
+                                    int wy = Integer.parseInt(parts[1]);
+                                    if (logY == Integer.MIN_VALUE || wy < logY) {
+                                        logY = wy; lx = Integer.parseInt(parts[0]); lz = Integer.parseInt(parts[2]);
+                                    }
+                                }
+                            }
+                            if (logY != Integer.MIN_VALUE) {
+                                java.util.List<Object> dr = random.draws;
+                                int sel = -1;
+                                for (int di = 0; di < dr.size(); di++) {
+                                    if (dr.get(di) instanceof Float f && Math.abs(f - 0.6160519f) < 1e-4) { sel = di; break; }
+                                }
+                                if (sel >= 0 && sel + 4 <= dr.size()) {
+                                    int offRes = (Integer) dr.get(sel + 3);
+                                    int offY = 3 + offRes;
+                                    ProbeMangroveRootTrace.traceWalk(level,
+                                        new BlockPos(lx, logY - offY, lz),
+                                        offY, dr.subList(sel + 4, dr.size()));
+                                }
+                            }
+                        }
                         System.out.print(ProbeDecorate.LOG.substring(log0));
                         System.out.print("SCENECOL");
                         for (int yy = 60; yy <= 80; yy++) {
