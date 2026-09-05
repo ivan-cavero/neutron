@@ -247,11 +247,17 @@ root cause of the lush_caves_clay divergence.
    neutron's walk exactly ((-20,76,9)T -> (-20,75,9)F), and on the
    VANILLA-scene reproduces vanilla's — the port + dir order are fully
    correct; the entire residual divergence is the underlying terrain at
-   cells the root walk touches (first: (-20,75,9), vanilla-scene=dirt vs
-   neutron-scene=mud). Also: VANILLA_NDEC_OUT env added to
-   ProbeFullDecorate (exports the pre-tree vanilla scene as NDEC1; LE
-   writer — one truncation bug near chunk (4,4) remains, ~691 bytes, not
-   yet debugged). CLUSTER LEDGERS (5 Sep s28):
+   cells the root walk touches. QUANTIFIED (5 Sep s28, z=9 slice
+   x=-40..-20): 5/20 columns differ, ALL the same pattern — the TOP of the
+   mud band: vanilla = dirt,dirt,grass_block; neutron = mud,mud,mud
+   (e.g. x=-27: 68-70). Vanilla keeps the air-adjacent swamp surface as
+   dirt/grass; neutron converts the whole band to mud. NEXT (iteration 8):
+   find the vanilla mangrove mud rule condition (datapack surface rule
+   JSON inside the server jar — water-depth vs air-adjacency check) and
+   port the exact gate into surface_rules.rs; then re-verify the walk
+   aligns and re-measure 789 (expected ≈ −120k from mangrove cells).
+   VANILLA_NDEC_OUT export hook bug FIXED (header was 20 bytes, must be
+   18 — LE writer verified).
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
    BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
    remaining gap across every 99.0-99.4 seed is the border origin-order

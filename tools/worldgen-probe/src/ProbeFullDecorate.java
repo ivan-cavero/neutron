@@ -319,6 +319,65 @@ public class ProbeFullDecorate {
             }
         }
         System.out.println("scene synced to store");
+        if (System.getenv("VANILLA_NDEC_OUT") != null) {
+            try (var out = new java.io.DataOutputStream(new java.io.BufferedOutputStream(
+                    new java.io.FileOutputStream(System.getenv("VANILLA_NDEC_OUT"))))) {
+                out.write("NDEC1".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                out.write(java.nio.ByteBuffer.allocate(18)
+                    .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                    .putLong(SEED).putInt(CCX).putInt(CCZ)
+                    .putShort((short) ProbeDecorate.BIOME_NAMES.size()).array());
+                for (String bn : ProbeDecorate.BIOME_NAMES) {
+                    byte[] nb = bn.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    out.write(java.nio.ByteBuffer.allocate(2)
+                        .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                        .putShort((short) nb.length).array());
+                    out.write(nb);
+                }
+                for (int cz = 0; cz < N; cz++) {
+                    for (int cx = 0; cx < N; cx++) {
+                        var pal = new java.util.LinkedHashMap<String, Integer>();
+                        int wx0 = (CCX - R + cx) * 16, wz0 = (CCZ - R + cz) * 16;
+                        int[] ids = new int[384 * 256];
+                        for (int y = MINY; y < TOP; y++) {
+                            for (int lz = 0; lz < 16; lz++) {
+                                for (int lx = 0; lx < 16; lx++) {
+                                    var stt = ProbeDecorate.getState(wx0 + lx, y, wz0 + lz);
+                                    String nm = net.minecraft.core.registries.BuiltInRegistries
+                                        .BLOCK.getKey(stt.getBlock()).toString();
+                                    Integer id = pal.getOrDefault(nm, pal.size());
+                                    if (id == pal.size()) pal.put(nm, id);
+                                    ids[((y - MINY) * 256 + lz * 16 + lx)] = id;
+                                }
+                            }
+                        }
+                        int palBytes = 2;
+                        for (String nm : pal.keySet()) palBytes += 2 + nm.getBytes(
+                            java.nio.charset.StandardCharsets.UTF_8).length;
+                        System.out.println("VNPAL chunk=" + cx + "," + cz
+                            + " size=" + pal.size() + " bytes=" + (palBytes + ids.length * 2 + 1536));
+                        out.write(java.nio.ByteBuffer.allocate(2)
+                            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                            .putShort((short) pal.size()).array());
+                        for (String nm : pal.keySet()) {
+                            byte[] nb = nm.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                            out.write(java.nio.ByteBuffer.allocate(2)
+                                .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                                .putShort((short) nb.length).array());
+                            out.write(nb);
+                        }
+                        java.nio.ByteBuffer bb = java.nio.ByteBuffer.allocate(ids.length * 2)
+                            .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+                        for (int v : ids) bb.putShort((short) v);
+                        out.write(bb.array());
+                        out.write(ProbeDecorate.QUART[cz][cx]);
+                    }
+                }
+                System.out.println("VANILLA NDEC written: " + System.getenv("VANILLA_NDEC_OUT"));
+            } catch (Exception e) {
+                System.out.println("VANILLA NDEC export failed: " + e);
+            }
+        }
 
         // ---- Decoration: all steps, real seeds, tree tracing ----
         WorldGenLevel level = (WorldGenLevel) Proxy.newProxyInstance(
