@@ -197,11 +197,23 @@ root cause of the lush_caves_clay divergence.
    attempt's in_square draws diverge (van n=6 = (10,2), neu = (9,8)). The
    earlier mangrove port REGRESSED because its INTERNAL draw order didn't
    match vanilla's (root placer/above-root/foliage sequence), not because
-   selection desyncs. NEXT (iteration 4): re-land the mangrove port with
-   exact vanilla draw order, verified draw-by-draw against pfd-mang.out
-   (this trace has every draw). Also: 456's mega-jungle port had the same
-   root cause — the trees_jungle trace (pfd--2_0 pattern) can verify it the
-   same way.
+   selection desyncs. ITERATION 4 (5 Sep s28): re-landed the port with the
+   EXACT vanilla order — two real bugs found and fixed via raw-stream diff
+   (pfd-mang47.out STREAM gif=47 vs NEUTRON_RNG_TRACE): (a) doPlace draws
+   getTreeHeight BEFORE rootPlacer.getTrunkOrigin (TreeFeature.java:65-69 —
+   my first port had it reversed); (b) BlockPos.distManhattan INCLUDES the Y
+   term (my width omitted it). After fixes the streams match 15+ draws
+   (selector 0.6160519 → height 0,4 → offset 0 → root-skew dice identical).
+   Full 789 parity: 98.9869% (+33,303) — STILL REGRESSES. First divergence
+   is canPlaceRoot at (-27,72,9): vanilla=not-replaceable (stone floor),
+   neutron=replaceable (air/water) — a MUD-FLOOR HEIGHT difference in the
+   mangrove swamp terrain itself. Once one column diverges, the whole
+   downstream stream shifts and the port nets negative. DEFINITIVE:
+   mangrove (and mega-jungle on 456) tree placement is GATED on terrain/
+   surface-height parity in those biomes. REVERTED the port; the objective
+   moves to terrain: dump vanilla vs neutron mud-floor Y in mangrove_swamp
+   (and jungle floor on 456) via dofill_cells/surface dumps, fix the surface
+   height, THEN the tree ports become net-positive.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
