@@ -251,11 +251,19 @@ root cause of the lush_caves_clay divergence.
    x=-40..-20): 5/20 columns differ, ALL the same pattern — the TOP of the
    mud band: vanilla = dirt,dirt,grass_block; neutron = mud,mud,mud
    (e.g. x=-27: 68-70). Vanilla keeps the air-adjacent swamp surface as
-   dirt/grass; neutron converts the whole band to mud. NEXT (iteration 8):
-   find the vanilla mangrove mud rule condition (datapack surface rule
-   JSON inside the server jar — water-depth vs air-adjacency check) and
-   port the exact gate into surface_rules.rs; then re-verify the walk
-   aligns and re-measure 789 (expected ≈ −120k from mangrove cells).
+   dirt/grass; neutron converts the whole band to mud. IT 7-8 (5 Sep s28):
+   vanilla surface rule decoded (SurfaceRuleData.java: mangrove mud is
+   UNCONDITIONAL in biome rules — dirt@75 was the tree's own below_trunk
+   write; replay artifact again). Live-walk tracer built (two-pass: restore
+   scene from NDEC, replay recorded dice): origin (-2,0) tree matches
+   vanilla EXACTLY, 31/31 root calls. But chunk (2,-1): vanilla places a
+   mangrove tree, neutron NEVER fires it (0 root calls) — that origin's RNG
+   stream was already desynced by an earlier feature. Full 789 with
+   verified port: 98.9972% (+27,956) still negative. FINAL: mangrove port
+   is correct per-stream but most origins' streams desync upstream (same
+   95.85% origin-order ceiling). PARKED until the origin-order model or
+   upstream feature draws are fixed. Re-applying is mechanical (this
+   session's history has the complete port).
    VANILLA_NDEC_OUT export hook bug FIXED (header was 20 bytes, must be
    18 — LE writer verified).
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
