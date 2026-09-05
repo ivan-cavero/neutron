@@ -84,13 +84,17 @@ fn load_vanilla(region_dir: &str, cx: i32, cz: i32) -> Option<Vec<u16>> {
     Some(blocks)
 }
 
-fn column_tops(blocks: &[u16]) -> [(i32, i32); 256] {
+/// (surface_top, floor, dirt_boundary_y) — dirt_boundary = the highest Y
+/// where stone sits directly below a dirt-family block (the surface-rule
+/// boundary). i32::MIN when the column has no dirt over stone.
+fn column_tops(blocks: &[u16]) -> [(i32, i32, i32); 256] {
     let wb = neutron_worldgen::generator::WORLD_BOTTOM;
-    let mut out = [(i32::MIN, i32::MIN); 256];
+    let mut out = [(i32::MIN, i32::MIN, i32::MIN); 256];
     for lz in 0..16i32 {
         for lx in 0..16i32 {
             let mut surface = i32::MIN;
             let mut floor = i32::MIN;
+            let mut boundary = i32::MIN;
             for y in (wb..wb + 384).rev() {
                 let b = BlockId::from_u16(
                     blocks[((y - wb) as usize) * 256 + (lz * 16 + lx) as usize],
@@ -102,11 +106,32 @@ fn column_tops(blocks: &[u16]) -> [(i32, i32); 256] {
                 if floor == i32::MIN && blocks_motion_pub(b) {
                     floor = y;
                 }
-                if surface != i32::MIN && floor != i32::MIN {
+                if boundary == i32::MIN
+                    && b == BlockId::Stone
+                    && y + 1 < wb + 384
+                {
+                    let above = BlockId::from_u16(
+                        blocks[((y + 1 - wb) as usize) * 256 + (lz * 16 + lx) as usize],
+                    )
+                    .unwrap_or(BlockId::Air);
+                    if matches!(
+                        above,
+                        BlockId::Dirt
+                            | BlockId::GrassBlock
+                            | BlockId::CoarseDirt
+                            | BlockId::Mud
+                            | BlockId::MuddyMangroveRoots
+                            | BlockId::Podzol
+                            | BlockId::RootedDirt
+                    ) {
+                        boundary = y + 1;
+                    }
+                }
+                if surface != i32::MIN && floor != i32::MIN && boundary != i32::MIN {
                     break;
                 }
             }
-            out[(lz * 16 + lx) as usize] = (surface, floor);
+            out[(lz * 16 + lx) as usize] = (surface, floor, boundary);
         }
     }
     out
@@ -136,29 +161,29 @@ fn main() {
     let neu_tops = column_tops(&neu_blocks);
 
     let mut diffs = 0usize;
-    let mut surface_diffs = 0usize;
+    let mut boundary_diffs = 0usize;
     for lz in 0..16i32 {
         for lx in 0..16i32 {
-            let (vs, vf) = van_tops[(lz * 16 + lx) as usize];
-            let (ns, nf) = neu_tops[(lz * 16 + lx) as usize];
-            if vs != ns || vf != nf {
+            let (_, _, vb) = van_tops[(lz * 16 + lx) as usize];
+            let (_, _, nb) = neu_tops[(lz * 16 + lx) as usize];
+            if vb != nb {
                 diffs += 1;
-                if vs != ns {
-                    surface_diffs += 1;
+                if vb != i32::MIN && nb != i32::MIN {
+                    boundary_diffs += 1;
                 }
                 if diffs <= 24 {
                     println!(
-                        "col ({:3},{:3}) vanilla surf={} floor={} | neutron surf={} floor={}",
+                        "col ({:3},{:3}) vanilla dirt-boundary={} | neutron dirt-boundary={}",
                         cx * 16 + lx,
                         cz * 16 + lz,
-                        vs,
-                        vf,
-                        ns,
-                        nf
+                        vb,
+                        nb
                     );
                 }
             }
         }
     }
-    println!("chunk ({cx},{cz}): {diffs}/256 columns differ ({surface_diffs} surface)");
+    println!(
+        "chunk ({cx},{cz}): {diffs}/256 columns differ ({boundary_diffs} both-side boundary)"
+    );
 }

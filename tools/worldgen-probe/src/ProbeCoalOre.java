@@ -1054,6 +1054,9 @@ public class ProbeCoalOre {
         // bundled datapack; a bare bootstrap does NOT. If this prints false,
         // every `state.is(TagKey)` gate in this probe is dead and the oracle
         // diverges from real vanilla on tag-dependent paths.
+        System.out.println("TAGCHECK mud∈mangrove_roots_can_grow_through = "
+                + net.minecraft.world.level.block.Blocks.MUD.defaultBlockState()
+                        .is(net.minecraft.tags.BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH));
         System.out.println("TAGCHECK deepslate∈sculk_replaceable_world_gen = "
                 + Blocks.DEEPSLATE.defaultBlockState()
                         .is(net.minecraft.tags.BlockTags.SCULK_REPLACEABLE_WORLD_GEN));
