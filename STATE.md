@@ -152,11 +152,21 @@ root cause of the lush_caves_clay divergence.
    448,459→448,365 (99.1362%); 424242 562,139→562,057 (98.9109%). All
    improved. GATE3 (5 Sep s27): all 27 remaining seeds re-run — 26/27
    improved, net −571,589 cells; mean 99.3503%, 11/27 ≥99.5%. CLOSED.
-1b. **NEXT OBJECTIVE — seed 456 (98.8722% / 584,256, the only non-55555
-   seed below 99.0)**: run `--writers` ledger on 456 (no cache — writers
-   mode rejects it), identify top writer, two-sided dump, fix. Second
-   candidate: 10101/789/50000 cluster (99.01–99.08, ~1.48M cells
-   combined) if 456's top writer is already covered.
+1b. **OBJECTIVE — seed 456 (98.8722% / 584,256; the only non-55555 seed
+   below 99.0)**. Writers ledger (5 Sep s27): terrain 277k / tree 195k /
+   simple_block 65k / vegetation_patch 12k. Jungle-signature cells 267k
+   (86% border); biomes match 100% at the worst chunks. Iteration 1:
+   ported mega_jungle trunk+foliage, bush foliage, leave_vine+cocoa
+   decorators — REVERTED, 456 regressed to 98.7551% (+60,681): the extra
+   RNG draws desync the shared selector stream (vanilla mega picks consume
+   branch draws neutron previously skipped; with the port the whole
+   trees_jungle stream shifts and canopies land where the ref has none).
+   The selector itself (chances 0.1/0.5/0.333/0.0125 + default) matches
+   vanilla RandomSelectorFeature draw-for-draw. NEXT hypothesis: extra
+   ferns (52k cells, uniform ~36/chunk, y=63, vanilla=air) — neutron's
+   WORLD_SURFACE heightmap for patch_grass_jungle returns ground level in
+   dense jungle where vanilla returns canopy top; verify heightmap_top
+   against the buffered region (leaves included?) before the next port.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
