@@ -292,7 +292,10 @@ root cause of the lush_caves_clay divergence.
    then freezes them (final maps stay live-tracked). Ratchet: 456
    −23,548 (→98.9177%), 789 −1,746 (→99.0546%, crosses 99.0), 424242
    −17,279 (→98.9444%), 70707 +972 (→99.4357%, small mangrove-adjacent
-   exception). Net −41,501 across the 4 seeds; tests green.
+   exception). Full ratchet (10 seeds): 50000 −4,200 (99.0903), 12345
+   −790 (99.1377), 777 −3,870 (98.7122), 10101 −2,662 (99.0150),
+   22222 −1,952 (99.1895) — net −54,203 across 10 seeds; only 70707
+   +972 against (0.002pp). Remaining 20 gate seeds queued; tests green.
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
    BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
    remaining gap across every 99.0-99.4 seed is the border origin-order
