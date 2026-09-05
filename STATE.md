@@ -162,11 +162,18 @@ root cause of the lush_caves_clay divergence.
    branch draws neutron previously skipped; with the port the whole
    trees_jungle stream shifts and canopies land where the ref has none).
    The selector itself (chances 0.1/0.5/0.333/0.0125 + default) matches
-   vanilla RandomSelectorFeature draw-for-draw. NEXT hypothesis: extra
-   ferns (52k cells, uniform ~36/chunk, y=63, vanilla=air) — neutron's
-   WORLD_SURFACE heightmap for patch_grass_jungle returns ground level in
-   dense jungle where vanilla returns canopy top; verify heightmap_top
-   against the buffered region (leaves included?) before the next port.
+   vanilla RandomSelectorFeature draw-for-draw. Iteration 2: frozen
+   WORLD_SURFACE_WG/OCEAN_FLOOR_WG heightmaps (vanilla freezes Usage.WORLDGEN
+   maps at surface; ProtoChunk tracks only FINAL maps during features,
+   ChunkStatus.java:17-28 + ProtoChunk.java:147-169) — REVERTED, 456
+   regressed to 98.7296% (+73,871): the frozen read is measurably wrong too,
+   so vanilla WG heightmaps must reflect something between live and frozen
+   (candidate: the WG maps DO get updated by setBlock because
+   getOrCreateHeightmapUnprimed lazily primes them at first setBlock, or
+   WorldGenRegion.getHeight re-primes). 2 investigation+2 fix iterations
+   spent on 456; per the 5-cap, NEXT: park 456 with both negative results
+   recorded; move to the 10101/789/50000 cluster ledger (99.01–99.08) for
+   an independent writer before returning with a better WG-heightmap model.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
