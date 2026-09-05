@@ -242,7 +242,16 @@ root cause of the lush_caves_clay divergence.
    REVERTED; mangrove objective PARKED until either (a) a live-walk
    vanilla tracer exists, or (b) a different angle (e.g. count parity of
    mangrove_roots per chunk) yields a cheap check. Surface-rule "dirt vs
-   mud" claim WITHDRAWN (replay artifact). CLUSTER LEDGERS (5 Sep s28):
+   mud" claim WITHDRAWN (replay artifact). CROSS-SCENE WALK PROOF (5 Sep
+   s28): replaying vanilla dice on the NEUTRON-scene NDEC reproduces
+   neutron's walk exactly ((-20,76,9)T -> (-20,75,9)F), and on the
+   VANILLA-scene reproduces vanilla's — the port + dir order are fully
+   correct; the entire residual divergence is the underlying terrain at
+   cells the root walk touches (first: (-20,75,9), vanilla-scene=dirt vs
+   neutron-scene=mud). Also: VANILLA_NDEC_OUT env added to
+   ProbeFullDecorate (exports the pre-tree vanilla scene as NDEC1; LE
+   writer — one truncation bug near chunk (4,4) remains, ~691 bytes, not
+   yet debugged). CLUSTER LEDGERS (5 Sep s28):
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
    BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
    remaining gap across every 99.0-99.4 seed is the border origin-order
