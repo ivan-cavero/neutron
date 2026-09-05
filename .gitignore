@@ -207,3 +207,4 @@ cell_writes.txt
 runs/*-evidence-*.txt
 tools/worldgen-probe/*.txt
 tools/worldgen-probe/*.log
+evidence/stream789/neutron-rng-trace.log
