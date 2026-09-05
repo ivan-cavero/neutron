@@ -174,6 +174,20 @@ root cause of the lush_caves_clay divergence.
    spent on 456; per the 5-cap, NEXT: park 456 with both negative results
    recorded; move to the 10101/789/50000 cluster ledger (99.01–99.08) for
    an independent writer before returning with a better WG-heightmap model.
+   LEDGERS DONE (5 Sep s27): 10101 #1 writer = ancient_city (244k of 512k —
+   structure not ported; PARKED like 55555, too large). 789 #1 = mangrove
+   trees 138k (upwards_branching_trunk + random_spread_foliage +
+   mangrove_root_placer — all Unknown in neutron → trees place nothing).
+   Iteration 3: ported mangrove trunk/foliage/roots — REVERTED, 789
+   regressed to 98.9862% (+33,673). SAME failure mode as 456's mega-jungle
+   port: any tree-port that starts consuming selector-stream draws at
+   origins where neutron previously no-oped REGRESSES, proving the shared
+   decoration RNG stream is ALREADY desynced before tree selection (the
+   no-op was accidentally absorbing the desync). Trees are downstream of
+   the real divergence — root cause sits EARLIER in the per-origin step
+   chain (steps 1..6: placement-modifier draws). NEXT: two-sided dump of a
+   mangrove_swamp origin RNG stream vs ProbeFullDecorate to find the first
+   diverging draw in steps 1-6 (before any tree port can land).
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
