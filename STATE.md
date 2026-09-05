@@ -242,7 +242,14 @@ root cause of the lush_caves_clay divergence.
    REVERTED; mangrove objective PARKED until either (a) a live-walk
    vanilla tracer exists, or (b) a different angle (e.g. count parity of
    mangrove_roots per chunk) yields a cheap check. Surface-rule "dirt vs
-   mud" claim WITHDRAWN (replay artifact).
+   mud" claim WITHDRAWN (replay artifact). CLUSTER LEDGERS (5 Sep s28):
+   50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
+   BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
+   remaining gap across every 99.0-99.4 seed is the border origin-order
+   cascade plus tree/stream divergence — NO new independent writer. The
+   cheap per-seed ledger route is exhausted; the remaining ~5M gate gap
+   requires either the live-walk tracer (javaagent) or a structural fix
+   to the origin-order model (95.85% fit ceiling).
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
