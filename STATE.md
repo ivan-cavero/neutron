@@ -1,23 +1,25 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 4 Sep 2026 (Linux box), session 26. STEP-7 UNION FIX LANDED
-> (5b03feb): apply_step_origin no longer skips a decoration step when the
-> primary biome's step list is empty (dripstone_cluster now fires; 70707
-> −81,717 cells → 99.4376%). Combined with the heightmap fix (3d66868):
-> 424242 562,057 / 98.9109%; 12345 448,365 / 99.1362%; 777 671,026 /
-> 98.7047%. Worldgen tests green.**
+> **Updated 5 Sep 2026 (Linux box), session 27. GATE3 COMPLETE: the 27
+> remaining gate seeds re-run with the step-7 union fix (5b03feb). 26/27
+> improved (456 −37,354 best after 70707), net −571,589 cells; total gate
+> gap now 9.07M (27 seeds) vs 9.64M before. Mean 99.3503%, 11/27 ≥99.5%,
+> 25/27 ≥99.0%. Below 99.0: 55555 (97.73, iceberg chain parked) and 456
+> (98.87). Combined with heightmap fix: 424242 562,057/98.9109%;
+> 12345 448,365/99.1362%; 777 671,026/98.7047%. Tests green.**
 
 ## Now
 
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
 | Measurement | Value |
-| 30-seed gate v2 (heightmap fix, 6 Sep s25) | mean **99.287%**, 10/30 ≥99.5%, 25/30 ≥99.0%, total 11.06M cells (−2.90M) |
-| seed **12345** gate2 | **99.1360%** / 448,459 (was 756,361) |
-| seed **777** gate2 | **98.6989%** / 674,071 (was 717,926) |
-| seed **40000** gate2 | **99.7489%** / 130,108 (was 565,427) |
-| seed **55555** gate2 | **97.7234%** / 1,174,942 (iceberg chain parked) |
+| 27-seed gate v3 (union fix 5b03feb, 5 Sep s27) | mean **99.3503%**, 11/27 ≥99.5%, 25/27 ≥99.0%, total 9.07M cells (−571,589 vs gate2) |
+| seed **456** gate3 | **98.8722%** / 584,256 (was 621,610; below 99.0 — needs writer dump) |
+| seed **12345** gate3 | **99.1362%** / 448,365 |
+| seed **777** gate3 | **98.7047%** / 671,026 |
+| seed **40000** gate3 | **99.7489%** / 130,108 (bit-identical to gate2) |
+| seed **55555** gate3 | **97.7251%** / 1,174,078 (iceberg chain parked) |
 
 Meter speedup (6ae05e2): worker pool (cores−2, `PARITY_WORKERS`), streaming
 compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
@@ -148,7 +150,13 @@ root cause of the lush_caves_clay divergence.
    and primary list are empty. Measured: 70707 371,432→289,715
    (**99.4376%**, −81,717); 777 674,071→671,026 (98.7047%); 12345
    448,459→448,365 (99.1362%); 424242 562,139→562,057 (98.9109%). All
-   improved. NEXT: re-run the remaining gate seeds with the union fix.
+   improved. GATE3 (5 Sep s27): all 27 remaining seeds re-run — 26/27
+   improved, net −571,589 cells; mean 99.3503%, 11/27 ≥99.5%. CLOSED.
+1b. **NEXT OBJECTIVE — seed 456 (98.8722% / 584,256, the only non-55555
+   seed below 99.0)**: run `--writers` ledger on 456 (no cache — writers
+   mode rejects it), identify top writer, two-sided dump, fix. Second
+   candidate: 10101/789/50000 cluster (99.01–99.08, ~1.48M cells
+   combined) if 456's top writer is already covered.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
