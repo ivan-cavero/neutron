@@ -229,9 +229,19 @@ root cause of the lush_caves_clay divergence.
    vanilla root walk captured (evidence/stream789/vanilla-root-walk-
    authoritative.txt, ROOTWALK=1 in-scene): N 6 roots, E 3, S 3, W 8, first
    candidate (-23,77,7) via else-bool(true), all canPlace results logged.
-   NEXT (iteration 6): re-apply the port, run NEUTRON_ROOT_TRACE, diff
-   position-for-position against this trace to find the first neutron walk
-   deviation, fix, verify full-stream alignment, then measure 789.
+   ITERATION 6 DONE (5 Sep s28): re-applied port + instrumentation, walked
+   both sides position-for-position. FIRST DIVERGENCE: canPlaceRoot at
+   (-20,75,9) — vanilla block = DIRT (canPlace=false), neutron = MUD
+   (canPlace=true). Pre-deco terrain verified identical via NDEC parse on
+   BOTH dumps — the difference is the SURFACE RULE: vanilla keeps DIRT at
+   the top of the mangrove mud band (air-adjacent cell); neutron converts
+   it to mud. Port measured 3x negative with progressively correct draws
+   (+33,673 → +33,303 → +27,956) — definitively gated on this surface
+   rule. Port REVERTED again; objective moves to Phase 1.3 SURFACE RULES:
+   fix the mangrove_swamp mud/dirt top-layer condition (dirt when the cell
+   above is air, mud only under water), re-verify the root walk aligns
+   (all tooling in place), then re-measure 789. All three port bugs + dir
+   order documented above for the re-apply.
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
