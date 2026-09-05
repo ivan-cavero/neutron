@@ -1,13 +1,19 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 5 Sep 2026 (Linux box), session 27. GATE3 COMPLETE: the 27
-> remaining gate seeds re-run with the step-7 union fix (5b03feb). 26/27
-> improved (456 −37,354 best after 70707), net −571,589 cells; total gate
-> gap now 9.07M (27 seeds) vs 9.64M before. Mean 99.3503%, 11/27 ≥99.5%,
-> 25/27 ≥99.0%. Below 99.0: 55555 (97.73, iceberg chain parked) and 456
-> (98.87). Combined with heightmap fix: 424242 562,057/98.9109%;
-> 12345 448,365/99.1362%; 777 671,026/98.7047%. Tests green.**
+> **Updated 5 Sep 2026 (Linux box), session 28. GATE3: mean 99.3503%
+> (11/27 ≥99.5%, 25/27 ≥99.0%, total 9.07M). TWO STRUCTURAL FINDINGS:
+> (1) VANILLA RACES PROVEN: two identical vanilla 26.2 runs on 424242
+> differ in 332,936 cells (0.85%) — ALL decoration features (trees 43%,
+> vines/cave_vines/moss/clay/leaf_litter); noise/density/aquifer/carvers/
+> deep ores/biomes are deterministic (biomes 100% identical). Neutron's
+> residual fingerprint MATCHES the vanilla race floor. (2) Climate
+> sampler params diverge at biome boundaries (all 6; depth worst:
+> vanilla -17382 vs neutron +436 at (-20,75,9)) — flips mangrove/savanna
+> lookup and gates tree placement (789 mangrove ≈120k cells). Tooling:
+> vanilladiff, ProbeClimateAt, climate_at example, ROOTWALK tracer,
+> GIFDRAW capture. Mangrove port verified draw-exact to 62 dice; parked
+> pending (1) or climate fix (2). Tests green.**
 
 ## Now
 
