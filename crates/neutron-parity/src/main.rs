@@ -224,72 +224,107 @@ fn main() {
     let mut protos_skipped: usize = 0;
     let mut structure_counts: std::collections::BTreeMap<String, u64> = Default::default();
     let mut entity_counts: std::collections::BTreeMap<String, u64> = Default::default();
-    const BATCH: usize = 64;
+    // Parallel generation with order-preserving slots.
+    //
+    // The noise+surface stage is ~98% of generation and each chunk's 7x7
+    // neighborhood overlaps heavily with its neighbours'. The previous code
+    // spawned one thread per chunk (up to 64 per batch on any machine) with
+    // a FRESH NoiseCache per chunk, recomputing ~49 columns per chunk (~6x
+    // redundant noise work) while oversubscribing the cores. Now: a worker
+    // count derived from cores, each worker owning one persistent NoiseCache
+    // over a contiguous stripe of coords (~7 new columns per chunk).
+    // PARITY_WORKERS overrides (same convention as region_parity).
+    let n_workers: usize = std::env::var_os("PARITY_WORKERS")
+        .and_then(|v| v.into_string().ok())
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n >= 1)
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|n| n.get().saturating_sub(2).max(1))
+                .unwrap_or(4)
+        });
+    eprintln!("parity: workers={n_workers} (cores-2; PARITY_WORKERS overrides)");
 
     println!(
         "{:>10} {:>9} {:>9} {:>9} {:>9}",
         "chunk", "ALL", "BASE", "core", "border"
     );
 
-    for batch in coords.chunks(BATCH) {
-        let cache_ref = chunk_cache.clone();
-        let generated: Vec<(i32, i32, neutron_worldgen::GeneratedChunk)> =
-            std::thread::scope(|s| {
-                let gen = &gen;
-                let mut handles = Vec::with_capacity(batch.len());
-                for &(ccx, ccz) in batch {
-                    let cache_chunk = cache_ref.clone();
-                    handles.push(s.spawn(move || {
-                        if let Some(cc) = cache_chunk.as_deref() {
-                            let dim_cells = dim.cells();
-                            let biome_cells = (dim.quarts_y() * 16) as usize;
-                            if let Some(hit) = cc.load(args.seed, ccx, ccz, dim_cells, biome_cells)
-                            {
-                                return (
+    let dim_cells = dim.cells();
+    let biome_cells = (dim.quarts_y() * 16) as usize;
+    // Indexed slots preserve coords order regardless of completion order,
+    // so the sequential compare below (and all output) stays deterministic.
+    let slots: Vec<std::sync::Mutex<Option<neutron_worldgen::GeneratedChunk>>> =
+        (0..coords.len()).map(|_| std::sync::Mutex::new(None)).collect();
+    std::thread::scope(|s| {
+        let n_stripes = n_workers.min(coords.len().max(1));
+        let stripe_len = coords.len().div_ceil(n_stripes);
+        for stripe_id in 0..n_stripes {
+            let start = stripe_id * stripe_len;
+            let end = (start + stripe_len).min(coords.len());
+            if start >= end {
+                break;
+            }
+            let stripe = &coords[start..end];
+            let cache_ref = chunk_cache.clone();
+            let gen = &gen;
+            let slots = &slots;
+            let cache_hits = &cache_hits;
+            s.spawn(move || {
+                // Persistent across this worker's stripe: neighbour columns
+                // computed for one chunk are reused by the next. Cap bounds
+                // memory (~200KB/column).
+                let mut noise = NoiseCache::with_cap(256);
+                for (k, &(ccx, ccz)) in stripe.iter().enumerate() {
+                    let (chunk, cached) = match cache_ref.as_deref().and_then(|cc| {
+                        cc.load(args.seed, ccx, ccz, dim_cells, biome_cells)
+                    }) {
+                        Some(hit) => (
+                            neutron_worldgen::GeneratedChunk {
+                                blocks: hit.blocks,
+                                biomes: hit.biomes,
+                                heightmap: hit.heightmap,
+                                // v1 cache stores no writer plane;
+                                // --writers + --cache is rejected below.
+                                writers: None,
+                            },
+                            true,
+                        ),
+                        None => {
+                            let chunk = gen.generate_chunk_cached(ccx, ccz, &mut noise);
+                            if let Some(cc) = cache_ref.as_deref() {
+                                let _ = cc.store(
+                                    args.seed,
                                     ccx,
                                     ccz,
-                                    neutron_worldgen::GeneratedChunk {
-                                        blocks: hit.blocks,
-                                        biomes: hit.biomes,
-                                        heightmap: hit.heightmap,
-                                        // v1 cache stores no writer plane;
-                                        // --writers + --cache is rejected below.
-                                        writers: None,
-                                    },
-                                    true,
+                                    &chunk.blocks,
+                                    &chunk.biomes,
+                                    &chunk.heightmap,
                                 );
                             }
+                            (chunk, false)
                         }
-                        let mut cache = NoiseCache::new();
-                        let chunk = gen.generate_chunk_cached(ccx, ccz, &mut cache);
-                        if let Some(cc) = cache_chunk.as_deref() {
-                            let _ = cc.store(
-                                args.seed,
-                                ccx,
-                                ccz,
-                                &chunk.blocks,
-                                &chunk.biomes,
-                                &chunk.heightmap,
-                            );
-                        }
-                        (ccx, ccz, chunk, false)
-                    }));
+                    };
+                    if cached {
+                        cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    *slots[start + k].lock().unwrap() = Some(chunk);
                 }
-                handles
-                    .into_iter()
-                    .map(|h| {
-                        let (cx, cz, ch, cached) = h.join().unwrap();
-                        if cached {
-                            cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        }
-                        (cx, cz, ch)
-                    })
-                    .collect()
             });
-        if args.scan_step > 0 {
-            eprintln!("scan {}/{}", acc.chunks_compared as usize + generated.len(), coords.len());
         }
-        for (ccx, ccz, chunk) in generated {
+    });
+    {
+        let mut done = 0usize;
+        for (idx, &(ccx, ccz)) in coords.iter().enumerate() {
+            let chunk = slots[idx]
+                .lock()
+                .unwrap()
+                .take()
+                .expect("worker filled every slot");
+            done += 1;
+            if args.scan_step > 0 && (done % 64 == 0 || done == coords.len()) {
+                eprintln!("scan {done}/{}", coords.len());
+            }
             let van = match regions.load_chunk(ccx, ccz, dim) {
                 Ok(v) => v,
                 Err(e) => {
