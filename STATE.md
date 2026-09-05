@@ -204,16 +204,19 @@ root cause of the lush_caves_clay divergence.
    my first port had it reversed); (b) BlockPos.distManhattan INCLUDES the Y
    term (my width omitted it). After fixes the streams match 15+ draws
    (selector 0.6160519 → height 0,4 → offset 0 → root-skew dice identical).
-   Full 789 parity: 98.9869% (+33,303) — STILL REGRESSES. First divergence
-   is canPlaceRoot at (-27,72,9): vanilla=not-replaceable (stone floor),
-   neutron=replaceable (air/water) — a MUD-FLOOR HEIGHT difference in the
-   mangrove swamp terrain itself. Once one column diverges, the whole
-   downstream stream shifts and the port nets negative. DEFINITIVE:
-   mangrove (and mega-jungle on 456) tree placement is GATED on terrain/
-   surface-height parity in those biomes. REVERTED the port; the objective
-   moves to terrain: dump vanilla vs neutron mud-floor Y in mangrove_swamp
-   (and jungle floor on 456) via dofill_cells/surface dumps, fix the surface
-   height, THEN the tree ports become net-positive.
+   Full 789 parity: 98.9869% (+33,303) — STILL REGRESSES. CORRECTION (5 Sep
+   s28, surface_height_dump): the mud FLOOR heights MATCH vanilla (floors
+   equal on nearly all columns; the surface diffs in raw dumps are tree
+   canopies, expected). The terrain-gate hypothesis is WITHDRAWN. The draw
+   divergence at index 15 (vanilla bool vs neutron float) is a root-walk
+   POSITION difference: vanilla simulated a position where canPlaceRoot
+   failed (no bool drawn), neutron walked elsewhere. Resolving it needs
+   vanilla-side root-position logging — NEXT (iteration 5): extend
+   ProbeFullDecorate/traceFeature to log every simulateRoots position +
+   canPlaceRoot result, re-diff, fix the neutron walk to match, re-verify
+   15→full-stream alignment, then re-measure 789. The port code is in this
+   session's history (git stash not kept; rewrite from the diff in
+   evidence/stream789 notes or re-type — ~250 lines).
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
