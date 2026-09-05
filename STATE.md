@@ -231,17 +231,18 @@ root cause of the lush_caves_clay divergence.
    candidate (-23,77,7) via else-bool(true), all canPlace results logged.
    ITERATION 6 DONE (5 Sep s28): re-applied port + instrumentation, walked
    both sides position-for-position. FIRST DIVERGENCE: canPlaceRoot at
-   (-20,75,9) — vanilla block = DIRT (canPlace=false), neutron = MUD
-   (canPlace=true). Pre-deco terrain verified identical via NDEC parse on
-   BOTH dumps — the difference is the SURFACE RULE: vanilla keeps DIRT at
-   the top of the mangrove mud band (air-adjacent cell); neutron converts
-   it to mud. Port measured 3x negative with progressively correct draws
-   (+33,673 → +33,303 → +27,956) — definitively gated on this surface
-   rule. Port REVERTED again; objective moves to Phase 1.3 SURFACE RULES:
-   fix the mangrove_swamp mud/dirt top-layer condition (dirt when the cell
-   above is air, mud only under water), re-verify the root walk aligns
-   (all tooling in place), then re-measure 789. All three port bugs + dir
-   order documented above for the re-apply.
+   (-20,75,9) — neutron canPlace=true (mud). Vanilla-side comparison from
+   the post-tree replay was INCONCLUSIVE: that trace is a POST-TREE replay
+   (hook runs after cf.place()), so its canPlace results include the tree's
+   own writes (below-trunk dirt at 75) — NOT the live walk semantics. The
+   live-vs-replay mismatch makes further vanilla-side
+   diffing impossible without instrumenting inside MangroveRootPlacer
+   (javaagent/reflection hook — heavy). Definitive session conclusion:
+   port draw-exact through 62 dice; 3 measurements all negative; port
+   REVERTED; mangrove objective PARKED until either (a) a live-walk
+   vanilla tracer exists, or (b) a different angle (e.g. count parity of
+   mangrove_roots per chunk) yields a cheap check. Surface-rule "dirt vs
+   mud" claim WITHDRAWN (replay artifact).
 2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
