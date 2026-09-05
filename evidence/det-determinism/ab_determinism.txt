@@ -1,0 +1,54 @@
+Vanilla-vs-vanilla determinism experiment (5 Sep 2026)
+========================================================
+Question: do two vanilla 26.2 generations with IDENTICAL seed+procedure
+produce identical blocks? (Decides whether 100% deterministic parity is
+achievable at all.)
+
+Procedure (tools/nbt-ref/det-run.sh <a|b>, identical both runs):
+- seed 424242, Temurin 25, pinned jar+libraries (vanilla-fresh-424242)
+- boot headless, RCON forceload square -128..127 (256 chunks), settle
+  150 s, save-all flush, stop. Sequential runs (A then B), -Xmx3G, nice.
+- NOTE: server logged "Can't keep up" (shared box) — see caveat below.
+
+Result (parity vanilladiff, common FULL chunks only):
+- A=400 full, B=400 full, common=400
+- identical chunks: 6/400
+- cells: 39,321,600 total, 332,936 differ (0.85%)
+- biome cells differ: 0
+- center chunk (0,0), generated first + complete minutes before save in
+  BOTH runs: 21 diffs, ALL cave_vines/cave_vines_plant (feature growth).
+
+Top pairs (symmetric air<->X: same features, different positions):
+- dark_oak_leaves +-air ~49k, pale_oak_leaves +-air ~45k,
+  pale/dark_oak_log +-air ~38k, oak_leaves ~13k  => TREES ~43%
+- cave_vines* ~28k, moss_block<->stone ~13k, hanging moss ~10k,
+  clay<->stone/deepslate ~16k, leaf_litter/grass ~20k
+- deep terrain (y<-16) TERRAIN<->TERRAIN: 4,296 cells, ALL involve clay
+  (lush-caves vegetation_patch feature). ZERO stone<->deepslate, ZERO ore
+  swaps, ZERO granite/diorite deep.
+- => noise/density, aquifer, carvers, deep ores, biomes: DETERMINISTIC.
+- => ALL decoration features (trees, patches, vines, moss, clay, blobs):
+  timing-dependent (ForkJoinPool cores-1 workers, ChunkTaskDispatcher
+  pops ordered but completions race; see Util.java:229-231,
+  ChunkTaskDispatcher.java:88-93).
+
+Composition match: neutron-vs-424242 residual is trees ~44% /
+lush-sculk ~13% — the same fingerprint as vanilla-vs-vanilla here.
+Hypothesis: neutron on 424242 is at/near the deterministic ceiling;
+the residual IS the race floor.
+
+Caveat (overload): both runs shared the box with loop-agent work, so
+wall-clock timing differed between A and B. Counter: (a) the canonical
+refs were generated under similar shared conditions; (b) center chunks
+complete minutes before save in both runs yet still differ — incomplete
+generation cannot explain it; (c) biomes 100% identical shows the
+deterministic subspace is stable across the same timing variance.
+Stronger follow-up: -Dmax.bg.threads=1 runs (serialized decoration =
+deterministic by construction) as ground truth + race map.
+
+Implication for "100%": a deterministic implementation cannot match
+race outcomes it cannot observe post-hoc. Redefine DONE as 100% on
+deterministic cells: generate 2-3 vanilla samples, mask cells where
+samples disagree (race cells), measure neutron on the rest.
+Raw data: /tmp/ab_full.txt (332,936 diff lines, on this box only).
+Worlds: tools/nbt-ref/vanilla-det-a, vanilla-det-b (gitignored).
