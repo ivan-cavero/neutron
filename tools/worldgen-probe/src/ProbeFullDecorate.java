@@ -393,6 +393,13 @@ public class ProbeFullDecorate {
                         System.out.print("STREAM gif=" + gif + " origin=" + ocx + "," + ocz
                                 + " draws=" + ProbeTreeFirstFlip.tail(random.draws, 0) + "\n");
                         System.out.print(ProbeDecorate.LOG.substring(log0));
+                        System.out.print("SCENECOL");
+                        for (int yy = 60; yy <= 80; yy++) {
+                            var stt = ProbeDecorate.getState(origin.getX() - 4, yy, origin.getZ() + 9);
+                            System.out.print(" " + yy + ":" + net.minecraft.core.registries.BuiltInRegistries
+                                .BLOCK.getKey(stt.getBlock()).getPath());
+                        }
+                        System.out.print("\n");
                         // Reflection dump of the placed feature's internal
                         // surface set: for VegetationPatchFeature the
                         // waterSurface (flooded interior) set is exactly what
