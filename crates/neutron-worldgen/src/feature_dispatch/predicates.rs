@@ -382,6 +382,23 @@ pub(crate) fn heightmap_top(
     z: i32,
     kind: HeightmapKind,
 ) -> Option<i32> {
+    // WORLD_SURFACE_WG semantics: primed post-noise, RE-PRIMED when the
+    // chunk completes SURFACE (ChunkStatus.SURFACE heightmapsAfter =
+    // WORLDGEN_HEIGHTMAPS), then FROZEN — ProtoChunk.setBlockState only
+    // tracks FINAL_HEIGHTMAPS during CARVERS/FEATURES. So placement
+    // modifiers reading WORLD_SURFACE_WG (patch_grass_jungle ferns etc.)
+    // see the post-surface/pre-carver snapshot, NOT live blocks. The
+    // RegionBuf per-chunk heightmaps are exactly that snapshot (written by
+    // generate_noise_and_surface after apply_surface_rules).
+    if kind == HeightmapKind::WorldSurface {
+        if let Some(y) = region.frozen_heightmap(x, z) {
+            if y > WORLD_BOTTOM as i16 {
+                return Some(y as i32);
+            }
+            // WORLD_BOTTOM sentinel = never primed (e.g. bare test grid):
+            // fall through to the live scan.
+        }
+    }
     for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
         if heightmap_opaque(region.get(x, y, z), kind) {
             return Some(y);

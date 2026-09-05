@@ -274,6 +274,21 @@ impl RegionBuf {
         }
     }
 
+    /// Frozen per-chunk heightmap top at (x,z) — the post-surface,
+    /// pre-carver WORLD_SURFACE_WG snapshot (None outside the stored grid).
+    pub fn frozen_heightmap(&self, x: i32, z: i32) -> Option<i16> {
+        let cxl = x.div_euclid(16) - self.origin_x / 16;
+        let czl = z.div_euclid(16) - self.origin_z / 16;
+        if cxl < 0 || czl < 0 || cxl >= self.chunks || czl >= self.chunks {
+            return None;
+        }
+        let hi = (czl * self.chunks + cxl) as usize;
+        let hm = self.heightmaps.get(hi)?;
+        let lx = x.rem_euclid(16) as usize;
+        let lz = z.rem_euclid(16) as usize;
+        Some(hm[lz * 16 + lx])
+    }
+
     /// Extract one chunk column from the region.
     pub fn take_chunk(&self, cx: i32, cz: i32) -> (Vec<u16>, Vec<i16>) {
         let mut blocks = vec![BlockId::Air.as_u16(); CHUNK_BLOCK_VOLUME];
