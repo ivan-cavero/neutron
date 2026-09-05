@@ -104,6 +104,9 @@ name = "wd_check"
 name = "dump_terrain"
 
 [[example]]
+name = "climate_at"
+
+[[example]]
 name = "surface_height_dump"
 
 [[example]]

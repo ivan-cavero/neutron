@@ -250,19 +250,25 @@ root cause of the lush_caves_clay divergence.
    cells the root walk touches. QUANTIFIED (5 Sep s28, z=9 slice
    x=-40..-20): 5/20 columns differ, ALL the same pattern — the TOP of the
    mud band: vanilla = dirt,dirt,grass_block; neutron = mud,mud,mud
-   (e.g. x=-27: 68-70). Vanilla keeps the air-adjacent swamp surface as
-   dirt/grass; neutron converts the whole band to mud. IT 7-8 (5 Sep s28):
-   vanilla surface rule decoded (SurfaceRuleData.java: mangrove mud is
-   UNCONDITIONAL in biome rules — dirt@75 was the tree's own below_trunk
-   write; replay artifact again). Live-walk tracer built (two-pass: restore
-   scene from NDEC, replay recorded dice): origin (-2,0) tree matches
-   vanilla EXACTLY, 31/31 root calls. But chunk (2,-1): vanilla places a
-   mangrove tree, neutron NEVER fires it (0 root calls) — that origin's RNG
-   stream was already desynced by an earlier feature. Full 789 with
-   verified port: 98.9972% (+27,956) still negative. FINAL: mangrove port
-   is correct per-stream but most origins' streams desync upstream (same
-   95.85% origin-order ceiling). PARKED until the origin-order model or
-   upstream feature draws are fixed. Re-applying is mechanical (this
+   (e.g. x=-27: 68-70). IT 7-8: vanilla surface rule decoded (mangrove mud
+   is UNCONDITIONAL in the biome under-chain; dirt@75 in the old trace was
+   the tree's own below_trunk write — replay artifact). Live-walk tracer
+   built (two-pass NDEC restore + dice replay): origin (-2,0) tree matches
+   vanilla 31/31 root calls. But chunk (2,-1): vanilla places a mangrove
+   tree, neutron never fires it (0 root calls) — stream already desynced
+   upstream. Full 789 with verified port: 98.9972% (+27,956) still
+   negative. TRUE ROOT CAUSE (ProbeClimateAt + climate_at example): at
+   (-20,75,9) ALL SIX climate parameters differ — vanilla temp=1888
+   humid=-1830 cont=2557 eros=5356 depth=-17382 weird=-2774 vs neutron
+   temp=2009 humid=-1682 cont=3491 eros=5567 depth=+436 weird=-3050.
+   Neutron's depth ≈ 0 at y=75 where vanilla has -17382 (well above
+   surface) → biome lookup gives mangrove_swamp (neutron) vs savanna
+   (vanilla) → surface rule flips (mud vs dirt/grass) → tree walk
+   diverges. NEXT OBJECTIVE (Phase 1.1 climate sampler): per-parameter
+   diff of temperature/vegetation shifted_noise jitter and the depth
+   density chain at boundary cells; tooling committed (ProbeClimateAt +
+   climate_at example). Mangrove port stays PARKED until climate parity
+   lands (re-apply is mechanical — bugs #1-#3 + dir order documented).
    session's history has the complete port).
    VANILLA_NDEC_OUT export hook bug FIXED (header was 20 bytes, must be
    18 — LE writer verified).
