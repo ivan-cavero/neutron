@@ -38,8 +38,14 @@ public final class ProbeMangroveRootTrace {
         if (layer != maxL && positions.size() <= maxL) {
             for (BlockPos pos : potential(level, draws, rootPos, prevDir, rootOrigin, maxW, skew)) {
                 boolean can = canPlace(level, pos);
+                String blk = "";
+                if (!can) {
+                    blk = " block=" + net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(ProbeDecorate.getState(pos.getX(), pos.getY(), pos.getZ()).getBlock())
+                        .getPath();
+                }
                 System.out.println("ROOTCALL pos=" + pos.getX() + "," + pos.getY() + ","
-                    + pos.getZ() + " canPlace=" + can);
+                    + pos.getZ() + " canPlace=" + can + blk);
                 if (can) {
                     positions.add(pos);
                     if (!simulate(level, draws, pos, prevDir, rootOrigin, positions,
@@ -91,8 +97,15 @@ public final class ProbeMangroveRootTrace {
     }
 
     static boolean canPlace(LevelSimulatedReader level, BlockPos pos) {
-        return TreeFeature.validTreePos(level, pos)
+        boolean ok = TreeFeature.validTreePos(level, pos)
             || level.isStateAtPosition(pos,
                 st -> st.is(net.minecraft.tags.BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH));
+        if (!ok) {
+            var st = ProbeDecorate.getState(pos.getX(), pos.getY(), pos.getZ());
+            System.out.println("ROOTCANFAIL pos=" + pos.getX() + "," + pos.getY() + ","
+                + pos.getZ() + " block=" + net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .getKey(st.getBlock()).getPath());
+        }
+        return ok;
     }
 }

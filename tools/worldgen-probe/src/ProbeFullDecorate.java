@@ -434,6 +434,8 @@ public class ProbeFullDecorate {
                                     RandomSupport.generateUniqueSeed()));
                     long decorationSeed = random.setDecorationSeed(SEED, origin.getX(), origin.getZ());
                     random.setFeatureSeed(decorationSeed, gif, step);
+                    boolean drawAll = System.getenv("PROBE_DRAW_ALL") != null;
+                    if (drawAll) random.logging = true;
                     String fname = ProbeTreeFirstFlip.idOfPlaced(pf);
                     // RNG-STREAM capture for one gif (e.g. wildflowers gif=22):
                     // runs REAL vanilla placement (placeWithBiomeCheck) while
@@ -516,10 +518,16 @@ public class ProbeFullDecorate {
                         System.out.print(ProbeTreeFirstFlip.OUT);
                         ProbeTreeFirstFlip.OUT = new StringBuilder();
                     } else {
+                        int drawStart = random.draws.size();
                         try {
                             pf.placeWithBiomeCheck(level, generator, random, origin);
                         } catch (Throwable t) {
                             System.out.println("ERROR step=" + step + " gif=" + gif + " " + t);
+                        }
+                        if (drawAll && random.draws.size() > drawStart) {
+                            System.out.println("GIFDRAW step=" + step + " gif=" + gif
+                                + " origin=" + ocx + "," + ocz
+                                + " draws=" + ProbeTreeFirstFlip.tail(random.draws, 0));
                         }
                     }
                 }
