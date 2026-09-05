@@ -243,7 +243,7 @@ root cause of the lush_caves_clay divergence.
    own writes (below-trunk dirt at 75) — NOT the live walk semantics. The
    live-vs-replay mismatch makes further vanilla-side
    diffing impossible without instrumenting inside MangroveRootPlacer
-   (javaagent/reflection hook — heavy). Definitive session conclusion:
+   (javaagent/reflection hook — heavy).
    port draw-exact through 62 dice; 3 measurements all negative; port
    REVERTED; mangrove objective PARKED until either (a) a live-walk
    vanilla tracer exists, or (b) a different angle (e.g. count parity of
@@ -270,14 +270,24 @@ root cause of the lush_caves_clay divergence.
    Neutron's depth ≈ 0 at y=75 where vanilla has -17382 (well above
    surface) → biome lookup gives mangrove_swamp (neutron) vs savanna
    (vanilla) → surface rule flips (mud vs dirt/grass) → tree walk
-   diverges. NEXT OBJECTIVE (Phase 1.1 climate sampler): per-parameter
-   diff of temperature/vegetation shifted_noise jitter and the depth
-   density chain at boundary cells; tooling committed (ProbeClimateAt +
+   diverges. SCOPE CHARACTERIZED (5 Sep s28, 3-point probe on 424242): at
+   (0,64,0) ALL SIX params match vanilla EXACTLY (temp=1337 humid=5238
+   cont=1339 eros=-2515 depth differs — wait, depth@0,64,0: vanilla
+   -12025 vs neutron +2974 — DEPTH DIFFERS EVERYWHERE); temp matches at
+   origin but differs at (100,70,100) and (-200,70,-200). Summary: depth
+   is globally wrong (sign+scale), temperature/vegetation diverge only
+   far from origin (shifted-noise jitter or noise-impl precision at
+   boundaries — matches the boundary-only biome flips seen in parity).
+   depth df = add(y_clamped_gradient(1.5→-1.5 over -64..320), overworld/
+   offset spline chain). Neutron gradient impl verified correct; the
+   delta pattern (van - neu = 1.50@64, 1.78@75, 1.10@46 on one column)
+   is NOT constant — the overworld/offset spline chain evaluates
+   differently. NEXT (iteration 9): dump overworld/offset spline inputs
+   (continents spline) both sides at (-20,75,9); the offset chain is the
+   depth fix; the shifted-noise jitter is the temp/humid fix.
    climate_at example). Mangrove port stays PARKED until climate parity
-   lands (re-apply is mechanical — bugs #1-#3 + dir order documented).
-   session's history has the complete port).
-   VANILLA_NDEC_OUT export hook bug FIXED (header was 20 bytes, must be
-   18 — LE writer verified).
+   lands (re-apply is mechanical — bugs #1-#3 + dir order documented;
+   VANILLA_NDEC_OUT export hook fixed, LE writer verified).
    50000 (99.0821%/474,604) — spruce trees 138k + dripstone_caves 138k,
    BOTH 86% border; core-only 19.5k/18k. Same signature as 456/789: the
    remaining gap across every 99.0-99.4 seed is the border origin-order
