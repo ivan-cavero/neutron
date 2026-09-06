@@ -629,7 +629,7 @@ impl<'a> PlacePipeline<'a> {
 
 /// `#minecraft:replaceable` subset reachable in the decoration buffer
 /// (`BlockState.canBeReplaced` gate of createTopperWithSideChance).
-fn can_be_replaced(b: BlockId) -> bool {
+pub(crate) fn can_be_replaced(b: BlockId) -> bool {
     matches!(
         b,
         BlockId::Air

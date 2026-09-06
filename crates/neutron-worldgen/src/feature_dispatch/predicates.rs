@@ -113,10 +113,13 @@ pub(crate) fn eval_block_predicate(
             supports_vegetation(below)
         }
         "minecraft:matching_fluids" => {
-            // MatchingFluidsPredicate: block at (origin + offset) must be in
-            // `fluids` (typically #minecraft:water ⊇ water + flowing_water).
-            // The region buffer stores a single Water id (no flow level), so
-            // both match Water. Missing offset = (0,0,0).
+            // MatchingFluidsPredicate: state.getFluidState().is(fluids) at
+            // (origin + offset). A block has a fluid state only for
+            // water/lava; every other block's fluid state is `empty`, so
+            // `"fluids": "minecraft:empty"` passes exactly when the cell
+            // holds no liquid (patch_melon). Missing `fluids` keeps the
+            // legacy water-only behavior. The region buffer stores a single
+            // Water id (no flow level), so flowing_water matches Water.
             let off = pred["offset"].as_array();
             let ox = off
                 .and_then(|a| a.first())
@@ -130,7 +133,43 @@ pub(crate) fn eval_block_predicate(
                 .and_then(|a| a.get(2))
                 .and_then(|v| v.as_i64())
                 .unwrap_or(0) as i32;
-            region.get(x + ox, y + oy, z + oz) == BlockId::Water
+            let b = region.get(x + ox, y + oy, z + oz);
+            let mut want: Vec<&str> = Vec::new();
+            if let Some(s) = pred["fluids"].as_str() {
+                want.push(s);
+            } else if let Some(arr) = pred["fluids"].as_array() {
+                want.extend(arr.iter().filter_map(|v| v.as_str()));
+            }
+            if want.is_empty() {
+                return b == BlockId::Water;
+            }
+            if want.iter().any(|f| *f == "minecraft:empty") {
+                return b != BlockId::Water && b != BlockId::Lava;
+            }
+            if b == BlockId::Water {
+                want.iter().any(|f| f.ends_with("water"))
+            } else if b == BlockId::Lava {
+                want.iter().any(|f| f.ends_with("lava"))
+            } else {
+                false
+            }
+        }
+        "minecraft:replaceable" => {
+            // ReplaceablePredicate: state.canBeReplaced() at (origin+offset).
+            let off = pred["offset"].as_array();
+            let ox = off
+                .and_then(|a| a.first())
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oy = off
+                .and_then(|a| a.get(1))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            let oz = off
+                .and_then(|a| a.get(2))
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as i32;
+            super::can_be_replaced(region.get(x + ox, y + oy, z + oz))
         }
         "minecraft:true" => true,
         _ => true,
