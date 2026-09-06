@@ -1,5 +1,4 @@
 # STATE — Neutron
-
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
 > **Updated 6 Sep 2026 (Linux box), session 29. GATE4 (WG-frozen heightmap
 > fix 36427c5): FULL 30-seed ratchet complete — mean 99.3165%, 12/30 ≥99.5%,
@@ -9,6 +8,10 @@
 > S29 FIX (e4e3f1e): matching_fluids honors the fluids field (patch_melon
 > 'empty' was inverted — melons never placed); replaceable predicate
 > implemented. 456 −571; 424242/12345/777 bit-identical; tests green.
+> S29 NOISE PORT (c766aab): PerlinSimplexNoise verified bit-exact vs the
+> 26.2 jar (test biome_info_noise_matches_vanilla). noise_based_count arm
+> measured then REVERTED: 456 −3,780 (bamboo) but 12345 +6,038 (kelp
+> columns shift — upstream origin-order desync). Tests green, pushed.**
 
 ## Now
 
