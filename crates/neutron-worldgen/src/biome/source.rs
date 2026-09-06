@@ -28,6 +28,12 @@ fn parameter_distance(min: i64, max: i64, target: i64) -> i64 {
     below.max(0)
 }
 
+/// Test-visible alias of [`fitness`] for two-sided tie diagnostics.
+#[cfg(test)]
+pub(crate) fn fitness_for_test(intervals: &[i64; 12], target: &[i64; 6]) -> i64 {
+    fitness(intervals, target)
+}
+
 /// Squared distance from a point to a parameter interval (6 dimensions).
 #[inline]
 fn fitness(intervals: &[i64; 12], target: &[i64; 6]) -> i64 {

@@ -118,8 +118,6 @@ pub fn apply_surface_rules(
             let end_y = WORLD_BOTTOM;
             let height = surface_y + 1;
             // Cache last cave-biome sample to avoid density eval per block.
-            let mut cached_biome = surface_biome;
-            let mut cached_biome_y = surface_y;
 
             for y in (end_y..=height.min(WORLD_TOP - 1)).rev() {
                 let idx = block_index(lx, y, lz);
@@ -163,15 +161,16 @@ pub fn apply_surface_rules(
                     continue;
                 }
 
-                // Re-sample biome every 8 blocks below surface for cave transitions.
-                if y < surface_y - 8 && (cached_biome_y - y).abs() >= 8 {
-                    cached_biome = sample_biome(st, world_x, y, world_z);
-                    cached_biome_y = y;
-                }
+                // Vanilla SurfaceSystem evaluates context.biome (BiomeManager.getBiome)
+                // PER BLOCK — the previous 8-block cache desynced thin cave-biome
+                // bands (e.g. sulfur_caves bands of 2-3 blocks inside birch_forest on
+                // seed 777: the cached sample from 8 above painted the wrong biome and
+                // the sulfur/cinnabar surface rule never fired, leaving deepslate/ore —
+                // the 285k-cell sulfur-family gap on 777).
                 let biome = if y >= min_surface_level - 16 {
                     surface_biome
                 } else {
-                    cached_biome
+                    sample_biome(st, world_x, y, world_z)
                 };
 
                 let mut ctx = RuleContext {
@@ -196,7 +195,7 @@ pub fn apply_surface_rules(
                     && world_x == -88 && world_z == -56 && (-26..=-18).contains(&y)
                 {
                     eprintln!(
-                        "[surf] ({world_x},{y},{world_z}) ctx_biome={biome} cached={cached_biome}@{cached_biome_y} surface={surface_biome} min_surf={min_surface_level} surf_y={surface_y} old={old:?}"
+                        "[surf] ({world_x},{y},{world_z}) ctx_biome={biome} surface={surface_biome} min_surf={min_surface_level} surf_y={surface_y} old={old:?}"
                     );
                 }
                 if let Some(new_block) = rule.try_apply(&mut ctx) {
@@ -742,17 +741,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "diagnostic: prints neutron biome ids at vanilla-mismatch cells"]
+    #[ignore = "diagnostic: for each vanilla/neutron classifier mismatch, prints the climate target and the fitness of BOTH answers under neutron's metric — equal fitness = tie-break divergence"]
     fn sulfur_biome_dump() {
         let gen = crate::ChunkGenerator::new(777);
-        for line in std::fs::read_to_string("/tmp/quant_cells.txt").unwrap().lines() {
+        for line in std::fs::read_to_string("/tmp/col_cells.txt").unwrap().lines() {
             let mut it = line.split_whitespace();
             let x: i32 = it.next().unwrap().parse().unwrap();
             let y: i32 = it.next().unwrap().parse().unwrap();
             let z: i32 = it.next().unwrap().parse().unwrap();
             let b = crate::biome::manager::biome_id_at_block(&gen.state, x, y, z);
-            let name = if b == biome_id::SULFUR_CAVES { "sulfur_caves" } else { "?" };
-            println!("BIOME {x} {y} {z} id={b} ({name})");
+            println!("BIOME {x} {y} {z} id={b}");
         }
     }
 
