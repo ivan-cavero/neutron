@@ -1,30 +1,21 @@
 # STATE — Neutron
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 6 Sep 2026 (Linux box), session 29. GATE4 (WG-frozen heightmap
-> fix 36427c5): FULL 30-seed ratchet complete — mean 99.3165%, 12/30 ≥99.5%,
-> 26/30 ≥99.0%. vs gate3 on the 15 comparable seeds: net −77,171 cells,
-> 12 improved / 2 tiny regressions (60606 +173, 70707 +972). Seeds below
-> 99.0: 55555 97.73 (iceberg parked), 777 98.71, 456 98.92, 424242 98.94.
-> S29 FIX (e4e3f1e): matching_fluids honors the fluids field (patch_melon
-> 'empty' was inverted — melons never placed); replaceable predicate
-> implemented. 456 −571; 424242/12345/777 bit-identical; tests green.
-> S29 NOISE PORT (c766aab): PerlinSimplexNoise verified bit-exact vs the
-> 26.2 jar (test biome_info_noise_matches_vanilla). noise_based_count arm
-> measured then REVERTED: 456 −3,780 (bamboo) but 12345 +6,038 (kelp
-> columns shift — upstream origin-order desync). Tests green, pushed.
-> S30 DIAGNOSTIC (c8633e8): 777's #2 writer = sulfur-family 285k cells
-> (sulfur/cinnabar/tuff_bricks painted by the SULFUR_CAVE_GRADIENT surface
-> rule). Chain: noise bit-exact vs jar (ProbeSulfurNoise, 400 cells 0
-> diff); surface rule + biome gate correct in isolation; ProbeClimateAt
-> had REGRESSED to block coords (S28 quart fix lost) — fixed; with it
-> vanilla Sampler == neutron climate EXACTLY. Residual: pure biome
-> classifier disagrees at 23/400 quarts (94.2%), thin bands (river/beach,
-> bamboo<->sparse, birch<->sulfur) — at boundary quarts the wrong biome
-> wins so the sulfur band never fires (777 chunk (-6,-4) proof: vanilla
-> sulfur at (-88,-24,-56), neutron deepslate). NEXT LEVER: diff neutron
-> find-value (parameter_distance + point order) vs vanilla RTree.search
-> (stateful lastResult tie-break). Instrumentation: NEUTRON_SURF_DEBUG +
-> 4 ignored diagnostic tests. Tests green, pushed.**
+> **Updated 6 Sep 2026 (Linux box), session 30. GATE4 (WG-frozen heightmap
+> fix 36427c5): 30-seed ratchet — mean 99.3165%, 12/30 ≥99.5%, 26/30 ≥99.0%.
+> S30 BREAKTHROUGH (55b0f5f): surface-rule biome now sampled PER BLOCK
+> (vanilla SurfaceSystem semantics; was cached every 8 blocks — thin
+> cave-biome bands got the wrong biome and biome-gated surface rules
+> never fired). 777: 667,156 → 551,047 (−116,109; 98.7122% → 98.9363%);
+> 424242/456/12345 bit-identical. This was the 285k-cell sulfur-family gap
+> (sulfur/cinnabar bands on 777; ledger #2 writer). Chain proof: neutron
+> voronoi == vanilla voronoi block-for-block (300/300 underground,
+> 399/399 near-surface); the 8-block cache was the sole divergence. The
+> earlier "classifier mismatch 22/400" was a probe artifact (pure-
+> classifier vs voronoi path) — RETRACTED; classifiers agree exactly (all
+> 22 winning points byte-present in biome_params.bin, fitness identical).
+> S29 fixes: melon predicates (e4e3f1e, 456 −571) + PerlinSimplexNoise
+> port verified bit-exact (c766aab; noise_based_count arm reverted —
+> kelp stream desync). Tests green, all pushed.**
 
 ## Now
 
@@ -35,7 +26,7 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | vs gate3 (15 comparable) | net **−77,171** cells, 12 improved, 2 regressed (60606 +173, 70707 +972) |
 | seed **424242** (primary) | **98.9444%** / 544,778 |
 | seed **456** (melon fix) | **98.9188%** / 560,137 (−571) |
-| seed **777** | **98.7122%** / 667,156 |
+| seed **777** (per-block biome fix 55b0f5f) | **98.9363%** / 551,047 (−116,109) |
 | seed **55555** | **97.7251%** / 1,174,078 (iceberg chain parked) |
 | best seed **44444** | **99.8537%** / 75,375 |
 
@@ -154,7 +145,20 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **GATE4 30-SEED RATCHET COMPLETE (6 Sep s29, after WG-frozen fix
+1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
+   of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
+   sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
+   block. Thin bands (sulfur_caves 2-3 blocks inside birch_forest) got the
+   wrong biome, so the SULFUR_CAVE_GRADIENT sulfur/cinnabar surface rule
+   never fired. 777: 667,156 → 551,047 (−116,109; 98.7122% → 98.9363%);
+   424242/456/12345 bit-identical. Proof chain: vanilla-vs-neutron voronoi
+   agree 300/300 underground + 399/399 near-surface sites (block-level);
+   ProbeClimateAt quart-coord regression FIXED (S28 fix had been lost from
+   the probe on disk) — climate exact; 22 "classifier mismatches" were a
+   pure-vs-voronoi probe artifact, RETRACTED. NEXT: re-run remaining sulfur
+   ledger on 777 (was 285k, now quantify); the same per-block semantics
+   may un-gate other biome-conditional surface rules across seeds.
+2. **GATE4 30-SEED RATCHET COMPLETE (6 Sep s29, after WG-frozen fix
    36427c5)**: all 30 gate seeds measured. mean 99.3165%, 12/30 ≥99.5%,
    26/30 ≥99.0%. vs gate3 on 15 comparable seeds: net −77,171 cells, 12
    improved, 2 tiny regressions (60606 +173, 70707 +972). Bottom four:
@@ -164,7 +168,7 @@ root cause of the lush_caves_clay divergence.
    (7G parity-cache + stale ndec dumps) — freed by deleting stale cache
    fingerprints; keep /tmp clear before long multi-seed runs.
    Tests green; all pushed (origin/main clean).
-2. **STEP-7 UNION FIX LANDED (4 Sep s26, commit 5b03feb)**:
+3. **STEP-7 UNION FIX LANDED (4 Sep s26, commit 5b03feb)**:
    apply_step_origin early-returned when features_at_step(primary_biome,
    gen_step) was empty (plains step 7 = []) BEFORE building the 3x3
    biome-union feature list — silently skipping the whole decoration step
@@ -321,7 +325,7 @@ root cause of the lush_caves_clay divergence.
    cheap per-seed ledger route is exhausted; the remaining ~5M gate gap
    requires either the live-walk tracer (javaagent) or a structural fix
    to the origin-order model (95.85% fit ceiling).
-3. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
+4. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
    so the surface y-loop started below the water column, water_height stayed
@@ -333,7 +337,7 @@ root cause of the lush_caves_clay divergence.
    (**99.7489%**). Aggregated `stone->dirt` across 30 seeds: 1.20M cells.
    NEXT: re-run the full 30-seed gate with this fix (expect ~1M cell drop);
    iceberg chain still parked.
-4. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
+5. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
    29/30 seeds in 98.54–99.76% (mean 99.10); 17 seeds ≥99.0; best 33333
    99.7587/124,776. Outlier: **55555 = 96.9196/1,589,788** — deep_frozen_ocean
    packed-ice bergs (727k cells = 51% of its gap; zero reverse cells) plus
@@ -343,7 +347,7 @@ root cause of the lush_caves_clay divergence.
    iceberg_surface/iceberg_pillar(x*1.28)/iceberg_pillar_roof(x*1.17) noises
    build giant snow/packed-ice columns — was never ported (noises ARE in
    datapack_data.rs:79-82).
-5. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
+6. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
    cap)**: port tested: 55555 **−423,814** (96.92→97.74%), 424242
    bit-identical, 123 **+45,387** → reverted per ratchet rule. Live-server
    experiment (probe-123 world, real 26.2 jar, forceload) proved the ref
@@ -360,25 +364,25 @@ root cause of the lush_caves_clay divergence.
    too large for the iteration budget; revisit if the gate moves above
    99.5 on the other 29 seeds. Port stays reverted; probe evidence
    committed (ProbeIcebergNoise/Msl/BiomeAtXY).
-6. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
+7. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
-7. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
+8. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
    vanilla PlaceOnGroundDecorator.java:80 accepts above ∈ {air, VINE};
    neutron only air. Enabling vine acceptance regressed 424242 to
    568,965 (+856) — neutron's vine positions diverge from vanilla's
    (origin-order cascade), so extra accepts write leaf_litter where
    vanilla has air. Reverted; decision recorded in
-8. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
+9. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
    stop)**: top writers unchanged — terrain-missing (dark_oak_leaves
    19.5k, dark_oak_log 7.6k, pale_oak_leaves 6.4k, oak_leaves 5.6k,
    leaf_litter 4.6k), tree-extra, vegetation_patch, simple_block,
    block_column. ALL dominated by the border/origin-order cascade;
    simple_block confusions (short_grass↔moss_carpet, water→short_grass
    in lush pools) trace to the same chain. No new independent writer.
-9. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+10. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-10. `cargo test --workspace` before any push.
+11. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
