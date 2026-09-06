@@ -40,10 +40,34 @@ max-tick-time=-1
 sync-chunk-writes=false
 view-distance=10
 pause-when-empty-seconds=0
+function-permission-level=2
 rcon.port=$RCON_PORT
 rcon.password=neutron-det
 enable-rcon=true
 EOF
+# DET_TICKDRIVEN=1: game-time-driven generation. A datapack tick function
+# applies gamerules at tick 1 and the forceload square at tick 20 — no RCON
+# during generation at all (RCON only for save-all/stop after settling, which
+# cannot affect already-decorated blocks). Pre-placed before boot so the
+# fresh world picks it up.
+if [ -n "${DET_TICKDRIVEN:-}" ]; then
+  mkdir -p world/datapacks/det/data/det/function world/datapacks/det/data/minecraft/tags/function
+  cat > world/datapacks/det/pack.mcmeta <<'EOF2'
+{"pack": {"pack_format": 107, "description": "det tick driver"}}
+EOF2
+  cat > world/datapacks/det/data/det/function/tick.mcfunction <<'EOF2'
+scoreboard objectives add det_t dummy
+scoreboard players add $c det_t 1
+execute if score $c det_t matches 1 run gamerule random_tick_speed 0
+execute if score $c det_t matches 1 run gamerule spawn_mobs false
+execute if score $c det_t matches 1 run gamerule advance_weather false
+execute if score $c det_t matches 1 run weather clear
+execute if score $c det_t matches 20 run forceload add -128 -128 127 127
+EOF2
+  cat > world/datapacks/det/data/minecraft/tags/function/tick.json <<'EOF2'
+{"values": ["det:tick"]}
+EOF2
+fi
 
 nice -n 10 java -Xmx3G ${DET_JAVA_FLAGS:-} -jar server.jar nogui > server-$TAG.out 2>&1 &
 PID=$!
@@ -77,7 +101,10 @@ PYEOF
 # DET_NOFORCELOAD=1: skip forceload (spawn area self-generates; removes
 # RCON arrival-tick variance from the generation phase entirely — the
 # strongest closed-system determinism test).
+# (Skipped entirely in DET_TICKDRIVEN mode: the datapack owns gamerules.)
+if [ -z "${DET_TICKDRIVEN:-}" ]; then
 rcon "gamerule randomTickSpeed 0" "gamerule doWeatherCycle false" "doMobSpawning false" "weather clear"
+fi
 # DET_PREWAIT: sleep AFTER gamerules, BEFORE forceload — lets boot-time
 # spawn generation drain while the system is otherwise idle, so the
 # forceload ticket burst lands on a quiescent dispatcher (tests whether
@@ -85,7 +112,7 @@ rcon "gamerule randomTickSpeed 0" "gamerule doWeatherCycle false" "doMobSpawning
 if [ -n "${DET_PREWAIT:-}" ]; then
   sleep "$DET_PREWAIT"
 fi
-if [ -z "${DET_NOFORCELOAD:-}" ]; then
+if [ -z "${DET_NOFORCELOAD:-}${DET_TICKDRIVEN:-}" ]; then
   rcon "forceload add -128 -128 127 127"
 fi
 sleep "$SETTLE"

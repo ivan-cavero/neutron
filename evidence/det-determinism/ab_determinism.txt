@@ -86,3 +86,18 @@ implementation. The achievable "100%" = race-masked parity (mask cells
 where N vanilla samples disagree; 100% on the rest) + perfection of
 the deterministic subspace (terrain/biomes/carvers/ores/structures —
 all verified stable across every pair here).
+
+UPDATE 6 Sep, FINAL control — fully game-time-driven generation
+(tags t1/t2, DET_TICKDRIVEN=1): datapack tick function applies
+gamerules at tick 1 + forceload square at tick 20 (snake_case names
+verified against GameRules.java: random_tick_speed, spawn_mobs,
+advance_weather — the old camelCase names FAIL in 26.2 and errored
+silently in all prior RCON runs; mob-spawning confound now closed).
+Zero RCON during generation (only save-all/stop after settling).
+0 ERRORs, function clean, 396 common full chunks.
+T1 vs T2: 345,029 diffs, same fingerprint (dark_oak +-air ~58k,
+pale_oak +-air ~40k, logs, vines, clay). Every confound dead:
+RCON timing, growth, weather, mobs, threads, load, macro perturbation.
+8 pairs total (A/B 333k, C1/C2 278k, D/E 331k, F/G 375k, J/K 301k,
+T1/T2 345k; H/I 0 over n=1). The verdict is overdetermined:
+decoration order varies run-to-run no matter the procedure.
