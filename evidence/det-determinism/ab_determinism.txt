@@ -67,3 +67,22 @@ deterministic cells: generate 2-3 vanilla samples, mask cells where
 samples disagree (race cells), measure neutron on the rest.
 Raw data: /tmp/ab_full.txt (332,936 diff lines, on this box only).
 Worlds: tools/nbt-ref/vanilla-det-a, vanilla-det-b (gitignored).
+
+UPDATE 6 Sep, decisive controls (all seed 424242, square-only unless noted):
+- F/G (ticks frozen, light box): 375,164 diffs — neither load nor
+  post-gen growth explains anything. Overload theory dead.
+- H/I (spawn-only, NO forceload): 0 diffs over 1 common chunk (weak
+  sample — spawn area barely generates without forceload).
+- J/K (forceload AFTER 90 s idle, ticks frozen): 300,923 diffs, same
+  fingerprint. Macro-perturbation theory (forceload-vs-boot-gen race)
+  dead: even landing tickets on a quiescent dispatcher, order varies.
+Scoreboard (7 pairs, all same fingerprint): A/B 332,936 · C1/C2
+278,329 · D/E 331,306 · F/G 375,164 · J/K 300,923 · H/I 0 (n=1).
+VERDICT: vanilla decoration order is timing-dependent BY CONSTRUCTION
+(serial dispatcher + wall-clock arrival races: RCON ticks, GC/OS jitter
+at completion-vs-tick interleave points). No RCON-reachable procedure
+removes it. Exact-order replication is unachievable for ANY
+implementation. The achievable "100%" = race-masked parity (mask cells
+where N vanilla samples disagree; 100% on the rest) + perfection of
+the deterministic subspace (terrain/biomes/carvers/ores/structures —
+all verified stable across every pair here).

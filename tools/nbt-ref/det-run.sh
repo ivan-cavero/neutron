@@ -74,8 +74,20 @@ PYEOF
 # Freeze post-generation simulation so the diff measures GENERATION order
 # only: randomTickSpeed 0 stops vine growth/leaf decay/grass spread/snow
 # melt in ticking chunks; doWeatherCycle false + clear stops snowfall.
-rcon "gamerule randomTickSpeed 0" "gamerule doWeatherCycle false" "weather clear"
-rcon "forceload add -128 -128 127 127"
+# DET_NOFORCELOAD=1: skip forceload (spawn area self-generates; removes
+# RCON arrival-tick variance from the generation phase entirely — the
+# strongest closed-system determinism test).
+rcon "gamerule randomTickSpeed 0" "gamerule doWeatherCycle false" "doMobSpawning false" "weather clear"
+# DET_PREWAIT: sleep AFTER gamerules, BEFORE forceload — lets boot-time
+# spawn generation drain while the system is otherwise idle, so the
+# forceload ticket burst lands on a quiescent dispatcher (tests whether
+# the race is the forceload-vs-boot-gen macro perturbation).
+if [ -n "${DET_PREWAIT:-}" ]; then
+  sleep "$DET_PREWAIT"
+fi
+if [ -z "${DET_NOFORCELOAD:-}" ]; then
+  rcon "forceload add -128 -128 127 127"
+fi
 sleep "$SETTLE"
 rcon "save-all flush"
 sleep 10
