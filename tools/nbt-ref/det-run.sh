@@ -2,15 +2,23 @@
 # det-run.sh <tag> — determinism experiment: ONE vanilla fresh generation.
 #
 # Fixed procedure, identical for every tag: seed 424242, boot headless,
-# forceload the canonical 16x16 square, settle 150 s, save-all flush, stop.
+# forceload the canonical 16x16 square, settle, save-all flush, stop.
 # Run twice (`det-run.sh a`, then `det-run.sh b`) and diff the two worlds
 # with: parity vanilladiff --a <A>/world/.../region --b <B>/world/.../region
 # If A == B cell-for-cell, vanilla decoration is deterministic in practice
 # and 100% parity is achievable. Any diff = true scheduler nondeterminism.
+#
+# Env overrides:
+#   DET_JAVA_FLAGS  extra JVM flags (e.g. -Dmax.bg.threads=1 for serialized
+#                   decoration = deterministic by construction; use a distinct
+#                   TAG like c1/c2 for those runs)
+#   DET_SETTLE_SECS settle wait after forceload (default 150; single-threaded
+#                   runs need ~600)
 set -euo pipefail
 
-TAG=${1:?usage: det-run.sh <a|b>}
+TAG=${1:?usage: det-run.sh <a|b|c1|c2>}
 SEED=424242
+SETTLE=${DET_SETTLE_SECS:-150}
 # NOTE: `vanilla-det-*` matches .gitignore (like vanilla-fresh-*).
 ROOT=tools/nbt-ref/vanilla-det-$TAG
 SRC=tools/nbt-ref/vanilla-fresh-424242
@@ -37,7 +45,7 @@ rcon.password=neutron-det
 enable-rcon=true
 EOF
 
-nice -n 10 java -Xmx3G -jar server.jar nogui > server-$TAG.out 2>&1 &
+nice -n 10 java -Xmx3G ${DET_JAVA_FLAGS:-} -jar server.jar nogui > server-$TAG.out 2>&1 &
 PID=$!
 echo "det-$TAG: server pid $PID"
 
@@ -63,8 +71,12 @@ PYEOF
 
 # Canonical square only (matches the canonical ref core; no ring — the
 # A-vs-B question needs identical procedures, not maximal coverage).
+# Freeze post-generation simulation so the diff measures GENERATION order
+# only: randomTickSpeed 0 stops vine growth/leaf decay/grass spread/snow
+# melt in ticking chunks; doWeatherCycle false + clear stops snowfall.
+rcon "gamerule randomTickSpeed 0" "gamerule doWeatherCycle false" "weather clear"
 rcon "forceload add -128 -128 127 127"
-sleep 150
+sleep "$SETTLE"
 rcon "save-all flush"
 sleep 10
 kill -INT $PID 2>/dev/null || true

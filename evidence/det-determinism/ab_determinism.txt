@@ -43,8 +43,23 @@ refs were generated under similar shared conditions; (b) center chunks
 complete minutes before save in both runs yet still differ — incomplete
 generation cannot explain it; (c) biomes 100% identical shows the
 deterministic subspace is stable across the same timing variance.
-Stronger follow-up: -Dmax.bg.threads=1 runs (serialized decoration =
-deterministic by construction) as ground truth + race map.
+
+UPDATE 6 Sep (runs C1/C2/D/E):
+- C1/C2 with -Dmax.bg.threads=1 STILL diverge (278k). Root cause found
+  in code: ChunkMap wraps the pool in ConsecutiveExecutor (serializes
+  task execution ALWAYS), so the flag changes nothing. Races are in
+  ARRIVAL ORDER at the serial dispatcher (completions vs tick-phase
+  ticket events), not in parallel execution. Thread count is irrelevant.
+- D/E with randomTickSpeed=0 + no weather cycle: 331,306 diffs vs
+  332,936 with ticks on — post-gen growth contributes ~nothing. The
+  divergence is essentially ALL generation-order races.
+- Deep terrain tick-free: 2,017 TERRAIN<->TERRAIN diffs below y=-16,
+  ALL involve clay (vegetation_patch feature). Zero stone/deepslate/
+  ore swaps. Deterministic subspace boundary holds.
+- Conclusion stands and is stronger: decoration order is
+  timing-dependent by construction (serial dispatcher + wall-clock
+  arrival races); exact-order replication is unachievable; race-masked
+  parity (100% on deterministic cells) is the redefinition.
 
 Implication for "100%": a deterministic implementation cannot match
 race outcomes it cannot observe post-hoc. Redefine DONE as 100% on
