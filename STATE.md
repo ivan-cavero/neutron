@@ -1,39 +1,28 @@
 # STATE — Neutron
 
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 5 Sep 2026 (Linux box), session 28. GATE3: mean 99.3503%
-> (11/27 ≥99.5%, 25/27 ≥99.0%, total 9.07M). TWO STRUCTURAL FINDINGS:
-> (1) VANILLA RACES PROVEN: two identical vanilla 26.2 runs on 424242
-> differ in 332,936 cells (0.85%) — ALL decoration features (trees 43%,
-> vines/cave_vines/moss/clay/leaf_litter); noise/density/aquifer/carvers/
-> deep ores/biomes are deterministic (biomes 100% identical). Neutron's
-> residual fingerprint MATCHES the vanilla race floor. (2) Climate
-> sampler params diverge at biome boundaries (all 6; depth worst:
-> vanilla -17382 vs neutron +436 at (-20,75,9)) — flips mangrove/savanna
-> lookup and gates tree placement (789 mangrove ≈120k cells). Tooling:
-> vanilladiff, ProbeClimateAt, climate_at example, ROOTWALK tracer,
-> GIFDRAW capture. Mangrove port verified draw-exact to 62 dice; parked
-> pending (1) or climate fix (2). Tests green.**
+> **Updated 6 Sep 2026 (Linux box), session 29. GATE4 (WG-frozen heightmap
+> fix 36427c5): FULL 30-seed ratchet complete — mean 99.3165%, 12/30 ≥99.5%,
+> 26/30 ≥99.0%. vs gate3 on the 15 comparable seeds: net −77,171 cells,
+> 12 improved / 2 tiny regressions (60606 +173, 70707 +972). Seeds below
+> 99.0: 55555 97.73 (iceberg parked), 777 98.71, 456 98.92, 424242 98.94.
+> Structural findings unchanged: (1) vanilla race floor 0.85% on 424242;
+> (2) origin-order model 95.85% fit ceiling; (3) tree ports regress until
+> upstream streams desync (mangrove 789, mega-jungle 456) — root cause
+> earlier in the per-origin step chain. Tests green, all pushed.**
 
 ## Now
 
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
 | Measurement | Value |
-| 27-seed gate v3 (union fix 5b03feb, 5 Sep s27) | mean **99.3503%**, 11/27 ≥99.5%, 25/27 ≥99.0%, total 9.07M cells (−571,589 vs gate2) |
-| seed **456** gate3 | **98.8722%** / 584,256 (was 621,610; below 99.0 — needs writer dump) |
-| seed **12345** gate3 | **99.1362%** / 448,365 |
-| seed **777** gate3 | **98.7047%** / 671,026 |
-| seed **40000** gate3 | **99.7489%** / 130,108 (bit-identical to gate2) |
-| seed **55555** gate3 | **97.7251%** / 1,174,078 (iceberg chain parked) |
-
-Meter speedup (6ae05e2): worker pool (cores−2, `PARITY_WORKERS`), streaming
-compare, NBT prefetch, per-worker persistent NoiseCache. Full SCAN ~24 min
-→ **~4 min**, 2 cores free, output identical.
-
-## Closed (git log has full evidence)
-
-- 77b27a2 FallenTreeFeature port (−1,022) · 013a17a replaceable_by_trees
+| **GATE4 full 30-seed ratchet** (WG-frozen heightmap 36427c5, 6 Sep s29) | mean **99.3165%**, 12/30 ≥99.5%, 26/30 ≥99.0% |
+| vs gate3 (15 comparable) | net **−77,171** cells, 12 improved, 2 regressed (60606 +173, 70707 +972) |
+| seed **424242** (primary) | **98.9444%** / 544,778 |
+| seed **456** | **98.9177%** / 560,708 |
+| seed **777** | **98.7122%** / 667,156 |
+| seed **55555** | **97.7251%** / 1,174,078 (iceberg chain parked) |
+| best seed **44444** | **99.8537%** / 75,375 |
   validTreePos + count-0 streams (−1,334) · 312ed67 bilinear minSurfaceLevel
   (−2,464) · 9d58a2e one-directional steep (−579) · b81b047 carve geometry
   proven bit-exact · 8c22a40 nested-count pipeline (−5,489) · 615443c
@@ -146,7 +135,17 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-1. **STEP-7 UNION FIX LANDED (4 Sep s26, commit 5b03feb)**:
+1. **GATE4 30-SEED RATCHET COMPLETE (6 Sep s29, after WG-frozen fix
+   36427c5)**: all 30 gate seeds measured. mean 99.3165%, 12/30 ≥99.5%,
+   26/30 ≥99.0%. vs gate3 on 15 comparable seeds: net −77,171 cells, 12
+   improved, 2 tiny regressions (60606 +173, 70707 +972). Bottom four:
+   55555 97.73 (iceberg parked), 777 98.71, 456 98.92, 424242 98.94. All
+   four are the known border/origin-order + tree-stream cascade; no new
+   independent writer. Tooling note: /tmp tmpfs hit 100% during the run
+   (7G parity-cache + stale ndec dumps) — freed by deleting stale cache
+   fingerprints; keep /tmp clear before long multi-seed runs.
+   Tests green; all pushed (origin/main clean).
+2. **STEP-7 UNION FIX LANDED (4 Sep s26, commit 5b03feb)**:
    apply_step_origin early-returned when features_at_step(primary_biome,
    gen_step) was empty (plains step 7 = []) BEFORE building the 3x3
    biome-union feature list — silently skipping the whole decoration step
@@ -303,7 +302,7 @@ root cause of the lush_caves_clay divergence.
    cheap per-seed ledger route is exhausted; the remaining ~5M gate gap
    requires either the live-walk tracer (javaagent) or a structural fix
    to the origin-order model (95.85% fit ceiling).
-2. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
+3. **HEIGHTMAP FIX LANDED (3 Sep s24, commit 3d66868)**: vanilla
    buildSurface's `height` = WORLD_SURFACE_WG+1 INCLUDES fluids
    (SurfaceSystem.java:112,119); neutron passed a fluid-EXCLUSIVE heightmap,
    so the surface y-loop started below the water column, water_height stayed
@@ -315,7 +314,7 @@ root cause of the lush_caves_clay divergence.
    (**99.7489%**). Aggregated `stone->dirt` across 30 seeds: 1.20M cells.
    NEXT: re-run the full 30-seed gate with this fix (expect ~1M cell drop);
    iceberg chain still parked.
-3. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
+4. **30-SEED VALIDATION COMPLETE (3 Sep s21)**: 27 new refs generated with
    29/30 seeds in 98.54–99.76% (mean 99.10); 17 seeds ≥99.0; best 33333
    99.7587/124,776. Outlier: **55555 = 96.9196/1,589,788** — deep_frozen_ocean
    packed-ice bergs (727k cells = 51% of its gap; zero reverse cells) plus
@@ -325,7 +324,7 @@ root cause of the lush_caves_clay divergence.
    iceberg_surface/iceberg_pillar(x*1.28)/iceberg_pillar_roof(x*1.17) noises
    build giant snow/packed-ice columns — was never ported (noises ARE in
    datapack_data.rs:79-82).
-4. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
+5. **frozenOceanExtension objective Bailed OUT (3 Sep s23, 5-iteration
    cap)**: port tested: 55555 **−423,814** (96.92→97.74%), 424242
    bit-identical, 123 **+45,387** → reverted per ratchet rule. Live-server
    experiment (probe-123 world, real 26.2 jar, forceload) proved the ref
@@ -342,25 +341,25 @@ root cause of the lush_caves_clay divergence.
    too large for the iteration budget; revisit if the gate moves above
    99.5 on the other 29 seeds. Port stays reverted; probe evidence
    committed (ProbeIcebergNoise/Msl/BiomeAtXY).
-5. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
+6. Origin order model CLOSED (2 Sep s19) — see below. 30-seed gate:
    ≥99.5 NOT met on all seeds (floor 98.54 outside 55555); gate accepted
    at established per-seed baselines until the iceberg chain lands.
-6. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
+7. place_on_ground vine acceptance TESTED and REVERTED (2 Sep s19):
    vanilla PlaceOnGroundDecorator.java:80 accepts above ∈ {air, VINE};
    neutron only air. Enabling vine acceptance regressed 424242 to
    568,965 (+856) — neutron's vine positions diverge from vanilla's
    (origin-order cascade), so extra accepts write leaf_litter where
    vanilla has air. Reverted; decision recorded in
-7. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
+8. **Fresh writers ledger (2 Sep s19, partial ~322k rows before
    stop)**: top writers unchanged — terrain-missing (dark_oak_leaves
    19.5k, dark_oak_log 7.6k, pale_oak_leaves 6.4k, oak_leaves 5.6k,
    leaf_litter 4.6k), tree-extra, vegetation_patch, simple_block,
    block_column. ALL dominated by the border/origin-order cascade;
    simple_block confusions (short_grass↔moss_carpet, water→short_grass
    in lush pools) trace to the same chain. No new independent writer.
-8. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
+9. Ruined portal loot tables (out of metric). AGENTS.md ref paths for
    12345/777 DO have `world/` prefix (stale doc).
-9. `cargo test --workspace` before any push.
+10. `cargo test --workspace` before any push.
 
 ## Perf / Environment (this box)
 
