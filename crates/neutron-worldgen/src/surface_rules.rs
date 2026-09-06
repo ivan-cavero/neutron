@@ -106,8 +106,6 @@ pub fn apply_surface_rules(
             );
             let min_surface_level = (prelim.floor() as i32) + surface_depth - 8;
 
-            // Surface biome at top of column (cave biomes re-sampled only deep below).
-            let surface_biome = sample_biome(st, world_x, surface_y.max(WORLD_BOTTOM), world_z);
 
             // Steep: neighbour height delta >= 4 (within chunk)
             let steep = is_steep(heightmap, lx, lz);
@@ -162,16 +160,12 @@ pub fn apply_surface_rules(
                 }
 
                 // Vanilla SurfaceSystem evaluates context.biome (BiomeManager.getBiome)
-                // PER BLOCK — the previous 8-block cache desynced thin cave-biome
-                // bands (e.g. sulfur_caves bands of 2-3 blocks inside birch_forest on
-                // seed 777: the cached sample from 8 above painted the wrong biome and
-                // the sulfur/cinnabar surface rule never fired, leaving deepslate/ore —
-                // the 285k-cell sulfur-family gap on 777).
-                let biome = if y >= min_surface_level - 16 {
-                    surface_biome
-                } else {
-                    sample_biome(st, world_x, y, world_z)
-                };
+                // PER BLOCK — no surface shortcut. (The previous 8-block cache and the
+                // min_surface_level-16 surface shortcut both desynced biome-gated rules:
+                // on seed 777 sulfur_caves bands at y 27-45 sat above min_surf-16, got the
+                // surface biome, and the sulfur/cinnabar rule never fired — a 190k-cell
+                // sulfur-family gap.)
+                let biome = sample_biome(st, world_x, y, world_z);
 
                 let mut ctx = RuleContext {
                     x: world_x,
@@ -190,14 +184,6 @@ pub fn apply_surface_rules(
                     main_rng,
                     sea_level: st.sea_level,
                 };
-
-                if std::env::var_os("NEUTRON_SURF_DEBUG").is_some()
-                    && world_x == -88 && world_z == -56 && (-26..=-18).contains(&y)
-                {
-                    eprintln!(
-                        "[surf] ({world_x},{y},{world_z}) ctx_biome={biome} surface={surface_biome} min_surf={min_surface_level} surf_y={surface_y} old={old:?}"
-                    );
-                }
                 if let Some(new_block) = rule.try_apply(&mut ctx) {
                     blocks[idx] = new_block.as_u16();
                 }
@@ -744,13 +730,34 @@ mod tests {
     #[ignore = "diagnostic: for each vanilla/neutron classifier mismatch, prints the climate target and the fitness of BOTH answers under neutron's metric — equal fitness = tie-break divergence"]
     fn sulfur_biome_dump() {
         let gen = crate::ChunkGenerator::new(777);
-        for line in std::fs::read_to_string("/tmp/col_cells.txt").unwrap().lines() {
+        let mut by_chunk: std::collections::BTreeMap<(i32, i32), Vec<String>> = Default::default();
+        for line in std::fs::read_to_string("/tmp/sulfur_missing2.txt").unwrap().lines() {
             let mut it = line.split_whitespace();
-            let x: i32 = it.next().unwrap().parse().unwrap();
-            let y: i32 = it.next().unwrap().parse().unwrap();
-            let z: i32 = it.next().unwrap().parse().unwrap();
-            let b = crate::biome::manager::biome_id_at_block(&gen.state, x, y, z);
-            println!("BIOME {x} {y} {z} id={b}");
+            let wx: i32 = it.next().unwrap().parse().unwrap();
+            let _y: i32 = it.next().unwrap().parse().unwrap();
+            let wz: i32 = it.next().unwrap().parse().unwrap();
+            by_chunk.entry((wx.div_euclid(16), wz.div_euclid(16))).or_default().push(line.to_string());
+        }
+        for ((cx, cz), lines) in by_chunk.iter(){
+            let (blocks, _, _) = gen.generate_noise_and_surface(*cx, *cz);
+            for line in lines.iter().take(10) {
+                let mut it = line.split_whitespace();
+                let wx: i32 = it.next().unwrap().parse().unwrap();
+                let y: i32 = it.next().unwrap().parse().unwrap();
+                let wz: i32 = it.next().unwrap().parse().unwrap();
+                let lx = (wx - cx * 16) as usize;
+                let lz = (wz - cz * 16) as usize;
+                let rel = y - crate::generator::WORLD_BOTTOM;
+                let idx = (rel as usize) * 256 + lz * 16 + lx;
+                let b = crate::surface::BlockId::from_u16(blocks[idx]);
+                let pip = crate::biome::manager::biome_id_at_block(&gen.state, wx, y, wz);
+                let g = crate::biome::manager::climate_at(&gen.state, wx, y, wz);
+                let grad = crate::worldgen::NoiseSet::for_seed(777, &gen.state.reg);
+                let gv = grad.noises().get("sulfur_cave_gradient").unwrap()
+                    .get_value(wx as f64, y as f64, wz as f64);
+                let _ = (pip, g);
+                println!("MISS {wx} {y} {wz} -> {:?} biome={pip} grad={gv:.6}", b);
+            }
         }
     }
 
