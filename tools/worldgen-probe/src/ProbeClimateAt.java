@@ -32,7 +32,7 @@ public class ProbeClimateAt {
             int x = Integer.parseInt(args[i]);
             int y = Integer.parseInt(args[i + 1]);
             int z = Integer.parseInt(args[i + 2]);
-            Climate.TargetPoint tp = sampler.sample(x, y, z);
+            Climate.TargetPoint tp = sampler.sample(x >> 2, y >> 2, z >> 2);
             System.out.println("CLIMATE " + x + "," + y + "," + z
                 + " temp=" + tp.temperature()
                 + " humid=" + tp.humidity()

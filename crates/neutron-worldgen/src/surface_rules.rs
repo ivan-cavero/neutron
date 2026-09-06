@@ -192,6 +192,13 @@ pub fn apply_surface_rules(
                     sea_level: st.sea_level,
                 };
 
+                if std::env::var_os("NEUTRON_SURF_DEBUG").is_some()
+                    && world_x == -88 && world_z == -56 && (-26..=-18).contains(&y)
+                {
+                    eprintln!(
+                        "[surf] ({world_x},{y},{world_z}) ctx_biome={biome} cached={cached_biome}@{cached_biome_y} surface={surface_biome} min_surf={min_surface_level} surf_y={surface_y} old={old:?}"
+                    );
+                }
                 if let Some(new_block) = rule.try_apply(&mut ctx) {
                     blocks[idx] = new_block.as_u16();
                 }
@@ -656,5 +663,123 @@ fn biome_name_to_id(name: &str) -> u8 {
         "mushroom_fields" => biome_id::MUSHROOM_FIELDS,
         "sulfur_caves" => biome_id::SULFUR_CAVES,
         _ => biome_id::PLAINS,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 777 sulfur_caves chunk (-5,-6): vanilla paints sulfur/cinnabar bands
+    /// via the sulfur_cave_gradient noise (SurfaceRuleData sulfurCaveBands).
+    /// This check pins the noise registration + biome gate used by the
+    /// surface rule: params must match the vanilla JSON, and the biome
+    /// gate `biome_name_to_id("sulfur_caves")` must equal the biome-source
+    /// id (36).
+    #[test]
+    #[ignore = "diagnostic: generates chunk (-5,-6) seed 777 through noise+surface and prints blocks at mismatch cells"]
+    fn sulfur_pipeline_dump() {
+        let gen = crate::ChunkGenerator::new(777);
+        // (chunk -> cells) so every dump line maps to its own chunk
+        let mut by_chunk: std::collections::BTreeMap<(i32, i32), Vec<String>> = Default::default();
+        for line in std::fs::read_to_string("/tmp/sulfur_cells.txt").unwrap().lines() {
+            let mut it = line.split_whitespace();
+            let wx: i32 = it.next().unwrap().parse().unwrap();
+            let _y: i32 = it.next().unwrap().parse().unwrap();
+            let wz: i32 = it.next().unwrap().parse().unwrap();
+            by_chunk.entry((wx.div_euclid(16), wz.div_euclid(16))).or_default().push(line.to_string());
+        }
+        for ((cx, cz), lines) in by_chunk {
+            let (blocks, _, _) = gen.generate_noise_and_surface(cx, cz);
+            for line in lines.iter().take(12) {
+                let mut it = line.split_whitespace();
+                let wx: i32 = it.next().unwrap().parse().unwrap();
+                let y: i32 = it.next().unwrap().parse().unwrap();
+                let wz: i32 = it.next().unwrap().parse().unwrap();
+                let lx = (wx - cx * 16) as usize;
+                let lz = (wz - cz * 16) as usize;
+                let rel = y - crate::generator::WORLD_BOTTOM;
+                let idx = (rel as usize) * 256 + lz * 16 + lx;
+                let b = crate::surface::BlockId::from_u16(blocks[idx]);
+                let pip_biome = crate::biome::manager::biome_id_at_block(&gen.state, wx, y, wz);
+                println!("PIPE {wx} {y} {wz} -> {:?} biome_here={pip_biome}", b);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "diagnostic: walks the parsed surface rule at vanilla-mismatch cells and prints the verdict"]
+    fn sulfur_rule_walk() {
+        let rule = overworld_rule();
+        let reg = crate::density::DensityRegistry::build();
+        let ns = crate::worldgen::NoiseSet::for_seed(777, &reg);
+        for line in std::fs::read_to_string("/tmp/sulfur_cells.txt").unwrap().lines().take(20) {
+            let mut it = line.split_whitespace();
+            let x: i32 = it.next().unwrap().parse().unwrap();
+            let y: i32 = it.next().unwrap().parse().unwrap();
+            let z: i32 = it.next().unwrap().parse().unwrap();
+            let grad = ns.noises().get("sulfur_cave_gradient").unwrap()
+                .get_value(x as f64, y as f64, z as f64);
+            let ctx = RuleContext {
+                x, y, z,
+                stone_depth_above: 1,
+                stone_depth_below: 1,
+                water_height: i32::MIN,
+                surface_depth: 3,
+                surface_secondary: 0.0,
+                min_surface_level: 60,
+                biome: biome_id::SULFUR_CAVES,
+                steep: false,
+                hole: false,
+                noises: ns.noises(),
+                main_rng: crate::positional::PositionalRandomFactory::new(0, 0),
+                sea_level: 63,
+            };
+            let mut ctx = ctx;
+            let out = rule.try_apply(&mut ctx);
+            println!("WALK {x} {y} {z} grad={grad:.6} -> {:?}", out);
+        }
+    }
+
+    #[test]
+    #[ignore = "diagnostic: prints neutron biome ids at vanilla-mismatch cells"]
+    fn sulfur_biome_dump() {
+        let gen = crate::ChunkGenerator::new(777);
+        for line in std::fs::read_to_string("/tmp/quant_cells.txt").unwrap().lines() {
+            let mut it = line.split_whitespace();
+            let x: i32 = it.next().unwrap().parse().unwrap();
+            let y: i32 = it.next().unwrap().parse().unwrap();
+            let z: i32 = it.next().unwrap().parse().unwrap();
+            let b = crate::biome::manager::biome_id_at_block(&gen.state, x, y, z);
+            let name = if b == biome_id::SULFUR_CAVES { "sulfur_caves" } else { "?" };
+            println!("BIOME {x} {y} {z} id={b} ({name})");
+        }
+    }
+
+    #[test]
+    #[ignore = "diagnostic: prints neutron sulfur_cave_gradient values for vanilla-mismatch cells"]
+    fn sulfur_noise_dump() {
+        let reg = crate::density::DensityRegistry::build();
+        let (o, a) = reg.noise_params("sulfur_cave_gradient");
+        let ns = crate::worldgen::NoiseSet::for_seed(777, &reg);
+        let n = ns.noises().get("sulfur_cave_gradient").expect("noise present");
+        let _ = (o, a);
+        for line in std::fs::read_to_string("/tmp/sulfur_cells.txt").unwrap().lines() {
+            let mut it = line.split_whitespace();
+            let x: i32 = it.next().unwrap().parse().unwrap();
+            let y: i32 = it.next().unwrap().parse().unwrap();
+            let z: i32 = it.next().unwrap().parse().unwrap();
+            let v = n.get_value(x as f64, y as f64, z as f64);
+            println!("SULFUR {x} {y} {z} {v:.9}");
+        }
+    }
+
+    #[test]
+    fn sulfur_cave_gradient_noise_and_gate() {
+        assert_eq!(biome_name_to_id("sulfur_caves"), biome_id::SULFUR_CAVES);
+        let reg = crate::density::DensityRegistry::build();
+        let (o, a) = reg.noise_params("sulfur_cave_gradient");
+        assert_eq!(*o, -5);
+        assert_eq!(a.as_slice(), &[1.0, 0.0, 1.0]);
     }
 }
