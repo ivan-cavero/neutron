@@ -31,6 +31,7 @@ pub mod legacy_rng;
 pub mod mineshaft;
 pub mod multiface_spreader;
 pub mod noise;
+pub mod perlin_simplex;
 pub mod ore_vein;
 pub mod positional;
 pub mod region_buf;
