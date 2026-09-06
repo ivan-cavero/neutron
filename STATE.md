@@ -6,10 +6,9 @@
 > 26/30 ≥99.0%. vs gate3 on the 15 comparable seeds: net −77,171 cells,
 > 12 improved / 2 tiny regressions (60606 +173, 70707 +972). Seeds below
 > 99.0: 55555 97.73 (iceberg parked), 777 98.71, 456 98.92, 424242 98.94.
-> Structural findings unchanged: (1) vanilla race floor 0.85% on 424242;
-> (2) origin-order model 95.85% fit ceiling; (3) tree ports regress until
-> upstream streams desync (mangrove 789, mega-jungle 456) — root cause
-> earlier in the per-origin step chain. Tests green, all pushed.**
+> S29 FIX (e4e3f1e): matching_fluids honors the fluids field (patch_melon
+> 'empty' was inverted — melons never placed); replaceable predicate
+> implemented. 456 −571; 424242/12345/777 bit-identical; tests green.
 
 ## Now
 
@@ -19,10 +18,14 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | **GATE4 full 30-seed ratchet** (WG-frozen heightmap 36427c5, 6 Sep s29) | mean **99.3165%**, 12/30 ≥99.5%, 26/30 ≥99.0% |
 | vs gate3 (15 comparable) | net **−77,171** cells, 12 improved, 2 regressed (60606 +173, 70707 +972) |
 | seed **424242** (primary) | **98.9444%** / 544,778 |
-| seed **456** | **98.9177%** / 560,708 |
+| seed **456** (melon fix) | **98.9188%** / 560,137 (−571) |
 | seed **777** | **98.7122%** / 667,156 |
 | seed **55555** | **97.7251%** / 1,174,078 (iceberg chain parked) |
 | best seed **44444** | **99.8537%** / 75,375 |
+
+## Closed (git log has full evidence)
+
+- 77b27a2 FallenTreeFeature port (−1,022) · 013a17a replaceable_by_trees
   validTreePos + count-0 streams (−1,334) · 312ed67 bilinear minSurfaceLevel
   (−2,464) · 9d58a2e one-directional steep (−579) · b81b047 carve geometry
   proven bit-exact · 8c22a40 nested-count pipeline (−5,489) · 615443c
