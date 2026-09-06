@@ -11,7 +11,20 @@
 > S29 NOISE PORT (c766aab): PerlinSimplexNoise verified bit-exact vs the
 > 26.2 jar (test biome_info_noise_matches_vanilla). noise_based_count arm
 > measured then REVERTED: 456 −3,780 (bamboo) but 12345 +6,038 (kelp
-> columns shift — upstream origin-order desync). Tests green, pushed.**
+> columns shift — upstream origin-order desync). Tests green, pushed.
+> S30 DIAGNOSTIC (c8633e8): 777's #2 writer = sulfur-family 285k cells
+> (sulfur/cinnabar/tuff_bricks painted by the SULFUR_CAVE_GRADIENT surface
+> rule). Chain: noise bit-exact vs jar (ProbeSulfurNoise, 400 cells 0
+> diff); surface rule + biome gate correct in isolation; ProbeClimateAt
+> had REGRESSED to block coords (S28 quart fix lost) — fixed; with it
+> vanilla Sampler == neutron climate EXACTLY. Residual: pure biome
+> classifier disagrees at 23/400 quarts (94.2%), thin bands (river/beach,
+> bamboo<->sparse, birch<->sulfur) — at boundary quarts the wrong biome
+> wins so the sulfur band never fires (777 chunk (-6,-4) proof: vanilla
+> sulfur at (-88,-24,-56), neutron deepslate). NEXT LEVER: diff neutron
+> find-value (parameter_distance + point order) vs vanilla RTree.search
+> (stateful lastResult tie-break). Instrumentation: NEUTRON_SURF_DEBUG +
+> 4 ignored diagnostic tests. Tests green, pushed.**
 
 ## Now
 
