@@ -1,21 +1,19 @@
 # STATE — Neutron
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
-> **Updated 6 Sep 2026 (Linux box), session 30. GATE4 (WG-frozen heightmap
+> **Updated 6 Sep 2026 (Linux box), session 30. GATE4 baseline (WG-frozen
 > fix 36427c5): 30-seed ratchet — mean 99.3165%, 12/30 ≥99.5%, 26/30 ≥99.0%.
-> S30 BREAKTHROUGH (55b0f5f): surface-rule biome now sampled PER BLOCK
-> (vanilla SurfaceSystem semantics; was cached every 8 blocks — thin
-> cave-biome bands got the wrong biome and biome-gated surface rules
-> never fired). 777: 667,156 → 551,047 (−116,109; 98.7122% → 98.9363%);
-> 424242/456/12345 bit-identical. This was the 285k-cell sulfur-family gap
-> (sulfur/cinnabar bands on 777; ledger #2 writer). Chain proof: neutron
-> voronoi == vanilla voronoi block-for-block (300/300 underground,
-> 399/399 near-surface); the 8-block cache was the sole divergence. The
-> earlier "classifier mismatch 22/400" was a probe artifact (pure-
-> classifier vs voronoi path) — RETRACTED; classifiers agree exactly (all
-> 22 winning points byte-present in biome_params.bin, fitness identical).
-> S29 fixes: melon predicates (e4e3f1e, 456 −571) + PerlinSimplexNoise
-> port verified bit-exact (c766aab; noise_based_count arm reverted —
-> kelp stream desync). Tests green, all pushed.**
+> S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%, −294k cells):
+> (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
+> (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
+> shortcut — vanilla SurfaceSystem has no shortcut: context.biome is
+> getBiome AT THE BLOCK everywhere. The shortcut masked cave biomes
+> extending above min_surface_level−16 (sulfur_caves at y 27-45 on 777),
+> blocking the SULFUR_CAVE_GRADIENT bands. Ratchet: 424242 −1,173,
+> 12345 −1,799, 456 flat — no regressions. 777 now 99.2797% / 373,153.
+> Attributed & parked: trial-chamber tuff_bricks 65k on 777 (structure
+> not ported; no vanilla worldgen mechanism outside templates). S29:
+> melon predicates (e4e3f1e), PerlinSimplexNoise bit-exact (c766aab).
+> Tests green, all pushed.**
 
 ## Now
 
@@ -26,7 +24,7 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 | vs gate3 (15 comparable) | net **−77,171** cells, 12 improved, 2 regressed (60606 +173, 70707 +972) |
 | seed **424242** (primary) | **98.9444%** / 544,778 |
 | seed **456** (melon fix) | **98.9188%** / 560,137 (−571) |
-| seed **777** (per-block biome fix 55b0f5f) | **98.9363%** / 551,047 (−116,109) |
+| seed **777** (55b0f5f + 0d3093d) | **99.2797%** / 373,153 (−294,003) |
 | seed **55555** | **97.7251%** / 1,174,078 (iceberg chain parked) |
 | best seed **44444** | **99.8537%** / 75,375 |
 
@@ -155,9 +153,16 @@ root cause of the lush_caves_clay divergence.
    agree 300/300 underground + 399/399 near-surface sites (block-level);
    ProbeClimateAt quart-coord regression FIXED (S28 fix had been lost from
    the probe on disk) — climate exact; 22 "classifier mismatches" were a
-   pure-vs-voronoi probe artifact, RETRACTED. NEXT: re-run remaining sulfur
-   ledger on 777 (was 285k, now quantify); the same per-block semantics
-   may un-gate other biome-conditional surface rules across seeds.
+   pure-vs-voronoi probe artifact, RETRACTED. FOLLOW-UP (0d3093d): post-fix
+   re-ledger showed 190k sulfur/cinnabar cells still -> stone at y 27-45 —
+   ABOVE min_surface_level-16, where a second shortcut substituted the
+   surface biome. Removed: vanilla has no shortcut, getBiome per block
+   everywhere. 777 total: −294k, now 99.2797%. Ratchet: 424242 −1,173,
+   12345 −1,799, 456 flat. Remaining on 777: trial-chamber tuff_bricks
+   65k (structure unported, PARKED like ancient_city; no vanilla worldgen
+   mechanism outside the trial_chambers template pool), trees 63k, ore
+   82k (border cascade). NEXT: re-run 30-seed gate — the shortcut removal
+   may move every seed with cave biomes above min_surf-16.
 2. **GATE4 30-SEED RATCHET COMPLETE (6 Sep s29, after WG-frozen fix
    36427c5)**: all 30 gate seeds measured. mean 99.3165%, 12/30 ≥99.5%,
    26/30 ≥99.0%. vs gate3 on 15 comparable seeds: net −77,171 cells, 12
