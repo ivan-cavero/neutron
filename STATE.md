@@ -165,6 +165,15 @@ root cause of the lush_caves_clay divergence.
    consuming real draws shifts later attempts. Do NOT re-land any tree
    port until the per-origin step-chain desync (border cascade) is fixed.
    Note recorded at the TrunkKind dispatch site in tree/cfg.rs.
+   456 LUSH-CLAY OBJECTIVE OPENED (c5d713c): 4,470 vanilla clay cells
+   (lush-cave floors y -32..0, e.g. (-118,-18,-51)) where neutron keeps
+   deepslate. Biomes AGREE (lush_caves both sides, probed). The
+   lush_caves_clay patch (step 9, count=62, env-scan down 12 + biome
+   gate) does not fire in neutron for those chunks; patch internals were
+   verified identical at 424242 origin (2,9). NEXT: check origin step-9
+   union list for those chunks (does the union catch lush_caves?) and
+   the patch RNG stream; NEUTRON_PATCH_LOG hook exists
+   (feature_dispatch/vegetation.rs:406).
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
