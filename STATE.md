@@ -20,13 +20,13 @@
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
 | Measurement | Value |
-| **GATE4 full 30-seed ratchet** (WG-frozen heightmap 36427c5, 6 Sep s29) | mean **99.3165%**, 12/30 ≥99.5%, 26/30 ≥99.0% |
-| vs gate3 (15 comparable) | net **−77,171** cells, 12 improved, 2 regressed (60606 +173, 70707 +972) |
-| seed **424242** (primary) | **98.9444%** / 544,778 |
-| seed **456** (melon fix) | **98.9188%** / 560,137 (−571) |
-| seed **777** (55b0f5f + 0d3093d) | **99.2797%** / 373,153 (−294,003) |
-| seed **55555** | **97.7251%** / 1,174,078 (iceberg chain parked) |
-| best seed **44444** | **99.8537%** / 75,375 |
+| **GATE5 full 30-seed ratchet** (per-block biome 55b0f5f + shortcut removal 0d3093d) | mean **99.3802%**, 14/30 ≥99.5%, 27/30 ≥99.0%, **net −990,130 vs gate4, 0 regressions** |
+| biggest movers | 777 −294,003 · 789 −182,637 · 30303 −95,720 · 60606 −81,794 · 66666 −71,589 · 55555 −45,846 · 88888 −46,813 |
+| seed **424242** (primary) | **98.9467%** / 543,605 |
+| seed **456** | **98.9188%** / 560,137 |
+| seed **777** | **99.2797%** / 373,153 |
+| seed **55555** | **97.8139%** / 1,128,232 (iceberg parked) |
+| best seed **44444** | **99.8575%** / 73,409 |
 
 ## Closed (git log has full evidence)
 
@@ -143,6 +143,11 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
+0. **GATE5 COMPLETE (7 Sep s30)**: all 30 gate seeds re-measured after the
+   two surface-rule biome fixes. net **−990,130** cells vs gate4, ZERO
+   regressions. mean 99.3802% (was 99.3165), 14/30 ≥99.5% (was 12),
+   27/30 ≥99.0% (was 26). Every seed improved or flat; the fixes are
+   universal (per-block getBiome semantics), not seed-specific.
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
