@@ -827,3 +827,78 @@ mod tests {
     }
 }
 
+
+#[cfg(test)]
+mod ordering_analysis {
+    /// Closure analysis for the origin-order model (7 Sep s31): on the mined
+    /// 45,391-pair CSV for 424242, no simple within-batch ordering beats the
+    /// ticket_sim arm — best simple candidates: z-outer-x-inner 96.08%,
+    /// x-outer-z-inner 90.91%, dist-asc 48.5%, chebyshev-wave 72.9%; the full
+    /// sim (inner square + west strip batches) measures 95.88% all / 96.94%
+    /// interior. All 2,151 violations are winner-displacement WEST/NORTH only
+    /// (1,182+692+218+59, never the reverse) — worker-completion jitter
+    /// consistent with vanilla's own 0.85% race floor. No cheap ordering
+    /// change closes it; re-visit only with a completion-order tracer.
+    #[test]
+    #[ignore = "diagnostic: reads /tmp/opencode/deco_pairs_424242.csv and prints consistency of candidate orderings"]
+    fn ordering_candidates_consistency() {
+        let path = "/tmp/opencode/deco_pairs_424242.csv";
+        let Ok(content) = std::fs::read_to_string(path) else {
+            eprintln!("skip: {path} not present");
+            return;
+        };
+        let mut pairs: Vec<(i32, i32, i32, i32)> = Vec::new();
+        for line in content.lines() {
+            if line.starts_with('#') || line.starts_with("ccx,") {
+                continue;
+            }
+            let it: Vec<&str> = line.split(',').collect();
+            if it.len() < 4 {
+                continue;
+            }
+            // CSV header: ccx,ccz,win_ox,win_oz,win_feat,lose_ox,lose_oz,lose_feat,...
+            pairs.push((
+                it[2].parse().unwrap(),
+                it[3].parse().unwrap(),
+                it[5].parse().unwrap(),
+                it[6].parse().unwrap(),
+            ));
+        }
+        // absolute chunk coords: inner square (-8..7)^2, x fastest (z asc)
+        let seq_row: Vec<(i32, i32)> = (-8..8)
+            .flat_map(|z| (-8..8).map(move |x| (x, z)))
+            .collect();
+        let consistency = |seq: &[(i32, i32)]| -> f64 {
+            let rank: std::collections::HashMap<(i32, i32), usize> =
+                seq.iter().enumerate().map(|(i, p)| (*p, i)).collect();
+            let (mut ok, mut n) = (0usize, 0usize);
+            for (wx, wz, lx, lz) in &pairs {
+                if let (Some(&rw), Some(&rl)) = (rank.get(&(*wx, *wz)), rank.get(&(*lx, *lz))) {
+                    n += 1;
+                    if rw > rl {
+                        ok += 1;
+                    }
+                }
+            }
+            ok as f64 / n as f64
+        };
+        println!("row-major:      {:.4}", consistency(&seq_row));
+        let seq_z: Vec<(i32, i32)> = (-8..8)
+            .flat_map(|x| (-8..8).map(move |z| (x, z)))
+            .collect();
+        println!("z-major:        {:.4}", consistency(&seq_z));
+        let seq_d: Vec<(i32, i32)> = {
+            let mut v = seq_row.clone();
+            v.sort_by_key(|p| (p.0 * p.0 + p.1 * p.1, *p));
+            v
+        };
+        println!("dist-asc:       {:.4}", consistency(&seq_d));
+        let cheb = |p: &(i32, i32)| p.0.abs().max(p.1.abs());
+        let seq_c: Vec<(i32, i32)> = {
+            let mut v = seq_row.clone();
+            v.sort_by_key(|p| (cheb(p), *p));
+            v
+        };
+        println!("chebyshev-wave: {:.4}", consistency(&seq_c));
+    }
+}
