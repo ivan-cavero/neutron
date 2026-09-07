@@ -106,8 +106,9 @@ impl SimplexNoise {
     }
 }
 
-/// `PerlinSimplexNoise` over an octave set. Only the subset needed by
-/// worldgen callers is implemented: octave set `[0]` (BIOME_INFO_NOISE).
+/// `PerlinSimplexNoise` over an octave set (vanilla 26.2 layout: octaves are
+/// indexed so the highest-frequency octave sits at index 0 and frequencies
+/// halve / amplitudes double with rising index).
 pub struct PerlinSimplexNoise {
     levels: Vec<Option<SimplexNoise>>,
     highest_freq_input_factor: f64,
@@ -115,19 +116,79 @@ pub struct PerlinSimplexNoise {
 }
 
 impl PerlinSimplexNoise {
+    /// `new PerlinSimplexNoise(new WorldgenRandom(new LegacyRandomSource(seed)),
+    /// octaveSet)` — full octave layout.
+    ///
+    /// Vanilla constructor, decompiled:
+    ///   lowFreqOctaves = -octaveSet.firstInt()   (octaveSet is sorted asc)
+    ///   highFreqOctaves = octaveSet.lastInt()
+    ///   octaves = lowFreq + highFreq + 1
+    ///   zeroOctaveIndex = highFreqOctaves
+    ///   levels[zeroOctaveIndex] = SimplexNoise(random)  if 0 ∈ set
+    ///   for i in zeroOctaveIndex+1 .. octaves:            // lower frequencies
+    ///       if (zeroOctaveIndex - i) ∈ set: SimplexNoise(random)
+    ///       else random.consumeCount(262)
+    ///   if highFreqOctaves > 0:                            // higher frequencies
+    ///       reseed = (long)(zeroOctave.getValue(zero.xo, zero.yo, zero.zo) * 9.223372E18F)
+    ///       highRandom = WorldgenRandom(LegacyRandomSource(reseed))
+    ///       for i in zeroOctaveIndex-1 ..= 0:
+    ///           if (zeroOctaveIndex - i) ∈ set: SimplexNoise(highRandom)
+    ///           else highRandom.consumeCount(262)
+    ///   highestFreqInputFactor = 2^highFreqOctaves
+    ///   highestFreqValueFactor = 1 / (2^octaves - 1)
+    pub fn new(seed: i64, octave_set: &[i32]) -> Self {
+        let mut sorted = octave_set.to_vec();
+        sorted.sort_unstable();
+        let low_freq = -sorted[0];
+        let high_freq = sorted[sorted.len() - 1];
+        let octaves = low_freq + high_freq + 1;
+        assert!(octaves >= 1, "total octaves must be >= 1");
+
+        let mut r = LegacyRandom::new(seed);
+        let mut levels: Vec<Option<SimplexNoise>> = (0..octaves).map(|_| None).collect();
+        let zero_index = high_freq;
+        let zero = SimplexNoise::new(&mut r);
+        if zero_index < octaves && sorted.contains(&0) {
+            levels[zero_index as usize] = Some(zero);
+        }
+        for i in (zero_index + 1)..octaves {
+            if sorted.contains(&(zero_index - i)) {
+                levels[i as usize] = Some(SimplexNoise::new(&mut r));
+            } else {
+                for _ in 0..262 {
+                    r.next_int32();
+                }
+            }
+        }
+        if high_freq > 0 {
+            // (long)(zero.getValue(zero.xo, zero.yo, zero.zo) * 9.223372E18F)
+            let z = levels[zero_index as usize].as_ref().unwrap();
+            let seed_val = (z.get_value_2d(z.xo, z.yo) * 9.223_372e18) as i64;
+            let mut hr = LegacyRandom::new(seed_val);
+            for i in (0..zero_index).rev() {
+                if sorted.contains(&(zero_index - i)) {
+                    levels[i as usize] = Some(SimplexNoise::new(&mut hr));
+                } else {
+                    for _ in 0..262 {
+                        hr.next_int32();
+                    }
+                }
+            }
+        }
+        Self {
+            levels,
+            highest_freq_input_factor: 2.0f64.powi(high_freq),
+            highest_freq_value_factor: 1.0 / (2.0f64.powi(octaves as i32) - 1.0),
+        }
+    }
+
     /// `new PerlinSimplexNoise(random, [0])` — the `BIOME_INFO_NOISE` shape.
     ///
     /// With octave set `{0}`: lowFreqOctaves = 0, highFreqOctaves = 0,
     /// octaves = 1, the zero octave lands at index 0, no consumeCount
     /// skips, and no high-freq reseed (highFreqOctaves == 0).
     pub fn biome_info_noise() -> Self {
-        let mut r = LegacyRandom::new(2345);
-        let zero = SimplexNoise::new(&mut r);
-        Self {
-            levels: vec![Some(zero)],
-            highest_freq_input_factor: 2.0f64.powi(0),
-            highest_freq_value_factor: 1.0 / (2.0f64.powi(1) - 1.0),
-        }
+        Self::new(2345, &[0])
     }
 
     /// `getValue(x, y, false)` — octave sum with the [0] layout.
@@ -167,6 +228,33 @@ mod tests {
             assert!(
                 (got - want).abs() < 5e-9,
                 "BIOME_INFO_NOISE({x},{z}) = {got:.9}, want {want:.9}"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod frozen_tests {
+    use super::*;
+
+    /// Two-sided check vs `Biome.FROZEN_TEMPERATURE_NOISE` (seed 3456,
+    /// octave set [-2, -1, 0]; ProbeFrozenTempNoise, real 26.2 jar):
+    /// 0,0 / 100,200 / -34,78 / 1234,-4321 ->
+    /// 0.000000000 / -0.407912601 / 0.082824879 / 0.486655128.
+    #[test]
+    fn frozen_temperature_noise_matches_vanilla() {
+        let n = PerlinSimplexNoise::new(3456, &[-2, -1, 0]);
+        let cases: [(f64, f64, f64); 4] = [
+            (0.0, 0.0, 0.000000000),
+            (100.0, 200.0, -0.407912601),
+            (-34.0, 78.0, 0.082824879),
+            (1234.0, -4321.0, 0.486655128),
+        ];
+        for (x, z, want) in cases {
+            let got = n.get_value(x, z);
+            assert!(
+                (got - want).abs() < 5e-9,
+                "FROZEN_TEMPERATURE_NOISE({x},{z}) = {got:.9}, want {want:.9}"
             );
         }
     }

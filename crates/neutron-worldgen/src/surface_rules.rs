@@ -188,8 +188,180 @@ pub fn apply_surface_rules(
                     blocks[idx] = new_block.as_u16();
                 }
             }
+
+            // SurfaceSystem.frozenOceanExtension (26.2, SurfaceSystem.java:160,235):
+            // runs AFTER the surface rule for the column, gated on the surface
+            // biome being frozen_ocean / deep_frozen_ocean.
+            let surface_biome = sample_biome(st, world_x, surface_y.max(WORLD_BOTTOM), world_z);
+            if matches!(surface_biome, biome_id::FROZEN_OCEAN | biome_id::DEEP_FROZEN_OCEAN) {
+                frozen_ocean_extension(
+                    st,
+                    blocks,
+                    min_surface_level,
+                    surface_biome,
+                    world_x,
+                    world_z,
+                    height,
+                );
+            }
         }
     }
+}
+
+/// `SurfaceSystem.frozenOceanExtension` (26.2, SurfaceSystem.java:235-284):
+/// paints snow_block / packed_ice berg columns over frozen-ocean water using
+/// the three iceberg NormalNoises (seeded per world via NoiseSet like every
+/// other registered noise). `noise_random` = per-column legacy random at
+/// (x, 0, z) — vanilla `this.noiseRandom.at(blockX, 0, blockZ)` where
+/// noiseRandom = WorldgenRandom(LegacyRandomSource(seed)).
+fn frozen_ocean_extension(
+    st: &WorldgenState,
+    blocks: &mut [u16],
+    min_surface_level: i32,
+    surface_biome: u8,
+    block_x: i32,
+    block_z: i32,
+    height: i32,
+) {
+    let sea_level = st.sea_level;
+    let noises = st.noises.noises();
+    let (Some(surface_n), Some(pillar_n), Some(roof_n)) = (
+        noises.get("iceberg_surface"),
+        noises.get("iceberg_pillar"),
+        noises.get("iceberg_pillar_roof"),
+    ) else {
+        return;
+    };
+
+    let pillar_scale = 1.28f64;
+    let iceberg = (surface_n.get_value(block_x as f64, 0.0, block_z as f64) * 8.25)
+        .abs()
+        .min(
+            pillar_n.get_value(
+                block_x as f64 * pillar_scale,
+                0.0,
+                block_z as f64 * pillar_scale,
+            ) * 15.0,
+        );
+    if iceberg <= 1.8 {
+        return;
+    }
+
+    let roof_scale = 1.17f64;
+    let iceberg_roof = (roof_n.get_value(
+        block_x as f64 * roof_scale,
+        0.0,
+        block_z as f64 * roof_scale,
+    ) * 1.5)
+        .abs();
+    let mut top = (iceberg * iceberg * 1.2).min(iceberg_roof.ceil() + 14.0);
+    if surface_should_melt_frozen_iceberg_slightly(st, surface_biome, block_x, block_z, sea_level) {
+        top -= 2.0;
+    }
+
+    let extension_bottom;
+    let extension_top;
+    if top > 2.0 {
+        extension_bottom = sea_level as f64 - top - 7.0;
+        top += sea_level as f64;
+        extension_top = top;
+    } else {
+        extension_top = 0.0;
+        extension_bottom = 0.0;
+    }
+
+    // noiseRandom = WorldgenRandom(LegacyRandomSource(levelSeed)) shared by the
+    // SurfaceSystem; `.at(x, 0, z)` per column. Neutron: PositionalRandomFactory
+    // over the main seed pair (main_lo/main_hi), matching the surface RNG used
+    // for surface_depth.
+    let mut random = PositionalRandomFactory::new(st.main_lo, st.main_hi).at(block_x, 0, block_z);
+    let max_snow_depth = 2 + random.next_int(4);
+    let min_snow_height = sea_level + 18 + random.next_int(10);
+    let mut snow_depth = 0;
+
+    let y_start = (height).max(extension_top as i32 + 1);
+    let mut y = y_start;
+    while y >= min_surface_level {
+        let b = BlockId::from_u16(blocks[block_index(
+            (block_x.rem_euclid(16)) as usize,
+            y,
+            (block_z.rem_euclid(16)) as usize,
+        )])
+        .unwrap_or(BlockId::Air);
+        let in_water_band = b == BlockId::Water
+            && y > extension_bottom as i32
+            && y < sea_level
+            && extension_bottom != 0.0;
+        let in_air_above_top = b.is_air() && y < extension_top as i32;
+        if (in_air_above_top && random.next_f64() > 0.01)
+            || (in_water_band && random.next_f64() > 0.15)
+        {
+            if snow_depth <= max_snow_depth && y > min_snow_height {
+                blocks[block_index(
+                    (block_x.rem_euclid(16)) as usize,
+                    y,
+                    (block_z.rem_euclid(16)) as usize,
+                )] = BlockId::Snow.as_u16();
+                snow_depth += 1;
+            } else {
+                blocks[block_index(
+                    (block_x.rem_euclid(16)) as usize,
+                    y,
+                    (block_z.rem_euclid(16)) as usize,
+                )] = BlockId::PackedIce.as_u16();
+            }
+        }
+        y -= 1;
+    }
+}
+
+/// `Biome.shouldMeltFrozenOceanIcebergSlightly` = getTemperature > 0.1.
+/// getTemperature = getHeightAdjustedTemperature (cache elided — pure fn):
+///   adjusted = FROZEN modifier (see below) applied to base temperature
+///   if y > seaLevel + 17: adjusted -= (TEMPERATURE_NOISE(x/8, z/8)*8 + y -
+///                             (seaLevel+17)) * 0.05 / 40
+/// FROZEN modifier (frozen_ocean base 0.0, deep_frozen_ocean base 0.5):
+///   large = FROZEN_TEMPERATURE_NOISE(x*0.05, z*0.05)*7
+///   edge  = BIOME_INFO_NOISE(x*0.2, z*0.2)
+///   if large + edge < 0.3 && BIOME_INFO_NOISE(x*0.09, z*0.09) < 0.8: 0.2
+///   else base
+/// All three PerlinSimplexNoise instances are world-independent (fixed
+/// LegacyRandomSource seeds 3456 / 2345).
+fn surface_should_melt_frozen_iceberg_slightly(
+    st: &WorldgenState,
+    surface_biome: u8,
+    x: i32,
+    z: i32,
+    sea_level: i32,
+) -> bool {
+    let base = match surface_biome {
+        biome_id::DEEP_FROZEN_OCEAN => 0.5f32,
+        _ => 0.0f32,
+    };
+    static FROZEN_N: std::sync::LazyLock<crate::perlin_simplex::PerlinSimplexNoise> =
+        std::sync::LazyLock::new(|| crate::perlin_simplex::PerlinSimplexNoise::new(3456, &[-2, -1, 0]));
+    static BIOME_INFO_N: std::sync::LazyLock<crate::perlin_simplex::PerlinSimplexNoise> =
+        std::sync::LazyLock::new(|| crate::perlin_simplex::PerlinSimplexNoise::new(2345, &[0]));
+    static TEMPERATURE_N: std::sync::LazyLock<crate::perlin_simplex::PerlinSimplexNoise> =
+        std::sync::LazyLock::new(|| crate::perlin_simplex::PerlinSimplexNoise::new(1234, &[0]));
+
+    let mut adjusted = base;
+    // FROZEN modifier (both frozen ocean biomes use it)
+    let large = FROZEN_N.get_value(x as f64 * 0.05, z as f64 * 0.05) * 7.0;
+    let edge = BIOME_INFO_N.get_value(x as f64 * 0.2, z as f64 * 0.2);
+    if large + edge < 0.3 {
+        let small = BIOME_INFO_N.get_value(x as f64 * 0.09, z as f64 * 0.09);
+        if small < 0.8 {
+            adjusted = 0.2;
+        }
+    }
+    // getHeightAdjustedTemperature uses the BLOCK y; the iceberg check samples at
+    // y = seaLevel (blockPos.set(x, seaLevel, z)), so y = seaLevel <= snowLevel —
+    // the height adjustment (which would need TEMPERATURE_NOISE, seed 1234)
+    // never applies here.
+    let _ = sea_level;
+    let _ = TEMPERATURE_N;
+    adjusted > 0.1
 }
 
 fn is_steep(heightmap: &[i16], lx: usize, lz: usize) -> bool {
