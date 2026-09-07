@@ -157,6 +157,14 @@ root cause of the lush_caves_clay divergence.
    dirt->grass_block 2.9k jungle floor). Self-contained regression tests
    for the column (-88,-56) fix landed (sulfur_column_biomes,
    sulfur_pipeline_fixed).
+   MEGA-JUNGLE RE-LAND TESTED AND REVERTED (37ff781, 7 Sep s31): full
+   draw-exact port (giant 2x2 core + branch loop + jungle foliage) on
+   seed 456: 560,137 -> 626,695 (+66,558 REGRESSION); 424242 bit-identical.
+   SECOND confirmation of the selector-stream desync failure mode (789
+   mangrove was first): no-op Unknown trunks absorb upstream desync;
+   consuming real draws shifts later attempts. Do NOT re-land any tree
+   port until the per-origin step-chain desync (border cascade) is fixed.
+   Note recorded at the TrunkKind dispatch site in tree/cfg.rs.
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
