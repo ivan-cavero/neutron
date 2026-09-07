@@ -21,11 +21,11 @@ Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
 | Measurement | Value |
 | **GATE5 full 30-seed ratchet** (per-block biome 55b0f5f + shortcut removal 0d3093d) | mean **99.3802%**, 14/30 ≥99.5%, 27/30 ≥99.0%, **net −990,130 vs gate4, 0 regressions** |
-| biggest movers | 777 −294,003 · 789 −182,637 · 30303 −95,720 · 60606 −81,794 · 66666 −71,589 · 55555 −45,846 · 88888 −46,813 |
+| **ICEBERG EXTENSION ported (505a2ad, 7 Sep s31)** | 55555 −903,023 (**97.81 → 99.5636%**), 123 −170,174 (99.479%); 424242 bit-identical; iceberg chain CLOSED |
 | seed **424242** (primary) | **98.9467%** / 543,605 |
-| seed **456** | **98.9188%** / 560,137 |
+| seed **456** | **98.9188%** / 560,137 (stream-desync symptoms only) |
 | seed **777** | **99.2797%** / 373,153 |
-| seed **55555** | **97.8139%** / 1,128,232 (iceberg parked) |
+| seed **55555** | **99.5636%** / 225,209 (berg gap closed) |
 | best seed **44444** | **99.8575%** / 73,409 |
 
 ## Closed (git log has full evidence)
@@ -143,7 +143,16 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-0. **GATE5 COMPLETE (7 Sep s30)**: all 30 gate seeds re-measured after the
+0. **FROZEN-OCEAN BERG EXTENSION PORTED (7 Sep s31, commit 505a2ad)**:
+   SurfaceSystem.frozenOceanExtension now paints snow_block/packed_ice berg
+   columns (three iceberg NormalNoises + per-column noiseRandom + FROZEN
+   temperature-modifier melt check via the newly-extended bit-exact
+   PerlinSimplexNoise). 55555: −903,023 (97.81 → 99.5636%, no longer the
+   worst seed); 123: −170,174 (99.479%); 424242 bit-identical. The parked
+   55555 iceberg chain is CLOSED. NEXT: re-run the 30-seed gate (gate6) —
+   55555 and 123 both improved; the remaining sub-99.5 seeds are 456/424242
+   (border cascade, structural) — mean should rise ~0.06pp to ~99.44.
+0.5. **GATE5 COMPLETE (7 Sep s30)**: all 30 gate seeds re-measured after the
    two surface-rule biome fixes. net **−990,130** cells vs gate4, ZERO
    regressions. mean 99.3802% (was 99.3165), 14/30 ≥99.5% (was 12),
    27/30 ≥99.0% (was 26). Every seed improved or flat; the fixes are
