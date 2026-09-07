@@ -20,8 +20,8 @@
 Worldgen 1:1 vs vanilla **26.2**. Meter = `region_parity` + `PARITY_SCAN=1`
 + `PARITY_LEDGER=<csv>`. Ref = canonical 524-chunk world.
 | Measurement | Value |
-| **GATE5 full 30-seed ratchet** (per-block biome 55b0f5f + shortcut removal 0d3093d) | mean **99.3802%**, 14/30 ≥99.5%, 27/30 ≥99.0%, **net −990,130 vs gate4, 0 regressions** |
-| **ICEBERG EXTENSION ported (505a2ad, 7 Sep s31)** | 55555 −903,023 (**97.81 → 99.5636%**), 123 −170,174 (99.479%); 424242 bit-identical; iceberg chain CLOSED |
+| **GATE6 full 30-seed ratchet** (iceberg extension 505a2ad) | mean **99.4493%**, 15/30 ≥99.5%, 28/30 ≥99.0%, **net −1,070,399 vs gate5, 0 regressions** |
+| gate6 movers | 55555 −903,023 (99.5636%) · 123 −167,376 (99.4790%); all other 28 seeds bit-identical |
 | seed **424242** (primary) | **98.9467%** / 543,605 |
 | seed **456** | **98.9188%** / 560,137 (stream-desync symptoms only) |
 | seed **777** | **99.2797%** / 373,153 |
@@ -143,7 +143,14 @@ root cause of the lush_caves_clay divergence.
 
 ## Next
 
-0. **FROZEN-OCEAN BERG EXTENSION PORTED (7 Sep s31, commit 505a2ad)**:
+0. **GATE6 COMPLETE (8 Sep s31)**: all 30 gate seeds re-measured after the
+   iceberg extension. net **−1,070,399** vs gate5, ZERO regressions. mean
+   99.4493% (was 99.3802), 15/30 ≥99.5% (was 14), 28/30 ≥99.0% (was 27).
+   Only 55555 (−903,023) and 123 (−167,376) moved — the extension only
+   affects frozen-ocean columns; the other 28 seeds are bit-identical,
+   confirming the port is exactly scoped. Below 99.0 remain 456 (98.92)
+   and 424242 (98.95) — both pure border/origin-order cascade.
+0.5. **FROZEN-OCEAN BERG EXTENSION PORTED (7 Sep s31, commit 505a2ad)**:
    SurfaceSystem.frozenOceanExtension now paints snow_block/packed_ice berg
    columns (three iceberg NormalNoises + per-column noiseRandom + FROZEN
    temperature-modifier melt check via the newly-extended bit-exact
