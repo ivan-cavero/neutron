@@ -148,6 +148,15 @@ root cause of the lush_caves_clay divergence.
    regressions. mean 99.3802% (was 99.3165), 14/30 ≥99.5% (was 12),
    27/30 ≥99.0% (was 26). Every seed improved or flat; the fixes are
    universal (per-block getBiome semantics), not seed-specific.
+   POST-GATE5 LEDGERS (271af41): 424242 = dark_oak/pale_oak canopy border
+   cascade (87% border, dispersed — no new writer). 456 = missing jungle
+   trees 207k (leaves/log/vine -> air; mega-jungle port regression was
+   attributed to selector-stream desync BEFORE the surface fixes —
+   re-land + measure is the next candidate) + genuine terrain surface
+   diffs 9.5k (clay->deepslate 4.5k lush-cave floors y<-16;
+   dirt->grass_block 2.9k jungle floor). Self-contained regression tests
+   for the column (-88,-56) fix landed (sulfur_column_biomes,
+   sulfur_pipeline_fixed).
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
