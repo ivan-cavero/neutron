@@ -170,10 +170,14 @@ root cause of the lush_caves_clay divergence.
    deepslate. Biomes AGREE (lush_caves both sides, probed). The
    lush_caves_clay patch (step 9, count=62, env-scan down 12 + biome
    gate) does not fire in neutron for those chunks; patch internals were
-   verified identical at 424242 origin (2,9). NEXT: check origin step-9
-   union list for those chunks (does the union catch lush_caves?) and
-   the patch RNG stream; NEUTRON_PATCH_LOG hook exists
-   (feature_dispatch/vegetation.rs:406).
+   verified identical at 424242 origin (2,9). CLEARED (004bcd3): the
+   origin 3x3 union DOES include lush_caves for all three chunks; the
+   missing clay is actually ORE_CLAY (step 6, size-33 blob, count=46,
+   biome-gated), not the vegetation patch. Y-band evidence: vanilla
+   missing clay y -32..0; neutron-only clay leaks to +56 — per-attempt
+   in_square/height draws shifted by the upstream origin-order stream
+   desync (same root as the tree cascade). No local fix; the desync
+   remains the sole root lever for 456 (trees 207k + clay 4.5k).
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
