@@ -178,6 +178,13 @@ root cause of the lush_caves_clay divergence.
    in_square/height draws shifted by the upstream origin-order stream
    desync (same root as the tree cascade). No local fix; the desync
    remains the sole root lever for 456 (trees 207k + clay 4.5k).
+   ORIGIN-ORDER MODEL CLOSED AT CEILING (c2eb1ef, 7 Sep s31): on the mined
+   45,391-pair CSV, no simple within-batch ordering beats the ticket_sim
+   arm (best alternative 96.08% interior vs sim 95.88/96.94). All 2,151
+   violations are WEST/NORTH winner-displacement only — worker-completion
+   jitter consistent with vanilla's 0.85% race floor. The 95.9% ceiling
+   is the practical limit of deterministic ordering; advancing the desync
+   lever requires a completion-order tracer (javaagent).
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
