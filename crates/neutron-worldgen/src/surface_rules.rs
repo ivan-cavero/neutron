@@ -729,9 +729,9 @@ mod tests {
     #[test]
     #[ignore = "diagnostic: for each vanilla/neutron classifier mismatch, prints the climate target and the fitness of BOTH answers under neutron's metric — equal fitness = tie-break divergence"]
     fn sulfur_biome_dump() {
-        let gen = crate::ChunkGenerator::new(777);
+        let gen = crate::ChunkGenerator::new(456);
         let mut by_chunk: std::collections::BTreeMap<(i32, i32), Vec<String>> = Default::default();
-        for line in std::fs::read_to_string("/tmp/sulfur_missing2.txt").unwrap().lines() {
+        for line in std::fs::read_to_string("/tmp/clay456.txt").unwrap().lines() {
             let mut it = line.split_whitespace();
             let wx: i32 = it.next().unwrap().parse().unwrap();
             let _y: i32 = it.next().unwrap().parse().unwrap();
@@ -756,7 +756,7 @@ mod tests {
                 let gv = grad.noises().get("sulfur_cave_gradient").unwrap()
                     .get_value(wx as f64, y as f64, wz as f64);
                 let _ = (pip, g);
-                println!("MISS {wx} {y} {wz} -> {:?} biome={pip} grad={gv:.6}", b);
+                println!("CLAY {wx} {y} {wz} -> {:?} biome={pip}", b);
             }
         }
     }
