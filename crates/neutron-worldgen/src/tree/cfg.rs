@@ -8,6 +8,19 @@ pub(super) fn parse_trunk_kind(ty: &str) -> TrunkKind {
         "minecraft:straight_trunk_placer" => TrunkKind::Straight,
         "minecraft:dark_oak_trunk_placer" => TrunkKind::DarkOak,
         "minecraft:fancy_trunk_placer" => TrunkKind::Fancy,
+        // NOTE: "minecraft:mega_jungle_trunk_placer" is deliberately NOT mapped
+        // (TrunkKind::Unknown no-op). A full MegaJungleTrunkPlacer +
+        // MegaJungleFoliagePlacer port (giant 2x2 core, branch loop with
+        // exact draw order branchHeight=treeHeight-2-nextInt(4), step
+        // -(2+nextInt(4)); angle=nextFloat()*2pi; 5 branch logs via
+        // (int)(1.5+cos/sin*b); jungle foliage dx+dz>=7 / r^2 skip) was
+        // implemented draw-exact and measured on seed 456 (7 Sep): 560,137 ->
+        // 626,695 (+66,558 REGRESSION) — same failure mode as the mangrove
+        // port on 789: at origins whose upstream decoration stream is already
+        // desynced, the no-op was accidentally absorbing the divergence;
+        // consuming real draws shifts every later attempt. Do NOT re-land
+        // until the per-origin step-chain stream desync (border origin-order
+        // cascade) is fixed.
         _ => TrunkKind::Unknown,
     }
 }
