@@ -804,6 +804,54 @@ mod tests {
         }
     }
 
+    /// 456 clay: the union diagnostic that cleared the dispatch hypothesis —
+    /// lush_caves IS present in the origin 3x3 union for all three missing-clay
+    /// chunks, so the step-6 ore_clay (size-33 blob, count=46) and step-9
+    /// lush_caves_clay both dispatch. The residual clay->deepslate gap is a
+    /// stream-displacement symptom: vanilla-missing clay sits at y -32..0
+    /// while neutron-only clay leaks up to +56, i.e. the per-attempt
+    /// in_square/height draws are shifted by upstream desync — same root as
+    /// the tree cascade. No local fix; documented 7 Sep s31.
+    #[test]
+    #[ignore = "diagnostic: prints the origin biome union at the 456 clay chunks"]
+    fn clay456_union_dump() {
+        let gen = crate::ChunkGenerator::new(456);
+        for (cx, cz) in [(3, -8), (-8, -4), (-3, -5)] {
+            let ox0 = cx * 16;
+            let oz0 = cz * 16;
+            // replicate the union source: section-quart noise biomes over 3x3
+            let st = &gen.state;
+            let mut names: Vec<String> = Vec::new();
+            for dz in -1..=1i32 {
+                for dx in -1..=1i32 {
+                    for sy in 0..24i32 {
+                        let qy = -4 + sy * 2; // section midpoint quarts (y -64..320 / 8)
+                        let q = crate::biome::manager::noise_biome_at_quart(
+                            st,
+                            ((ox0 + dx * 16) >> 2) + 2,
+                            qy,
+                            ((oz0 + dz * 16) >> 2) + 2,
+                        );
+                        let n = match q {
+                            34 => "lush_caves",
+                            36 => "sulfur_caves",
+                            33 => "birch_forest",
+                            3 => "forest",
+                            10 => "jungle",
+                            48 => "sparse_jungle",
+                            1 => "plains",
+                            _ => "?",
+                        };
+                        if !names.iter().any(|x| x.contains(n)) {
+                            names.push(format!("{n}({q})"));
+                        }
+                    }
+                }
+            }
+            println!("UNION chunk=({cx},{cz}) origin=({ox0},{oz0}): {}", names.join(", "));
+        }
+    }
+
     #[test]
     fn sulfur_cave_gradient_noise_and_gate() {
         assert_eq!(biome_name_to_id("sulfur_caves"), biome_id::SULFUR_CAVES);
