@@ -761,21 +761,46 @@ mod tests {
         }
     }
 
+    /// Column (-88,-56) seed 777 — drove the per-block biome fix (55b0f5f) and the
+    /// shortcut removal (0d3093d). Vanilla voronoi (ProbeBiomeAt): birch_forest at
+    /// y -30..-25, sulfur_caves at -24,-23, birch at -22..-20, sulfur at -19..-16.
+    /// Neutron must match block-for-block now.
     #[test]
-    #[ignore = "diagnostic: prints neutron sulfur_cave_gradient values for vanilla-mismatch cells"]
-    fn sulfur_noise_dump() {
-        let reg = crate::density::DensityRegistry::build();
-        let (o, a) = reg.noise_params("sulfur_cave_gradient");
-        let ns = crate::worldgen::NoiseSet::for_seed(777, &reg);
-        let n = ns.noises().get("sulfur_cave_gradient").expect("noise present");
-        let _ = (o, a);
-        for line in std::fs::read_to_string("/tmp/sulfur_cells.txt").unwrap().lines() {
-            let mut it = line.split_whitespace();
-            let x: i32 = it.next().unwrap().parse().unwrap();
-            let y: i32 = it.next().unwrap().parse().unwrap();
-            let z: i32 = it.next().unwrap().parse().unwrap();
-            let v = n.get_value(x as f64, y as f64, z as f64);
-            println!("SULFUR {x} {y} {z} {v:.9}");
+    #[ignore = "diagnostic: compares seed-777 column (-88,-56) biome ids against vanilla voronoi"]
+    fn sulfur_column_biomes() {
+        let gen = crate::ChunkGenerator::new(777);
+        // (y, expected vanilla biome id)
+        let want: [(i32, u8); 15] = [
+            (-30, 33), (-29, 33), (-28, 33), (-27, 33), (-26, 33), (-25, 33),
+            (-24, 36), (-23, 36), (-22, 33), (-21, 33), (-20, 33),
+            (-19, 36), (-18, 36), (-17, 36), (-16, 36),
+        ];
+        for (y, exp) in want {
+            let b = crate::biome::manager::biome_id_at_block(&gen.state, -88, y, -56);
+            assert_eq!(b, exp, "column (-88,{y},-56)");
+        }
+    }
+
+    /// Seed 777 chunk (-6,-4): the sulfur-band cells (-88,-24,-56) etc. must now be
+    /// painted sulfur/cinnabar by the surface rule (previously deepslate — the
+    /// 8-block cache bug).
+    #[test]
+    #[ignore = "diagnostic: verifies surface rule paints sulfur at the previously-broken cells"]
+    fn sulfur_pipeline_fixed() {
+        let gen = crate::ChunkGenerator::new(777);
+        let (blocks, _, _) = gen.generate_noise_and_surface(-6, -4);
+        let cells: [(i32, i32, i32); 4] = [
+            (-88, -24, -56), (-85, -23, -61), (-84, -22, -50), (-83, -21, -54),
+        ];
+        for (wx, y, wz) in cells {
+            let idx = ((y - crate::generator::WORLD_BOTTOM) as usize) * 256
+                + ((wz + 64) as usize) * 16
+                + ((wx + 96) as usize);
+            let b = crate::surface::BlockId::from_u16(blocks[idx]).unwrap();
+            assert!(
+                matches!(b, crate::surface::BlockId::Sulfur | crate::surface::BlockId::Cinnabar),
+                "({wx},{y},{wz}) = {b:?}, want sulfur/cinnabar"
+            );
         }
     }
 
