@@ -36,10 +36,15 @@ public class ProbeBiomeAt {
                 return source.getNoiseBiome(qx, qy, qz, sampler);
             }
         }, BiomeManager.obfuscateSeed(seed));
-        int[][] pts = {{4,0,0},{0,3,12},{0,3,70},{4,0,17},{11,0,4},{5,15,170},{0,3,22},{4,0,28}};
-        for (int[] p : pts) {
-            Holder<Biome> b = mgr.getBiome(new BlockPos(p[0], p[1], p[2]));
-            System.out.println("(" + p[0] + "," + p[1] + "," + p[2] + ") biome=" + b.unwrapKey().map(k -> k.identifier().toString()).orElse("?"));
+        java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+        String line;
+        while ((line = in.readLine()) != null) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+            String[] pp = line.split("\\s+");
+            int x = Integer.parseInt(pp[0]), y = Integer.parseInt(pp[1]), z = Integer.parseInt(pp[2]);
+            Holder<Biome> b = mgr.getBiome(new BlockPos(x, y, z));
+            System.out.println("BIOME " + x + " " + y + " " + z + " " + b.unwrapKey().map(k -> k.identifier().toString()).orElse("?"));
         }
     }
     static void HolderGetterHolder() {}
