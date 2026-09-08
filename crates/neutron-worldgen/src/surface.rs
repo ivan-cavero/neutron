@@ -245,6 +245,16 @@ pub enum BlockId {
     MossyStoneBrickWall = 243,
     StoneSlab = 244,
     SmoothStoneSlab = 245,
+    /// Infested (silverfish) variants — real blocks, placed by `ore_infested`
+    /// and monster-room spawner boxes. NOT aliases of their host block:
+    /// vanilla writes the distinct block and parity compares names.
+    InfestedStone = 246,
+    InfestedDeepslate = 247,
+    InfestedCobblestone = 248,
+    InfestedStoneBricks = 249,
+    InfestedMossyStoneBricks = 250,
+    InfestedCrackedStoneBricks = 251,
+    InfestedChiseledStoneBricks = 252,
 }
 
 impl BlockId {
@@ -473,6 +483,13 @@ impl BlockId {
             243 => Some(Self::MossyStoneBrickWall),
             244 => Some(Self::StoneSlab),
             245 => Some(Self::SmoothStoneSlab),
+            246 => Some(Self::InfestedStone),
+            247 => Some(Self::InfestedDeepslate),
+            248 => Some(Self::InfestedCobblestone),
+            249 => Some(Self::InfestedStoneBricks),
+            250 => Some(Self::InfestedMossyStoneBricks),
+            251 => Some(Self::InfestedCrackedStoneBricks),
+            252 => Some(Self::InfestedChiseledStoneBricks),
             _ => None,
         }
     }
@@ -586,6 +603,13 @@ impl BlockId {
             Self::MossyStoneBrickWall => "minecraft:mossy_stone_brick_wall",
             Self::StoneSlab => "minecraft:stone_slab",
             Self::SmoothStoneSlab => "minecraft:smooth_stone_slab",
+            Self::InfestedStone => "minecraft:infested_stone",
+            Self::InfestedDeepslate => "minecraft:infested_deepslate",
+            Self::InfestedCobblestone => "minecraft:infested_cobblestone",
+            Self::InfestedStoneBricks => "minecraft:infested_stone_bricks",
+            Self::InfestedMossyStoneBricks => "minecraft:infested_mossy_stone_bricks",
+            Self::InfestedCrackedStoneBricks => "minecraft:infested_cracked_stone_bricks",
+            Self::InfestedChiseledStoneBricks => "minecraft:infested_chiseled_stone_bricks",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
             Self::Diorite => "minecraft:diorite",
@@ -932,10 +956,13 @@ impl BlockId {
             "red_mushroom_block" => Some(Self::RedMushroomBlock),
             "brown_mushroom_block" => Some(Self::BrownMushroomBlock),
             "mushroom_stem" => Some(Self::MushroomStem),
-            // Infested variants are visually identical to their host block.
-            "infested_stone" => Some(Self::Stone),
-            "infested_cobblestone" => Some(Self::Cobblestone),
-            "infested_deepslate" => Some(Self::Deepslate),
+            "infested_stone" => Some(Self::InfestedStone),
+            "infested_cobblestone" => Some(Self::InfestedCobblestone),
+            "infested_deepslate" => Some(Self::InfestedDeepslate),
+            "infested_stone_bricks" => Some(Self::InfestedStoneBricks),
+            "infested_mossy_stone_bricks" => Some(Self::InfestedMossyStoneBricks),
+            "infested_cracked_stone_bricks" => Some(Self::InfestedCrackedStoneBricks),
+            "infested_chiseled_stone_bricks" => Some(Self::InfestedChiseledStoneBricks),
             _ => None,
         }
     }
@@ -1163,6 +1190,13 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::MossyStoneBrickWall => "minecraft:mossy_stone_brick_wall",
         BlockId::StoneSlab => "minecraft:stone_slab",
         BlockId::SmoothStoneSlab => "minecraft:smooth_stone_slab",
+        BlockId::InfestedStone => "minecraft:infested_stone",
+        BlockId::InfestedDeepslate => "minecraft:infested_deepslate",
+        BlockId::InfestedCobblestone => "minecraft:infested_cobblestone",
+        BlockId::InfestedStoneBricks => "minecraft:infested_stone_bricks",
+        BlockId::InfestedMossyStoneBricks => "minecraft:infested_mossy_stone_bricks",
+        BlockId::InfestedCrackedStoneBricks => "minecraft:infested_cracked_stone_bricks",
+        BlockId::InfestedChiseledStoneBricks => "minecraft:infested_chiseled_stone_bricks",
     }
 }
 

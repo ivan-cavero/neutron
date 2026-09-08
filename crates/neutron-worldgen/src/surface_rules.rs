@@ -1161,3 +1161,70 @@ mod dripstone_ref_biome {
 
 
 
+
+#[cfg(test)]
+mod mineshaft_ref_10101 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Seed 10101: the ref has 244k air cells at y -56..-16 that neutron keeps
+    /// as deepslate. Find which structure owns this area: dump the ref chunk
+    /// (-14,1) structures starts + the neighbors' starts.
+    #[test]
+    #[ignore = "diagnostic: dumps ref chunk structures for seed 10101 chunk (-14,1)"]
+    fn mineshaft10101_ref_structures() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
+        let mut all = String::new();
+        for rx in [-1i32, 0] {
+            for rz in [0i32, 1] {
+                let region = match Region::open(std::path::Path::new(&format!(
+                    "{dir}/r.{rx}.{rz}.mca")))
+                {
+                    Ok(r) => r.with_coords(rx, rz),
+                    Err(e) => {
+                        all.push_str(&format!("region ({rx},{rz}) open failed: {e:?}\n"));
+                        continue;
+                    }
+                };
+                for lx in 0..32 {
+                    for lz in 0..32 {
+                        let cx = rx * 32 + lx;
+                        let cz = rz * 32 + lz;
+                        let raw = match region.get_chunk(lx, lz) {
+                            Ok(Some(r)) => r,
+                            _ => continue,
+                        };
+                        let nbt = read_nbt(&raw).expect("nbt");
+                        let Some(Tag::Compound(st)) = compound_get(&nbt.compound, "structures")
+                        else {
+                            continue;
+                        };
+                        let Some(Tag::Compound(starts)) = compound_get(st, "starts") else {
+                            continue;
+                        };
+                        for (name, tag) in &starts.tags {
+                            if name.to_string() == "minecraft:mineshaft" {
+                                all.push_str(&format!(
+                                    "chunk ({cx},{cz}) mineshaft\n"
+                                ));
+                            }
+                            if name.to_string() == "minecraft:ancient_city" {
+                                all.push_str(&format!(
+                                    "chunk ({cx},{cz}) ancient_city\n"
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        eprintln!("STRUCTS-10101\n{all}");
+        // Ground truth measured 8 Sep (seed 10101): mineshaft starts at
+        // (-14,0) and (-2,8), ancient_city at (-14,9). Neutron's mineshaft
+        // placement matches; no ancient_city port exists yet (the 244k
+        // air->deepslate family at y -56..-16 is the unported city).
+        assert!(all.contains("mineshaft"));
+        assert!(all.contains("ancient_city"));
+    }
+}

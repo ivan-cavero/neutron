@@ -9,6 +9,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.levelgen.carver.CanyonCarverConfiguration;
+import net.minecraft.world.level.levelgen.carver.CanyonWorldCarver;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.ChunkPos;
@@ -71,6 +73,29 @@ public class ProbeCarveTrace {
                 CarvingMask mask,
                 WorldCarver.CarveSkipChecker skipChecker) {
             System.out.printf(Locale.ROOT, "EL %.6f %.6f %.6f %.6f %.6f%n",
+                    x, y, z, horizontalRadius, verticalRadius);
+            return super.carveEllipsoid(context, configuration, chunk, biomeGetter,
+                    aquifer, x, y, z, horizontalRadius, verticalRadius, mask, skipChecker);
+        }
+    }
+
+    static class TracingCanyonCarver extends CanyonWorldCarver {
+        TracingCanyonCarver() {
+            super(CanyonCarverConfiguration.CODEC);
+        }
+
+        @Override
+        protected boolean carveEllipsoid(
+                CarvingContext context,
+                CanyonCarverConfiguration configuration,
+                ChunkAccess chunk,
+                Function<BlockPos, Holder<Biome>> biomeGetter,
+                Aquifer aquifer,
+                double x, double y, double z,
+                double horizontalRadius, double verticalRadius,
+                CarvingMask mask,
+                WorldCarver.CarveSkipChecker skipChecker) {
+            System.out.printf(Locale.ROOT, "CEL %.6f %.6f %.6f %.6f %.6f%n",
                     x, y, z, horizontalRadius, verticalRadius);
             return super.carveEllipsoid(context, configuration, chunk, biomeGetter,
                     aquifer, x, y, z, horizontalRadius, verticalRadius, mask, skipChecker);
@@ -147,6 +172,9 @@ public class ProbeCarveTrace {
         CaveCarverConfiguration caveExtraCfg = (CaveCarverConfiguration)
                 carverReg.getOrThrow(net.minecraft.data.worldgen.Carvers.CAVE_EXTRA_UNDERGROUND).value().config();
 
+        CanyonCarverConfiguration canyonCfg = (CanyonCarverConfiguration)
+                carverReg.getOrThrow(net.minecraft.data.worldgen.Carvers.CANYON).value().config();
+        CanyonWorldCarver canyonTracer = new TracingCanyonCarver();
         CaveWorldCarver tracer = new TracingCaveCarver();
         Function<BlockPos, Holder<Biome>> biomeGetter = p -> plains;
 
@@ -166,6 +194,13 @@ public class ProbeCarveTrace {
                 if (tracer.isStartChunk(caveExtraCfg, random)) {
                     System.out.printf(Locale.ROOT, "SRC %d %d 1%n", scx, scz);
                     tracer.carve(context, caveExtraCfg, chunk, biomeGetter, random, aquifer,
+                            new ChunkPos(scx, scz), mask);
+                }
+
+                random.setLargeFeatureSeed(seed + 2, scx, scz);
+                if (canyonTracer.isStartChunk(canyonCfg, random)) {
+                    System.out.printf(Locale.ROOT, "SRC %d %d 2%n", scx, scz);
+                    canyonTracer.carve(context, canyonCfg, chunk, biomeGetter, random, aquifer,
                             new ChunkPos(scx, scz), mask);
                 }
             }

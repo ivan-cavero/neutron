@@ -157,3 +157,25 @@ mod tests {
         assert!(!hits.is_empty());
     }
 }
+
+#[cfg(test)]
+mod parity_10101 {
+    /// Seed 10101: the ref world has mineshaft starts at chunks (-14,0),
+    /// (-2,8) and (12,8), and none at the negative-control chunks.
+    #[test]
+    fn mineshaft_starts_match_ref_10101() {
+        for (cx, cz) in [(-14, 0), (-2, 8), (12, 8)] {
+            assert!(
+                super::is_mineshaft_chunk(10101, cx, cz),
+                "expected mineshaft start at ({cx},{cz})"
+            );
+        }
+        for (cx, cz) in [(-13, 1), (-10, 5), (-5, 3)] {
+            assert!(
+                !super::is_mineshaft_chunk(10101, cx, cz),
+                "unexpected mineshaft start at ({cx},{cz})"
+            );
+        }
+        assert!(!super::pieces::generate_start(10101, -14, 0).is_empty());
+    }
+}

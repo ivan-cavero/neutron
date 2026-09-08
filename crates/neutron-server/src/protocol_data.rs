@@ -217,6 +217,13 @@ pub fn block_state_id(internal: u16) -> i32 {
         136 => 30399, // small_dripleaf (default facing=north,half=lower,waterlogged=false)
         137 => 30357, // big_dripleaf (default facing=north,tilt=none,waterlogged=false)
         138 => 30389, // big_dripleaf_stem (default facing=north,waterlogged=false)
+        246 => 7760,  // infested_stone
+        247 => 32067, // infested_deepslate (default axis=y)
+        248 => 7761,  // infested_cobblestone
+        249 => 7762,  // infested_stone_bricks
+        250 => 7763,  // infested_mossy_stone_bricks
+        251 => 7764,  // infested_cracked_stone_bricks
+        252 => 7765,  // infested_chiseled_stone_bricks
         _ => 1,       // unknown -> stone
     }
 }

@@ -48,12 +48,65 @@ public class ProbeChunkDensity {
         @SuppressWarnings("unchecked")
         var beard = (DensityFunctions.BeardifierOrMarker) bf.get(null);
 
-        int[][] pts = {{12,1,15},{10,2,15},{8,3,14},{2,5,14},{5,5,14},{1,5,15}};
-        for (int[] p : pts) {
-            double d = sample(rs, settings, beard, fluid, p[0], p[1], p[2]);
-            System.out.println("(" + p[0] + "," + p[1] + "," + p[2] + ") interp=" + String.format("%.6f", d)
+        // stdin: x y z absolute block coords (chunk derived from x,z)
+        java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+        String line;
+        while ((line = in.readLine()) != null) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+            String[] pp = line.split("\\s+");
+            int bx = Integer.parseInt(pp[0]);
+            int by = Integer.parseInt(pp[1]);
+            int bz = Integer.parseInt(pp[2]);
+            double d = sampleAbs(rs, settings, beard, fluid, bx, by, bz);
+            System.out.println("(" + bx + "," + by + "," + bz + ") interp=" + String.format("%.6f", d)
                 + (d > 0 ? " solid" : " air"));
         }
+    }
+
+    static double sampleAbs(RandomState rs, Holder<NoiseGeneratorSettings> settings,
+                         DensityFunctions.BeardifierOrMarker beard,
+                         net.minecraft.world.level.levelgen.Aquifer.FluidPicker fluid,
+                         int bx, int by, int bz) throws Exception {
+        int cx = Math.floorDiv(bx, 16);
+        int cz = Math.floorDiv(bz, 16);
+        int lx = bx - cx * 16;
+        int lz = bz - cz * 16;
+        // re-run sample with local coords, then offset the NoiseChunk to the chunk
+        return sampleAt(rs, settings, beard, fluid, cx, cz, lx, by, lz);
+    }
+
+    static double sampleAt(RandomState rs, Holder<NoiseGeneratorSettings> settings,
+                         DensityFunctions.BeardifierOrMarker beard,
+                         net.minecraft.world.level.levelgen.Aquifer.FluidPicker fluid,
+                         int cx, int cz, int lx, int by, int lz) throws Exception {
+        NoiseSettings ns = settings.value().noiseSettings();
+        int cw = ns.getCellWidth(), ch = ns.getCellHeight(), minY = ns.minY();
+        int cellCountX = 16 / cw, cellCountZ = 16 / cw, cellCountY = ns.height() / ch;
+        int cellXM = lx / cw, cellZM = lz / cw, cellYM = (by - minY) / ch;
+        int xicT = lx % cw, yicT = (by - minY) % ch, zicT = lz % cw;
+        var nc = new NC(4, rs, cx * 16, cz * 16, ns, beard, settings.value(), fluid, Blender.empty());
+        nc.initializeForFirstCellX();
+        double result = Double.NaN;
+        for (int ccx = 0; ccx < cellCountX; ccx++) {
+            nc.advanceCellX(ccx);
+            for (int ccz = 0; ccz < cellCountZ; ccz++) {
+                for (int cy = cellCountY - 1; cy >= 0; cy--) {
+                    nc.selectCellYZ(cy, ccz);
+                    for (int yic = ch - 1; yic >= 0; yic--) {
+                        int posY = (minY / ch + cy) * ch + yic;
+                        nc.updateForY(posY, (double) yic / ch);
+                        for (int xic = 0; xic < cw; xic++) {
+                            int posX = ccx * cw + xic;
+                            if (posX == lx && posY == by && ccz * cw + zicT == lz) {
+                                result = nc.interp();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     static double sample(RandomState rs, Holder<NoiseGeneratorSettings> settings,
