@@ -352,6 +352,9 @@ pub(crate) struct Piece {
     pub(crate) is_feature: bool,
     /// Jigsaw depth at placement (center = 0).
     pub(crate) depth: i32,
+    /// Free-space snapshot AT ACCEPT TIME (vanilla carries the
+    /// MutableObject<VoxelShape> contents in the PieceState).
+    pub(crate) free_at_accept: Vec<Bb>,
 }
 
 /// RNG consumed exactly like vanilla's `WorldgenRandom` here:
@@ -459,6 +462,20 @@ impl<'r> Assembler<'r> {
         );
 
         let mut asm = Assembler { rng, pieces: Vec::new(), global };
+        let center_free: Vec<Bb> = {
+            // global AABB minus center box (the branch shape the center was
+            // "accepted" into)
+            let gy0 = (global_center.1 - MAX_DISTANCE_V).max(crate::generator::WORLD_BOTTOM);
+            let gy1 = (global_center.1 + MAX_DISTANCE_V + 1).min(crate::generator::WORLD_TOP);
+            vec![Bb {
+                min_x: global.0,
+                max_x: global.1,
+                min_y: gy0,
+                max_y: gy1,
+                min_z: global.2,
+                max_z: global.3,
+            }]
+        };
         asm.pieces.push(Piece {
             depth: 0,
             tpl_name: center_tpl_name,
@@ -466,6 +483,7 @@ impl<'r> Assembler<'r> {
             rot: center_rot,
             bb: center_bb,
             is_feature: false,
+            free_at_accept: center_free,
         });
         if MAX_DEPTH > 0 {
             // Branch shape = Shapes.join(create(globalAABB), create(centerBox),
@@ -493,7 +511,10 @@ impl<'r> Assembler<'r> {
             while idx < asm.pieces.len() {
                 let p = asm.pieces[idx].clone();
                 // vanilla pushes a PieceState only when depth + 1 <= maxDepth;
-                // deeper pieces are never expanded.
+                // deeper pieces are never expanded. The PieceState's `free` is
+                // the SAME MutableObject the piece was accepted against — one
+                // shared, progressively-carved shape per branch (siblings keep
+                // carving it after this piece was accepted).
                 if p.depth <= MAX_DEPTH {
                     asm.try_placing_children(&p, p.depth, &mut branch);
                 }
@@ -651,21 +672,38 @@ impl<'r> Assembler<'r> {
                         // Overlap: childrenFree (branch) ∩ shrunk(target) or,
                         // if the target jigsaw sits inside the source box,
                         // sourceFree. attachInsideSource:
-                        // Vanilla free-shape semantics: `childrenFree` is
-                        // the branch's FREE space. Accept iff
-                        // joinIsNotEmpty(free, shrunk(target), ONLY_SECOND)
-                        // — shrunk candidate intersects free space. On
-                        // accept, ONLY_FIRST join SUBTRACTS the box:
-                        // free := free AND NOT targetBB.
+                        // Vanilla free-shape semantics (BooleanOp decoded —
+                        // vanilla SKIPS the candidate when joinIsNotEmpty(
+                        // free, shrunk(cand), ONLY_SECOND) is TRUE, i.e. when
+                        // (cand ∧ ¬free) ≠ ∅): a candidate is accepted only
+                        // when it is FULLY inside the free space (disjoint
+                        // from every placed piece and inside the global AABB).
+                        // On accept: free := free ∧ ¬cand (ONLY_FIRST carve).
                         let inside = attach_inside_source_hit(source, target_jigsaw_pos);
                         let free: &mut Vec<Bb> = if inside {
                             &mut source_free
                         } else {
                             branch_free
                         };
-                        let free_hit = free.iter().any(|b| target_bb.intersects_shrunk(b));
-                        if !free_hit {
-                            continue; // no free-space contact → vanilla skips
+                        // cand ∧ ¬free ≠ ∅ ⟺ NOT(cand ⊆ free): subtract every
+                        // free box from the candidate; a surviving remainder
+                        // means part of the candidate lies OUTSIDE free.
+                        let pokes_out = {
+                            let mut rest: Vec<Bb> = vec![target_bb];
+                            for r in free.iter() {
+                                if rest.is_empty() {
+                                    break;
+                                }
+                                let mut next_rest: Vec<Bb> = Vec::new();
+                                for c in rest.iter() {
+                                    next_rest.extend(c.subtract(r));
+                                }
+                                rest = next_rest;
+                            }
+                            !rest.is_empty()
+                        };
+                        if pokes_out {
+                            continue; // overlaps placed pieces / global bounds
                         }
                         let mut next: Vec<Bb> = Vec::new();
                         for b in free.iter() {
@@ -698,6 +736,11 @@ bb=({},{},{})",
                             rot: target_rot,
                             bb: target_bb,
                             is_feature: target_elem.feature,
+                            free_at_accept: {
+                                let mut snap = free.clone();
+                                snap.push(target_bb);
+                                snap
+                            },
                         });
                         if depth + 1 <= MAX_DEPTH {
                             // FIFO: children processed in insertion order.

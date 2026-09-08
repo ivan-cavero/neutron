@@ -393,10 +393,8 @@ impl ChunkGenerator {
         // once over the region before decoration, visible to every origin.
         region.current_writer = crate::writers::MINESHAFT;
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
-        // Ancient-city placement is UNWIRED pending exact assembly parity:
-        // with 38/89 pieces matching, placement nets ≈0 (measured window
-        // 98,972 → 98,939). The shared branch shape diverges at piece 21;
-        // see STATE.md.
+        region.current_writer = crate::writers::ANCIENT_CITY;
+        crate::ancient_city::apply_ancient_city_region(&mut region, &self.state);
         region.current_writer = crate::writers::TERRAIN;
         if prof {
             eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);

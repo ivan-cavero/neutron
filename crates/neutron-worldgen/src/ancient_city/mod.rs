@@ -59,12 +59,49 @@ pub(crate) fn pieces_for(level_seed: i64, cx: i32, cz: i32) -> Option<Vec<jigsaw
     pieces
 }
 
+/// Diagnostic: count cells written per piece for one city.
+#[test]
+#[ignore = "diagnostic: placement write counts for seed 10101 city"]
+fn city10101_place_counts() {
+    let pieces = pieces_for(10101, -14, 9).expect("assembly");
+    let mut region = crate::region_buf::RegionBuf::new(-16, 8, 3);
+    let mut total = 0usize;
+    for p in &pieces {
+        let w = place_piece(&mut region, p);
+        total += w;
+    }
+    eprintln!("PLACE-TOTAL total={total}");
+    // read back the center chunk's column: world x -224..-209, z 144..159
+    let mut nonzero = 0usize;
+    let mut air = 0usize;
+    for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+        for lz in 144..160 {
+            for lx in -224..-208 {
+                let b = region.get(lx, y, lz);
+                if b == crate::surface::BlockId::Air {
+                    air += 1;
+                } else {
+                    nonzero += 1;
+                }
+            }
+        }
+    }
+    eprintln!("CENTER-READBACK nonzero={nonzero} air={air}");
+    panic!("PLACE-DONE");
+}
+
 /// Place all city pieces intersecting `region`.
 pub fn apply_ancient_city_region(region: &mut RegionBuf, state: &WorldgenState) {
     let c0x = region.origin_x.div_euclid(16);
     let c0z = region.origin_z.div_euclid(16);
     let c1x = c0x + region.chunks - 1;
     let c1z = c0z + region.chunks - 1;
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        eprintln!(
+            "CITY-APPLY region=({}, {}) chunks={} seed={}",
+            region.origin_x, region.origin_z, region.chunks, state.seed
+        );
+    }
     // A city spans up to ±116 from its anchor — scan a generous ring.
     const SEARCH: i32 = 12;
     let mut placed = 0u64;
@@ -183,7 +220,7 @@ mod parity_10101 {
             };
             eprintln!(
                 "NEU-PIECE {} {} {} {} {} {} {} {}",
-                p.tpl_name,
+                if p.is_feature { "FEATURE" } else { p.tpl_name },
                 rot,
                 p.bb.min_x,
                 p.bb.min_y,
