@@ -12,11 +12,15 @@
 > branch free-space AABB carve; ListPoolElement first-child jigsaws).
 > 7d73cfc: FeaturePoolElement pieces (1×1×1, name=minecraft:bottom, no
 > RNG) + source_free = FULL source box → ref proves 38 degenerate sculk
-> children exist. Assembly 151 vs ref 89, 39/89 BBs exact; divergence
-> cascades from the piece-21 branch split (order). PLACEMENT UNWIRED
-> (38/89 nets −33 wash). NEXT: bisect the piece-21 split with a java
-> JigsawPlacement oracle (ProbeCityPieces), then wire placement. City =
-> top 10101 family (~300k cells).
+> children exist. 69253ef: ProbeCityPieces JAVA ORACLE — real vanilla
+> JigsawPlacement, 89/89 pieces order-identical to ref NBT (seed 10101
+> chunk (-14,9)); dumps per-piece template+rotation+BB+RNG-draw-count.
+> MY placer: 22/89 prefix-identical, 151 vs 89 pieces, 23039 draws vs
+> vanilla 16102 (+6937 over-draw) — failed-attempt accounting diverges
+> mid-tree. Util.shuffle micro-test bit-exact vs Java. PLACEMENT
+> UNWIRED (assembly wash). NEXT: per-piece draw delta bisect vs oracle
+> (NEUTRON_CITY_DRAWS + oracle draws= column), fix, wire placement.
+> City = top 10101 family (~300k cells).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
