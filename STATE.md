@@ -2,7 +2,7 @@
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
 > **Updated 6 Sep 2026 (Linux box), session 30. GATE4 baseline (WG-frozen
 > fix 36427c5): 30-seed ratchet — mean 99.3165%, 12/30 ≥99.5%, 26/30 ≥99.0%.
-> 8 Sep s31-s32. s31 561360b (PUSHED? no — github unreachable 3×; retry):
+> 8 Sep s31-s32. s31 561360b + s32 89b851b PUSHED (network recovered):
 > infested variants ALIASED to host blocks → ore_infested wrote stone
 > over stone. 7 Infested* BlockIds 246-252 + protocol ids. 10101:
 > 99.0158% → 99.0368% (−10,895; family 10,328 → 96). Ratchet 424242 +418,
