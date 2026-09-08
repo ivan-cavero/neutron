@@ -201,6 +201,17 @@ root cause of the lush_caves_clay divergence.
    jitter consistent with vanilla's 0.85% race floor. The 95.9% ceiling
    is the practical limit of deterministic ordering; advancing the desync
    lever requires a completion-order tracer (javaagent).
+   DRIPSTONE STREAM DIFF OPENED (d56b893, 8 Sep s31): seed 10000 chunk
+   (-14,-7) origin (-224,-112) — dripstone_cluster draw COUNTS match
+   exactly (vanilla GIFDRAW 151 == neutron 151), gif mapping pinned
+   (index 4), seeding path re-verified vs ChunkGenerator.java — yet the
+   first-attempt POSITIONS differ (vanilla origin+(2,5) vs neutron
+   (-218,23,-100) = origin+(6,12)). Same count, different values: the
+   divergence is inside the feature's draw VALUES (or the GIFDRAW list
+   interleaves the count/height draws differently than assumed — the
+   first draws don't fit the in_square pattern). NEUTRON_ICE_LOG now
+   dumps attempt positions + draw counts; next step is decoding the
+   vanilla draw list against neutron's per-attempt values.
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
