@@ -253,3 +253,23 @@ fn rng_trace_enabled() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("NEUTRON_RNG_TRACE").is_some())
 }
+
+#[cfg(test)]
+mod deco_seed_tests {
+    use super::*;
+
+    /// Two-sided check vs ProbeDecoSeed (real 26.2 jar), seed 10000,
+    /// chunk (-14,-7): decorationSeed = -7619487885928149280; feature
+    /// (index 4, step 7) first draws: nextInt(49)=2, then 5, 14, 22.
+    #[test]
+    fn decoration_seed_matches_vanilla() {
+        let mut r = FeatureRandom::new(10000);
+        let deco = r.set_decoration_seed(10000, -14 * 16, -7 * 16);
+        assert_eq!(deco, -7619487885928149280, "decorationSeed");
+        r.set_feature_seed(deco, 4, 7);
+        assert_eq!(r.next_int(49), 2, "count raw");
+        assert_eq!(r.next_int(16), 5, "x");
+        assert_eq!(r.next_int(16), 14, "z");
+        assert_eq!(r.next_int(257), 22, "y");
+    }
+}

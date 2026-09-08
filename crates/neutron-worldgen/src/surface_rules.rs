@@ -1047,3 +1047,117 @@ mod dripstone_trace {
         let _ = gen.generate_chunk(-14, -7);
     }
 }
+
+#[cfg(test)]
+mod dripstone_gate {
+    /// Seed 10000 origin (-224,-112): vanilla's dripstone_cluster first attempt
+    /// (count raw 2 → count 50) at (-219, 1, -98) PASSES the biome gate
+    /// (dripstone_caves). Neutron must agree.
+    #[test]
+    #[ignore = "diagnostic: prints neutron biome ids at vanilla's first dripstone attempts"]
+    fn dripstone10000_gate_biomes() {
+        let gen = crate::ChunkGenerator::new(10000);
+        // vanilla attempts: (x,z,y) triples from GIFDRAW: (5,14,1),(11,13,202),(6,5,18)...
+        let cells: [(i32, i32, i32); 6] = [
+            (-224 + 5, 1, -112 + 14),
+            (-224 + 11, 202, -112 + 13),
+            (-224 + 6, 18, -112 + 5),
+            (-224 + 10, 43, -112 + 8),
+            (-224 + 0, 242, -112 + 0),
+            (-224 + 9, 105, -112 + 2),
+        ];
+        for (x, y, z) in cells {
+            let b = crate::biome::manager::biome_id_at_block(&gen.state, x, y, z);
+            println!("GATE ({x},{y},{z}) id={b} ({})", if b == 35 { "dripstone_caves" } else { "?" });
+        }
+    }
+}
+
+#[cfg(test)]
+mod dripstone_noise_gate {
+    /// Seed 10000 origin (-224,-112): the vanilla biome-gate reads the chunk's
+    /// STORED section biomes (noise biomes at quart resolution — filled by
+    /// MultiNoiseBiomeSource during noise gen, no voronoi zoom). Neutron's
+    /// gate must use noise_biome_at_quart, not biome_id_at_block (voronoi).
+    #[test]
+    #[ignore = "diagnostic: prints noise-biome vs voronoi at vanilla's dripstone gate cells"]
+    fn dripstone10000_noise_vs_voronoi() {
+        let gen = crate::ChunkGenerator::new(10000);
+        let cells: [(i32, i32, i32); 3] = [
+            (-219, 1, -98),
+            (-213, 202, -99),
+            (-218, 18, -107),
+        ];
+        for (x, y, z) in cells {
+            let noise = crate::biome::manager::noise_biome_at_quart(
+                &gen.state, x >> 2, y >> 2, z >> 2,
+            );
+            let vor = crate::biome::manager::biome_id_at_block(&gen.state, x, y, z);
+            println!(
+                "CELL ({x},{y},{z}) noise_biome={noise} voronoi={vor}"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod dripstone_ref_biome {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    /// Read the REF world's STORED biome palette around y=1 for chunk
+    /// (-14,-7) seed 10000.
+    #[test]
+    #[ignore = "diagnostic: dumps the ref chunk's stored biomes near the dripstone gate cell"]
+    fn dripstone10000_ref_stored_biome() {
+        use neutron_world::Region;
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10000/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, -7);
+        let region = match Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+        {
+            Ok(r) => r.with_coords(cx >> 5, cz >> 5),
+            Err(e) => panic!("region open failed: {e:?}"),
+        };
+        let raw = region
+            .get_chunk(cx & 31, cz & 31)
+            .expect("chunk")
+            .expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections"),
+        };
+        for sec in sections {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                Some(Tag::Int(y)) => *y,
+                _ => continue,
+            };
+            if y_sec != 4 {
+                continue;
+            }
+            let Some(Tag::Compound(bs)) = compound_get(sec, "biomes") else {
+                println!("SECTION Y=4 has NO biomes");
+                continue;
+            };
+            match compound_get(bs, "palette") {
+                Some(Tag::List(List::String(p))) => {
+                    println!("SECTION Y=4 biome palette: {:?}", p)
+                }
+                _ => println!("SECTION Y=4 biome palette: (unexpected tag)"),
+            }
+            if let Some(Tag::List(data)) = compound_get(bs, "data") {
+                let n = match data {
+                    List::Long(l) => l.len(),
+                    _ => 0,
+                };
+                println!("SECTION Y=4 biome data: {n} longs");
+            } else {
+                println!("SECTION Y=4 biome data: none");
+            }
+        }
+    }
+}
+
+
+

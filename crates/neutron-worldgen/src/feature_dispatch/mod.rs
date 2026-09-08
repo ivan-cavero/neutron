@@ -595,8 +595,8 @@ impl<'a> PlacePipeline<'a> {
 
     fn place_one(&mut self, x: i32, y: i32, z: i32) {
         let ice_log = std::env::var_os("NEUTRON_ICE_LOG").is_some()
-            && self.placed_id.contains("dripstone")
-            && *self.draw_no < 6;
+            && self.placed_id.contains("dripstone_cluster")
+            && self.rng.draw_count() < 60;
         if ice_log {
             eprintln!("[attempt] {placed} ({x},{y},{z})", placed = self.placed_id, x = x, y = y, z = z);
         }
