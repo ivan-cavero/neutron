@@ -59,8 +59,10 @@ pub(crate) struct Tpl {
     /// (nbt_index, x, y, z, pal) — nbt_index = position in the
     /// template `blocks` array (vanilla `StructureTemplate` visit order).
     pub(crate) cells: &'static [(u16, i32, i32, i32, u16)],
-    /// block-entity cells: (nbt_index,x,y,z,pal,nbt-id,jigsaw final_state).
-    pub(crate) marked: &'static [(u16, i32, i32, i32, u16, &'static str, &'static str)],
+    /// block-entity cells: (nbt_index,x,y,z,pal,id,final_state,
+    /// jigsaw_name,jigsaw_pool,jigsaw_priority,jigsaw_joint).
+    pub(crate) marked: &'static [(u16, i32, i32, i32, u16, &'static str, &'static str,
+        &'static str, &'static str, i32, &'static str, &'static str)],
 }
 
 /// giant_portal_1 (template coords, NBT block order)
@@ -2465,7 +2467,7 @@ pub(crate) static GIANT_PORTAL_1: Tpl = Tpl { size: [11, 17, 16], cells: &[
 (2396,9,16,12,6),
 (2397,9,16,13,6),
 (2398,9,16,14,6)
-], marked: &[(2399,4,3,3,20,"minecraft:chest","")] };
+], marked: &[(2399,4,3,3,20,"minecraft:chest","","","",0,"","")] };
 
 /// giant_portal_2 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -4735,7 +4737,7 @@ pub(crate) static GIANT_PORTAL_2: Tpl = Tpl { size: [11, 16, 16], cells: &[
 (2262,8,15,11,6),
 (2263,9,15,5,6),
 (2264,9,15,10,6)
-], marked: &[(2265,9,1,9,24,"minecraft:chest","")] };
+], marked: &[(2265,9,1,9,24,"minecraft:chest","","","",0,"","")] };
 
 /// giant_portal_3 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -8172,7 +8174,7 @@ pub(crate) static GIANT_PORTAL_3: Tpl = Tpl { size: [16, 16, 16], cells: &[
 (3429,14,15,13,6),
 (3430,14,15,14,6),
 (3431,15,15,9,6)
-], marked: &[(3432,9,2,3,28,"minecraft:chest","")] };
+], marked: &[(3432,9,2,3,28,"minecraft:chest","","","",0,"","")] };
 
 /// portal_1 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -8479,7 +8481,7 @@ pub(crate) static PORTAL_1: Tpl = Tpl { size: [6, 10, 6], cells: &[
 (299,3,9,4,6),
 (300,4,9,2,6),
 (301,4,9,3,6)
-], marked: &[(302,2,0,2,36,"minecraft:jigsaw","minecraft:netherrack"), (303,2,2,0,20,"minecraft:chest","")] };
+], marked: &[(302,2,0,2,36,"minecraft:jigsaw","minecraft:netherrack","minecraft:empty","minecraft:empty",0,"aligned","minecraft:empty"), (303,2,2,0,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_10 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -9363,7 +9365,7 @@ pub(crate) static PORTAL_10: Tpl = Tpl { size: [12, 8, 10], cells: &[
 (876,10,7,5,6),
 (877,10,7,6,6),
 (878,10,7,7,6)
-], marked: &[(879,2,1,7,20,"minecraft:chest","")] };
+], marked: &[(879,2,1,7,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_2 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -10116,7 +10118,7 @@ pub(crate) static PORTAL_2: Tpl = Tpl { size: [9, 12, 9], cells: &[
 (745,7,11,4,6),
 (746,7,11,5,6),
 (747,7,11,6,6)
-], marked: &[(748,4,0,4,36,"minecraft:jigsaw","minecraft:netherrack"), (749,8,2,6,24,"minecraft:chest","")] };
+], marked: &[(748,4,0,4,36,"minecraft:jigsaw","minecraft:netherrack","minecraft:empty","minecraft:empty",0,"aligned","minecraft:empty"), (749,8,2,6,24,"minecraft:chest","","","",0,"","")] };
 
 /// portal_3 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -10673,7 +10675,7 @@ pub(crate) static PORTAL_3: Tpl = Tpl { size: [8, 9, 9], cells: &[
 (549,6,8,3,6),
 (550,6,8,4,6),
 (551,6,8,5,6)
-], marked: &[(552,3,0,4,36,"minecraft:jigsaw","minecraft:air"), (553,3,3,6,20,"minecraft:chest","")] };
+], marked: &[(552,3,0,4,36,"minecraft:jigsaw","minecraft:air","minecraft:empty","minecraft:empty",0,"aligned","minecraft:empty"), (553,3,3,6,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_4 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -11176,7 +11178,7 @@ pub(crate) static PORTAL_4: Tpl = Tpl { size: [8, 9, 9], cells: &[
 (495,6,8,4,6),
 (496,6,8,5,6),
 (497,6,8,6,6)
-], marked: &[(498,3,0,4,36,"minecraft:jigsaw","minecraft:netherrack"), (499,3,3,2,20,"minecraft:chest","")] };
+], marked: &[(498,3,0,4,36,"minecraft:jigsaw","minecraft:netherrack","minecraft:empty","minecraft:empty",0,"aligned","minecraft:empty"), (499,3,3,2,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_5 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -11780,7 +11782,7 @@ pub(crate) static PORTAL_5: Tpl = Tpl { size: [10, 10, 7], cells: &[
 (596,8,9,4,6),
 (597,9,9,2,6),
 (598,9,9,3,6)
-], marked: &[(599,4,0,3,36,"minecraft:jigsaw","minecraft:netherrack"), (600,4,3,2,28,"minecraft:chest","")] };
+], marked: &[(599,4,0,3,36,"minecraft:jigsaw","minecraft:netherrack","minecraft:empty","minecraft:empty",0,"aligned","minecraft:empty"), (600,4,3,2,28,"minecraft:chest","","","",0,"","")] };
 
 /// portal_6 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -11996,7 +11998,7 @@ pub(crate) static PORTAL_6: Tpl = Tpl { size: [5, 7, 7], cells: &[
 (208,4,6,2,6),
 (209,4,6,3,6),
 (210,4,6,4,6)
-], marked: &[(211,1,1,4,20,"minecraft:chest","")] };
+], marked: &[(211,1,1,4,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_7 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -12510,7 +12512,7 @@ pub(crate) static PORTAL_7: Tpl = Tpl { size: [9, 7, 9], cells: &[
 (506,8,6,3,6),
 (507,8,6,4,6),
 (508,8,6,5,6)
-], marked: &[(509,0,1,2,20,"minecraft:chest","")] };
+], marked: &[(509,0,1,2,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_8 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -13568,7 +13570,7 @@ pub(crate) static PORTAL_8: Tpl = Tpl { size: [14, 9, 9], cells: &[
 (1050,13,8,6,6),
 (1051,13,8,7,6),
 (1052,13,8,8,6)
-], marked: &[(1053,4,4,2,20,"minecraft:chest","")] };
+], marked: &[(1053,4,4,2,20,"minecraft:chest","","","",0,"","")] };
 
 /// portal_9 (template coords, NBT block order)
 #[rustfmt::skip]
@@ -14212,5 +14214,27 @@ pub(crate) static PORTAL_9: Tpl = Tpl { size: [10, 8, 9], cells: &[
 (636,8,7,6,6),
 (637,8,7,7,6),
 (638,9,7,5,6)
-], marked: &[(639,4,1,0,20,"minecraft:chest","")] };
+], marked: &[(639,4,1,0,20,"minecraft:chest","","","",0,"","")] };
 
+
+/// Resolve a template const by its pool-JSON location suffix
+/// (e.g. `CITY_CENTER_CITY_CENTER_1`). Missing-on-disk templates
+/// (vanilla data references one) resolve to `None`.
+pub(crate) fn tpl_by_name(name: &str) -> Option<&'static Tpl> {
+    match name {
+        "GIANT_PORTAL_1" => Some(&GIANT_PORTAL_1),
+        "GIANT_PORTAL_2" => Some(&GIANT_PORTAL_2),
+        "GIANT_PORTAL_3" => Some(&GIANT_PORTAL_3),
+        "PORTAL_1" => Some(&PORTAL_1),
+        "PORTAL_10" => Some(&PORTAL_10),
+        "PORTAL_2" => Some(&PORTAL_2),
+        "PORTAL_3" => Some(&PORTAL_3),
+        "PORTAL_4" => Some(&PORTAL_4),
+        "PORTAL_5" => Some(&PORTAL_5),
+        "PORTAL_6" => Some(&PORTAL_6),
+        "PORTAL_7" => Some(&PORTAL_7),
+        "PORTAL_8" => Some(&PORTAL_8),
+        "PORTAL_9" => Some(&PORTAL_9),
+        _ => None,
+    }
+}

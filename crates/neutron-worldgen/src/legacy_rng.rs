@@ -33,7 +33,8 @@ impl LegacyRandom {
         loop {
             let bits = self.next(31);
             let val = bits % bound;
-            if bits - val + (bound - 1) >= 0 {
+            // Java int overflow wraps (defined); replicate with wrapping ops.
+            if bits.wrapping_sub(val).wrapping_add(bound - 1) >= 0 {
                 return val;
             }
         }

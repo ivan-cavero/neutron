@@ -1228,3 +1228,60 @@ mod mineshaft_ref_10101 {
         assert!(all.contains("ancient_city"));
     }
 }
+
+#[cfg(test)]
+mod city_ref_10101 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Seed 10101 chunk (-14,9): dump the ref's ancient_city start: BB,
+    /// Children piece ids + BBs — the assembly ground truth for the port.
+    #[test]
+    #[ignore = "diagnostic: dumps ref ancient_city pieces for seed 10101 chunk (-14,9)"]
+    fn city10101_ref_pieces() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, 9);
+        let region = match Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+        {
+            Ok(r) => r.with_coords(cx >> 5, cz >> 5),
+            Err(e) => panic!("region open failed: {e:?}"),
+        };
+        let raw = region
+            .get_chunk(cx & 31, cz & 31)
+            .expect("chunk")
+            .expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let Tag::Compound(st) = compound_get(&nbt.compound, "structures").unwrap() else {
+            panic!("no structures");
+        };
+        let Tag::Compound(starts) = compound_get(st, "starts").unwrap() else {
+            panic!("no starts");
+        };
+        let mut found = false;
+        for (name, tag) in &starts.tags {
+            if name.to_string() != "minecraft:ancient_city" {
+                continue;
+            }
+            found = true;
+            let Tag::Compound(start) = tag else { continue };
+            let bb = compound_get(start, "BB");
+            let Tag::List(List::Compound(children)) =
+                compound_get(start, "Children").expect("children")
+            else {
+                panic!("children not compound list");
+            };
+            let mut out = format!("CITY-PIECES {}\nBB={bb:?}\n", children.len());
+            for (i, ch) in children.iter().enumerate() {
+                let id = compound_get(ch, "id");
+                let bb = compound_get(ch, "BB");
+                let pos = compound_get(ch, "Pos");
+                out.push_str(&format!("[{i}] id={id:?} bb={bb:?}\n"));
+                let _ = pos;
+            }
+            panic!("CITY-DUMP {out}");
+        }
+        assert!(found, "no ancient_city start in chunk");
+    }
+}

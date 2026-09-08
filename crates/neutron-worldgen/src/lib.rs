@@ -28,6 +28,7 @@ pub mod fossil_structures;
 pub mod features;
 pub mod generator;
 pub mod legacy_rng;
+pub mod ancient_city;
 pub mod mineshaft;
 pub mod multiface_spreader;
 pub mod noise;

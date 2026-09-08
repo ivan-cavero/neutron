@@ -825,12 +825,12 @@ fn apply_age(cur: BlockId, mossiness: f32, x: i32, y: i32, z: i32) -> Option<Blo
 /// Merged NBT-order iteration over template cells + marked cells.
 enum Step<'a> {
     Plain(&'a (u16, i32, i32, i32, u16)),
-    Marked(&'a (u16, i32, i32, i32, u16, &'static str, &'static str)),
+    Marked(&'a (u16, i32, i32, i32, u16, &'static str, &'static str, &'static str, &'static str, i32, &'static str, &'static str)),
 }
 
 struct MergedIter<'a> {
     cells: &'a [(u16, i32, i32, i32, u16)],
-    marked: &'a [(u16, i32, i32, i32, u16, &'static str, &'static str)],
+    marked: &'a [(u16, i32, i32, i32, u16, &'static str, &'static str, &'static str, &'static str, i32, &'static str, &'static str)],
     ci: usize,
     mi: usize,
 }
@@ -894,7 +894,7 @@ pub(crate) fn place_complex_idx(region: &mut RegionBuf, state: &WorldgenState, p
     for step in MergedIter::new(plan.tpl) {
         let (lx, ly, lz, pal, marked_id, final_state) = match step {
             Step::Plain((_, x, y, z, p)) => (*x, *y, *z, *p, "", ""),
-            Step::Marked((_, x, y, z, p, id, fs)) => (*x, *y, *z, *p, *id, *fs),
+            Step::Marked((_, x, y, z, p, id, fs, ..)) => (*x, *y, *z, *p, *id, *fs),
         };
         let (tx, tz) = transform(lx, lz, plan.mirrored, plan.rot, plan.pivot.0, plan.pivot.1);
         let wx = plan.base_x + tx;
