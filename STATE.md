@@ -2,7 +2,16 @@
 > Facts only. History: `runs/` (archive). Method: `AGENTS.md` v2.
 > **Updated 6 Sep 2026 (Linux box), session 30. GATE4 baseline (WG-frozen
 > fix 36427c5): 30-seed ratchet — mean 99.3165%, 12/30 ≥99.5%, 26/30 ≥99.0%.
-> S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%, −294k cells):
+> 8 Sep s31 (561360b, PUSH PENDING — github.com unreachable twice, retry
+> next iteration): infested variants were ALIASED to host blocks
+> (infested_stone→Stone), so ore_infested wrote stone over stone. Added
+> 7 real Infested* BlockIds 246-252 + protocol ids. 10101: 99.0158% →
+> 99.0368% (−10,895; infested family 10,328 → 96). Ratchet: 424242 +418,
+> 12345 +109, 777 bit-identical. ANCIENT CITY FOUND as the top 10101
+> family: 244k air->deepslate at y -56..-16 = unported ancient_city at
+> ref chunk (-14,9) (carvers bit-exact 63/63, mineshaft starts 3/3+3/3,
+> density solid both sides — the city is the only missing mechanism).
+> Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
 > shortcut — vanilla SurfaceSystem has no shortcut: context.biome is
