@@ -210,8 +210,18 @@ root cause of the lush_caves_clay divergence.
    divergence is inside the feature's draw VALUES (or the GIFDRAW list
    interleaves the count/height draws differently than assumed — the
    first draws don't fit the in_square pattern). NEUTRON_ICE_LOG now
-   dumps attempt positions + draw counts; next step is decoding the
-   vanilla draw list against neutron's per-attempt values.
+   dumps attempt positions + draw counts; DECODED (945da54, 8 Sep s31):
+   vanilla GIFDRAW values are RAW nextInt results — [2,5,14,...] = count
+   raw 2 (uniform 48..96 -> 50 attempts) + per attempt (x,z,y). Neutron
+   consumes IDENTICAL 151 draws for the same origin (stream aligned
+   draw-for-draw; decorationSeed + feature(4,7) first draws pinned in
+   feature_rng.rs test vs ProbeDecoSeed). The ref's STORED section
+   biomes at the attempt cells are [forest, plains] — no dripstone_caves
+   — so vanilla's BiomeFilter REJECTS all 50 attempts at this origin,
+   same as neutron. The ref's dripstone here is spill-in from NEIGHBOR
+   origins; the symmetric displacement is the stored-biome border
+   cascade (same family as the S30 per-block finding). No feature bug;
+   dripstone ~540k cells across 6 seeds joins the cascade total.
 1. **PER-BLOCK BIOME FIX LANDED (6 Sep s30, commit 55b0f5f)** — root cause
    of the 777 sulfur-family gap. apply_surface_rules cached the cave-biome
    sample every 8 blocks; vanilla evaluates BiomeManager.getBiome per
