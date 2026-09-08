@@ -1277,7 +1277,16 @@ mod city_ref_10101 {
                 let id = compound_get(ch, "id");
                 let bb = compound_get(ch, "BB");
                 let pos = compound_get(ch, "Pos");
-                out.push_str(&format!("[{i}] id={id:?} bb={bb:?}\n"));
+                let mut extra = String::new();
+                if let Some(Tag::IntArray(b)) = bb {
+                    let v = b.to_vec();
+                    if v.len() == 6 && v[0] == v[3] && v[1] == v[4] && v[2] == v[5] {
+                        for (k, val) in &ch.tags {
+                            extra.push_str(&format!(" {k}={val:?}"));
+                        }
+                    }
+                }
+                out.push_str(&format!("[{i}] id={id:?} bb={bb:?}{extra}\n"));
                 let _ = pos;
             }
             panic!("CITY-DUMP {out}");

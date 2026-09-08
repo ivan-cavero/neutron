@@ -492,7 +492,11 @@ impl<'r> Assembler<'r> {
             let mut idx = 1;
             while idx < asm.pieces.len() {
                 let p = asm.pieces[idx].clone();
-                asm.try_placing_children(&p, p.depth, &mut branch);
+                // vanilla pushes a PieceState only when depth + 1 <= maxDepth;
+                // deeper pieces are never expanded.
+                if p.depth <= MAX_DEPTH {
+                    asm.try_placing_children(&p, p.depth, &mut branch);
+                }
                 idx += 1;
             }
         }
@@ -510,10 +514,32 @@ impl<'r> Assembler<'r> {
             None => return,
         };
         let source_box_y = source.bb.min_y;
-        let mut source_free: Vec<Bb> = Vec::new();
+        // vanilla: `if (sourceFree.get() == null) sourceFree.setValue(
+        // Shapes.create(AABB.of(sourceBB)))` — the inside-source branch shape
+        // starts as the FULL source box (not carved).
+        let mut source_free: Vec<Bb> = vec![source.bb];
         let mut source_jigsaws = world_jigsaws(source_tpl, source.position, source.rot);
         shuffle(&mut source_jigsaws, self.rng);
 
+        let trace = std::env::var_os("NEUTRON_CITY_TRACE2").is_some()
+            && (8..140).contains(&self.pieces.len());
+        if trace {
+            eprintln!(
+                "EXPAND piece#{} {} bb=({},{},{}) jigsaws={}",
+                self.pieces.len(),
+                source.tpl_name,
+                source.bb.min_x,
+                source.bb.min_y,
+                source.bb.min_z,
+                source_jigsaws.len()
+            );
+            for (i, j) in source_jigsaws.iter().enumerate() {
+                eprintln!(
+                    "  SRC-JIG[{}] pos=({},{},{}) front={:?} pool={} name={} target={}",
+                    i, j.pos.0, j.pos.1, j.pos.2, j.front, j.pool, j.name, j.target
+                );
+            }
+        }
         'sources: for source_jigsaw in &source_jigsaws {
             let (sjx, sjy, sjz) = source_jigsaw.pos;
             let target_jigsaw_pos = source_jigsaw.front.offset(sjx, sjy, sjz);
@@ -549,7 +575,11 @@ impl<'r> Assembler<'r> {
                 if target_elem.single == Some("") && !target_elem.feature {
                     break; // EmptyPoolElement.INSTANCE → break
                 }
-                for target_rot in shuffled_rots(self.rng) {
+                for (rot_i, target_rot) in shuffled_rots(self.rng).into_iter().enumerate() {
+                    let _ = rot_i;
+                    if trace && target_elem.feature {
+                        eprintln!("    FEAT-ELEM rot={target_rot:?} src_target={}", source_jigsaw.target);
+                    }
                     // list_pool_element: children templates tried IN ORDER at
                     // the same position (vanilla ListPoolElement: each child
                     // is placed stacked at same pos — getShuffledJigsawBlocks
@@ -579,7 +609,31 @@ impl<'r> Assembler<'r> {
                         });
                     }
                     let mut all_jigsaws: Vec<Jigsaw> = Vec::new();
-                    if let Some(first) = child_names.first() {
+                    if target_elem.feature {
+                        // FeaturePoolElement: NO RNG — one jigsaw at the
+                        // position (orientation DOWN/SOUTH, name/pool/target
+                        // all "minecraft:empty"), BB = Vec3i.ZERO → 1×1×1.
+                        all_jigsaws.push(Jigsaw {
+                            pos: (0, 0, 0),
+                            // FrontAndTop.fromFrontAndTop(DOWN, SOUTH)
+                            front: Dir::Down,
+                            top: Dir::South,
+                            // DEFAULT_JIGSAW_NAME = "minecraft:bottom"
+                            name: "minecraft:bottom",
+                            target: "minecraft:empty",
+                            pool: "minecraft:empty",
+                            joint_rollable: true,
+                        });
+                        // degenerate single-block BB at origin: minY = maxY = 0
+                        union_bb = Some(Bb {
+                            min_x: 0,
+                            max_x: 0,
+                            min_y: 0,
+                            max_y: 0,
+                            min_z: 0,
+                            max_z: 0,
+                        });
+                    } else if let Some(first) = child_names.first() {
                         if let Some(t) = tpl_by_name(first) {
                             let mut tj = world_jigsaws(t, (0, 0, 0), target_rot);
                             // getShuffledJigsawBlocks shuffles per (element,
@@ -588,11 +642,28 @@ impl<'r> Assembler<'r> {
                             all_jigsaws.extend(tj);
                         }
                     }
-                    let Some(raw_bb) = union_bb else { continue };
+                    let Some(raw_bb) = union_bb else {
+                        if trace {
+                            eprintln!("    ELEM {} NO-BB", child_names.first().unwrap_or(&""));
+                        }
+                        continue;
+                    };
                     let hack_box_y_span = raw_bb.max_y - raw_bb.min_y + 1;
                     let _ = hack_box_y_span; // doExpansionHack=false for city
 
                     for target_jigsaw in &all_jigsaws {
+                        if trace && target_elem.feature {
+                            eprintln!(
+                                "    FEAT-CAN src_front={:?} tgt_front={:?} src_tgt={} tgt_name={} rollable={} src_top={:?} tgt_top={:?}",
+                                source_jigsaw.front,
+                                target_jigsaw.front,
+                                source_jigsaw.target,
+                                target_jigsaw.name,
+                                source_jigsaw.joint_rollable,
+                                source_jigsaw.top,
+                                target_jigsaw.top
+                            );
+                        }
                         if !can_attach(source_jigsaw, target_jigsaw) {
                             continue;
                         }
@@ -631,7 +702,18 @@ impl<'r> Assembler<'r> {
                         } else {
                             branch_free
                         };
-                        if !free.iter().any(|b| target_bb.intersects_shrunk(b)) {
+                        let free_hit = free.iter().any(|b| target_bb.intersects_shrunk(b));
+                        if trace && target_elem.feature {
+                            eprintln!(
+                                "    FEAT-FREE hit={} bb=({},{},{}) free_boxes={}",
+                                free_hit,
+                                target_bb.min_x,
+                                target_bb.min_y,
+                                target_bb.min_z,
+                                free.len()
+                            );
+                        }
+                        if !free_hit {
                             continue; // no free-space contact → vanilla skips
                         }
                         let mut next: Vec<Bb> = Vec::new();
