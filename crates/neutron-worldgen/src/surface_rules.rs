@@ -1033,3 +1033,17 @@ mod tests {
         assert_eq!(a.as_slice(), &[1.0, 0.0, 1.0]);
     }
 }
+
+#[cfg(test)]
+mod dripstone_trace {
+    /// 10000 dripstone stream probe: chunk (-14,-7) — dumps neutron's
+    /// dripstone_cluster/pointed_dripstone attempt draw counts for
+    /// comparison against vanilla GIFDRAW (ProbeFullDecorate
+    /// PROBE_DRAW_ALL=1, step 7, gif=4).
+    #[test]
+    #[ignore = "diagnostic: traces neutron dripstone draws for chunk (-14,-7) seed 10000"]
+    fn dripstone10000_trace() {
+        let gen = crate::ChunkGenerator::new(10000);
+        let _ = gen.generate_chunk(-14, -7);
+    }
+}

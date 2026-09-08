@@ -278,15 +278,16 @@ pub(crate) fn place_placed_feature_step(
     placed_id: &str,
     gen_step: i32,
 ) {
-    if std::env::var_os("NEUTRON_ICE_LOG").is_some() && placed_id.contains("dripstone") {
-        eprintln!("[step7] {placed_id} step={gen_step} origin=({origin_min_x},{origin_min_z})");
-    }
     let Some(placed) = feature_catalog::load_placed_feature(placed_id) else {
         return;
     };
+    let ice_log = std::env::var_os("NEUTRON_ICE_LOG").is_some()
+        && placed_id.contains("dripstone");
+    if ice_log {
+        rng.reset_draw_count();
+        eprintln!("[step7] {placed_id} step={gen_step} origin=({origin_min_x},{origin_min_z})");
+    }
     let feature_ref = placed["feature"].as_str().map(|s| s.to_string());
-
-    // PlacedFeature.placeWithContext is a lazy stream: Count → InSquare →
     // filters → Feature.place. Each surviving position is placed *before*
     // the next InSquare nextInt (TreeFeature consumes a lot of RNG).
     // Collecting all xz first then placing desyncs every attempt after the first.
@@ -357,6 +358,12 @@ pub(crate) fn place_placed_feature_step(
     };
     // The stream starts as a single position at the origin, then modifiers run.
     ctx.run_modifiers(&mods[..], origin_min_x, origin_min_z, 0, false, false);
+    if std::env::var_os("NEUTRON_ICE_LOG").is_some() && placed_id.contains("dripstone") {
+        eprintln!(
+            "[step7-draws] {placed_id} origin=({origin_min_x},{origin_min_z}) draws={}",
+            rng.draw_count()
+        );
+    }
 }
 
 struct PlacePipeline<'a> {
@@ -587,6 +594,12 @@ impl<'a> PlacePipeline<'a> {
     }
 
     fn place_one(&mut self, x: i32, y: i32, z: i32) {
+        let ice_log = std::env::var_os("NEUTRON_ICE_LOG").is_some()
+            && self.placed_id.contains("dripstone")
+            && *self.draw_no < 6;
+        if ice_log {
+            eprintln!("[attempt] {placed} ({x},{y},{z})", placed = self.placed_id, x = x, y = y, z = z);
+        }
         let mut tree_placed = false;
         static SKIP_TREE_DRAWS: std::sync::OnceLock<Option<i32>> = std::sync::OnceLock::new();
         if let Some(skip) = *SKIP_TREE_DRAWS.get_or_init(|| {
