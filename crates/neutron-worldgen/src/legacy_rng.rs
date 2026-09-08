@@ -7,11 +7,13 @@
 /// 48-bit LCG matching `LegacyRandomSource` / `java.util.Random`.
 pub struct LegacyRandom {
     seed: u64,
+    /// Cumulative low-level `next()` draws (diagnostic parity meter).
+    pub draws: u64,
 }
 
 impl LegacyRandom {
     pub fn new(seed: i64) -> Self {
-        let mut r = Self { seed: 0 };
+        let mut r = Self { seed: 0, draws: 0 };
         r.set_seed(seed);
         r
     }
@@ -21,6 +23,7 @@ impl LegacyRandom {
     }
 
     fn next(&mut self, bits: u32) -> i32 {
+        self.draws += 1;
         self.seed = self.seed.wrapping_mul(0x5DEE_CE66_D).wrapping_add(0xB) & ((1u64 << 48) - 1);
         (self.seed >> (48 - bits)) as i32
     }

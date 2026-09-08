@@ -52,7 +52,11 @@ pub fn is_city_chunk(level_seed: i64, cx: i32, cz: i32) -> bool {
 pub(crate) fn pieces_for(level_seed: i64, cx: i32, cz: i32) -> Option<Vec<jigsaw::Piece>> {
     let mut rng = LegacyRandom::new(0);
     rng.set_large_feature_seed(level_seed, cx, cz);
-    jigsaw::Assembler::assemble(&mut rng, cx * 16, cz * 16)
+    let pieces = jigsaw::Assembler::assemble(&mut rng, cx * 16, cz * 16);
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        eprintln!("NEU-DRAWS total={}", rng.draws);
+    }
+    pieces
 }
 
 /// Place all city pieces intersecting `region`.
@@ -169,21 +173,47 @@ mod parity_10101 {
             max.1 = max.1.max(p.bb.max_y);
             max.2 = max.2.max(p.bb.max_z);
         }
-        let mut out = format!("CITY-ASSEMBLY pieces={}\n", pieces.len());
+        eprintln!("CITY-ASSEMBLY pieces={}", pieces.len());
         for p in &pieces {
-            out.push_str(&format!(
-                "{}, {}, {}, {}, {}, {} | {} {} {:?}\n",
+            let rot = match p.rot {
+                super::jigsaw::Rot::None => "NONE",
+                super::jigsaw::Rot::Cw90 => "CLOCKWISE_90",
+                super::jigsaw::Rot::Cw180 => "CLOCKWISE_180",
+                super::jigsaw::Rot::Ccw90 => "COUNTERCLOCKWISE_90",
+            };
+            eprintln!(
+                "NEU-PIECE {} {} {} {} {} {} {} {}",
+                p.tpl_name,
+                rot,
                 p.bb.min_x,
                 p.bb.min_y,
                 p.bb.min_z,
                 p.bb.max_x,
                 p.bb.max_y,
-                p.bb.max_z,
-                p.tpl_name,
-                p.rot == super::jigsaw::Rot::None,
-                p.position
-            ));
+                p.bb.max_z
+            );
         }
-        panic!("CITY-DUMP {out}");
+        panic!("CITY-DUMP-END");
+    }
+}
+
+#[cfg(test)]
+mod shuffle_micro {
+    use crate::legacy_rng::LegacyRandom;
+
+    /// Java oracle (UtilShuffle, seed -321779700379): SHUFFLED [2,5,0,4,1,3],
+    /// nextInt(16) after = [0,8,15,0,6,13].
+    #[test]
+    fn util_shuffle_matches_java() {
+        let mut rng = LegacyRandom::new(-321779700379);
+        let mut list: Vec<usize> = (0..6).collect();
+        // Util.shuffle: for i in (2..=len).rev() { swap(i-1, nextInt(i)) }
+        for i in (2..=list.len()).rev() {
+            let swap_to = rng.next_int(i as i32) as usize;
+            list.swap(i - 1, swap_to);
+        }
+        assert_eq!(list, vec![2, 5, 0, 4, 1, 3], "shuffle mismatch");
+        let ints: Vec<i32> = (0..6).map(|_| rng.next_int(16)).collect();
+        assert_eq!(ints, vec![0, 8, 15, 0, 6, 13], "nextInt mismatch");
     }
 }

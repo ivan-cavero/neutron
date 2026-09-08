@@ -521,25 +521,6 @@ impl<'r> Assembler<'r> {
         let mut source_jigsaws = world_jigsaws(source_tpl, source.position, source.rot);
         shuffle(&mut source_jigsaws, self.rng);
 
-        let trace = std::env::var_os("NEUTRON_CITY_TRACE2").is_some()
-            && (8..140).contains(&self.pieces.len());
-        if trace {
-            eprintln!(
-                "EXPAND piece#{} {} bb=({},{},{}) jigsaws={}",
-                self.pieces.len(),
-                source.tpl_name,
-                source.bb.min_x,
-                source.bb.min_y,
-                source.bb.min_z,
-                source_jigsaws.len()
-            );
-            for (i, j) in source_jigsaws.iter().enumerate() {
-                eprintln!(
-                    "  SRC-JIG[{}] pos=({},{},{}) front={:?} pool={} name={} target={}",
-                    i, j.pos.0, j.pos.1, j.pos.2, j.front, j.pool, j.name, j.target
-                );
-            }
-        }
         'sources: for source_jigsaw in &source_jigsaws {
             let (sjx, sjy, sjz) = source_jigsaw.pos;
             let target_jigsaw_pos = source_jigsaw.front.offset(sjx, sjy, sjz);
@@ -577,9 +558,6 @@ impl<'r> Assembler<'r> {
                 }
                 for (rot_i, target_rot) in shuffled_rots(self.rng).into_iter().enumerate() {
                     let _ = rot_i;
-                    if trace && target_elem.feature {
-                        eprintln!("    FEAT-ELEM rot={target_rot:?} src_target={}", source_jigsaw.target);
-                    }
                     // list_pool_element: children templates tried IN ORDER at
                     // the same position (vanilla ListPoolElement: each child
                     // is placed stacked at same pos — getShuffledJigsawBlocks
@@ -642,28 +620,11 @@ impl<'r> Assembler<'r> {
                             all_jigsaws.extend(tj);
                         }
                     }
-                    let Some(raw_bb) = union_bb else {
-                        if trace {
-                            eprintln!("    ELEM {} NO-BB", child_names.first().unwrap_or(&""));
-                        }
-                        continue;
-                    };
+                    let Some(raw_bb) = union_bb else { continue; };
                     let hack_box_y_span = raw_bb.max_y - raw_bb.min_y + 1;
                     let _ = hack_box_y_span; // doExpansionHack=false for city
 
                     for target_jigsaw in &all_jigsaws {
-                        if trace && target_elem.feature {
-                            eprintln!(
-                                "    FEAT-CAN src_front={:?} tgt_front={:?} src_tgt={} tgt_name={} rollable={} src_top={:?} tgt_top={:?}",
-                                source_jigsaw.front,
-                                target_jigsaw.front,
-                                source_jigsaw.target,
-                                target_jigsaw.name,
-                                source_jigsaw.joint_rollable,
-                                source_jigsaw.top,
-                                target_jigsaw.top
-                            );
-                        }
                         if !can_attach(source_jigsaw, target_jigsaw) {
                             continue;
                         }
@@ -703,16 +664,6 @@ impl<'r> Assembler<'r> {
                             branch_free
                         };
                         let free_hit = free.iter().any(|b| target_bb.intersects_shrunk(b));
-                        if trace && target_elem.feature {
-                            eprintln!(
-                                "    FEAT-FREE hit={} bb=({},{},{}) free_boxes={}",
-                                free_hit,
-                                target_bb.min_x,
-                                target_bb.min_y,
-                                target_bb.min_z,
-                                free.len()
-                            );
-                        }
                         if !free_hit {
                             continue; // no free-space contact → vanilla skips
                         }
