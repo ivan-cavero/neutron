@@ -10,10 +10,13 @@
 > (JigsawPlacement addPieces: random_spread salt 20083232/24/8 golden vs
 > ref chunk (-14,9); city_anchor adjust; groundLevelDelta 1; FIFO placer;
 > branch free-space AABB carve; ListPoolElement first-child jigsaws).
-> 38/89 pieces exact vs ref, drain diverges at idx 21. PLACEMENT UNWIRED
-> (38/89 nets −33 wash — window 98,972 → 98,939). NEXT: fix drain order
-> (suspects: failed-attach draw accounting / feature-element handling),
-> then wire placement. City = top 10101 family (~300k cells).
+> 7d73cfc: FeaturePoolElement pieces (1×1×1, name=minecraft:bottom, no
+> RNG) + source_free = FULL source box → ref proves 38 degenerate sculk
+> children exist. Assembly 151 vs ref 89, 39/89 BBs exact; divergence
+> cascades from the piece-21 branch split (order). PLACEMENT UNWIRED
+> (38/89 nets −33 wash). NEXT: bisect the piece-21 split with a java
+> JigsawPlacement oracle (ProbeCityPieces), then wire placement. City =
+> top 10101 family (~300k cells).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
