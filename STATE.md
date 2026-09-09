@@ -24,18 +24,23 @@
 > REF HAS NONE — the deep_dark biome gate: my noise-biome lookup at the
 > stub returns deep_dark, vanilla's = dark_forest (ref section palette
 > [dark_forest, deep_dark]; the stub quart cell is dark_forest).
-> WIRING + BEARDIFIER UNWIRED (424242 restored to exactly 98.9475% /
-> 543,187). s36 climate probe (340d630): vanilla TargetPoint at the
-> 424242 stub (-219,-37,144) = t=1217 h=4117 c=1600 e=-1866 d=11053
-> w=-4634 (dark_forest); NEUTRON t=-2611 h=-9 c=2608 e=-3724 d=11778
-> w=4538 (deep_dark) — ALL SIX parameters diverge (not a tie-break): the
-> shifted-noise climate evaluation (temperature/offset-shift noise)
-> differs from vanilla at negative-y cave positions. NEXT: bisect the
-> climate chain per-parameter (probe TargetPoint vs climate_at at a
-> grid; check shift_x/shift_z caches and the offset/temperature perlin
-> instances) — then re-wire city + beardifier. City = top 10101 family
-> (~195k cells left); every other seed with deep_dark cities will also
-> unblock.
+> s37 (abb68f7): ANCIENT CITY + BEARDIFIER WIRED. The s36 "climate
+> divergence" was a TEST BUG — the winner-quart probe compared the 10101
+> state against a 424242 vanilla probe. With the correct state, neutron's
+> climate target matches vanilla bit-for-bit at every probed position
+> (10101 stub = deep_dark; 424242 winner quart = dark_forest).
+> WIRED: isValidBiome gate (8-corner fiddled voronoi, deep_dark) +
+> Beardifier (BEARD_BOX piece boxes, cell-corner interpolated) + assembly
+> cache (the jigsaw expansion repeats per chunk in a ±7 radius; without
+> it the 524-chunk scan exceeds 40 min).
+> Parity 10101: 99.0368% → 99.1410% (+53,878; total −110,402 since the
+> city objective started: infested −10,895, palette+assembly +8,175,
+> beardifier +53,878 net). Ratchet: 424242 +0 BIT-IDENTICAL (gate
+> correctly rejects its potential city at (-13,9)), 777 +0 (no city),
+> 12345 +9,531 (gated city placed — vanilla has one there too).
+> Remaining 10101 gap: 444,157. Top family now air→deepslate 194k (city
+> interiors: junction terms *0.4 missing from the Beardifier) + sculk
+> 23k. NEXT: junction beard contributions; then the 44-seed gate.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
