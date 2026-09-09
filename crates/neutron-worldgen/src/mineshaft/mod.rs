@@ -162,6 +162,29 @@ mod tests {
 mod parity_10101 {
     /// Seed 10101: the ref world has mineshaft starts at chunks (-14,0),
     /// (-2,8) and (12,8), and none at the negative-control chunks.
+    /// The ref's (-14,0) start has 147 children (measured). My generate_start
+    /// must match — the 194k air->deepslate family on 10101 (y -51..-32,
+    /// z 12..95, x -224..-113) is mineshaft corridor air the port misses.
+    #[test]
+    #[ignore = "diagnostic: dump mineshaft piece BBs for the ref diff"]
+    fn mineshaft_piece_dump_10101() {
+        let pieces = super::pieces::generate_start(10101, -14, 0);
+        for (i, p) in pieces.iter().enumerate() {
+            eprintln!(
+                "MS-PIECE {} {:?} {} {} {} {} {} {}",
+                i,
+                p.kind,
+                p.bb.min_x,
+                p.bb.min_y,
+                p.bb.min_z,
+                p.bb.max_x,
+                p.bb.max_y,
+                p.bb.max_z
+            );
+        }
+        panic!("MS-DUMP-DONE");
+    }
+
     #[test]
     fn mineshaft_starts_match_ref_10101() {
         for (cx, cz) in [(-14, 0), (-2, 8), (12, 8)] {

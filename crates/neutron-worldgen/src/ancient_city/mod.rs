@@ -488,6 +488,7 @@ mod shuffle_micro {
 #[cfg(test)]
 mod city_scan_424242 {
     use super::*;
+    use super::*;
 
     /// List city chunks in the 424242 ref range (chunks -11..11).
     #[test]
@@ -502,6 +503,27 @@ mod city_scan_424242 {
             }
         }
         eprintln!("CITY-424242 starts: {hits:?}");
+        panic!("SCAN-DONE");
+    }
+}
+
+#[cfg(test)]
+mod city_scan_10101 {
+    use super::is_city_chunk;
+
+    /// All 10101 city starts within ±20 chunks.
+    #[test]
+    #[ignore = "diagnostic: scan 10101 city starts"]
+    fn city10101_starts() {
+        let mut hits = Vec::new();
+        for cz in -20..=20 {
+            for cx in -20..=20 {
+                if is_city_chunk(10101, cx, cz) {
+                    hits.push((cx, cz));
+                }
+            }
+        }
+        eprintln!("CITY-10101 starts: {hits:?}");
         panic!("SCAN-DONE");
     }
 }

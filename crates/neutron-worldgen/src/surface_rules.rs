@@ -1214,6 +1214,11 @@ mod mineshaft_ref_10101 {
                                     "chunk ({cx},{cz}) ancient_city\n"
                                 ));
                             }
+                            if name.to_string() == "minecraft:trial_chambers" {
+                                all.push_str(&format!(
+                                    "chunk ({cx},{cz}) trial_chambers\n"
+                                ));
+                            }
                         }
                     }
                 }
@@ -1306,6 +1311,15 @@ mod city_gen_10101 {
     fn city10101_gen_pipeline() {
         let gen = ChunkGenerator::new(10101);
         let chunk = gen.generate_chunk(-13, 10);
+        // the ref-air example cell from the ledger
+        eprintln!(
+            "CELL (-202,-51,144) = {:?}",
+            chunk.block_at(((-202) - (-208)) as u32, -51, (144 - 144) as u32)
+        );
+        eprintln!(
+            "CELL (-202,-50,144) = {:?}",
+            chunk.block_at(((-202) - (-208)) as u32, -50, (144 - 144) as u32)
+        );
         // count sculk/deepslate_tiles/chamber-ish blocks in the chunk column
         let mut counts = std::collections::HashMap::new();
         for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
@@ -1367,6 +1381,12 @@ mod city_ref_424242 {
                             if name.to_string() == "minecraft:ancient_city" {
                                 out.push_str(&format!("chunk ({cx},{cz}) ancient_city\n"));
                             }
+                            if name.to_string() == "minecraft:trial_chambers" {
+                                out.push_str(&format!("chunk ({cx},{cz}) trial_chambers\n"));
+                            }
+                            if name.to_string() == "minecraft:mineshaft" {
+                                out.push_str(&format!("chunk ({cx},{cz}) mineshaft\n"));
+                            }
                         }
                     }
                 }
@@ -1418,5 +1438,194 @@ mod city_biome_424242 {
             }
         }
         panic!("BIOME-DONE");
+    }
+}
+
+#[cfg(test)]
+mod carve_trace_10101 {
+    use crate::generator::ChunkGenerator;
+
+    /// Seed 10101 chunk (-14,2): trace neutron's carver starts (the ref-air
+    /// cells at z 12..64 need vanilla carvers my pass may miss).
+    #[test]
+    #[ignore = "diagnostic: runs neutron carvers for chunk (-14,2) seed 10101 with trace"]
+    fn carve10101_trace() {
+        let gen = ChunkGenerator::new(10101);
+        let _ = gen.generate_chunk(-14, 2);
+        panic!("TRACE-DONE");
+    }
+}
+
+#[cfg(test)]
+mod ref_block_10101 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Read the 10101 ref chunk (-14,2) blocks at (-224..-222,-51,32).
+    #[test]
+    #[ignore = "diagnostic: ref blocks at (-224..-222,-51,32)"]
+    fn ref_block_10101_cell() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, 2);
+        let region = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+            .expect("region")
+            .with_coords(cx >> 5, cz >> 5);
+        let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections"),
+        };
+        for sec in sections {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                Some(Tag::Int(y)) => *y,
+                _ => continue,
+            };
+            // y -51 → section -4 (y -64..-49), local y = -51 - (-64) = 13
+            if y_sec != -4 {
+                continue;
+            }
+            let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else {
+                println!("SEC-4 no block_states");
+                continue;
+            };
+            let palette = match compound_get(bs, "palette") {
+                Some(Tag::List(List::Compound(p))) => p
+                    .iter()
+                    .map(|e| {
+                        match compound_get(e, "Name") {
+                            Some(Tag::String(n)) => n.to_string(),
+                            _ => "?".to_string(),
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+                _ => Vec::new(),
+            };
+            println!("SEC-4 palette size {}", palette.len());
+            // decode data (packed longs) for index (5, 13, 15): index = y*256 + z*16 + x
+            // section Y=-4 → y -64..-49; local y = -51 + 64 = 13
+            // cells (-224..-222, -51, 32): local x 0..2, local z 0
+            let bits = (palette.len() as f64).log2().ceil() as usize;
+            let per = 64 / bits.max(1);
+            if let Some(Tag::LongArray(data)) = compound_get(bs, "data") {
+                let data = data.to_vec();
+                for lx in 0..6usize {
+                    let idx: usize = 13 * 256 + 0 * 16 + lx;
+                    let li = idx / per;
+                    let po = idx % per;
+                    let long = data.get(li).copied().unwrap_or(0) as u64;
+                    let mut v: u64 = 0;
+                    for b in 0..bits {
+                        v |= (((long >> (po * bits + b)) & 1) << b);
+                    }
+                    println!(
+                        "SEC-4 block ({},{},32) = {}",
+                        -224 + lx as i32,
+                        -51,
+                        palette.get(v as usize).unwrap_or(&"?".into())
+                    );
+                }
+            } else {
+                println!("SEC-4 uniform palette: {:?}", palette.first());
+            }
+        }
+        panic!("REF-BLOCK-DONE");
+    }
+}
+
+#[cfg(test)]
+mod mineshaft_ref_children_10101 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Dump the ref's mineshaft (-14,0) children BBs (piece tree ground truth).
+    #[test]
+    #[ignore = "diagnostic: ref mineshaft children BBs seed 10101"]
+    fn mineshaft_children_10101() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, 0);
+        let region = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+            .expect("region")
+            .with_coords(cx >> 5, cz >> 5);
+        let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let Tag::Compound(st) = compound_get(&nbt.compound, "structures").unwrap() else {
+            panic!("no structures");
+        };
+        let Tag::Compound(starts) = compound_get(st, "starts").unwrap() else {
+            panic!("no starts");
+        };
+        for (name, tag) in &starts.tags {
+            if name.to_string() != "minecraft:mineshaft" {
+                continue;
+            }
+            let Tag::Compound(start) = tag else { continue };
+            let Tag::List(List::Compound(children)) =
+                compound_get(start, "Children").expect("children")
+            else {
+                panic!("children not compound list");
+            };
+            for (i, ch) in children.iter().enumerate() {
+                let bb = compound_get(ch, "BB");
+                if let Some(Tag::IntArray(b)) = bb {
+                    let v = b.to_vec();
+                    eprintln!(
+                        "REF-MS {} {} {} {} {} {} {}",
+                        i, v[0], v[1], v[2], v[3], v[4], v[5]
+                    );
+                }
+            }
+        }
+        panic!("REF-MS-DONE");
+    }
+}
+
+#[cfg(test)]
+mod all_starts_10101 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Dump ALL structure starts for 10101 chunks (-14,2), (-14,1), (-13,2).
+    #[test]
+    #[ignore = "diagnostic: all structure starts near the air family"]
+    fn all_starts_10101_near() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
+        for (cx, cz) in [(-14i32, 2), (-14, 1), (-13, 2), (-15, 2)] {
+            let region = Region::open(std::path::Path::new(&format!(
+                "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+                .expect("region")
+                .with_coords(cx >> 5, cz >> 5);
+            let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+            let nbt = read_nbt(&raw).expect("nbt");
+            let Tag::Compound(st) = compound_get(&nbt.compound, "structures").unwrap() else {
+                continue;
+            };
+            let Tag::Compound(starts) = compound_get(st, "starts").unwrap() else {
+                continue;
+            };
+            let names: Vec<String> = starts
+                .tags
+                .iter()
+                .map(|(n, t)| {
+                    let mut size = String::new();
+                    if let Tag::Compound(ct) = t {
+                        if let Some(Tag::List(l)) = compound_get(ct, "Children") {
+                            if let List::Compound(c) = l {
+                                size = format!(" children={}", c.len());
+                            }
+                        }
+                    }
+                    format!("{}{}", n.to_string(), size)
+                })
+                .collect();
+            eprintln!("STARTS ({cx},{cz}): {names:?}");
+        }
+        panic!("STARTS-DONE");
     }
 }
