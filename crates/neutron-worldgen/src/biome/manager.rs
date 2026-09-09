@@ -155,7 +155,93 @@ pub fn noise_biome_at_quart(state: &WorldgenState, quart_x: i32, quart_y: i32, q
 pub fn biome_id_at_block(state: &WorldgenState, x: i32, y: i32, z: i32) -> u8 {
     let zoom = obfuscate_seed(state.seed);
     let (qx, qy, qz) = voronoi_quart(zoom, x, y, z);
-    noise_biome_at_quart(state, qx, qy, qz)
+    let b = noise_biome_at_quart(state, qx, qy, qz);
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        eprintln!(
+            "NEU-VORONOI block=({x},{y},{z}) winner_quart=({qx},{qy},{qz}) biome={b}"
+        );
+    }
+    b
+}
+
+/// `BiomeManager.getBiome` with ONE shared marker-cache state across the
+/// 8 corner climate samples — replicating vanilla's flat_cache/cache_2d
+/// persistence inside `Climate.Sampler` (NoiseChunk caches live for the
+/// whole chunk fill, so corners 2..8 reuse corner-1's cached shift values).
+pub fn biome_id_at_block_polluted(state: &WorldgenState, x: i32, y: i32, z: i32) -> u8 {
+    let zoom = obfuscate_seed(state.seed);
+    let abs_x = x - 2;
+    let abs_y = y - 2;
+    let abs_z = z - 2;
+    let parent_x = abs_x >> 2;
+    let parent_y = abs_y >> 2;
+    let parent_z = abs_z >> 2;
+    let fract_x = (abs_x & 3) as f64 / 4.0;
+    let fract_y = (abs_y & 3) as f64 / 4.0;
+    let fract_z = (abs_z & 3) as f64 / 4.0;
+
+    let mut marker_state = crate::density::MarkerState::new(
+        state.cell_width as usize,
+        state.cell_height as usize,
+        state.reg.cache_slot_count(),
+    );
+
+    let mut min_i = 0i32;
+    let mut min_dist = f64::INFINITY;
+    let mut min_biome = 0u8;
+    for i in 0..8 {
+        let x_even = (i & 4) == 0;
+        let y_even = (i & 2) == 0;
+        let z_even = (i & 1) == 0;
+        let corner_x = if x_even { parent_x } else { parent_x + 1 };
+        let corner_y = if y_even { parent_y } else { parent_y + 1 };
+        let corner_z = if z_even { parent_z } else { parent_z + 1 };
+        let distance_x = if x_even { fract_x } else { fract_x - 1.0 };
+        let distance_y = if y_even { fract_y } else { fract_y - 1.0 };
+        let distance_z = if z_even { fract_z } else { fract_z - 1.0 };
+        let next = get_fiddled_distance(
+            zoom,
+            corner_x,
+            corner_y,
+            corner_z,
+            distance_x,
+            distance_y,
+            distance_z,
+        );
+        if min_dist > next {
+            min_i = i;
+            min_dist = next;
+        }
+        // climate sampled with the shared caches (in vanilla, the sampler
+        // evaluates lazily at getNoiseBiome time — same shared-cache effect
+        // for the winner; evaluating eagerly per corner replicates the
+        // pollution for all corners and the winner's biome comes out equal
+        // because the winner's cache state matches its last evaluation).
+        let block_x = corner_x * 4;
+        let block_y = corner_y * 4;
+        let block_z = corner_z * 4;
+        let mut env = crate::density::DensityEnv::with_markers(
+            block_x,
+            block_y,
+            block_z,
+            state.noises.noises(),
+            &mut marker_state,
+        );
+        let climate = crate::biome::source::climate_at_block(
+            &mut env,
+            &state.router.temperature,
+            &state.router.vegetation,
+            &state.router.continents,
+            &state.router.erosion,
+            &state.router.depth,
+            &state.router.ridges,
+        );
+        let biome = find_biome(&climate);
+        if min_i == i {
+            min_biome = biome;
+        }
+    }
+    min_biome
 }
 
 pub fn climate_at(state: &WorldgenState, x: i32, y: i32, z: i32) -> crate::biome_source::ClimateTarget {

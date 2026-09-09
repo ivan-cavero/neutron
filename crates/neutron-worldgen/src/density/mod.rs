@@ -518,11 +518,38 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             let x = env.x as f64 * xz_scale + compute(sx, env);
             let y = env.y as f64 * y_scale + compute(sy, env);
             let z = env.z as f64 * xz_scale + compute(sz, env);
-            noise.get_value(x, y, z)
+            let v = noise.get_value(x, y, z);
+            if std::env::var_os("NEUTRON_CITY_DRAWS").is_some()
+                && key == "continentalness"
+                && env.x == -224
+                && env.z == 140
+            {
+                eprintln!(
+                    "SHIFTED-EVAL env=({},{},{}) sample=({x:.4},{y:.4},{z:.4}) value={v:.6}",
+                    env.x, env.y, env.z
+                );
+            }
+            v
         }
         DFNode::ShiftA(key) => {
             let noise = &env.noises[key];
-            noise.get_value(env.x as f64 * 0.25, 0.0, env.z as f64 * 0.25) * 4.0
+            let v = noise.get_value(env.x as f64 * 0.25, 0.0, env.z as f64 * 0.25) * 4.0;
+            if std::env::var_os("NEUTRON_CITY_DRAWS").is_some()
+                && key == "offset"
+                && env.x == -224
+                && env.z == 140
+            {
+                eprintln!(
+                    "SHIFT-A env=({},{},{}) noise_at=({:.4},0,{:.4}) value={v:.6} ptr={:p}",
+                    env.x,
+                    env.y,
+                    env.z,
+                    env.x as f64 * 0.25,
+                    env.z as f64 * 0.25,
+                    noise as *const _
+                );
+            }
+            v
         }
         DFNode::ShiftB(key) => {
             let noise = &env.noises[key];

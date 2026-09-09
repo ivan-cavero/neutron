@@ -393,14 +393,8 @@ impl ChunkGenerator {
         // once over the region before decoration, visible to every origin.
         region.current_writer = crate::writers::MINESHAFT;
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
-        // Ancient-city placement + beardifier are IMPLEMENTED but UNWIRED:
-        // the assembly is 89/89 exact vs the vanilla oracle, but the city's
-        // biome gate (deep_dark at the stub) disagrees with vanilla — my
-        // noise-biome lookup says deep_dark at 424242 chunk (-13,9) where the
-        // ref world has no city (stored section palette [dark_forest,
-        // deep_dark] — the stub quart cell is dark_forest in vanilla). The
-        // lookup at negative-y cave positions needs the cave-biome handling
-        // verified before wiring. See STATE.md.
+        region.current_writer = crate::writers::ANCIENT_CITY;
+        crate::ancient_city::apply_ancient_city_region(&mut region, &self.state);
         region.current_writer = crate::writers::TERRAIN;
         if prof {
             eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);
@@ -570,11 +564,10 @@ impl ChunkGenerator {
 
         // Structure beard boxes (BEARD_BOX terrain adaptation) must be known
         // BEFORE doFill — vanilla builds the Beardifier from structure starts
-        // at NoiseChunk creation. DISABLED pending parity: the carve matches
-        // on 10101 (+43k) but regresses 424242 (−122k) — the junction terms
-        // (getBeardContribution*0.4) and per-piece ground-level deltas need
-        // verification against a vanilla density oracle. See STATE.md.
-        let city_beard_boxes: Vec<crate::density::BeardBox> = Vec::new();
+        // at NoiseChunk creation. The ancient city is the only BEARD_BOX
+        // structure ported so far. Boxes are empty where the biome gate
+        // rejects the city (deep_dark gate, matching vanilla placement).
+        let city_beard_boxes = crate::ancient_city::beard_boxes_for(&self.state, cx, cz);
 
         // Create per-chunk marker state (owned by the generator).
         let mut marker_state =

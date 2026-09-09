@@ -54,6 +54,40 @@ pub(crate) fn pieces_for(level_seed: i64, cx: i32, cz: i32) -> Option<Vec<jigsaw
     pieces_with_center(&state, cx, cz).map(|(p, _)| p)
 }
 
+/// Assembly cache — the jigsaw expansion is expensive (~1-2 ms per start)
+/// and every chunk in a ±7-chunk radius repeats it during doFill.
+fn assembly_cache() -> &'static std::sync::Mutex<std::collections::HashMap<(i64, i32, i32), Option<(
+    Vec<jigsaw::Piece>,
+    (i32, i32, i32),
+)>>> {
+    static CACHE: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<(i64, i32, i32), Option<(
+            Vec<jigsaw::Piece>,
+            (i32, i32, i32),
+        )>>>,
+    > = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Gated, cached assembly (the deep_dark biome gate included).
+pub fn pieces_gated(
+    state: &WorldgenState,
+    cx: i32,
+    cz: i32,
+) -> Option<(Vec<jigsaw::Piece>, (i32, i32, i32))> {
+    let key = (state.seed, cx, cz);
+    if let Ok(cache) = assembly_cache().lock() {
+        if let Some(hit) = cache.get(&key) {
+            return hit.clone();
+        }
+    }
+    let result = pieces_with_center(state, cx, cz);
+    if let Ok(mut cache) = assembly_cache().lock() {
+        cache.insert(key, result.clone());
+    }
+    result
+}
+
 /// Assemble + biome gate. Returns the pieces and the stub position
 /// (`isValidBiome` samples the biome here — deep_dark required).
 fn pieces_with_center(
@@ -64,14 +98,61 @@ fn pieces_with_center(
     let mut rng = LegacyRandom::new(0);
     rng.set_large_feature_seed(state.seed, cx, cz);
     let (mut pieces, center) = jigsaw::Assembler::assemble(&mut rng, cx * 16, cz * 16)?;
-    let biome = crate::biome::manager::noise_biome_at_quart(
-        state,
-        center.0 >> 2,
-        center.1 >> 2,
-        center.2 >> 2,
-    );
+    // isValidBiome → BiomeManager.getBiome(stub): the 8-corner fiddled
+    // voronoi vote (obfuscated zoom seed), NOT the raw quart climate. The
+    // 8 corner climate samples SHARE one flat_cache/cache_2d marker state
+    // (vanilla's NoiseChunk caches are per-instance; the sampler's caches
+    // persist across the 8 samples and pollute corners 2..8 with corner-1
+    // shift values) — replicate that exactly.
+    // isValidBiome → BiomeManager.getBiome(stub): the 8-corner fiddled
+    // voronoi vote with CLEAN caches (structure stage precedes NoiseChunk
+    // creation, so the sampler caches are cold). Verified: 10101 stub →
+    // deep_dark (city placed); 424242 stub → deep_dark per this lookup but
+    // dark_forest per the vanilla probe — the remaining gap is the climate
+    // evaluation at the WINNER quart (a ±1-quart neighbor of the stub),
+    // probed next.
+    let biome = crate::biome::manager::biome_id_at_block(state, center.0, center.1, center.2);
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        eprintln!("NEU-GATE424 seed={} center={:?} biome={}", state.seed, center, biome);
+    }
     if biome != crate::biome::source::biome_id::DEEP_DARK {
         return None;
+    }
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        let st3 = crate::worldgen::WorldgenState::overworld(424242);
+        let cl = crate::biome::manager::climate_at(&st3, -224, -40, 140);
+        eprintln!(
+            "NEU-CLIMATE-WINNER (-224,-40,140) t={} h={} c={} e={} d={} w={}",
+            cl.temperature, cl.humidity, cl.continentalness, cl.erosion, cl.depth, cl.weirdness
+        );
+        let found = crate::biome::source::find_biome(&cl);
+        eprintln!("NEU-FIND-BIOME winner={found}");
+        for (px, py, pz) in [(-208i32, -37, 148), (-208, -37, 149)] {
+            let cl2 = crate::biome::manager::climate_at(&st3, px, py, pz);
+            let f2 = crate::biome::source::find_biome(&cl2);
+            eprintln!(
+                "NEU-GATE-CLIMATE ({px},{py},{pz}) t={} c={} e={} d={} w={} biome={f2}",
+                cl2.temperature, cl2.continentalness, cl2.erosion, cl2.depth, cl2.weirdness
+            );
+        }
+        let st3 = crate::worldgen::WorldgenState::overworld(424242);
+        let sx = st3
+            .noises
+            .get("offset")
+            .get_value(-224.0 * 0.25, 0.0, 140.0 * 0.25)
+            * 4.0;
+        let sz = st3
+            .noises
+            .get("offset")
+            .get_value(140.0 * 0.25, -224.0 * 0.25, 0.0)
+            * 4.0;
+        eprintln!("NEU-SHIFT-WINNER sx={sx} sz={sz}");
+        eprintln!(
+            "NEU-SHIFTED-C {}",
+            st3.noises
+                .get("continentalness")
+                .get_value(-224.0 * 0.25 + sx, 0.0, 140.0 * 0.25 + sz)
+        );
     }
     // CAVE-BIOME GATE FINDING (s35): at seed 424242 stub (-219,-37,144) the
     // vanilla climate target is t=1217 h=4117 c=1600 e=-1866 d=11053 w=-4634
@@ -81,6 +162,16 @@ fn pieces_with_center(
     // the gate logic. Until the climate lookup matches vanilla at negative-y
     // cave positions, the gate cannot be trusted.
     let _ = state;
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        // Vanilla ProbeNoiseVal 424242: offset(-54.75,0,36) = -0.19571926,
+        // temperature(-54.75,-9.25,36) = 0.11632854.
+        let st2 = crate::worldgen::WorldgenState::overworld(424242);
+        eprintln!(
+            "NEU-NOISE offset={} temperature={}",
+            st2.noises.get("offset").get_value(-54.75, 0.0, 36.0),
+            st2.noises.get("temperature").get_value(-54.75, -9.25, 36.0)
+        );
+    }
     if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
         eprintln!(
             "NEU-GATE biome={} center={:?}",
@@ -95,6 +186,9 @@ fn pieces_with_center(
 #[ignore = "diagnostic: placement write counts for seed 10101 city"]
 fn city10101_place_counts() {
     let pieces = pieces_for(10101, -14, 9).expect("assembly");
+    // 424242 has a potential city at (-13,9) — the gate must REJECT it
+    // (winner quart climate = dark_forest per vanilla).
+    assert!(pieces_for(424242, -13, 9).is_none(), "424242 gate must reject");
     let mut region = crate::region_buf::RegionBuf::new(-16, 8, 3);
     let mut total = 0usize;
     for p in &pieces {
@@ -102,6 +196,47 @@ fn city10101_place_counts() {
         total += w;
     }
     eprintln!("PLACE-TOTAL total={total} pieces={}", pieces.len());
+    eprintln!(
+        "NEU-NOISE offset={} temperature={}",
+        crate::worldgen::WorldgenState::overworld(424242)
+            .noises
+            .get("offset")
+            .get_value(-54.75, 0.0, 36.0),
+        crate::worldgen::WorldgenState::overworld(424242)
+            .noises
+            .get("temperature")
+            .get_value(-54.75, -9.25, 36.0)
+    );
+    eprintln!(
+        "NEU-NOISE2 continentalness(shifted-input -54.75,-9.25,36)={}",
+        crate::worldgen::WorldgenState::overworld(424242)
+            .noises
+            .get("continentalness")
+            .get_value(-54.75, -9.25, 36.0)
+    );
+    {
+        let st3 = crate::worldgen::WorldgenState::overworld(424242);
+        let sx = st3
+            .noises
+            .get("offset")
+            .get_value(-219.0 * 0.25, 0.0, 144.0 * 0.25)
+            * 4.0;
+        let sz = st3
+            .noises
+            .get("offset")
+            .get_value(144.0 * 0.25, -219.0 * 0.25, 0.0)
+            * 4.0;
+        eprintln!("NEU-SHIFT sx={sx} sz={sz}");
+        eprintln!(
+            "NEU-SHIFTED-VALUE continents={} temperature={}",
+            st3.noises
+                .get("continentalness")
+                .get_value(-219.0 * 0.25 + sx, 0.0, 144.0 * 0.25 + sz),
+            st3.noises
+                .get("temperature")
+                .get_value(-219.0 * 0.25 + sx, 0.0, 144.0 * 0.25 + sz)
+        );
+    }
     // read back the center chunk's column: world x -224..-209, z 144..159
     let mut nonzero = 0usize;
     let mut air = 0usize;
@@ -134,7 +269,7 @@ pub fn beard_boxes_for(state: &WorldgenState, cx: i32, cz: i32) -> Vec<crate::de
             if !is_city_chunk(state.seed, cx, cz) {
                 continue;
             }
-            let Some((pieces, _)) = pieces_with_center(state, cx, cz) else {
+            let Some((pieces, _)) = pieces_gated(state, cx, cz) else {
                 continue;
             };
             for p in &pieces {
