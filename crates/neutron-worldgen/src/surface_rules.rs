@@ -1462,7 +1462,11 @@ mod ref_block_10101 {
     use neutron_world::nbt::{compound_get, read_nbt};
     use neutron_world::Region;
 
-    /// Read the 10101 ref chunk (-14,2) blocks at (-224..-222,-51,32).
+    /// FINDING (s46): the 424242 tree-family confusions are INVERTED — the ref has AIR
+    /// where neutron placed EXTRA dark_oak/pale_oak trees (58,456 dark_oak leaf cells in
+    /// border zones alone). The trees are not missing; they are PHANTOM (placed by origins
+    /// vanilla's ticket order never decorated in that position). Prior understanding
+    /// ("trees are missing") reversed by the writers ledger.
     /// FINDING (s41): the ref air at these cells = SculkVeinBlock.onDischarged
     /// (vein with no faces left converts to AIR — SculkVeinBlock.java:81).
     /// The 194k air->deepslate family is sculk-vein discharge air; the sculk
