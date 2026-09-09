@@ -66,10 +66,18 @@
 > (-14,2) y=-51: ZERO sculk/veins (8 air, 92 deepslate, 43 tiles) vs ref
 > sculk+veins+air — the sculk spread never reaches that section on seed
 > 10101. Patch placement (256 attempts/chunk, y uniform -64..256,
-> deep_dark voronoi gate) matches vanilla's JSON. NEXT: two-sided sculk
-> spread trace on 10101 (NEUTRON_SCULK_TRACE_W + spread_fail dumps vs a
-> vanilla sculk probe) to find the cursor-movement divergence. sculk
-> family total on 10101: 35.9k sculk_patch + 194k discharge air.
+> deep_dark voronoi gate) matches vanilla's JSON.
+> bfef791 (s42) SPREAD BISECT: attempt trace on chunk (-14,2) origin
+> (-224,32) — 28 attempts in y -60..-16, ALL pass the deep_dark gate;
+> canSpreadFrom semantics verified identical to vanilla (solid origins
+> rejected both sides). Only 3 attempts SPREAD — AIR origins at y
+> -20..-24. The ref sculk at y -51..-32 comes from those patches' CHARGE
+> CURSORS traveling DOWN 27-31 blocks through solid rock; my cursors
+> don't reach. Divergence = SculkSpreader cursor movement
+> (getValidMovementPos / charge decay through solid cells). NEXT: replay
+> the 3 spreading patches through ProbeSculkPatch (cave-dump format) vs
+> my run_patch to diff cursor paths. sculk family total on 10101:
+> 35.9k sculk_patch + 194k discharge air.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
