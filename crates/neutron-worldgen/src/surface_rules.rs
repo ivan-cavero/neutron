@@ -1473,19 +1473,30 @@ mod ref_block_10101 {
     fn my_sculk_census_10101() {
         let gen = crate::generator::ChunkGenerator::new(10101);
         let chunk = gen.generate_chunk(-14, 2);
-        let mut census = std::collections::BTreeMap::new();
-        for lz in 0..16u32 {
-            for lx in 0..16u32 {
-                let b = chunk.block_at(lx, -51, lz);
-                let name = format!("{b:?}");
-                *census.entry(name).or_insert(0usize) += 1;
+        let mut census: std::collections::BTreeMap<String, usize> =
+            std::collections::BTreeMap::new();
+        for ly in [-64i32 + 16, -51, -44, -40, -36, -32] {
+            let mut sculk_count = 0usize;
+            let mut vein_count = 0usize;
+            let mut air_count = 0usize;
+            for lz in 0..16u32 {
+                for lx in 0..16u32 {
+                    let b = chunk.block_at(lx, ly, lz);
+                    match b {
+                        crate::surface::BlockId::Sculk => sculk_count += 1,
+                        crate::surface::BlockId::SculkVein => vein_count += 1,
+                        crate::surface::BlockId::Air | crate::surface::BlockId::CaveAir => {
+                            air_count += 1
+                        }
+                        _ => {}
+                    }
+                }
             }
+            eprintln!(
+                "MY-Y {ly}: sculk={sculk_count} vein={vein_count} air={air_count}"
+            );
         }
-        for (k, v) in &census {
-            if *v > 0 && (k.contains("Sculk") || k.contains("Air") || k.contains("Deepslate")) {
-                eprintln!("MY-CELL y=-51 {k} = {v}");
-            }
-        }
+        let _ = &census;
         panic!("CENSUS-DONE");
     }
 

@@ -226,14 +226,17 @@ pub(super) fn place_sculk_patch(
             );
         }
         let biome_ok = is_deep_dark_at(state, x, y, z);
-        if dump && ox0 == -224 && oz0 == 32 && y >= -60 && y < -16 {
+        if dump && y < -30 && y > -70 {
             eprintln!(
-                "ATT10101 i={i} ({x},{y},{z}) deep_dark={biome_ok} here={:?}",
+                "ATTDEEP o=({ox0},{oz0}) i={i} ({x},{y},{z}) deep_dark={biome_ok} here={:?}",
                 region.get(x, y, z)
             );
         }
         if !biome_ok {
             continue;
+        }
+        if dump && y < -30 && y > -70 {
+            eprintln!("ATTDEEP-PASS o=({ox0},{oz0}) i={i} ({x},{y},{z})");
         }
         SCULK_BIOME_OK.fetch_add(1, Ordering::Relaxed);
         let here = region.get(x, y, z);
