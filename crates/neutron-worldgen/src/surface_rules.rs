@@ -1462,12 +1462,13 @@ mod ref_block_10101 {
     use neutron_world::nbt::{compound_get, read_nbt};
     use neutron_world::Region;
 
-    /// FINDING (s46+s47): the 424242 tree-family confusions are DISPLACED trees —
-    /// the pre-deco SCENE diverges before decoration (van_pred14.predc1 vs
-    /// our_pred14.predc1 differ in size by 1,587 bytes). One scene diff is
-    /// explained (mineshaft CaveAir); the rest is the multi-origin scene
-    /// divergence the dark-oak handoff isolated. The tree gate is correct;
-    /// the SCENE it evaluates differs.
+    /// FINDING (s49): the predc1-based "scene divergence" was an ARTIFACT —
+    /// the vanilla ProbePreDecorate dump has the deepslate transition
+    /// UNAPPLIED (621k stone vs 146k deepslate below y=0, while the real ref
+    /// world has deepslate below y≈0 — the parity tool confirms deepslate at
+    /// y=-63 on both sides). The probe's buildSurface is not equivalent to
+    /// the real server's. The displaced-tree family's cause remains the
+    /// origin-order/ticket-sim residual (11-13% violations).
     /// FINDING (s41): the ref air at these cells = SculkVeinBlock.onDischarged
     /// (vein with no faces left converts to AIR — SculkVeinBlock.java:81).
     /// The 194k air->deepslate family is sculk-vein discharge air; the sculk
