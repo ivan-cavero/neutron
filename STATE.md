@@ -58,11 +58,18 @@
 > substance NULL(default)=stone. Structure REFERENCES scan for chunks
 > (-14,2)/(-14,1)/(-13,2): zero starts, zero references → the real
 > chunk's Beardifier is EMPTY. Every noise/structure mechanism excluded.
-> The ref air at y -51..-32 in deep_dark sections (sculk + sculk_vein in
-> the palette) remains unexplained. NEXT: full-chunk vanilla generation
-> oracle (ProbeCityPieces-style) to dump the real chunk's block source
-> per position, or a sculk-feature probe — sculk_vein sits adjacent to
-> the air cells in the ref palette. sculk_patch 35.9k = second lever.
+> s41 (0f7e6a3): MECHANISM FOUND — SculkVeinBlock.onDischarged
+> (SculkVeinBlock.java:81): a vein with no faces left (all faces touch
+> sculk) REPLACES ITSELF with AIR (or WATER in fluid). The 194k air→
+> deepslate family = sculk-vein discharge air. My port HAS the mechanic
+> (sculk/blocks.rs on_discharged → Air) but the census of my chunk
+> (-14,2) y=-51: ZERO sculk/veins (8 air, 92 deepslate, 43 tiles) vs ref
+> sculk+veins+air — the sculk spread never reaches that section on seed
+> 10101. Patch placement (256 attempts/chunk, y uniform -64..256,
+> deep_dark voronoi gate) matches vanilla's JSON. NEXT: two-sided sculk
+> spread trace on 10101 (NEUTRON_SCULK_TRACE_W + spread_fail dumps vs a
+> vanilla sculk probe) to find the cursor-movement divergence. sculk
+> family total on 10101: 35.9k sculk_patch + 194k discharge air.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
