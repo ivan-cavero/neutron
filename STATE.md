@@ -44,10 +44,18 @@
 > Beardifier inside cacheAllInCell) + affectedBox-24 early-out. 10101
 > NEUTRAL (+6 — the *0.4 kernel is small/localized); kept for correctness.
 > Parity 10101: 99.1410% / 444,163. Scan runtime 3348s (watch: the city
-> adds ~1000s to the 524-chunk scan). NEXT: the remaining 194k air→
-> deepslate family needs the two-sided diff re-run (post-beardifier) —
-> the air cells may now be aquifer water (deepslate→water was 5.8k) or
-> re-attributed; re-ledger before choosing the next lever.
+> adds ~1000s to the 524-chunk scan).
+> e7d450a (s39) RE-ATTRIBUTED the 194k air→deepslate family — NOT city
+> interiors (ancient_city writer = 0 confusions; placement exact). Family
+> spans x -224..-27, y -51..-18, z 0..223 (7 z-bands). Ref NBT verified
+> air at (-211,-51,31) and (-223,-51,32) (deep_dark section; sculk in
+> palette). EXCLUDED by probes: density (vanilla +0.033 solid), carvers
+> (starts 68/68, ELs 3150/3150, no coverage), mineshafts (piece tree
+> 147/147 BBs exact; corridors at y -19..-2), city (pieces z ≥ 74), trial
+> chambers (zero starts). HYPOTHESIS: deep_dark-specific air (aquifer
+> config or a deep_dark density modifier). NEXT: extend ProbeAquifer to
+> computeSubstance at the cells; compare the deep_dark aquifer behavior
+> vs neutron's. sculk_patch family 35.9k = second lever.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'

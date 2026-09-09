@@ -44,7 +44,25 @@ public class ProbeBiomeAt {
             String[] pp = line.split("\\s+");
             int x = Integer.parseInt(pp[0]), y = Integer.parseInt(pp[1]), z = Integer.parseInt(pp[2]);
             Holder<Biome> b = mgr.getBiome(new BlockPos(x, y, z));
+            var tp = sampler.sample(
+                net.minecraft.core.QuartPos.fromBlock(x),
+                net.minecraft.core.QuartPos.fromBlock(y),
+                net.minecraft.core.QuartPos.fromBlock(z));
+            // shift_x internals: flat_cache(cache_2d(shift_a(offset))) —
+            // evaluate the offset noise at (x*0.25, 0, z*0.25) * 4.
+            {
+                var offNoise = rs.noiseRegistryValue("minecraft:offset");
+                if (offNoise == null) {
+                    // fallback: reflect into rs via sampler? Print via the
+                    // public NormalNoise if resolvable from the provider.
+                    System.out.println("OFFSET unavailable via noiseRegistryValue");
+                }
+            }
             System.out.println("BIOME " + x + " " + y + " " + z + " " + b.unwrapKey().map(k -> k.identifier().toString()).orElse("?"));
+            System.out.printf(java.util.Locale.ROOT,
+                "TARGET t=%d h=%d c=%d e=%d d=%d w=%d%n",
+                tp.temperature(), tp.humidity(), tp.continentalness(),
+                tp.erosion(), tp.depth(), tp.weirdness());
         }
     }
     static void HolderGetterHolder() {}
