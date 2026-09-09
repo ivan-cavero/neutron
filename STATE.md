@@ -38,9 +38,16 @@
 > beardifier +53,878 net). Ratchet: 424242 +0 BIT-IDENTICAL (gate
 > correctly rejects its potential city at (-13,9)), 777 +0 (no city),
 > 12345 +9,531 (gated city placed — vanilla has one there too).
-> Remaining 10101 gap: 444,157. Top family now air→deepslate 194k (city
-> interiors: junction terms *0.4 missing from the Beardifier) + sculk
-> 23k. NEXT: junction beard contributions; then the 44-seed gate.
+> c5ca14b (s38): junction beard contributions (*0.4) — JigsawJunction
+> pairs recorded at accept, contribution with raw unclamped deltas,
+> sampled on the cell-corner beard grid (vanilla wraps the whole
+> Beardifier inside cacheAllInCell) + affectedBox-24 early-out. 10101
+> NEUTRAL (+6 — the *0.4 kernel is small/localized); kept for correctness.
+> Parity 10101: 99.1410% / 444,163. Scan runtime 3348s (watch: the city
+> adds ~1000s to the 524-chunk scan). NEXT: the remaining 194k air→
+> deepslate family needs the two-sided diff re-run (post-beardifier) —
+> the air cells may now be aquifer water (deepslate→water was 5.8k) or
+> re-attributed; re-ledger before choosing the next lever.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
