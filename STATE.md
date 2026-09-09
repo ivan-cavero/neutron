@@ -102,18 +102,18 @@
 > in both worlds at DISPLACED positions: vanilla's ticket-order places
 > each border tree from a different origin. Net tree-family ≈ 281k cells
 > on 424242 — the origin-order cascade is the dominant remaining family.
-> 138a9f6 (s49) RETRACTION: the predc1 "scene divergence" was an ARTIFACT
-> — decoded both dumps (big-endian PREDC1: palette + u16 index arrays):
-> the vanilla probe dump has 621k stone vs 146k deepslate below y=0
-> (deepslate transition UNAPPLIED) while the real ref world has deepslate
-> below y≈0 (parity confirms deepslate at y=-63 both sides). The probe's
-> buildSurface is not equivalent to the real server — the prior session's
-> conclusion was based on this broken dump. The displaced-tree family's
-> cause remains the origin-order/ticket-sim residual (11-13% violations).
-> NEXT: the ticket-sim residual — compare the simulated decorate order
-> against vanilla's real per-chunk decoration (the probe infrastructure
-> exists; the deepslate bug in ProbePreDecorate must be fixed first or
-> the probe's scene dumps remain unreliable).
+> 0ed2162 (s50) CONFIRMED with the real ref NBT: chunk (-14,-14) section
+> Y=-4 palette = [bedrock, deepslate, gravel, tuff, ores, lava, air] —
+> the REAL world has deepslate at y=-63, matching our world. The vanilla
+> ProbePreDecorate dump (stone at y=-63) is DEFINITIVELY BROKEN — its
+> buildSurface (possibleBiomes={PLAINS} + reflection overload) fails to
+> apply the deepslate vertical gradient. The predc1 scene-divergence
+> conclusion stands RETRACTED. The displaced-tree family's cause remains
+> the origin-order/ticket-sim residual (11-13% violations).
+> NEXT: ticket-sim residual — compare the simulated decorate order against
+> vanilla's real per-chunk decoration. Scene dumps must come from real
+> server chunks (the ref worlds) or a FIXED probe. 424242 tree family
+> ≈ 281k cells.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
