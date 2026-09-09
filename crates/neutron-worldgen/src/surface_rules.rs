@@ -1689,3 +1689,61 @@ mod all_starts_10101 {
         panic!("STARTS-DONE");
     }
 }
+
+#[cfg(test)]
+mod ref_deepslate_424242 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// 424242 ref chunk (-14,-14): section Y=-4 (y -64..-49) palette —
+    /// stone or deepslate at y=-63?
+    #[test]
+    #[ignore = "diagnostic: ref section palette for chunk (-14,-14)"]
+    fn ref424242_sec4_palette() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, -14);
+        let region = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+            .expect("region")
+            .with_coords(cx >> 5, cz >> 5);
+        let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections"),
+        };
+        for sec in sections {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                Some(Tag::Int(y)) => *y,
+                _ => continue,
+            };
+            eprintln!("REF-SEC Y={y_sec}");
+            if y_sec != -4 {
+                continue;
+            }
+            let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else {
+                eprintln!("SEC-4 no block_states");
+                continue;
+            };
+            if let Some(Tag::List(l)) = compound_get(bs, "palette") {
+                let names: Vec<String> = match l {
+                    List::Compound(cs) => cs
+                        .iter()
+                        .map(|e| match compound_get(e, "Name") {
+                            Some(Tag::String(n)) => n.to_string(),
+                            _ => "?".into(),
+                        })
+                        .collect(),
+                    List::String(ss) => ss.iter().map(|s| s.to_string()).collect(),
+                    _ => vec!["?".into()],
+                };
+                eprintln!("SEC-4 palette ({}): {:?}", names.len(), names);
+            } else {
+                eprintln!("SEC-4 palette: absent");
+            }
+        }
+        panic!("PALETTE-DONE");
+    }
+}
