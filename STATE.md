@@ -73,11 +73,16 @@
 > rejected both sides). Only 3 attempts SPREAD — AIR origins at y
 > -20..-24. The ref sculk at y -51..-32 comes from those patches' CHARGE
 > CURSORS traveling DOWN 27-31 blocks through solid rock; my cursors
-> don't reach. Divergence = SculkSpreader cursor movement
-> (getValidMovementPos / charge decay through solid cells). NEXT: replay
-> the 3 spreading patches through ProbeSculkPatch (cave-dump format) vs
-> my run_patch to diff cursor paths. sculk family total on 10101:
-> 35.9k sculk_patch + 194k discharge air.
+> don't reach — CORRECTION (s43, facf8ec): the replay oracle run
+> (ProbeSculkPatch on MY terrain, cave-dump exporter
+> NEUTRON_SCULK_CAVEDUMP=1, 20,928 cells + 3 origins) shows vanilla's
+> spread on my terrain ALSO stays at y -19/-20. The local origins don't
+> reach y=-51 either. The ref sculk at y -51..-32 comes from NEIGHBOR
+> origins (deeper attempts or cursor spread into chunk (-14,2)); ref
+> chunk (-14,2) has NO sculk at y=-51 (discharged veins became air ✓).
+> NEXT: extend the bisect to all 25 origins (dump attempts per origin,
+> filter deep attempts y < -30, replay those). sculk family total on
+> 10101: 35.9k sculk_patch + 194k discharge air.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
