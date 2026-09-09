@@ -176,6 +176,42 @@ pub(super) fn place_sculk_patch(
     cfg: &PatchConfig,
 ) {
     let dump = std::env::var_os("NEUTRON_SCULK_PATCHES").is_some();
+    // Export the pristine terrain box around the 3 spreading origins for the
+    // vanilla ProbeSculkPatch replay (cave-dump format).
+    if std::env::var_os("NEUTRON_SCULK_CAVEDUMP").is_some() && ox0 == -224 && oz0 == 32 {
+        use std::fmt::Write as _;
+        let mut out = String::new();
+        for y in -40..=-10 {
+            for z in 30..=56 {
+                for x in -224..=-200 {
+                    let b = region.get(x, y, z);
+                    let name = match b {
+                        crate::surface::BlockId::Deepslate => "deepslate",
+                        crate::surface::BlockId::Stone => "stone",
+                        crate::surface::BlockId::Tuff => "tuff",
+                        crate::surface::BlockId::Granite => "granite",
+                        crate::surface::BlockId::Diorite => "diorite",
+                        crate::surface::BlockId::Andesite => "andesite",
+                        crate::surface::BlockId::Dirt => "dirt",
+                        crate::surface::BlockId::Gravel => "gravel",
+                        crate::surface::BlockId::Calcite => "calcite",
+                        crate::surface::BlockId::Clay => "clay",
+                        crate::surface::BlockId::Sand => "sand",
+                        crate::surface::BlockId::Water => "water",
+                        crate::surface::BlockId::Air | crate::surface::BlockId::CaveAir => "air",
+                        crate::surface::BlockId::DeepslateTiles => "deepslate_tiles",
+                        crate::surface::BlockId::DeepslateBricks => "deepslate_bricks",
+                        _ => "deepslate",
+                    };
+                    let _ = writeln!(out, "{} {} {} {}", x, y, z, name);
+                }
+            }
+        }
+        for (ox, oy, oz) in [(-216i32, -24, 43), (-218, -23, 45), (-211, -20, 40)] {
+            let _ = writeln!(out, "origin {} {} {}", ox, oy, oz);
+        }
+        eprintln!("CAVEDUMP-BEGIN\n{}\nCAVEDUMP-END", out.trim_end());
+    }
     for i in 0..cfg.patch_count {
         PATCH_I.store(i, Ordering::Relaxed);
         SCULK_TRIES.fetch_add(1, Ordering::Relaxed);

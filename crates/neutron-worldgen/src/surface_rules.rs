@@ -1538,8 +1538,9 @@ mod ref_block_10101 {
             let per = 64 / bits.max(1);
             if let Some(Tag::LongArray(data)) = compound_get(bs, "data") {
                 let data = data.to_vec();
-                for lx in 0..6usize {
-                    let idx: usize = 13 * 256 + 0 * 16 + lx;
+                for lx in 0..16usize {
+                for ly in 0..16usize {
+                    let idx: usize = ly * 256 + 0 * 16 + lx;
                     let li = idx / per;
                     let po = idx % per;
                     let long = data.get(li).copied().unwrap_or(0) as u64;
@@ -1547,12 +1548,17 @@ mod ref_block_10101 {
                     for b in 0..bits {
                         v |= (((long >> (po * bits + b)) & 1) << b);
                     }
-                    println!(
-                        "SEC-4 block ({},{},32) = {}",
-                        -224 + lx as i32,
-                        -51,
-                        palette.get(v as usize).unwrap_or(&"?".into())
-                    );
+                    let default_name = "?".to_string();
+                    let name = palette.get(v as usize).unwrap_or(&default_name);
+                    if name.contains("sculk") {
+                        println!(
+                            "REF-SCULK ({},{},32) = {}",
+                            -224 + lx as i32,
+                            -64 + ly as i32,
+                            name
+                        );
+                    }
+                }
                 }
             } else {
                 println!("SEC-4 uniform palette: {:?}", palette.first());
