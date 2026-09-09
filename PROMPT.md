@@ -518,6 +518,15 @@ Rules:
 
 9. **ONE fix per iteration.** Do not bundle multiple changes. This makes crashes recoverable.
 
+9b. **NEVER discard uncommitted work you did not create.** Before ANY
+    `git checkout --`, `git reset --hard`, `git stash`, or `git clean`,
+    run `git status --short` and `git stash list`. If foreign uncommitted
+    work exists (another agent works this checkout), STOP touching git
+    state for those paths: commit only your own files, stash with
+    explicit pathspec (`git stash push <your files>`), never bare `git
+    stash` / `git checkout -- .`. Destroying another writer's work is
+    the worst failure mode of a shared checkout.
+
 10. **5-iteration hard cap per objective.** If you have spent 5 iterations on the same
     mini-objective without a parity improvement, STOP working on it. Commit whatever
     you have (even if incomplete), update STATE.md noting the objective is blocked with
