@@ -41,6 +41,7 @@ struct Args {
     dim_name: String,
     cache: Option<PathBuf>,
     writers: bool,
+    race_mask: Option<PathBuf>,
 }
 
 fn usage() -> ! {
@@ -69,6 +70,7 @@ fn parse_args() -> Args {
         dim_name: "overworld".into(),
         cache: None,
         writers: false,
+        race_mask: None,
     };
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
@@ -78,6 +80,7 @@ fn parse_args() -> Args {
             "--dimension" => a.dim_name = val(),
             "--cache" => a.cache = Some(PathBuf::from(val())),
             "--writers" => a.writers = true,
+            "--race-mask" => a.race_mask = Some(PathBuf::from(val())),
             "--seed" => a.seed = val().parse().unwrap_or_else(|_| usage()),
             "--center" => {
                 let v = val();
@@ -135,6 +138,40 @@ fn main() {
         eprintln!("parity: --writers and --cache are mutually exclusive (cache v1 stores no writer plane)");
         std::process::exit(2);
     }
+    // Race mask: world-coord cells where vanilla samples disagree with each
+    // other (`vanilladiff --mask-out`). Excluded from every tally so the
+    // percentages read as parity on deterministic cells.
+    let race_mask: Option<std::collections::HashSet<(i32, i32, i32)>> =
+        args.race_mask.as_ref().map(|p| {
+            let text = std::fs::read_to_string(p).unwrap_or_else(|e| {
+                eprintln!("parity: cannot read --race-mask {}: {e}", p.display());
+                std::process::exit(2);
+            });
+            let mut set = std::collections::HashSet::new();
+            for (ln, line) in text.lines().enumerate() {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+                let mut it = line.split(',');
+                let cell = (
+                    it.next().unwrap_or_else(|| usage()),
+                    it.next().unwrap_or_else(|| usage()),
+                    it.next().unwrap_or_else(|| usage()),
+                );
+                match (cell.0.parse(), cell.1.parse(), cell.2.parse()) {
+                    (Ok(x), Ok(y), Ok(z)) => {
+                        set.insert((x, y, z));
+                    }
+                    _ => {
+                        eprintln!("parity: --race-mask {} line {}: bad cell", p.display(), ln + 1);
+                        std::process::exit(2);
+                    }
+                }
+            }
+            eprintln!("parity: race-mask {} cells from {}", set.len(), p.display());
+            set
+        });
     // New-dimension tripwire: refs covering a dimension we cannot compare
     // must be loud, not silent.
     if let Some(dims) = discover_dimension_dirs(std::path::Path::new(&args.refs)) {
@@ -337,7 +374,15 @@ fn main() {
                 println!("{ccx:>5},{ccz:>4}     missing");
                 continue;
             };
-            let m = compare_chunk(&mut acc, ccx, ccz, &chunk, &van, ledger_writer.is_some());
+            let m = compare_chunk(
+                &mut acc,
+                ccx,
+                ccz,
+                &chunk,
+                &van,
+                ledger_writer.is_some(),
+                race_mask.as_ref(),
+            );
     if let (Some(w), true) = (ledger_writer.as_mut(), !acc.rows.is_empty()) {
         use std::io::Write;
         let rows = std::mem::take(&mut acc.rows);
@@ -403,6 +448,12 @@ fn main() {
     };
     let summary = build_summary(meta, &acc, args.top_gaps, 10);
     print_stdout(&summary);
+    if let Some(m) = &race_mask {
+        println!(
+            "MASKED {} race cells excluded (percentages = parity on deterministic cells)",
+            m.len()
+        );
+    }
 
     if !structure_counts.is_empty() {
         println!("STRUCTURE STARTS (ref inventory):");

@@ -139,6 +139,13 @@ pub fn classify(vn: &str, nn: &str) -> GapClass {
 ///
 /// `collect_rows`: push every mismatch into `rows` (ledger mode). Without it,
 /// only aggregates accumulate — cheap enough for wide scans.
+///
+/// `mask`: optional set of world-coord cells to skip (race cells where
+/// vanilla samples disagree with each other — no deterministic
+/// implementation can match those; see `parity --race-mask`). Skipped
+/// cells accumulate into nothing: totals, gaps, rows and worst-chunk
+/// counts all exclude them, so percentages read as "parity on
+/// deterministic cells".
 pub fn compare_chunk(
     acc: &mut RegionAccumulator,
     cx: i32,
@@ -146,6 +153,7 @@ pub fn compare_chunk(
     chunk: &GeneratedChunk,
     van: &RefChunk,
     collect_rows: bool,
+    mask: Option<&std::collections::HashSet<(i32, i32, i32)>>,
 ) -> ChunkMetrics {
     debug_assert_eq!(van.blocks.names.len(), van.blocks.dim.cells());
     let dim: DimSpec = van.blocks.dim;
@@ -153,6 +161,11 @@ pub fn compare_chunk(
     for y in dim.bottom()..dim.top() {
         for z in 0..16u32 {
             for x in 0..16u32 {
+                if let Some(m) = mask {
+                    if m.contains(&(cx * 16 + x as i32, y, cz * 16 + z as i32)) {
+                        continue;
+                    }
+                }
                 let b = chunk.block_at(x, y, z);
                 let nn = vanilla_name(b);
                 let vn = van.blocks.get(x, y, z);
