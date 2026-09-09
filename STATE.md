@@ -25,10 +25,17 @@
 > stub returns deep_dark, vanilla's = dark_forest (ref section palette
 > [dark_forest, deep_dark]; the stub quart cell is dark_forest).
 > WIRING + BEARDIFIER UNWIRED (424242 restored to exactly 98.9475% /
-> 543,187). NEXT: fix the negative-y cave biome lookup (deep_dark vs
-> dark_forest at y=-37 quart (-55,-10,36) seed 424242), re-wire city +
-> beardifier → expect +51k (10101) and city parity on every seed with
-> the deep_dark gate. City = top 10101 family (~195k cells left).
+> 543,187). s36 climate probe (340d630): vanilla TargetPoint at the
+> 424242 stub (-219,-37,144) = t=1217 h=4117 c=1600 e=-1866 d=11053
+> w=-4634 (dark_forest); NEUTRON t=-2611 h=-9 c=2608 e=-3724 d=11778
+> w=4538 (deep_dark) — ALL SIX parameters diverge (not a tie-break): the
+> shifted-noise climate evaluation (temperature/offset-shift noise)
+> differs from vanilla at negative-y cave positions. NEXT: bisect the
+> climate chain per-parameter (probe TargetPoint vs climate_at at a
+> grid; check shift_x/shift_z caches and the offset/temperature perlin
+> instances) — then re-wire city + beardifier. City = top 10101 family
+> (~195k cells left); every other seed with deep_dark cities will also
+> unblock.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
