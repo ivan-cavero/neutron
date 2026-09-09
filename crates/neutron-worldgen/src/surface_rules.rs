@@ -1463,6 +1463,32 @@ mod ref_block_10101 {
     use neutron_world::Region;
 
     /// Read the 10101 ref chunk (-14,2) blocks at (-224..-222,-51,32).
+    /// FINDING (s41): the ref air at these cells = SculkVeinBlock.onDischarged
+    /// (vein with no faces left converts to AIR — SculkVeinBlock.java:81).
+    /// The 194k air->deepslate family is sculk-vein discharge air; the sculk
+    /// spread on seed 10101 never reaches/places veins at those positions in
+    /// neutron. Root cause lives in the sculk cursor movement/placement.
+    #[test]
+    #[ignore = "diagnostic: MY chunk (-14,2) sculk/vein census at y=-51"]
+    fn my_sculk_census_10101() {
+        let gen = crate::generator::ChunkGenerator::new(10101);
+        let chunk = gen.generate_chunk(-14, 2);
+        let mut census = std::collections::BTreeMap::new();
+        for lz in 0..16u32 {
+            for lx in 0..16u32 {
+                let b = chunk.block_at(lx, -51, lz);
+                let name = format!("{b:?}");
+                *census.entry(name).or_insert(0usize) += 1;
+            }
+        }
+        for (k, v) in &census {
+            if *v > 0 && (k.contains("Sculk") || k.contains("Air") || k.contains("Deepslate")) {
+                eprintln!("MY-CELL y=-51 {k} = {v}");
+            }
+        }
+        panic!("CENSUS-DONE");
+    }
+
     #[test]
     #[ignore = "diagnostic: ref blocks at (-224..-222,-51,32)"]
     fn ref_block_10101_cell() {
