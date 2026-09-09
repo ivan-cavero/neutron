@@ -110,10 +110,18 @@
 > apply the deepslate vertical gradient. The predc1 scene-divergence
 > conclusion stands RETRACTED. The displaced-tree family's cause remains
 > the origin-order/ticket-sim residual (11-13% violations).
-> NEXT: ticket-sim residual — compare the simulated decorate order against
-> vanilla's real per-chunk decoration. Scene dumps must come from real
-> server chunks (the ref worlds) or a FIXED probe. 424242 tree family
-> ≈ 281k cells.
+> d493b9e (s51) TREE DISPLACEMENT QUANTIFIED: dark_oak log census —
+> REF 164+132=296 vs MINE 135+145=280 across chunks (-14,-14)/(-13,-14):
+> trees shifted EAST across the chunk boundary (−29/+13), not uniformly
+> over/under-placed. Also confirmed via real ref NBT: (-208,71,-218) =
+> AIR — the prior 'vanilla places a tree neutron rejects' was based on
+> the BROKEN probe scene. Root cause narrowed: the dark_forest_vegetation
+> feature places trees + leaf_litter + sub-features in ONE RNG stream
+> (step 9 vegetal); an earlier sub-feature consuming different RNG shifts
+> all subsequent tree positions — matching the cross-chunk displacement.
+> NEXT: bisect the dark_forest_vegetation RNG stream per origin
+> (PROBE_RAW_DRAWS infra exists at /tmp/opencode/probe_dark_raw2.out).
+> Tree family ≈ 281k cells on 424242.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
