@@ -1747,3 +1747,166 @@ mod ref_deepslate_424242 {
         panic!("PALETTE-DONE");
     }
 }
+
+#[cfg(test)]
+mod ref_tree_424242 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// 424242 ref chunk (-14,-14): the block at (-208,71,-218) — is the
+    /// dark_oak tree there in the real world? (local x=8, y=71→sec 4 ly=7,
+    /// z=-218→local 6)
+    #[test]
+    #[ignore = "diagnostic: ref block at (-208,71,-218)"]
+    fn ref424242_tree_cell() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-14, -14);
+        let region = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+            .expect("region")
+            .with_coords(cx >> 5, cz >> 5);
+        let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections"),
+        };
+        // y=71 → section 4 (y 64..79), local y = 71-64 = 7
+        // local x = -208 - (-224) = 16?? No: chunk (-14,-14) covers x -224..-209;
+        // -208 is in chunk (-13,-14)! Adjust: cx=-13.
+        let (cx2, cz2) = (-13, -14);
+        let region2 = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx2 >> 5, cz2 >> 5)))
+            .expect("region2")
+            .with_coords(cx2 >> 5, cz2 >> 5);
+        let raw2 = region2.get_chunk(cx2 & 31, cz2 & 31).expect("chunk2").expect("data2");
+        let nbt2 = read_nbt(&raw2).expect("nbt2");
+        let sections2 = match compound_get(&nbt2.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections2"),
+        };
+        // count dark_oak logs in both chunks (all sections)
+        for (label, secs) in [("chunk(-14,-14)", sections), ("chunk(-13,-14)", sections2)] {
+            let mut log_count = 0usize;
+            for sec in secs {
+                let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else {
+                    continue;
+                };
+                let palette = match compound_get(bs, "palette") {
+                    Some(Tag::List(l)) => match l {
+                        List::Compound(cs) => cs
+                            .iter()
+                            .map(|e| match compound_get(e, "Name") {
+                                Some(Tag::String(n)) => n.to_string(),
+                                _ => "?".into(),
+                            })
+                            .collect(),
+                        _ => vec![],
+                    },
+                    _ => vec![],
+                };
+                let Some(dark_idx) = palette.iter().position(|n| n == "minecraft:dark_oak_log")
+                else {
+                    continue;
+                };
+                let bits = (palette.len() as f64).log2().ceil() as usize;
+                let per = (64 / bits).max(1);
+                if let Some(Tag::LongArray(data)) = compound_get(bs, "data") {
+                    let data = data.to_vec();
+                    for idx in 0..(16 * 16 * 16) {
+                        let li = idx / per;
+                        let po = idx % per;
+                        let long = data.get(li).copied().unwrap_or(0) as u64;
+                        let mut v: u64 = 0;
+                        for b in 0..bits {
+                            v |= (((long >> (po * bits + b)) & 1) << b);
+                        }
+                        if v as usize == dark_idx {
+                            log_count += 1;
+                        }
+                    }
+                }
+            }
+            eprintln!("REF-TREE-COUNT {label} dark_oak_logs = {log_count}");
+        }
+        for (label, secs, lx) in [("chunk(-14,-14)", sections, 16), ("chunk(-13,-14)", sections2, 8)] {
+            for sec in secs {
+                let y_sec = match compound_get(sec, "Y") {
+                    Some(Tag::Byte(y)) => *y as i8 as i32,
+                    Some(Tag::Int(y)) => *y,
+                    _ => continue,
+                };
+                if y_sec != 4 {
+                    continue;
+                }
+                let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else {
+                    continue;
+                };
+                let palette = match compound_get(bs, "palette") {
+                    Some(Tag::List(l)) => match l {
+                        List::Compound(cs) => cs
+                            .iter()
+                            .map(|e| match compound_get(e, "Name") {
+                                Some(Tag::String(n)) => n.to_string(),
+                                _ => "?".into(),
+                            })
+                            .collect(),
+                        _ => vec![],
+                    },
+                    _ => vec![],
+                };
+                let bits = (palette.len() as f64).log2().ceil() as usize;
+                let per = (64 / bits).max(1);
+                let idx = 7 * 256 + 6 * 16 + lx;
+                if let Some(Tag::LongArray(data)) = compound_get(bs, "data") {
+                    let data = data.to_vec();
+                    let li = idx / per;
+                    let po = idx % per;
+                    let long = data.get(li).copied().unwrap_or(0) as u64;
+                    let mut v: u64 = 0;
+                    for b in 0..bits {
+                        v |= (((long >> (po * bits + b)) & 1) << b);
+                    }
+                    eprintln!(
+                        "REF-TREE {label} (-208,71,-218) = {}",
+                        palette.get(v as usize).unwrap_or(&"?".into())
+                    );
+                } else {
+                    eprintln!(
+                        "REF-TREE {label} uniform = {:?}",
+                        palette.first()
+                    );
+                }
+            }
+        }
+        panic!("TREE-CELL-DONE");
+    }
+}
+
+#[cfg(test)]
+mod my_tree_census_424242 {
+    use crate::generator::ChunkGenerator;
+
+    /// MY dark_oak log count for chunks (-14,-14) and (-13,-14) on 424242.
+    #[test]
+    #[ignore = "diagnostic: my dark_oak log census"]
+    fn my_tree_census_424242() {
+        let gen = ChunkGenerator::new(424242);
+        for (cx, cz) in [(-14i32, -14), (-13, -14)] {
+            let chunk = gen.generate_chunk(cx, cz);
+            let mut log_count = 0usize;
+            for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                for lz in 0..16u32 {
+                    for lx in 0..16u32 {
+                        if chunk.block_at(lx, y, lz) == crate::surface::BlockId::DarkOakLog {
+                            log_count += 1;
+                        }
+                    }
+                }
+            }
+            eprintln!("MY-TREE-COUNT chunk ({cx},{cz}) dark_oak_logs = {log_count}");
+        }
+        panic!("CENSUS-DONE");
+    }
+}
