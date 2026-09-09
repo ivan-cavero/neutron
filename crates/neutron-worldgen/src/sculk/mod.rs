@@ -214,6 +214,10 @@ pub(crate) fn apply_sculk_origin(
     region.current_writer = crate::writers::SCULK_PATCH;
     let mut rng = FeatureRandom::new(level_seed);
     let dec = rng.set_decoration_seed(level_seed, ox0, oz0);
+    // vanilla deep_dark step-7 order: sculk_vein (index 0) THEN
+    // sculk_patch_deep_dark (index 1) — each with its own feature seed.
+    rng.set_feature_seed(dec, idx_vein, step::UNDERGROUND_DECORATION);
+    place_sculk_vein(&mut rng, region, state, faces, ox0, oz0, &vein_cfg);
     rng.set_feature_seed(dec, idx_patch, step::UNDERGROUND_DECORATION);
     place_sculk_patch(&mut rng, region, state, faces, ox0, oz0, &patch_cfg);
 

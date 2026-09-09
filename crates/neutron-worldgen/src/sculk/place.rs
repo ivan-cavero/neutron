@@ -178,6 +178,41 @@ pub(super) fn place_sculk_patch(
     let dump = std::env::var_os("NEUTRON_SCULK_PATCHES").is_some();
     // Export the pristine terrain box around the 3 spreading origins for the
     // vanilla ProbeSculkPatch replay (cave-dump format).
+    if std::env::var_os("NEUTRON_SCULK_CAVEDUMP").is_some() && ox0 == -208 && oz0 == 0 {
+        use std::fmt::Write as _;
+        let mut out = String::new();
+        for y in -60..=-25 {
+            for z in -5..=40 {
+                for x in -230..=-190 {
+                    let b = region.get(x, y, z);
+                    let name = match b {
+                        crate::surface::BlockId::Deepslate => "deepslate",
+                        crate::surface::BlockId::Stone => "stone",
+                        crate::surface::BlockId::Tuff => "tuff",
+                        crate::surface::BlockId::Granite => "granite",
+                        crate::surface::BlockId::Diorite => "diorite",
+                        crate::surface::BlockId::Andesite => "andesite",
+                        crate::surface::BlockId::Dirt => "dirt",
+                        crate::surface::BlockId::Gravel => "gravel",
+                        crate::surface::BlockId::Calcite => "calcite",
+                        crate::surface::BlockId::Clay => "clay",
+                        crate::surface::BlockId::Sand => "sand",
+                        crate::surface::BlockId::Water => "water",
+                        crate::surface::BlockId::Air | crate::surface::BlockId::CaveAir => "air",
+                        crate::surface::BlockId::DeepslateTiles => "deepslate_tiles",
+                        crate::surface::BlockId::DeepslateBricks => "deepslate_bricks",
+                        _ => "deepslate",
+                    };
+                    let _ = writeln!(out, "{} {} {} {}", x, y, z, name);
+                }
+            }
+        }
+        // origins whose deep attempts land in this box
+        for (ox, oy, oz) in [(-208i32, 0, 0)] {
+            let _ = writeln!(out, "origin {} {} {}", ox, oy, oz);
+        }
+        eprintln!("CAVEDUMP2-BEGIN\n{}\nCAVEDUMP2-END", out.trim_end());
+    }
     if std::env::var_os("NEUTRON_SCULK_CAVEDUMP").is_some() && ox0 == -224 && oz0 == 32 {
         use std::fmt::Write as _;
         let mut out = String::new();
@@ -226,17 +261,8 @@ pub(super) fn place_sculk_patch(
             );
         }
         let biome_ok = is_deep_dark_at(state, x, y, z);
-        if dump && y < -30 && y > -70 {
-            eprintln!(
-                "ATTDEEP o=({ox0},{oz0}) i={i} ({x},{y},{z}) deep_dark={biome_ok} here={:?}",
-                region.get(x, y, z)
-            );
-        }
         if !biome_ok {
             continue;
-        }
-        if dump && y < -30 && y > -70 {
-            eprintln!("ATTDEEP-PASS o=({ox0},{oz0}) i={i} ({x},{y},{z})");
         }
         SCULK_BIOME_OK.fetch_add(1, Ordering::Relaxed);
         let here = region.get(x, y, z);
