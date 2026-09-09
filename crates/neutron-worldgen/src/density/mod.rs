@@ -266,12 +266,76 @@ impl DFNode {
 }
 
 /// Evaluation environment: per-seed noise instances, blend state, and marker caching.
+/// One structure piece box for the `minecraft:beardifier` density node
+/// (`Beardifier.Rigid` — BEARD_BOX pieces with their ground-level delta).
+#[derive(Clone, Copy, Debug)]
+pub struct BeardBox {
+    pub min_x: i32,
+    pub max_x: i32,
+    pub min_y: i32,
+    pub max_y: i32,
+    pub min_z: i32,
+    pub max_z: i32,
+    /// `PoolElementStructurePiece.getGroundLevelDelta()`.
+    pub ground_level_delta: i32,
+}
+
+impl BeardBox {
+    /// `Beardifier.getBeardContribution` sum for one block (times 0.8).
+    /// `dx`/`dz` are the horizontal distances OUTSIDE the box (clamped ≥ 0);
+    /// `dy = max(0, max(ground_y - y, y - max_y))`; `dy_to_ground = y - ground_y`.
+    /// Kernel: `e^(-d²/16)` with `d² = dx² + (dy_to_ground + 0.5)² + dz²`,
+    /// lookup `KERNEL[zi*576 + xi*24 + yi]` for xi/yi/zi = d+12 ∈ [0,24).
+    pub fn contribution(&self, x: i32, y: i32, z: i32) -> f64 {
+        let dx = 0.max((self.min_x - x).max(x - self.max_x));
+        let dz = 0.max((self.min_z - z).max(z - self.max_z));
+        let ground_y = self.min_y + self.ground_level_delta;
+        let dy = 0.max((ground_y - y).max(y - self.max_y));
+        let dy_to_ground = y - ground_y;
+        let (xi, yi, zi) = (dx + 12, dy + 12, dz + 12);
+        if xi > 23 || yi > 23 || zi > 23 {
+            return 0.0;
+        }
+        let dy_with_offset = dy_to_ground as f64 + 0.5;
+        let distance_sqr = mth_helpers::length_squared(dx as f64, dy_with_offset, dz as f64);
+        let value = -dy_with_offset * mth_helpers::fast_inv_sqrt(distance_sqr / 2.0) / 2.0;
+        // BEARD_KERNEL[zi][xi][yi] = computeBeardContribution(xi-12, yi-12,
+        // zi-12) = e^{-((xi-12)² + (yi-12+0.5)² + (zi-12)²) / 16} — the
+        // kernel's y term carries the +0.5 offset.
+        let k = (-(dx as f64 * dx as f64
+            + (dy as f64 + 0.5) * (dy as f64 + 0.5)
+            + dz as f64 * dz as f64)
+            / 16.0)
+            .exp();
+        value * k * 0.8
+    }
+}
+
+/// `Mth.lengthSquared` / `Mth.fastInvSqrt` (f64, magic-constant bit trick).
+pub(crate) mod mth_helpers {
+    pub fn length_squared(x: f64, y: f64, z: f64) -> f64 {
+        x * x + y * y + z * z
+    }
+
+    pub fn fast_inv_sqrt(x: f64) -> f64 {
+        let xhalf = 0.5 * x;
+        let mut i = x.to_bits() as i64;
+        i = 6910469410427058090i64 - (i >> 1);
+        let mut r = f64::from_bits(i as u64);
+        r * (1.5 - xhalf * r * r)
+    }
+}
+
 pub struct DensityEnv<'a> {
     pub x: i32,
     pub y: i32,
     pub z: i32,
     /// Noise key -> NormalNoise instance for the current seed.
     pub noises: &'a HashMap<String, NormalNoise>,
+    /// Structure piece boxes feeding the `minecraft:beardifier` node
+    /// (`Beardifier.forStructuresInChunk` — BEARD_BOX pieces within 12
+    /// blocks of the chunk). Empty outside structure generation.
+    pub beard_boxes: &'a [BeardBox],
     /// blend alpha (1.0 for fresh generation).
     pub blend_alpha: f64,
     /// blend offset (0.0 for fresh generation).
@@ -289,6 +353,7 @@ impl<'a> DensityEnv<'a> {
             y,
             z,
             noises,
+            beard_boxes: &[],
             blend_alpha: 1.0,
             blend_offset: 0.0,
             marker_state: None,
@@ -308,10 +373,17 @@ impl<'a> DensityEnv<'a> {
             y,
             z,
             noises,
+            beard_boxes: &[],
             blend_alpha: 1.0,
             blend_offset: 0.0,
             marker_state: Some(state),
         }
+    }
+
+    /// Enable structure beard contributions (`Beardifier.forStructuresInChunk`).
+    pub fn with_beard_boxes(mut self, boxes: &'a [BeardBox]) -> Self {
+        self.beard_boxes = boxes;
+        self
     }
 
     // sub() removed: use env.y = Y; compute(...); env.y = old_y inline
@@ -609,7 +681,14 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             }
             *lower_bound as f64
         }
-        DFNode::Beardifier => 0.0,
+        DFNode::Beardifier => {
+            // Beardifier.compute: sum over the chunk's BEARD_BOX pieces.
+            let mut v = 0.0;
+            for b in env.beard_boxes {
+                v += b.contribution(env.x, env.y, env.z);
+            }
+            v
+        }
         DFNode::BlendedNoise(bn) => bn.0.compute(env.x, env.y, env.z),
         DFNode::EndIslands(offset) => {
             // Only used by the End; conservative approximation is not needed

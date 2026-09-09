@@ -355,6 +355,9 @@ pub(crate) struct Piece {
     /// Free-space snapshot AT ACCEPT TIME (vanilla carries the
     /// MutableObject<VoxelShape> contents in the PieceState).
     pub(crate) free_at_accept: Vec<Bb>,
+    /// `PoolElementStructurePiece.getGroundLevelDelta()` — for rigid pieces:
+    /// source delta − deltaY.
+    pub(crate) ground_level_delta: i32,
 }
 
 /// RNG consumed exactly like vanilla's `WorldgenRandom` here:
@@ -364,6 +367,18 @@ pub(crate) struct Assembler<'r> {
     pieces: Vec<Piece>,
     /// Global AABB clamp (min_x, max_x, min_z, max_z).
     global: (i32, i32, i32, i32),
+}
+
+/// All city pool elements are `single`/`list`/`feature` pool elements with
+/// RIGID projection — `getGroundLevelDelta()` = source delta − deltaY.
+fn target_rigid_probe(_tpl: &str) -> bool {
+    true
+}
+
+/// Non-rigid elements would use `targetElement.getGroundLevelDelta()`
+/// (StructurePoolElement default = 1). Unused for the city.
+fn target_elem_ground_level_delta() -> i32 {
+    1
 }
 
 fn attach_inside_source_hit(source: &Piece, pos: (i32, i32, i32)) -> bool {
@@ -406,7 +421,7 @@ impl<'r> Assembler<'r> {
         rng: &'r mut crate::legacy_rng::LegacyRandom,
         start_x: i32,
         start_z: i32,
-    ) -> Option<Vec<Piece>> {
+    ) -> Option<(Vec<Piece>, (i32, i32, i32))> {
         // JigsawStructure.findGenerationPoint: constant start height → no draw.
         let start_pos = (start_x, START_Y, start_z);
         // Rotation.getRandom: nextInt(4)
@@ -484,6 +499,7 @@ impl<'r> Assembler<'r> {
             bb: center_bb,
             is_feature: false,
             free_at_accept: center_free,
+            ground_level_delta: 1,
         });
         if MAX_DEPTH > 0 {
             // Branch shape = Shapes.join(create(globalAABB), create(centerBox),
@@ -521,7 +537,7 @@ impl<'r> Assembler<'r> {
                 idx += 1;
             }
         }
-        Some(std::mem::take(&mut asm.pieces))
+        Some((std::mem::take(&mut asm.pieces), global_center))
     }
 
     fn try_placing_children(
@@ -729,6 +745,12 @@ bb=({},{},{})",
                                 (target_bb.min_x, target_bb.min_y, target_bb.min_z)
                             );
                         }
+                        let source_ground_level_delta = source.ground_level_delta;
+                        let target_ground_level_delta = if target_rigid_probe(child_names[0]) {
+                            source_ground_level_delta - delta_y
+                        } else {
+                            target_elem_ground_level_delta()
+                        };
                         self.pieces.push(Piece {
                             depth: depth + 1,
                             tpl_name: child_names[0],
@@ -736,6 +758,7 @@ bb=({},{},{})",
                             rot: target_rot,
                             bb: target_bb,
                             is_feature: target_elem.feature,
+                            ground_level_delta: target_ground_level_delta,
                             free_at_accept: {
                                 let mut snap = free.clone();
                                 snap.push(target_bb);

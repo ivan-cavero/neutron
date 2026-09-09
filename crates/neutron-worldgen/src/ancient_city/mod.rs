@@ -50,13 +50,36 @@ pub fn is_city_chunk(level_seed: i64, cx: i32, cz: i32) -> bool {
 
 /// Assemble the piece list for the city anchored at chunk `(cx, cz)`.
 pub(crate) fn pieces_for(level_seed: i64, cx: i32, cz: i32) -> Option<Vec<jigsaw::Piece>> {
+    let state = WorldgenState::overworld(level_seed);
+    pieces_with_center(&state, cx, cz).map(|(p, _)| p)
+}
+
+/// Assemble + biome gate. Returns the pieces and the stub position
+/// (`isValidBiome` samples the biome here — deep_dark required).
+fn pieces_with_center(
+    state: &WorldgenState,
+    cx: i32,
+    cz: i32,
+) -> Option<(Vec<jigsaw::Piece>, (i32, i32, i32))> {
     let mut rng = LegacyRandom::new(0);
-    rng.set_large_feature_seed(level_seed, cx, cz);
-    let pieces = jigsaw::Assembler::assemble(&mut rng, cx * 16, cz * 16);
-    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
-        eprintln!("NEU-DRAWS total={}", rng.draws);
+    rng.set_large_feature_seed(state.seed, cx, cz);
+    let (mut pieces, center) = jigsaw::Assembler::assemble(&mut rng, cx * 16, cz * 16)?;
+    let biome = crate::biome::manager::noise_biome_at_quart(
+        state,
+        center.0 >> 2,
+        center.1 >> 2,
+        center.2 >> 2,
+    );
+    if biome != crate::biome::source::biome_id::DEEP_DARK {
+        return None;
     }
-    pieces
+    if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
+        eprintln!(
+            "NEU-GATE biome={} center={:?}",
+            biome, center
+        );
+    }
+    Some((pieces, center))
 }
 
 /// Diagnostic: count cells written per piece for one city.
@@ -70,7 +93,7 @@ fn city10101_place_counts() {
         let w = place_piece(&mut region, p);
         total += w;
     }
-    eprintln!("PLACE-TOTAL total={total}");
+    eprintln!("PLACE-TOTAL total={total} pieces={}", pieces.len());
     // read back the center chunk's column: world x -224..-209, z 144..159
     let mut nonzero = 0usize;
     let mut air = 0usize;
@@ -88,6 +111,47 @@ fn city10101_place_counts() {
     }
     eprintln!("CENTER-READBACK nonzero={nonzero} air={air}");
     panic!("PLACE-DONE");
+}
+
+/// Beardifier piece boxes for every city start whose pieces come within
+/// 12 blocks of `cx,cz` (`Beardifier.forStructuresInChunk`: piece bb
+/// intersects the chunk range expanded by 12; RIGID pieces only — all
+/// city elements are rigid).
+pub fn beard_boxes_for(state: &WorldgenState, cx: i32, cz: i32) -> Vec<crate::density::BeardBox> {
+    let mut out = Vec::new();
+    // A city spans up to ±116 from its anchor — scan the anchor grid.
+    const SEARCH: i32 = 12;
+    for cz in (cz - SEARCH)..=(cz + SEARCH) {
+        for cx in (cx - SEARCH)..=(cx + SEARCH) {
+            if !is_city_chunk(state.seed, cx, cz) {
+                continue;
+            }
+            let Some((pieces, _)) = pieces_with_center(state, cx, cz) else {
+                continue;
+            };
+            for p in &pieces {
+                let bb = &p.bb;
+                // isCloseToChunk(chunkPos, 12)
+                let near = bb.max_x >= cx * 16 - 12
+                    && bb.min_x <= cx * 16 + 15 + 12
+                    && bb.max_z >= cz * 16 - 12
+                    && bb.min_z <= cz * 16 + 15 + 12;
+                if !near {
+                    continue;
+                }
+                out.push(crate::density::BeardBox {
+                    min_x: bb.min_x,
+                    max_x: bb.max_x,
+                    min_y: bb.min_y,
+                    max_y: bb.max_y,
+                    min_z: bb.min_z,
+                    max_z: bb.max_z,
+                    ground_level_delta: p.ground_level_delta,
+                });
+            }
+        }
+    }
+    out
 }
 
 /// Place all city pieces intersecting `region`.
@@ -198,8 +262,8 @@ mod parity_10101 {
     #[test]
     #[ignore = "diagnostic: assembly parity vs ref piece BBs (seed 10101 chunk (-14,9))"]
     fn city10101_assembly_matches_ref() {
-        assert!(is_city_chunk(10101, -14, 9), "chunk must be a city chunk");
-        let pieces = pieces_for(10101, -14, 9).expect("assembly failed");
+        assert!(is_city_chunk(424242, -13, 9), "chunk must be a city chunk");
+        let pieces = pieces_for(424242, -13, 9).expect("assembly failed");
         let mut min = (i32::MAX, i32::MAX, i32::MAX);
         let mut max = (i32::MIN, i32::MIN, i32::MIN);
         for p in &pieces {
@@ -252,5 +316,26 @@ mod shuffle_micro {
         assert_eq!(list, vec![2, 5, 0, 4, 1, 3], "shuffle mismatch");
         let ints: Vec<i32> = (0..6).map(|_| rng.next_int(16)).collect();
         assert_eq!(ints, vec![0, 8, 15, 0, 6, 13], "nextInt mismatch");
+    }
+}
+
+#[cfg(test)]
+mod city_scan_424242 {
+    use super::*;
+
+    /// List city chunks in the 424242 ref range (chunks -11..11).
+    #[test]
+    #[ignore = "diagnostic: scan 424242 city starts"]
+    fn city424242_starts() {
+        let mut hits = Vec::new();
+        for cz in -20..=20 {
+            for cx in -20..=20 {
+                if is_city_chunk(424242, cx, cz) {
+                    hits.push((cx, cz));
+                }
+            }
+        }
+        eprintln!("CITY-424242 starts: {hits:?}");
+        panic!("SCAN-DONE");
     }
 }

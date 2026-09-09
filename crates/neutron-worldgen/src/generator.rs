@@ -393,8 +393,14 @@ impl ChunkGenerator {
         // once over the region before decoration, visible to every origin.
         region.current_writer = crate::writers::MINESHAFT;
         crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
-        region.current_writer = crate::writers::ANCIENT_CITY;
-        crate::ancient_city::apply_ancient_city_region(&mut region, &self.state);
+        // Ancient-city placement + beardifier are IMPLEMENTED but UNWIRED:
+        // the assembly is 89/89 exact vs the vanilla oracle, but the city's
+        // biome gate (deep_dark at the stub) disagrees with vanilla — my
+        // noise-biome lookup says deep_dark at 424242 chunk (-13,9) where the
+        // ref world has no city (stored section palette [dark_forest,
+        // deep_dark] — the stub quart cell is dark_forest in vanilla). The
+        // lookup at negative-y cave positions needs the cave-biome handling
+        // verified before wiring. See STATE.md.
         region.current_writer = crate::writers::TERRAIN;
         if prof {
             eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);
@@ -562,6 +568,14 @@ impl ChunkGenerator {
         let st = &self.state;
         let mut blocks = vec![BlockId::Air.as_u16(); CHUNK_BLOCK_VOLUME];
 
+        // Structure beard boxes (BEARD_BOX terrain adaptation) must be known
+        // BEFORE doFill — vanilla builds the Beardifier from structure starts
+        // at NoiseChunk creation. DISABLED pending parity: the carve matches
+        // on 10101 (+43k) but regresses 424242 (−122k) — the junction terms
+        // (getBeardContribution*0.4) and per-piece ground-level deltas need
+        // verification against a vanilla density oracle. See STATE.md.
+        let city_beard_boxes: Vec<crate::density::BeardBox> = Vec::new();
+
         // Create per-chunk marker state (owned by the generator).
         let mut marker_state =
             MarkerState::new(st.cell_width as usize, st.cell_height as usize, st.reg.cache_slot_count());
@@ -609,6 +623,29 @@ impl ChunkGenerator {
                 }
             }
             grids.push(samples);
+        }
+
+        // Beardifier grid: vanilla computes fullNoise = cacheAllInCell(
+        // finalDensity + BeardifierMarker) — the beard contributions are
+        // sampled on the SAME cell-corner grid and interpolated like every
+        // other density term.
+        let mut beard_grid = vec![0f64; grid_len];
+        if !city_beard_boxes.is_empty() {
+            for iy in 0..=cell_count_y {
+                let grid_y = (cell_noise_min_y + iy as i32) * cell_height;
+                for iz in 0..=cell_count_xz {
+                    let grid_z = (first_cell_z + iz as i32) * cell_width;
+                    for ix in 0..=cell_count_xz {
+                        let grid_x = (first_cell_x + ix as i32) * cell_width;
+                        let si = (iy as usize * stride_xz + iz as usize) * stride_xz + ix as usize;
+                        let mut v = 0.0;
+                        for b in &city_beard_boxes {
+                            v += b.contribution(grid_x, grid_y, grid_z);
+                        }
+                        beard_grid[si] = v;
+                    }
+                }
+            }
         }
 
         marker_state.cell_interp = Some(CellInterpRuntime {
@@ -667,8 +704,45 @@ impl ChunkGenerator {
                                     pos_z,
                                     st.noises.noises(),
                                     &mut marker_state,
-                                );
-                                let final_density = compute(&st.router.final_density, &mut env);
+                                )
+                                .with_beard_boxes(&city_beard_boxes);
+                                let mut final_density =
+                                    compute(&st.router.final_density, &mut env);
+                                // + BeardifierMarker (interpolated beard grid)
+                                if !city_beard_boxes.is_empty() {
+                                    let idx = |dx: usize, dy: usize, dz: usize| {
+                                        ((cell_y_index as usize + dy) * stride_xz
+                                            + (cell_z_index as usize + dz))
+                                            * stride_xz
+                                            + (cell_x_index as usize + dx)
+                                    };
+                                    let g = &beard_grid;
+                                    let (fx, fy, fz) = (factor_x, factor_y, factor_z);
+                                    let l = |a: f64, b: f64, t: f64| a + (b - a) * t;
+                                    let v00 = l(
+                                        g[idx(0, 0, 0)],
+                                        g[idx(0, 1, 0)],
+                                        fy,
+                                    );
+                                    let v10 = l(
+                                        g[idx(1, 0, 0)],
+                                        g[idx(1, 1, 0)],
+                                        fy,
+                                    );
+                                    let v01 = l(
+                                        g[idx(0, 0, 1)],
+                                        g[idx(0, 1, 1)],
+                                        fy,
+                                    );
+                                    let v11 = l(
+                                        g[idx(1, 0, 1)],
+                                        g[idx(1, 1, 1)],
+                                        fy,
+                                    );
+                                    let vz0 = l(v00, v10, fx);
+                                    let vz1 = l(v01, v11, fx);
+                                    final_density += l(vz0, vz1, fz);
+                                }
                                 static TRACE_DENS: std::sync::OnceLock<bool> =
                                     std::sync::OnceLock::new();
                                 if *TRACE_DENS.get_or_init(|| {

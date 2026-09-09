@@ -1173,7 +1173,7 @@ mod mineshaft_ref_10101 {
     /// (-14,1) structures starts + the neighbors' starts.
     #[test]
     #[ignore = "diagnostic: dumps ref chunk structures for seed 10101 chunk (-14,1)"]
-    fn mineshaft10101_ref_structures() {
+    fn mineshaft10101_ref_structures_orig() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
         let mut all = String::new();
         for rx in [-1i32, 0] {
@@ -1292,5 +1292,131 @@ mod city_ref_10101 {
             panic!("CITY-DUMP {out}");
         }
         assert!(found, "no ancient_city start in chunk");
+    }
+}
+
+#[cfg(test)]
+mod city_gen_10101 {
+    use crate::generator::ChunkGenerator;
+
+    /// Seed 10101 chunk (-14,9): generate through the real pipeline and
+    /// check whether city blocks land.
+    #[test]
+    #[ignore = "diagnostic: full-pipeline generation of chunk (-14,9) seed 10101"]
+    fn city10101_gen_pipeline() {
+        let gen = ChunkGenerator::new(10101);
+        let chunk = gen.generate_chunk(-13, 10);
+        // count sculk/deepslate_tiles/chamber-ish blocks in the chunk column
+        let mut counts = std::collections::HashMap::new();
+        for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+            for lz in 0..16u32 {
+                for lx in 0..16u32 {
+                    let b = chunk.block_at(lx, y, lz);
+                    *counts.entry(format!("{b:?}")).or_insert(0usize) += 1;
+                }
+            }
+        }
+        for k in ["DeepslateTiles", "Sculk", "PolishedBasalt", "Deepslate", "IronBars", "Lantern"] {
+            eprintln!("GEN-COUNT {k}={:?}", counts.get(k).unwrap_or(&0));
+        }
+        panic!("GEN-DONE");
+    }
+}
+
+#[cfg(test)]
+mod city_ref_424242 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Does the 424242 ref actually have the ancient_city start at chunk
+    /// (-13,9)? Scan the region for its structure starts.
+    #[test]
+    #[ignore = "diagnostic: scan 424242 ref region r.-1.0 for city starts"]
+    fn city424242_ref_check() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
+        let mut out = String::new();
+        for rx in [-1i32, 0] {
+            for rz in [0i32, 1] {
+                let region = match Region::open(std::path::Path::new(&format!(
+                    "{dir}/r.{rx}.{rz}.mca")))
+                {
+                    Ok(r) => r.with_coords(rx, rz),
+                    Err(e) => {
+                        out.push_str(&format!("region ({rx},{rz}): {e:?}\n"));
+                        continue;
+                    }
+                };
+                for lx in 0..32 {
+                    for lz in 0..32 {
+                        let cx = rx * 32 + lx;
+                        let cz = rz * 32 + lz;
+                        let raw = match region.get_chunk(lx, lz) {
+                            Ok(Some(r)) => r,
+                            _ => continue,
+                        };
+                        let Ok(nbt) = read_nbt(&raw) else { continue };
+                        let Some(Tag::Compound(st)) = compound_get(&nbt.compound, "structures")
+                        else {
+                            continue;
+                        };
+                        let Some(Tag::Compound(starts)) = compound_get(st, "starts") else {
+                            continue;
+                        };
+                        for (name, _) in &starts.tags {
+                            if name.to_string() == "minecraft:ancient_city" {
+                                out.push_str(&format!("chunk ({cx},{cz}) ancient_city\n"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        eprintln!("REF-424242-CITIES\n{out}");
+        panic!("SCAN-DONE");
+    }
+}
+
+#[cfg(test)]
+mod city_biome_424242 {
+    use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+    use neutron_world::nbt::{compound_get, read_nbt};
+    use neutron_world::Region;
+
+    /// Read the 424242 ref chunk (-13,9) stored biomes at section Y=-3
+    /// (y -48..-33) — is it deep_dark?
+    #[test]
+    #[ignore = "diagnostic: ref chunk (-13,9) biome palette"]
+    fn city424242_ref_biome() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
+        let (cx, cz) = (-13, 9);
+        let region = Region::open(std::path::Path::new(&format!(
+            "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
+            .expect("region")
+            .with_coords(cx >> 5, cz >> 5);
+        let raw = region.get_chunk(cx & 31, cz & 31).expect("chunk").expect("data");
+        let nbt = read_nbt(&raw).expect("nbt");
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l,
+            _ => panic!("no sections"),
+        };
+        for sec in sections {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                Some(Tag::Int(y)) => *y,
+                _ => continue,
+            };
+            if y_sec != -3 {
+                continue;
+            }
+            let Some(Tag::Compound(bs)) = compound_get(sec, "biomes") else {
+                println!("SEC -3 NO BIOMES");
+                continue;
+            };
+            if let Some(Tag::List(List::String(p))) = compound_get(bs, "palette") {
+                println!("SEC-3 PALETTE {:?}", p);
+            }
+        }
+        panic!("BIOME-DONE");
     }
 }
