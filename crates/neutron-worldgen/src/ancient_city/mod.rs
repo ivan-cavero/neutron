@@ -55,17 +55,16 @@ pub(crate) fn pieces_for(level_seed: i64, cx: i32, cz: i32) -> Option<Vec<jigsaw
 }
 
 /// Assembly cache — the jigsaw expansion is expensive (~1-2 ms per start)
-/// and every chunk in a ±7-chunk radius repeats it during doFill.
-fn assembly_cache() -> &'static std::sync::Mutex<std::collections::HashMap<(i64, i32, i32), Option<(
-    Vec<jigsaw::Piece>,
-    (i32, i32, i32),
-)>>> {
-    static CACHE: std::sync::OnceLock<
-        std::sync::Mutex<std::collections::HashMap<(i64, i32, i32), Option<(
-            Vec<jigsaw::Piece>,
-            (i32, i32, i32),
-        )>>>,
-    > = std::sync::OnceLock::new();
+/// and every chunk in a ±7-chunk radius repeats it during doFill. Values
+/// are Arc-shared so cache hits never clone the piece list.
+type AssemblyCache = std::collections::HashMap<
+    (i64, i32, i32),
+    Option<(std::sync::Arc<Vec<jigsaw::Piece>>, (i32, i32, i32))>,
+>;
+
+fn assembly_cache() -> &'static std::sync::Mutex<AssemblyCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<AssemblyCache>> =
+        std::sync::OnceLock::new();
     CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
@@ -74,14 +73,15 @@ pub fn pieces_gated(
     state: &WorldgenState,
     cx: i32,
     cz: i32,
-) -> Option<(Vec<jigsaw::Piece>, (i32, i32, i32))> {
+) -> Option<(std::sync::Arc<Vec<jigsaw::Piece>>, (i32, i32, i32))> {
     let key = (state.seed, cx, cz);
     if let Ok(cache) = assembly_cache().lock() {
         if let Some(hit) = cache.get(&key) {
             return hit.clone();
         }
     }
-    let result = pieces_with_center(state, cx, cz);
+    let result = pieces_with_center(state, cx, cz)
+        .map(|(p, c)| (std::sync::Arc::new(p), c));
     if let Ok(mut cache) = assembly_cache().lock() {
         cache.insert(key, result.clone());
     }
@@ -195,7 +195,11 @@ fn city10101_place_counts() {
         let w = place_piece(&mut region, p);
         total += w;
     }
-    eprintln!("PLACE-TOTAL total={total} pieces={}", pieces.len());
+    eprintln!(
+        "PLACE-TOTAL total={total} pieces={} junctions={}",
+        pieces.len(),
+        pieces.iter().map(|p| p.junctions.len()).sum::<usize>()
+    );
     eprintln!(
         "NEU-NOISE offset={} temperature={}",
         crate::worldgen::WorldgenState::overworld(424242)
@@ -260,8 +264,13 @@ fn city10101_place_counts() {
 /// 12 blocks of `cx,cz` (`Beardifier.forStructuresInChunk`: piece bb
 /// intersects the chunk range expanded by 12; RIGID pieces only — all
 /// city elements are rigid).
-pub fn beard_boxes_for(state: &WorldgenState, cx: i32, cz: i32) -> Vec<crate::density::BeardBox> {
+pub fn beard_boxes_for(
+    state: &WorldgenState,
+    cx: i32,
+    cz: i32,
+) -> (Vec<crate::density::BeardBox>, Vec<crate::density::BeardJunction>) {
     let mut out = Vec::new();
+    let mut junctions = Vec::new();
     // A city spans up to ±116 from its anchor — scan the anchor grid.
     const SEARCH: i32 = 12;
     for cz in (cz - SEARCH)..=(cz + SEARCH) {
@@ -272,7 +281,7 @@ pub fn beard_boxes_for(state: &WorldgenState, cx: i32, cz: i32) -> Vec<crate::de
             let Some((pieces, _)) = pieces_gated(state, cx, cz) else {
                 continue;
             };
-            for p in &pieces {
+            for p in pieces.iter() {
                 let bb = &p.bb;
                 // isCloseToChunk(chunkPos, 12)
                 let near = bb.max_x >= cx * 16 - 12
@@ -291,10 +300,24 @@ pub fn beard_boxes_for(state: &WorldgenState, cx: i32, cz: i32) -> Vec<crate::de
                     max_z: bb.max_z,
                     ground_level_delta: p.ground_level_delta,
                 });
+                for j in &p.junctions {
+                    // vanilla filters junctions to the chunk ±12 window
+                    if j.source_x > cx * 16 - 12
+                        && j.source_z > cz * 16 - 12
+                        && j.source_x < cx * 16 + 15 + 12
+                        && j.source_z < cz * 16 + 15 + 12
+                    {
+                        junctions.push(crate::density::BeardJunction {
+                            source_x: j.source_x,
+                            source_ground_y: j.source_ground_y,
+                            source_z: j.source_z,
+                        });
+                    }
+                }
             }
         }
     }
-    out
+    (out, junctions)
 }
 
 /// Place all city pieces intersecting `region`.

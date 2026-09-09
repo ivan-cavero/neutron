@@ -567,7 +567,8 @@ impl ChunkGenerator {
         // at NoiseChunk creation. The ancient city is the only BEARD_BOX
         // structure ported so far. Boxes are empty where the biome gate
         // rejects the city (deep_dark gate, matching vanilla placement).
-        let city_beard_boxes = crate::ancient_city::beard_boxes_for(&self.state, cx, cz);
+        let (city_beard_boxes, city_beard_junctions) =
+            crate::ancient_city::beard_boxes_for(&self.state, cx, cz);
 
         // Create per-chunk marker state (owned by the generator).
         let mut marker_state =
@@ -623,7 +624,7 @@ impl ChunkGenerator {
         // sampled on the SAME cell-corner grid and interpolated like every
         // other density term.
         let mut beard_grid = vec![0f64; grid_len];
-        if !city_beard_boxes.is_empty() {
+        if !city_beard_boxes.is_empty() || !city_beard_junctions.is_empty() {
             for iy in 0..=cell_count_y {
                 let grid_y = (cell_noise_min_y + iy as i32) * cell_height;
                 for iz in 0..=cell_count_xz {
@@ -634,6 +635,9 @@ impl ChunkGenerator {
                         let mut v = 0.0;
                         for b in &city_beard_boxes {
                             v += b.contribution(grid_x, grid_y, grid_z);
+                        }
+                        for j in &city_beard_junctions {
+                            v += j.contribution(grid_x, grid_y, grid_z);
                         }
                         beard_grid[si] = v;
                     }
@@ -698,7 +702,13 @@ impl ChunkGenerator {
                                     st.noises.noises(),
                                     &mut marker_state,
                                 )
-                                .with_beard_boxes(&city_beard_boxes);
+                                // NOTE: the beard contributions are added via the
+                                // pre-sampled beard_grid below (vanilla wraps the
+                                // whole Beardifier inside cacheAllInCell — the
+                                // contributions are cell-corner sampled and
+                                // interpolated). The env lists stay empty here to
+                                // avoid double counting.
+                                ;
                                 let mut final_density =
                                     compute(&st.router.final_density, &mut env);
                                 // + BeardifierMarker (interpolated beard grid)

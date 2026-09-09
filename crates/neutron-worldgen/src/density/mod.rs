@@ -326,6 +326,38 @@ pub(crate) mod mth_helpers {
     }
 }
 
+/// `JigsawJunction` for the Beardifier (`*0.4` term). `dy` is NOT clamped
+/// and `y_to_ground = dy` (no ground offset).
+#[derive(Clone, Copy, Debug)]
+pub struct BeardJunction {
+    pub source_x: i32,
+    pub source_ground_y: i32,
+    pub source_z: i32,
+}
+
+impl BeardJunction {
+    /// `Beardifier`: contribution = getBeardContribution(dx, dy, dz, dy) * 0.4
+    /// where dx/dy/dz = block − source (raw, unclamped).
+    pub fn contribution(&self, x: i32, y: i32, z: i32) -> f64 {
+        let dx = x - self.source_x;
+        let dy = y - self.source_ground_y;
+        let dz = z - self.source_z;
+        let (xi, yi, zi) = (dx + 12, dy + 12, dz + 12);
+        if xi > 23 || yi > 23 || zi > 23 {
+            return 0.0;
+        }
+        let dy_with_offset = dy as f64 + 0.5;
+        let distance_sqr = mth_helpers::length_squared(dx as f64, dy_with_offset, dz as f64);
+        let value = -dy_with_offset * mth_helpers::fast_inv_sqrt(distance_sqr / 2.0) / 2.0;
+        let k = (-(dx as f64 * dx as f64
+            + (dy as f64 + 0.5) * (dy as f64 + 0.5)
+            + dz as f64 * dz as f64)
+            / 16.0)
+            .exp();
+        value * k * 0.4
+    }
+}
+
 pub struct DensityEnv<'a> {
     pub x: i32,
     pub y: i32,
@@ -336,6 +368,8 @@ pub struct DensityEnv<'a> {
     /// (`Beardifier.forStructuresInChunk` — BEARD_BOX pieces within 12
     /// blocks of the chunk). Empty outside structure generation.
     pub beard_boxes: &'a [BeardBox],
+    /// Jigsaw junctions feeding the `*0.4` beard term.
+    pub beard_junctions: &'a [BeardJunction],
     /// blend alpha (1.0 for fresh generation).
     pub blend_alpha: f64,
     /// blend offset (0.0 for fresh generation).
@@ -354,6 +388,7 @@ impl<'a> DensityEnv<'a> {
             z,
             noises,
             beard_boxes: &[],
+            beard_junctions: &[],
             blend_alpha: 1.0,
             blend_offset: 0.0,
             marker_state: None,
@@ -374,6 +409,7 @@ impl<'a> DensityEnv<'a> {
             z,
             noises,
             beard_boxes: &[],
+            beard_junctions: &[],
             blend_alpha: 1.0,
             blend_offset: 0.0,
             marker_state: Some(state),
@@ -383,6 +419,12 @@ impl<'a> DensityEnv<'a> {
     /// Enable structure beard contributions (`Beardifier.forStructuresInChunk`).
     pub fn with_beard_boxes(mut self, boxes: &'a [BeardBox]) -> Self {
         self.beard_boxes = boxes;
+        self
+    }
+
+    /// Enable jigsaw junction contributions (`Beardifier` `*0.4` term).
+    pub fn with_beard_junctions(mut self, junctions: &'a [BeardJunction]) -> Self {
+        self.beard_junctions = junctions;
         self
     }
 
@@ -518,38 +560,11 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             let x = env.x as f64 * xz_scale + compute(sx, env);
             let y = env.y as f64 * y_scale + compute(sy, env);
             let z = env.z as f64 * xz_scale + compute(sz, env);
-            let v = noise.get_value(x, y, z);
-            if std::env::var_os("NEUTRON_CITY_DRAWS").is_some()
-                && key == "continentalness"
-                && env.x == -224
-                && env.z == 140
-            {
-                eprintln!(
-                    "SHIFTED-EVAL env=({},{},{}) sample=({x:.4},{y:.4},{z:.4}) value={v:.6}",
-                    env.x, env.y, env.z
-                );
-            }
-            v
+            noise.get_value(x, y, z)
         }
         DFNode::ShiftA(key) => {
             let noise = &env.noises[key];
-            let v = noise.get_value(env.x as f64 * 0.25, 0.0, env.z as f64 * 0.25) * 4.0;
-            if std::env::var_os("NEUTRON_CITY_DRAWS").is_some()
-                && key == "offset"
-                && env.x == -224
-                && env.z == 140
-            {
-                eprintln!(
-                    "SHIFT-A env=({},{},{}) noise_at=({:.4},0,{:.4}) value={v:.6} ptr={:p}",
-                    env.x,
-                    env.y,
-                    env.z,
-                    env.x as f64 * 0.25,
-                    env.z as f64 * 0.25,
-                    noise as *const _
-                );
-            }
-            v
+            noise.get_value(env.x as f64 * 0.25, 0.0, env.z as f64 * 0.25) * 4.0
         }
         DFNode::ShiftB(key) => {
             let noise = &env.noises[key];
@@ -709,10 +724,49 @@ pub fn compute(df: &DF, env: &mut DensityEnv) -> f64 {
             *lower_bound as f64
         }
         DFNode::Beardifier => {
-            // Beardifier.compute: sum over the chunk's BEARD_BOX pieces.
+            // Beardifier.compute: sum over the chunk's BEARD_BOX pieces and
+            // jigsaw junctions, with the affectedBox early-out (union bbox
+            // inflated by 24 — vanilla returns 0 outside it).
+            if env.beard_boxes.is_empty() && env.beard_junctions.is_empty() {
+                return 0.0;
+            }
+            let mut min_x = i32::MAX;
+            let mut max_x = i32::MIN;
+            let mut min_y = i32::MAX;
+            let mut max_y = i32::MIN;
+            let mut min_z = i32::MAX;
+            let mut max_z = i32::MIN;
+            for b in env.beard_boxes {
+                min_x = min_x.min(b.min_x);
+                max_x = max_x.max(b.max_x);
+                min_y = min_y.min(b.min_y);
+                max_y = max_y.max(b.max_y);
+                min_z = min_z.min(b.min_z);
+                max_z = max_z.max(b.max_z);
+            }
+            for j in env.beard_junctions {
+                min_x = min_x.min(j.source_x);
+                max_x = max_x.max(j.source_x);
+                min_y = min_y.min(j.source_ground_y);
+                max_y = max_y.max(j.source_ground_y);
+                min_z = min_z.min(j.source_z);
+                max_z = max_z.max(j.source_z);
+            }
+            if env.x < min_x - 24
+                || env.x > max_x + 24
+                || env.y < min_y - 24
+                || env.y > max_y + 24
+                || env.z < min_z - 24
+                || env.z > max_z + 24
+            {
+                return 0.0;
+            }
             let mut v = 0.0;
             for b in env.beard_boxes {
                 v += b.contribution(env.x, env.y, env.z);
+            }
+            for j in env.beard_junctions {
+                v += j.contribution(env.x, env.y, env.z);
             }
             v
         }

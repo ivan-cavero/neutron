@@ -358,6 +358,19 @@ pub(crate) struct Piece {
     /// `PoolElementStructurePiece.getGroundLevelDelta()` — for rigid pieces:
     /// source delta − deltaY.
     pub(crate) ground_level_delta: i32,
+    /// Jigsaw junctions recorded at accept time
+    /// (`PoolElementStructurePiece.addJunction`).
+    pub(crate) junctions: Vec<Junction>,
+}
+
+/// `JigsawJunction` — a connection point between two pieces; feeds the
+/// Beardifier's `*0.4` term.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Junction {
+    pub(crate) source_x: i32,
+    pub(crate) source_ground_y: i32,
+    pub(crate) source_z: i32,
+    pub(crate) delta_y: i32,
 }
 
 /// RNG consumed exactly like vanilla's `WorldgenRandom` here:
@@ -500,6 +513,7 @@ impl<'r> Assembler<'r> {
             is_feature: false,
             free_at_accept: center_free,
             ground_level_delta: 1,
+            junctions: Vec::new(),
         });
         if MAX_DEPTH > 0 {
             // Branch shape = Shapes.join(create(globalAABB), create(centerBox),
@@ -751,7 +765,34 @@ bb=({},{},{})",
                         } else {
                             target_elem_ground_level_delta()
                         };
+                        // junctionY = sourceBoxY + sourceJigsawLocalY (rigid)
+                        let junction_y = source_box_y + source_jigsaw_local_y;
+                        let source_gld = source.ground_level_delta;
+                        let target_gld = target_ground_level_delta;
+                        // sourcePiece.addJunction(...)
+                        let src_junction = Junction {
+                            source_x: target_jigsaw_pos.0,
+                            source_ground_y: junction_y - source_jigsaw_local_y
+                                + source_gld,
+                            source_z: target_jigsaw_pos.2,
+                            delta_y,
+                        };
+                        // targetPiece.addJunction(...)
+                        let tgt_junction = Junction {
+                            source_x: sjx,
+                            source_ground_y: junction_y - tjy + target_gld,
+                            source_z: sjz,
+                            delta_y: -delta_y,
+                        };
+                        if let Some(src) = self
+                            .pieces
+                            .iter_mut()
+                            .find(|pp| pp.position == source.position && pp.bb == source.bb)
+                        {
+                            src.junctions.push(src_junction);
+                        }
                         self.pieces.push(Piece {
+                            junctions: vec![tgt_junction],
                             depth: depth + 1,
                             tpl_name: child_names[0],
                             position: raw_box_pos,
