@@ -102,14 +102,18 @@
 > in both worlds at DISPLACED positions: vanilla's ticket-order places
 > each border tree from a different origin. Net tree-family ≈ 281k cells
 > on 424242 — the origin-order cascade is the dominant remaining family.
-> d2a0d39 (s48): the pre-deco SCENE diverges — van_pred14.predc1 vs
-> our_pred14.predc1 (chunk (-14,-14)) differ by 1,587 bytes. The tree
-> gate evaluates a different scene: trees are accepted/rejected at
-> different positions because the SCENE differs before decoration. One
-> scene diff explained (mineshaft CaveAir); the rest is the multi-origin
-> divergence. NEXT: decode both predc1 dumps and enumerate scene diffs
-> per chunk — each is an explained mechanism or a new lever. The tree
-> family (~281k cells on 424242) resolves once the scene matches.
+> 138a9f6 (s49) RETRACTION: the predc1 "scene divergence" was an ARTIFACT
+> — decoded both dumps (big-endian PREDC1: palette + u16 index arrays):
+> the vanilla probe dump has 621k stone vs 146k deepslate below y=0
+> (deepslate transition UNAPPLIED) while the real ref world has deepslate
+> below y≈0 (parity confirms deepslate at y=-63 both sides). The probe's
+> buildSurface is not equivalent to the real server — the prior session's
+> conclusion was based on this broken dump. The displaced-tree family's
+> cause remains the origin-order/ticket-sim residual (11-13% violations).
+> NEXT: the ticket-sim residual — compare the simulated decorate order
+> against vanilla's real per-chunk decoration (the probe infrastructure
+> exists; the deepslate bug in ProbePreDecorate must be fixed first or
+> the probe's scene dumps remain unreliable).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
