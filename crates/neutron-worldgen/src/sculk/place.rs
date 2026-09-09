@@ -190,6 +190,12 @@ pub(super) fn place_sculk_patch(
             );
         }
         let biome_ok = is_deep_dark_at(state, x, y, z);
+        if dump && ox0 == -224 && oz0 == 32 && y >= -60 && y < -16 {
+            eprintln!(
+                "ATT10101 i={i} ({x},{y},{z}) deep_dark={biome_ok} here={:?}",
+                region.get(x, y, z)
+            );
+        }
         if !biome_ok {
             continue;
         }
@@ -209,6 +215,9 @@ pub(super) fn place_sculk_patch(
             continue;
         }
         SCULK_SPREAD_OK.fetch_add(1, Ordering::Relaxed);
+        if dump && ox0 == -224 && oz0 == 32 && y >= -60 && y < -16 {
+            eprintln!("ATT10101-SPREAD i={i} ({x},{y},{z}) spreading");
+        }
         if dump {
             rng.reset_draw_count();
             if ox0 == 96 && oz0 == -32 && i == 0 {
