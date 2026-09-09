@@ -94,9 +94,17 @@
 > aquifer, carvers, mineshaft, city, trial chambers ALL excluded by
 > probes (see e7d450a/46496f6); the ref air at y -51..-32 in deep_dark
 > sections has no identified mechanism in the noise/structure pipeline.
-> 5-iteration cap on this hypothesis REACHED — PARKED. NEXT LEVER: the
-> 424242 mineshaft confusions (9.1k) or the 35.9k sculk_patch family
-> bisect on other seeds; or the full-chunk vanilla oracle.
+> 5-iteration cap on this hypothesis REACHED — PARKED.
+> c84f4a7 (s47) 424242 LEDGER: the tree family is DISPLACED, not missing
+> — tree writer 163,816 (87% border) with INVERTED direction (ref AIR
+> where neutron placed dark_oak/pale_oak trees), while the terrain writer
+> simultaneously shows ref LEAVES where neutron has air. The trees exist
+> in both worlds at DISPLACED positions: vanilla's ticket-order places
+> each border tree from a different origin. Net tree-family ≈ 281k cells
+> on 424242 — the origin-order cascade is the dominant remaining family.
+> NEXT: decoration-order fix at border origins (ticket-sim residual
+> 11-13% violations) — the mineshaft (5,010) and sculk families are
+> secondary.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
