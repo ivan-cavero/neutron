@@ -1462,11 +1462,12 @@ mod ref_block_10101 {
     use neutron_world::nbt::{compound_get, read_nbt};
     use neutron_world::Region;
 
-    /// FINDING (s46): the 424242 tree-family confusions are INVERTED — the ref has AIR
-    /// where neutron placed EXTRA dark_oak/pale_oak trees (58,456 dark_oak leaf cells in
-    /// border zones alone). The trees are not missing; they are PHANTOM (placed by origins
-    /// vanilla's ticket order never decorated in that position). Prior understanding
-    /// ("trees are missing") reversed by the writers ledger.
+    /// FINDING (s46+s47): the 424242 tree-family confusions are DISPLACED trees —
+    /// the pre-deco SCENE diverges before decoration (van_pred14.predc1 vs
+    /// our_pred14.predc1 differ in size by 1,587 bytes). One scene diff is
+    /// explained (mineshaft CaveAir); the rest is the multi-origin scene
+    /// divergence the dark-oak handoff isolated. The tree gate is correct;
+    /// the SCENE it evaluates differs.
     /// FINDING (s41): the ref air at these cells = SculkVeinBlock.onDischarged
     /// (vein with no faces left converts to AIR — SculkVeinBlock.java:81).
     /// The 194k air->deepslate family is sculk-vein discharge air; the sculk
