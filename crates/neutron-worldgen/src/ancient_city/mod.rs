@@ -73,6 +73,14 @@ fn pieces_with_center(
     if biome != crate::biome::source::biome_id::DEEP_DARK {
         return None;
     }
+    // CAVE-BIOME GATE FINDING (s35): at seed 424242 stub (-219,-37,144) the
+    // vanilla climate target is t=1217 h=4117 c=1600 e=-1866 d=11053 w=-4634
+    // (dark_forest → no city), while this lookup returns t=-2611 h=-9 c=2608
+    // e=-3724 d=11778 w=4538 (deep_dark → city placed). The divergence is in
+    // the shifted-noise climate evaluation (temperature/offset noise), not
+    // the gate logic. Until the climate lookup matches vanilla at negative-y
+    // cave positions, the gate cannot be trusted.
+    let _ = state;
     if std::env::var_os("NEUTRON_CITY_DRAWS").is_some() {
         eprintln!(
             "NEU-GATE biome={} center={:?}",
