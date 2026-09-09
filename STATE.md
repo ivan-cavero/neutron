@@ -87,11 +87,16 @@
 > at y=-51 (discharged to air). MY chunk: ZERO sculk at any deep y — the
 > 550 deep attempts' spreads place no sculk in this chunk. The nearest
 > origin attempt (-204,-53,5) is ~19-24 blocks from the ref layer.
-> NEXT: two-sided cursor-path diff — replay the deep origins' patches
-> through ProbeSculkPatch on MY terrain (extend the cave-dump exporter to
-> the (-208,0) area) and diff cursor positions per round vs my run_patch.
-> The cursor movement was verified on 424242; deep_dark depths may hit a
-> different branch (hasSubstrateAccess / charge decay).
+> c2f5aa1 (s45): sculk_vein feature WIRED (it was loaded but never
+> called — vanilla deep_dark step-7 order: vein idx 0 then patch idx 1,
+> each with its own feature seed). Parity 10101 NEUTRAL (444,163 →
+> 444,163). The 194k air→deepslate family remains BLOCKED: density,
+> aquifer, carvers, mineshaft, city, trial chambers ALL excluded by
+> probes (see e7d450a/46496f6); the ref air at y -51..-32 in deep_dark
+> sections has no identified mechanism in the noise/structure pipeline.
+> 5-iteration cap on this hypothesis REACHED — PARKED. NEXT LEVER: the
+> 424242 mineshaft confusions (9.1k) or the 35.9k sculk_patch family
+> bisect on other seeds; or the full-chunk vanilla oracle.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
