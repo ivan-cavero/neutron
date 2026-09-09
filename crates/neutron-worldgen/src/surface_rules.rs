@@ -1596,7 +1596,7 @@ mod all_starts_10101 {
     #[ignore = "diagnostic: all structure starts near the air family"]
     fn all_starts_10101_near() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-10101/world/dimensions/minecraft/overworld/region");
-        for (cx, cz) in [(-14i32, 2), (-14, 1), (-13, 2), (-15, 2)] {
+        for (cx, cz) in [(-14i32, 2), (-14, 1), (-13, 2)] {
             let region = Region::open(std::path::Path::new(&format!(
                 "{dir}/r.{}.{}.mca", cx >> 5, cz >> 5)))
                 .expect("region")
@@ -1609,6 +1609,17 @@ mod all_starts_10101 {
             let Tag::Compound(starts) = compound_get(st, "starts").unwrap() else {
                 continue;
             };
+            if let Some(Tag::Compound(refs)) = compound_get(st, "References") {
+                for (rn, rv) in &refs.tags {
+                    if let Tag::List(l) = rv {
+                        let cnt = match l {
+                            List::Long(v) => v.len(),
+                            _ => 0,
+                        };
+                        eprintln!("REFS ({cx},{cz}): {rn} -> {cnt}");
+                    }
+                }
+            }
             let names: Vec<String> = starts
                 .tags
                 .iter()
