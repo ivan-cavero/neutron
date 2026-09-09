@@ -10,22 +10,25 @@
 > (JigsawPlacement addPieces: random_spread salt 20083232/24/8 golden vs
 > ref chunk (-14,9); city_anchor adjust; groundLevelDelta 1; FIFO placer;
 > branch free-space AABB carve; ListPoolElement first-child jigsaws).
-> 8455ed9 (s34): ANCIENT CITY SOLVED at the assembly level. The free-
-> shape accept test was decoded INVERTED: BooleanOp.ONLY_SECOND =
-> second && !first, so joinIsNotEmpty(free, shrunk(cand), ONLY_SECOND)
-> == (cand && !free) != 0, and vanilla SKIPS when true → a candidate is
-> accepted only when FULLY INSIDE free space; accept carves its box
-> (ONLY_FIRST). Implemented via candidate-minus-free subtraction.
-> Assembly seed 10101 chunk (-14,9): 89/89 pieces ORDER-IDENTICAL to the
-> ProbeCityPieces oracle (= ref NBT). 57 city blocks added (deepslate
-> family etc, protocol ids probe-dumped); placement 9.4k → 51.2k cells
-> per region, WIRED into generate_chunk_cached.
-> Parity 10101: 99.0368% → 99.0526% (+8,175). City window: 98,972 →
-> 44,427 (−54,545). REMAINING: 244k air→deepslate = city INTERIORS —
-> vanilla carves them with the Beardifier (BEARD_BOX piece boxes →
-> getBeardContribution into density); neutron's beardifier node is a
-> 0.0 stub. NEXT: implement Beardifier for city pieces (piece boxes
-> known before doFill; kernel formula in Beardifier.java:169-185).
+> s34-s35: ANCIENT CITY — assembly SOLVED, placement BLOCKED on the
+> cave-biome gate. 8455ed9: accept-semantics decoded (ONLY_SECOND =
+> cand ∧ ¬free ≠ ∅ → vanilla SKIPS; a candidate is accepted only when
+> FULLY INSIDE free space; accept carves) → assembly 89/89 ORDER-
+> IDENTICAL to the ProbeCityPieces oracle (= ref NBT) on 10101 AND
+> 92/93 on 424242 (the 1 = oracle prints LIST:1, same piece). 57 city
+> blocks added (probe-dumped protocol ids). Placement wired: 10101
+> +8,175 → then 349e33d Beardifier port (BEARD_BOX piece boxes, kernel
+> e^{-((dx)²+(dy+0.5)²+(dz)²)/16}, value = -(dyToGround+0.5)*invSqrt(d²
+> /2)/2, cell-corner interpolated) → 10101 +43,067 (99.1359%).
+> BUT 424242 REGRESSED −122k: I place a city at chunk (-13,9) where the
+> REF HAS NONE — the deep_dark biome gate: my noise-biome lookup at the
+> stub returns deep_dark, vanilla's = dark_forest (ref section palette
+> [dark_forest, deep_dark]; the stub quart cell is dark_forest).
+> WIRING + BEARDIFIER UNWIRED (424242 restored to exactly 98.9475% /
+> 543,187). NEXT: fix the negative-y cave biome lookup (deep_dark vs
+> dark_forest at y=-37 quart (-55,-10,36) seed 424242), re-wire city +
+> beardifier → expect +51k (10101) and city parity on every seed with
+> the deep_dark gate. City = top 10101 family (~195k cells left).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
