@@ -52,10 +52,17 @@
 > palette). EXCLUDED by probes: density (vanilla +0.033 solid), carvers
 > (starts 68/68, ELs 3150/3150, no coverage), mineshafts (piece tree
 > 147/147 BBs exact; corridors at y -19..-2), city (pieces z ≥ 74), trial
-> chambers (zero starts). HYPOTHESIS: deep_dark-specific air (aquifer
-> config or a deep_dark density modifier). NEXT: extend ProbeAquifer to
-> computeSubstance at the cells; compare the deep_dark aquifer behavior
-> vs neutron's. sculk_patch family 35.9k = second lever.
+> chambers (zero starts). s40 (46496f6): AQUIFER EXCLUDED too —
+> ProbeAquifer substance mode walks the full doFill interpolation and
+> calls aquifer.computeSubstance at the cells: density +0.033 solid,
+> substance NULL(default)=stone. Structure REFERENCES scan for chunks
+> (-14,2)/(-14,1)/(-13,2): zero starts, zero references → the real
+> chunk's Beardifier is EMPTY. Every noise/structure mechanism excluded.
+> The ref air at y -51..-32 in deep_dark sections (sculk + sculk_vein in
+> the palette) remains unexplained. NEXT: full-chunk vanilla generation
+> oracle (ProbeCityPieces-style) to dump the real chunk's block source
+> per position, or a sculk-feature probe — sculk_vein sits adjacent to
+> the air cells in the ref palette. sculk_patch 35.9k = second lever.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
