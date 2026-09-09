@@ -80,9 +80,18 @@
 > reach y=-51 either. The ref sculk at y -51..-32 comes from NEIGHBOR
 > origins (deeper attempts or cursor spread into chunk (-14,2)); ref
 > chunk (-14,2) has NO sculk at y=-51 (discharged veins became air ✓).
-> NEXT: extend the bisect to all 25 origins (dump attempts per origin,
-> filter deep attempts y < -30, replay those). sculk family total on
-> 10101: 35.9k sculk_patch + 194k discharge air.
+> 0574bab (s44): ALL-ORIGIN BISECT — 550 deep attempts (y -70..-30) pass
+> the gate AND spread across 8 origins ((-208,0), (-240,32), (-192,0),
+> (-240,0), (-240,16), (-192,64), (-224,48), (-224,0); 29-37 each). REF
+> ground truth: a sculk LAYER at y=-52 in chunk (-14,2) with sculk_vein
+> at y=-51 (discharged to air). MY chunk: ZERO sculk at any deep y — the
+> 550 deep attempts' spreads place no sculk in this chunk. The nearest
+> origin attempt (-204,-53,5) is ~19-24 blocks from the ref layer.
+> NEXT: two-sided cursor-path diff — replay the deep origins' patches
+> through ProbeSculkPatch on MY terrain (extend the cave-dump exporter to
+> the (-208,0) area) and diff cursor positions per round vs my run_patch.
+> The cursor movement was verified on 424242; deep_dark depths may hit a
+> different branch (hasSubstrateAccess / charge decay).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
