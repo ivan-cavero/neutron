@@ -102,9 +102,14 @@
 > in both worlds at DISPLACED positions: vanilla's ticket-order places
 > each border tree from a different origin. Net tree-family ≈ 281k cells
 > on 424242 — the origin-order cascade is the dominant remaining family.
-> NEXT: decoration-order fix at border origins (ticket-sim residual
-> 11-13% violations) — the mineshaft (5,010) and sculk families are
-> secondary.
+> d2a0d39 (s48): the pre-deco SCENE diverges — van_pred14.predc1 vs
+> our_pred14.predc1 (chunk (-14,-14)) differ by 1,587 bytes. The tree
+> gate evaluates a different scene: trees are accepted/rejected at
+> different positions because the SCENE differs before decoration. One
+> scene diff explained (mineshaft CaveAir); the rest is the multi-origin
+> divergence. NEXT: decode both predc1 dumps and enumerate scene diffs
+> per chunk — each is an explained mechanism or a new lever. The tree
+> family (~281k cells on 424242) resolves once the scene matches.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
