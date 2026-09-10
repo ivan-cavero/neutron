@@ -210,12 +210,25 @@
 > vanilla's real carvers) + 12,208 stone-vs-water (aquifer). The b81b047
 > 'carve bit-exact' verdict was measured against broken probes — needs
 > re-verification with a fixed surface path.
-> NEXT: the carver diff (15.7k/window) is now the TOP concrete lever:
-> fix the probe's buildSurface (deepslate/bedrock/surface rules) OR
-> re-verify my carver geometry against the ref NBT directly (the ref's
-> final blocks include decoration, but underground carver air in
-> non-lush biomes is unambiguous). Then re-run the scene diff to isolate
-> the true carver delta and fix carvers.rs.
+> 4c20950 (s62) DECORATION-HEALING QUANTIFIED (SCENE_DIFF_CSV export +
+> ledger cross-attribution, 5x5 window (-12,-6)): of 15,711 'van=stone
+> mine=air' scene diffs, only 543 survive as final mismatches —
+> decoration heals 99.8% of pre-decoration scene diffs
+> (last-writer-wins). The 252 'carver-writer' cells are NOT carver
+> geometry: they are decor-on-scene (short_grass/moss_carpet/tall_grass/
+> azalea/cave_vines) where my scene had air so the decor never grew.
+> CARVER GEOMETRY IS NOT THE PROBLEM (s61's 15.7k = healed noise).
+> The persistent families (tree 164k, veg_patch 54k, simple_block 37k)
+> are the DECORATION diverging — the accept-gate cascade on the differing
+> scene, root = origin order (ticket-sim residual 11-13%).
+> NEXT: the accept-gate cascade is confirmed as the sole remaining lever
+> for ~530k cells. The order model cannot be ranked by the mined-pair
+> CSV (s57 disproved col). The remaining instrument: a per-cell
+> decoration replay TRACE from vanilla's real server (the NDEC2 replay
+> probe: ProbeFullDecorate already runs the real decoration loop —
+> extend it to dump per-origin per-feature accept/reject for the
+> witness column, giving vanilla's true accept set to diff against
+> mine).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
