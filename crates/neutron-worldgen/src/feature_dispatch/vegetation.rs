@@ -565,6 +565,15 @@ pub(crate) fn place_vegetation_patch(
         surface_pts = interior;
     }
 
+    // s68 ROOT-CAUSE CHAIN CLOSED (oracle per-attempt diff, origin (-12,-6)):
+    // my attempt 0 patch = 197 cells (197 columns, depth 1/cell — depth semantics
+    // correct); vanilla's WHOLE 62-attempt feature = 406 cells / 374 columns
+    // (moss_patch depth=1 — same depth semantics). Vanilla's attempts average
+    // ~6.5 cells; mine ~100+. The per-column scan succeeds only where the scene
+    // has air-above-solid: MY SCENE HAS MORE CARVED AIR than vanilla's (s61:
+    // 15,711 van=stone mine=air cells in this window — my carvers carve more).
+    // The lush patch size diff = the carver air diff amplified by the scan;
+    // the fix belongs in carvers.rs (the s61 15.7k cells are the witness set).
     // s67 oracle: dump the surface set (the cells the patch ground-filled).
     if std::env::var_os("NEUTRON_SURFACE_DUMP").is_some() {
         let mut pts = Vec::new();
