@@ -188,12 +188,25 @@
 > patch missed y13. ORIGIN-ORDER CASCADE with a concrete witness.
 > The scan (vertical_range 5, 2-air-step + 2-solid-step window) landing
 > depends on the pre-patch scene = earlier origins' writes → order.
-> NEXT: trace my (-13,-6) origin's moss_patch attempts at this column vs
-> vanilla's (position stream is per-origin verified; the divergence is
-> the scan's landing y or the biome gate on the differing scene). If the
-> scan lands differently, dump the height_range draw for moss_patch
-> (gif?) — ProbeVegSeed extends to any gif/step. The moss_patch gif =
-> vanilla step-9 index (ProbeSorter9).
+> bc627f5 (s60) WITNESS CELL MECHANISM: lush_caves has NO moss_patch in
+> its biome feature list — the moss = lush_caves_vegetation (= moss_patch,
+> count 125, gif 30, depth 1). Depth-1 patch = ONE cell per column →
+> y12+y13 moss = TWO origins' passes (border column). My y11
+> cave_vines_plant is EXTRA vs vanilla air: my vine hung from my moss;
+> vanilla's cave_vines (gif 28) didn't place one. UNRESOLVED: the writer
+> of vanilla's y11 AIR over solid density (no carver reaches y11-13; no
+> decoration air mechanism found; probes biased: FixedBiomeSource PLAINS
+> + ProbeChunkDensity shares lineage with the s50-broken probe). Same
+> pattern as the parked s45 sculk family.
+> NEXT: park the lush-clay chain (3 iterations on the witness cell; the
+> remaining mechanism needs a real-server replay probe — a NEW Java probe
+> that runs the FULL vanilla decoration on a real chunk and dumps the
+> pre-moss scene is the missing instrument, ~1 day of work). Move to the
+> next ledger family: simple_block 37k (grass/moss-carpet/hanging-moss
+> decor — same accept-gate cascade) OR block_column 17k (dripleaf
+> columns). Both share the scene-diff root; the highest-value concrete
+> lever left is ANY probe that captures vanilla's PRE-DECORATION scene
+> from a real server (NDEC2-style, fixed biome+bio getter).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
