@@ -354,7 +354,12 @@ public class ProbeTreeFirstFlip {
                 || cf.feature() instanceof FallenTreeFeature
                 || cf.feature() instanceof HugeBrownMushroomFeature
                 || cf.feature() instanceof HugeRedMushroomFeature
-                || id.contains("vegetation");
+                // `id.contains("vegetation")` also captured the lush_caves
+                // moss/clay patches (VegetationPatchFeature) — those are not
+                // trees; route them to the generic ACCEPT oracle instead.
+                || (id.contains("vegetation")
+                    && !(cf.feature() instanceof net.minecraft.world.level.levelgen.feature.VegetationPatchFeature)
+                    && !(cf.feature() instanceof net.minecraft.world.level.levelgen.feature.WaterloggedVegetationPatchFeature));
     }
 
     static int heightOf(String type, int x, int z) {
