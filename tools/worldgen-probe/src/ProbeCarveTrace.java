@@ -205,6 +205,40 @@ public class ProbeCarveTrace {
                 }
             }
         }
+        // Optional cell probe: args[3..5] = wx wy wz -> report mask membership
+        // per carver kind by re-carving into separate masks.
+        if (args.length >= 6) {
+            int wx = Integer.parseInt(args[3]);
+            int wy = Integer.parseInt(args[4]);
+            int wz = Integer.parseInt(args[5]);
+            String[] kinds = {"cave", "cave_extra", "canyon"};
+            for (int kind = 0; kind < 3; kind++) {
+                CarvingMask kmask = new CarvingMask(HEIGHT, MINY);
+                CaveWorldCarver ktr = kind == 2 ? null : new TracingCaveCarver();
+                CanyonCarverConfiguration kcfg2 = canyonCfg;
+                for (int dx = -8; dx <= 8; dx++) {
+                    for (int dz = -8; dz <= 8; dz++) {
+                        int scx = tcx + dx, scz = tcz + dz;
+                        WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(0L));
+                        if (kind == 0) {
+                            random.setLargeFeatureSeed(seed + 0, scx, scz);
+                            if (tracer.isStartChunk(caveCfg, random))
+                                tracer.carve(context, caveCfg, chunk, biomeGetter, random, aquifer, new ChunkPos(scx, scz), kmask);
+                        } else if (kind == 1) {
+                            random.setLargeFeatureSeed(seed + 1, scx, scz);
+                            if (tracer.isStartChunk(caveExtraCfg, random))
+                                tracer.carve(context, caveExtraCfg, chunk, biomeGetter, random, aquifer, new ChunkPos(scx, scz), kmask);
+                        } else {
+                            random.setLargeFeatureSeed(seed + 2, scx, scz);
+                            if (canyonTracer.isStartChunk(kcfg2, random))
+                                canyonTracer.carve(context, kcfg2, chunk, biomeGetter, random, aquifer, new ChunkPos(scx, scz), kmask);
+                        }
+                    }
+                }
+                boolean hit = kmask.get(wx & 15, wy, wz & 15);
+                System.out.printf("CELL %s (%d,%d,%d) carved=%b%n", kinds[kind], wx, wy, wz, hit);
+            }
+        }
         System.out.flush();
     }
 }
