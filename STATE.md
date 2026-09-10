@@ -128,11 +128,23 @@
 > window (-1,-8): ELIMINATED (4 gap classes → 0). Lush-clay family grew
 > in that window (clay patches read the scene mid-loop; residual =
 > ticket-sim order). generate_start memoized.
-> NEXT: the ticket-sim order residual at mineshaft clusters is the
-> shared lever for both the 12345 cost and the lush-clay window growth.
-> Mined-pair check: which 12345 mineshaft-cluster origins invert vs the
-> ticket-sim (the 11-13% violation set). Tree family ≈ 253k cells on
-> 424242 still resolves with terrain parity at borders.
+> f690c35 (s54) TORCH DESYNC: placeSupport else-branch consumes TWO
+> maybeGenerateBlock wall_torch rolls (0.05) in vanilla; neutron skipped
+> them → every later corridor draw desynced. Fixed + BlockId::WallTorch
+> (309) + maybe_generate_block. 424242 98.9527→98.9526 (neutral full
+> meter; mineshaft window (-1,-8) −181: stone/tuff/andesite→clay spills
+> → 0). 12345 99.1591→99.1616% (−1,276; s53 cost RECOVERED + −966 vs
+> s52). 777 bit-identical. Mineshaft RNG stream now draw-exact through
+> supports+decor rolls.
+> NEXT: remaining mineshaft-writer cells on 424242 (573 in window
+> (-1,-8), y -16..0): vanilla=rail mine=cave_air (32) = per-origin decor
+> RNG (rails/cobwebs/torches INSIDE corridor postProcess) still not
+> ported — vanilla runs rails/cobwebs inside each piece's postProcess
+> (MineshaftPieces postProcess loop), consuming the SAME decoration RNG
+> stream after the supports. Port the corridor decor sequence (rails,
+> cobwebs 0.2/torch 0.05 rolls) to stop the remaining stream divergence
+> at origin re-runs. Tree family ≈ 253k still resolves with terrain
+> parity at borders.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
