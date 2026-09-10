@@ -242,11 +242,21 @@
 > lush_caves_clay (gif 29) + lush_caves_vegetation (gif 30) +
 > lush_caves_ceiling_vegetation (gif 27) — all three moss/clay writers
 > confirmed at the witness chunk. Per-attempt comparison is next.
-> NEXT: dump MY per-attempt accept/position set for lush_caves_clay +
-> lush_caves_vegetation at the 9 origins (env-gated trace in
-> feature_dispatch) and diff against vanilla's oracle output — the
-> first diverging attempt per origin is the order-model witness. Then
-> fix the order model (or the accept-gate) at those attempts.
+> bc24bb0 (s65) NEUTRON_LUSH_TRACE: per-attempt oracle for the lush/moss
+> patches on my side (MYATTEMPT placed= x= z= y= ok=). Gate bug fixed
+> (OnceLock cached the name check with the env check — permanently
+> disabled). First measurement (origin (-12,-6), witness window): my
+> lush_caves_clay = 65 attempts, ONE accept (-179,-86,-29); vanilla's
+> oracle accepted the feature there too. The per-attempt diff needs
+> vanilla's per-attempt positions: the treeish branch's SURFACE dump
+> (placeGroundPatch's returned surface Set via reflection) IS that
+> oracle — s64's treeish narrowing removed patch attempts from the
+> tree trace; next iteration re-enable the SURFACE dump for patches
+> (keep ACCEPT too) and diff the surface sets.
+> NEXT: re-extend the oracle for patches: print BOTH the ACCEPT boolean
+> AND the placeGroundPatch surface set (reflection) per origin, then
+> diff against NEUTRON_PATCH_DUMP (my surface set) — the first diverging
+> column is the witness.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
