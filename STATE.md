@@ -325,15 +325,22 @@
 > stacked trees — the order-model cascade's concrete footprint. Vanilla
 > has the same live-heightmap behavior; the divergence is purely the
 > LAST-WRITER ORDER.
-> PARKED (both the order model and its gate surface): the remaining
-> ~530k cells are the jitter cascade; vanilla's worker-pool completion
-> order is likely non-derivable from the seed.
-> NEXT (smaller concrete levers, in order): (1) huge_mushroom 2,868 +
-> simple_block 37k — verify the simple_block decor gates are
-> order-independent (they read heightmap too → order-dependent → skip);
-> (2) the carver residual 357 cells (closed, tiny); (3) multi-seed
-> ratchet maintenance. The 530k order-cascade cells are PARKED pending
-> a faithful-scheduler simulation idea or a changed ref pipeline.
+> 3e7b1c8 (s73) FROZEN OCEAN_FLOOR REVERTED: routing the OceanFloor
+> placement modifier through a frozen post-carver snapshot REGRESSED
+> the lush window (-12,-6): 17,985 → 21,491 (+3,506). REVERTED to the
+> live scan (matches vanilla's tree ys at all three witness columns).
+> CORRECTION: the lush-window baseline is 17,985 (97.97%) — earlier
+> notes CONFLATED it with the mineshaft window (-1,-8) baseline 9,459.
+> The static ChunkStatus read (frozen at CARVERS→FEATURES) contradicts
+> the meter — the real WorldGenRegion heightmap lifecycle needs a
+> faithful trace. The freeze infra remains (inert, no readers).
+> PARKED: order cascade ~530k (jitter); lush chain (needs scene probe);
+> carver (357, closed). Session-final baselines: 424242 98.9645% /
+> 534,440; 12345 99.1619%; 777 99.2797%.
+> NEXT: with the big families parked, the remaining tractable items are
+> the small ledgers: huge_mushroom 2,868 + sculk_patch 1,226 +
+> seagrass 398 + ruined_portal 440 — verify these are genuinely
+> feature-bug cells (not cascade) with the oracle, fix what's real.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
