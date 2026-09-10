@@ -2075,6 +2075,22 @@ mod my_tree_census_424242 {
         out
     }
 
+    /// Climate target at the witness column's quart — my sampler vs the
+    /// expected lush_caves point.
+    #[test]
+    #[ignore = "diagnostic: climate params at (-192,13,-93)"]
+    fn climate_at_witness_424242() {
+        let state = crate::worldgen::WorldgenState::overworld(424242);
+        for y in [9, 13, 20, 40, 64, 90] {
+            let t = crate::biome::manager::climate_at(&state, -192, y, -93);
+            let _ = &t; // ClimateTarget has no Debug; print the resolved biome
+            let b2 = crate::biome::manager::biome_id_at_block(&state, -192, y, -93);
+            let b = crate::biome::manager::biome_id_at_block(&state, -192, y, -93);
+            eprintln!("BIOME y={y}: id={b} / direct={b2}");
+        }
+        panic!("CLIMATE-DONE");
+    }
+
     fn my_tree_census_424242() {
         let gen = ChunkGenerator::new(424242);
         for (cx, cz) in [(-14i32, -14), (-13, -14)] {

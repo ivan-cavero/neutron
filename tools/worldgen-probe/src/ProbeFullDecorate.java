@@ -387,7 +387,22 @@ public class ProbeFullDecorate {
 
         // Vanilla builds featuresPerStep ONCE from biomeSource.possibleBiomes()
         // (the FULL set) — the FeatureSorter indices are global over that set.
-        var allBiomesList = new ArrayList<>(GEN.getBiomeSource().possibleBiomes());
+        // possibleBiomes of the FIXED-plains source = {plains} only — the
+        // feature-per-step table must cover ALL overworld biomes or the
+        // biome gate rejects every non-plains feature (the s50 bug class).
+        var allBiomesList = new ArrayList<Holder<Biome>>();
+        try {
+            var paramList = LOOKUP.lookupOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                    .getOrThrow(net.minecraft.resources.ResourceKey.create(
+                            Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST,
+                            net.minecraft.resources.Identifier.parse("minecraft:overworld")));
+            for (var pair : paramList.value().parameters().values()) {
+                allBiomesList.add(pair.getSecond());
+            }
+        } catch (Throwable t) {
+            System.out.println("possibleBiomes fallback: " + t);
+            allBiomesList.addAll(GEN.getBiomeSource().possibleBiomes());
+        }
         FEATURES_PER_STEP = FeatureSorter.buildFeaturesPerStep(allBiomesList,
                 b -> b.value().getGenerationSettings().features(), true);
         var generator = (ChunkGenerator) GEN;
@@ -519,10 +534,17 @@ public class ProbeFullDecorate {
                         ProbeTreeFirstFlip.OUT = new StringBuilder();
                     } else {
                         int drawStart = random.draws.size();
+                        boolean accepted = false;
                         try {
-                            pf.placeWithBiomeCheck(level, generator, random, origin);
+                            accepted = pf.placeWithBiomeCheck(level, generator, random, origin);
                         } catch (Throwable t) {
                             System.out.println("ERROR step=" + step + " gif=" + gif + " " + t);
+                        }
+                        if (System.getenv("ACCEPT_TRACE") != null) {
+                            System.out.println("ACCEPT step=" + step + " gif=" + gif
+                                + " origin=" + ocx + "," + ocz
+                                + " name=" + fname + " ok=" + accepted
+                                + " draws=" + (random.draws.size() - drawStart));
                         }
                         if (drawAll && random.draws.size() > drawStart) {
                             System.out.println("GIFDRAW step=" + step + " gif=" + gif
