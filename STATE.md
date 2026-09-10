@@ -179,13 +179,21 @@
 > real order in 11-13% of mined pairs.
 > CAUTION: the earlier trunk_bases ref=0 was a decoder artifact (relative
 > path from crate cwd) — probe numbers were always valid.
-> NEXT: trace the pre-decoration SCENE at (-192,13,-93): which pass wrote
-> my y13 stone (terrain/carver/ore/earlier-origin)? If an earlier origin's
-> feature wrote it in my order but runs LATER in vanilla, that's a direct
-> order-model violation case with a concrete witness cell — the unit to
-> fix in the order model (or to justify masking undecorated neighbors
-> during early origins' passes, matching vanilla's not-yet-decorated
-> CARVERS state).
+> 39cb9c6 (s59) MOSS-PATCH WITNESS CELL: (-192,13,-93) traced end-to-end.
+> Vanilla density: y9 air, y10-14 SOLID. Vanilla carvers: NONE reach
+> y11-13 (new ProbeCarveTrace per-cell probe: CarvingMask membership).
+> Ref final: y11 air, y12-13 moss. A depth-1 moss_patch writes ONE cell
+> per column → y12+y13 moss = TWO patch passes from DIFFERENT origins
+> (border column lx=0). My world: y12 moss only — the second origin's
+> patch missed y13. ORIGIN-ORDER CASCADE with a concrete witness.
+> The scan (vertical_range 5, 2-air-step + 2-solid-step window) landing
+> depends on the pre-patch scene = earlier origins' writes → order.
+> NEXT: trace my (-13,-6) origin's moss_patch attempts at this column vs
+> vanilla's (position stream is per-origin verified; the divergence is
+> the scan's landing y or the biome gate on the differing scene). If the
+> scan lands differently, dump the height_range draw for moss_patch
+> (gif?) — ProbeVegSeed extends to any gif/step. The moss_patch gif =
+> vanilla step-9 index (ProbeSorter9).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
