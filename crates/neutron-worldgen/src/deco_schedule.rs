@@ -179,7 +179,20 @@ impl Batch {
 /// `Marked 256 chunks [-8,-8]..[7,7]`, +31 s `Marked 48 chunks
 /// [-12,-12]..[-11,11]`, save-all/stop. Each batch is a phase (full drain).
 pub fn canonical_batches() -> Vec<Batch> {
-    vec![Batch::rect(-8, -8, 7, 7), Batch::rect(-12, -12, -11, 11)]
+    // s78: the ref procedure (new-mc-version.sh) adds the surrounding RING via
+    // FOUR side strips after the center square — the sim only had the WEST
+    // strip. Exact strip coordinates from the script's forceload commands:
+    //   forceload add -192 -192 -161 191   → chunks -12..-11 × -12..11 (west)
+    //   forceload add  160 -192  191 191   → chunks  10..11  × -12..11 (east)
+    //   forceload add -160 -192  159 -161  → chunks -10..9   × -12..-11 (north)
+    //   forceload add -160  160  159  191  → chunks -10..9   ×  10..11 (south)
+    vec![
+        Batch::rect(-8, -8, 7, 7),
+        Batch::rect(-12, -12, -11, 11), // west strip
+        Batch::rect(10, -12, 11, 11),   // east strip
+        Batch::rect(-10, -12, 9, -11),  // north strip
+        Batch::rect(-10, 10, 9, 11),    // south strip
+    ]
 }
 
 // ---- scheduler replicas -----------------------------------------------------
@@ -806,7 +819,7 @@ mod tests {
             for dx in -2i32..=2 {
                 for dz in -2i32..=2 {
                     let p = (x + dx, z + dz);
-                    if (-14..=9).contains(&p.0) && (-14..=13).contains(&p.1) {
+                    if (-14..=14).contains(&p.0) && (-14..=14).contains(&p.1) {
                         halo.insert(p);
                     }
                 }
