@@ -370,6 +370,13 @@
 > REVERTED (batch toggle removed with the deco_schedule revert).
 > ALSO committed: the s73 frozen-vs-live diagnostic test (companion to
 > the s73 revert).
+> 9s77 spiral hypothesis DISPROVEN: the mined-pair (0,-1) north-late
+> violations cluster in the NORTH half (616/778, z<0) — hypothesized a
+> spawn-spiral insertion order. Implemented (Batch explicit_coords +
+> NEUTRON_DECO_BATCHES=spiral): mined-pair consistency CRASHED to
+> 80.83% (17,826 violations). REVERTED. Vanilla's within-rect insertion
+> order is neither a rect sweep nor a distance spiral — or the insertion
+> order isn't what determines the poll order at all.
 > FINAL POSITION: the mined-pair CSV is NOT a valid ranking instrument
 > for order models (subset bias, proven twice). The only valid meter is
 > the full scan (~35-40 min per order experiment). The parked ~535k
