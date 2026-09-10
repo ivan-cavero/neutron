@@ -304,13 +304,22 @@
 > CONCLUSION: the tree family root = the ORDER MODEL (which origin's
 > pass is last), confirmed end-to-end. The order model (ticket-sim,
 > 95.9% pairwise) residual = the 11-13% inverted pairs.
-> NEXT: the order model is the ONLY lever left for ~500k cells. Two
-> directions: (a) mine per-origin LAST-WRITER evidence from the ref
-> (impossible — the ref stores only final blocks), or (b) improve the
-> ticket-sim by simulating vanilla's ACTUAL scheduler more faithfully
-> (the ChunkTaskDispatcher's worker-pool jitter — the s38/s45 notes).
-> The honest position: the remaining ~530k cells need a
-> faithful-scheduler simulation, which is the deco_schedule work.
+> PARKED (s70, 5-iter cap): the order model is the sole lever for the
+> remaining ~530k cells, confirmed end-to-end (s70 oracle diff: same
+> counts, displaced positions). The residual 11-13% inversions are
+> ADJACENT-RANK — vanilla's worker-pool completion jitter, likely not
+> derivable from the seed (the ref was generated once; the completion
+> order depended on machine thread scheduling). Improving the sim
+> requires evidence of vanilla's deterministic tie-breaks, if any.
+> PARK the lush-clay chain too (s60, needs a faithful-scene probe).
+> NEXT: session-final three-seed ratchet verification, then the
+> highest-value remaining: reduce the jitter surface — batch the
+> inverted ADJACENT-RANK pairs (both orders produce equal results when
+> the two origins' writes don't overlap — only overlapping-write pairs
+> matter). Quantify: what fraction of the 11-13% inversions involve
+> overlapping writes? If small, the effective cascade is much smaller
+> than 530k and better-targeted fixes (e.g. the witness-column pairs)
+> are tractable.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
