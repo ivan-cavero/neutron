@@ -312,14 +312,21 @@
 > order depended on machine thread scheduling). Improving the sim
 > requires evidence of vanilla's deterministic tie-breaks, if any.
 > PARK the lush-clay chain too (s60, needs a faithful-scene probe).
-> NEXT: session-final three-seed ratchet verification, then the
-> highest-value remaining: reduce the jitter surface — batch the
-> inverted ADJACENT-RANK pairs (both orders produce equal results when
-> the two origins' writes don't overlap — only overlapping-write pairs
-> matter). Quantify: what fraction of the 11-13% inversions involve
-> overlapping writes? If small, the effective cascade is much smaller
-> than 530k and better-targeted fixes (e.g. the witness-column pairs)
-> are tractable.
+> VERIFIED (s71): session-final full scan 424242 = 98.9645% / 534,440
+> (bit-identical to the s55 fix state — the diagnostic commits s56-s70
+> introduced no drift). Three-seed ratchet state: 12345 99.1619%,
+> 777 99.2797% (verified s64).
+> NEXT: quantify the ORDER-DEPENDENT gate surface — tree gates are
+> order-independent (heightmap is pre-decoration static; biome is a
+> pure lookup); the order-dependent gates are the ones READING the
+> scene (water-depth filter reads other origins' writes; the moss patch
+> scan reads the scene). Quantify: what fraction of the displaced-tree
+> accepts flip due to a scene-reading gate vs a position/y diff? The
+> s70 trace (my 268 unique positions vs vanilla's 3 accepted in
+> chunk (6,1)) has the data: if my accepts at vanilla's (x,z) with the
+> right y were rejected by the water-depth/below-block gates on
+> order-written cells, the fix is the SCENE (order), else the gate
+> logic itself.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
