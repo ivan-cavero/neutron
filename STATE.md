@@ -168,14 +168,24 @@
 > CSV is a local/partial signal; the full meter disagrees. REVERTED to
 > ticket_sim (534,440 baseline restored). NEUTRON_TRUNK_BASES probe mode
 > added (diagnostic).
-> NEXT: the terrain family's non-tree core: clay->stone 9,566 +
-> moss->stone 9,112 + clay->deepslate 7,456 (lush patches, 87% border).
-> These are scene diffs BEFORE trees. The s56 position-stream verification
-> (attempt-0 match) rules OUT the RNG/seed; the divergence is the
-> environment_scan/biome gates on a differing scene. The failure unit =
-> the first diverging attempt's gate. The border origins' scene = the
-> ticket-sim's 11-13% violation set — a BETTER order model is the only
-> remaining lever (the mined-pair CSV can't rank it — full meter only).
+> 6560d62 (s58) LUSH COLUMN DUMP: (-192,13,-93) chunk (-12,-6) —
+> REF: y11=air y12-13=MOSS y14+=stone; MINE: y11=cave_vines y12=MOSS
+> y13+=stone. Vanilla's patch filled y12+y13; mine filled y12 only and
+> kept stone at y13. Patch algorithm verified identical (s6-s13) → the
+> pre-patch SCENE differs (my extra solid layer at y13). Lush-clay family
+> = patch-fill amplification of scene diffs. Confirms s56/s57: the
+> remaining ~534k = scene diffs at border origins; my scene is written by
+> the ticket-sim-ordered origin passes whose order violates vanilla's
+> real order in 11-13% of mined pairs.
+> CAUTION: the earlier trunk_bases ref=0 was a decoder artifact (relative
+> path from crate cwd) — probe numbers were always valid.
+> NEXT: trace the pre-decoration SCENE at (-192,13,-93): which pass wrote
+> my y13 stone (terrain/carver/ore/earlier-origin)? If an earlier origin's
+> feature wrote it in my order but runs LATER in vanilla, that's a direct
+> order-model violation case with a concrete witness cell — the unit to
+> fix in the order model (or to justify masking undecorated neighbors
+> during early origins' passes, matching vanilla's not-yet-decorated
+> CARVERS state).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
