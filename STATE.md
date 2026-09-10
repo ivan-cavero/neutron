@@ -119,17 +119,20 @@
 > feature places trees + leaf_litter + sub-features in ONE RNG stream
 > (step 9 vegetal); an earlier sub-feature consuming different RNG shifts
 > all subsequent tree positions — matching the cross-chunk displacement.
-> 1b686d3 (s52) CHAIN TRACED: dark_forest_vegetation y = OCEAN_FLOOR
-> heightmap at (x,z) — the heightmap depends on the SCENE. Origin-order
-> cascade → scattered terrain/ore diffs at border origins → heightmap
-> shifts → tree attempts land at different y → acceptance flips →
-> displaced trees. The tree displacement is DOWNSTREAM of terrain diffs;
-> the tree feature itself is correct (40/40 anchors at chunk (7,-1)).
-> NEXT: the terrain/ore parity at border origins IS the lever — the
-> scattered ore/stone diffs (e.g. (-214,12,-223) coal_ore extra,
-> (-211,24,-219) diorite extra from ORIGIN_DIVERGENCE_REPORT.md) shift
-> heightmaps. Bisect the ore placement at border origins next. Tree
-> family ≈ 281k cells on 424242 resolves with the terrain parity.
+> 5a8c0c6 (s53) MINESHAFTS PER-ORIGIN: vanilla re-runs piece postProcess
+> per origin in the decoration loop (setFeatureSeed(dec,1,3), Xoroshiro,
+> 3x3 writable-area filter). Old single-pass model carved cave_air the
+> ref never had. 424242 98.9475→98.9527% (-27,579). 777 flat; 12345
+> +310 (order-model residual at its mineshaft clusters — known cost).
+> Mineshaft-overcarve family (cave_air/cobweb/water->clay) on 424242
+> window (-1,-8): ELIMINATED (4 gap classes → 0). Lush-clay family grew
+> in that window (clay patches read the scene mid-loop; residual =
+> ticket-sim order). generate_start memoized.
+> NEXT: the ticket-sim order residual at mineshaft clusters is the
+> shared lever for both the 12345 cost and the lush-clay window growth.
+> Mined-pair check: which 12345 mineshaft-cluster origins invert vs the
+> ticket-sim (the 11-13% violation set). Tree family ≈ 253k cells on
+> 424242 still resolves with terrain parity at borders.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
