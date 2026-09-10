@@ -149,6 +149,14 @@ fn main() {
     });
 
     let gen = ChunkGenerator::new(seed);
+    // NEUTRON_TRUNK_BASES=1: print the ref's trunk-base positions per log type.
+    if std::env::var_os("NEUTRON_TRUNK_BASES").is_some() {
+        for log in [BlockId::DarkOakLog, BlockId::PaleOakLog, BlockId::OakLog] {
+            let trunks = vanilla_trunks_of(&region_dir, cx, cz, log);
+            println!("REF-TRUNKS {:?} n={} {:?}", log, trunks.len(), trunks);
+        }
+        return;
+    }
     // NEUTRON_DECO_SURFACE=1: diff the surface columns (vanilla vs neutron)
     // for the center chunk; print the mismatch columns + biomes.
     if std::env::var("NEUTRON_DECO_SURFACE").is_ok() {
