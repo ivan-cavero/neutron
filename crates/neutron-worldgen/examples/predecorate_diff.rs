@@ -14,6 +14,91 @@ fn main() {
     let ccz: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(0);
     let dump_path = args.next().expect("dump path");
     let _ = seed;
+    // --compare-scenes <vanillaNDEC1> <mineNDEC1> [wx wy wz]: diff two NDEC1
+    // pre-decoration scenes (vanilla-side rebuilt by ProbeFullDecorate with
+    // VANILLA_NDEC_OUT, mine by decorate_oracle). s60 scene-parity instrument.
+    if dump_path == "--compare-scenes" {
+        let van = args.next().expect("vanilla ndec");
+        let mine = args.next().expect("mine ndec");
+        let cell: Option<(i32, i32, i32)> = args
+            .next()
+            .and_then(|wx| Some((wx.parse().ok()?, args.next()?.parse().ok()?, args.next()?.parse().ok()?)));
+        let rd = |path: &str| -> std::collections::HashMap<(i32, i32, i32), String> {
+            let buf = std::fs::read(path).expect(path);
+            assert!(&buf[0..5] == b"NDEC1", "bad magic");
+            let mut pos = 5usize;
+            let u16 = |pos: &mut usize| { let v = u16::from_le_bytes([buf[*pos], buf[*pos + 1]]); *pos += 2; v };
+            let i32v = |pos: &mut usize| { let v = i32::from_le_bytes(buf[*pos..*pos + 4].try_into().unwrap()); *pos += 4; v };
+            let _seed = i64::from_le_bytes(buf[pos..pos + 8].try_into().unwrap()); pos += 8;
+            let _ccx = i32v(&mut pos);
+            let _ccz = i32v(&mut pos);
+            let r = 2; let n = 2 * r + 1;
+            let ox0 = (_ccx - r) * 16;
+            let oz0 = (_ccz - r) * 16;
+            let bio = u16(&mut pos);
+            for _ in 0..bio { let ln = u16(&mut pos); pos += ln as usize; }
+            let (miny, top) = (-64i32, 320i32);
+            let mut out = std::collections::HashMap::new();
+            for cz in 0..n {
+                for cx in 0..n {
+                    let paln = u16(&mut pos);
+                    let mut pal = Vec::with_capacity(paln as usize);
+                    for _ in 0..paln {
+                        let ln = u16(&mut pos) as usize;
+                        pal.push(String::from_utf8(buf[pos..pos + ln].to_vec()).unwrap());
+                        pos += ln;
+                    }
+                    let wx0 = ox0 + cx * 16;
+                    let wz0 = oz0 + cz * 16;
+                    for y in miny..top {
+                        for lz in 0..16i32 {
+                            for lx in 0..16i32 {
+                                let v = u16(&mut pos) as usize;
+                                let nm = pal.get(v).cloned().unwrap_or_default();
+                                if nm != "minecraft:air" {
+                                    out.insert((wx0 + lx, y, oz0 + cz * 16 + lz), nm);
+                                }
+                            }
+                        }
+                    }
+                    pos += 1536; // quart biome grid
+                }
+            }
+            out
+        };
+        let van = rd(&van);
+        let mine = rd(&mine);
+        if let Some((wx, wy, wz)) = cell {
+            for y in (wy - 8)..=(wy + 8) {
+                let v = van.get(&(wx, y, wz)).map(|s| s.as_str()).unwrap_or("air");
+                let m = mine.get(&(wx, y, wz)).map(|s| s.as_str()).unwrap_or("air");
+                let mark = if v == m { "" } else { "  <-- DIFF" };
+                println!("y={y}: van={v} mine={m}{mark}");
+            }
+        } else {
+            let mut diffs = 0usize;
+            let mut pairs = std::collections::HashMap::new();
+            for (k, v) in &van {
+                let m = mine.get(k);
+                if m != Some(v) {
+                    diffs += 1;
+                    *pairs.entry((v.clone(), m.cloned().unwrap_or_else(|| "<none>".into())))
+                        .or_insert(0usize) += 1;
+                    if diffs <= 12 {
+                        println!("DIFF {:?}: van={} mine={:?}", k, v, m);
+                    }
+                }
+            }
+            let extra = mine.iter().filter(|(k, _)| !van.contains_key(*k)).count();
+            println!("scene diffs: {} (vanilla-only cells) + {} (mine-only cells)", diffs, extra);
+            let mut pairs: Vec<_> = pairs.into_iter().collect();
+            pairs.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+            for ((a, b), n) in pairs.iter().take(12) {
+                println!("pair {}: van={} mine={}", n, a, b);
+            }
+        }
+        return;
+    }
     if dump_path == "--dump-ours" {
         let out = args.next().expect("out path");
         let gen = ChunkGenerator::new(seed);
