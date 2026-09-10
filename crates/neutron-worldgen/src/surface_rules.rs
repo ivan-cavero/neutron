@@ -2106,6 +2106,22 @@ mod my_tree_census_424242 {
         panic!("LUSH-ATTEMPTS-DONE");
     }
 
+    /// MY tree trace for the 9 origins around chunk (7,2) — the tree-family
+    /// window (s70 oracle diff).
+    #[test]
+    #[ignore = "diagnostic: my tree accepts for the tree window"]
+    fn my_tree_attempts_424242() {
+        let gen = ChunkGenerator::new(424242);
+        for (cx, cz) in [
+            (6i32, 1), (7, 1), (8, 1),
+            (6, 2), (7, 2), (8, 2),
+            (6, 3), (7, 3), (8, 3),
+        ] {
+            let _ = gen.generate_chunk(cx, cz);
+        }
+        panic!("TREE-ATTEMPTS-DONE");
+    }
+
     fn my_tree_census_424242() {
         let gen = ChunkGenerator::new(424242);
         for (cx, cz) in [(-14i32, -14), (-13, -14)] {
