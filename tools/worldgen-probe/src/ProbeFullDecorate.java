@@ -442,6 +442,12 @@ public class ProbeFullDecorate {
                     }
                 }
                 int[] indexArray = possibleThisStep.stream().mapToInt(Integer::intValue).sorted().toArray();
+                if (System.getenv("ACCEPT_TRACE") != null && step == 9) {
+                    System.out.println("STEP9 possible=" + indexArray.length
+                        + " has27=" + possibleThisStep.contains(27)
+                        + " has29=" + possibleThisStep.contains(29)
+                        + " has30=" + possibleThisStep.contains(30));
+                }
                 for (int gif : indexArray) {
                     PlacedFeature pf = stepData.features().get(gif);
                     ProbeTreeFirstFlip.LoggingWgr random = new ProbeTreeFirstFlip.LoggingWgr(
@@ -535,6 +541,82 @@ public class ProbeFullDecorate {
                     } else {
                         int drawStart = random.draws.size();
                         boolean accepted = false;
+                        // s66: per-attempt surface-set oracle for the lush/moss
+                        // patches — reflect placeGroundPatch's returned set by
+                        // invoking the protected method before the real place
+                        // (the place would consume the RNG; the invocation must
+                        // use the SAME stream state, so only run one of the two:
+                        // the surface invocation REPLACES the real placement in
+                        // oracle mode).
+                        boolean isPatch = fname.contains("vegetation")
+                            && (fname.contains("lush_caves") || fname.contains("moss_patch")
+                                || fname.contains("pale_moss"));
+                        if (System.getenv("PATCH_TRACE") != null) {
+                            System.out.println("PATCHCHK step=" + step + " fname=" + fname
+                                + " isPatch=" + isPatch);
+                        }
+                        if (isPatch && System.getenv("PATCH_TRACE") != null) {
+                            System.out.println("PATCHENTER step=" + step + " gif=" + gif
+                                + " fname=" + fname);
+                            try {
+                                // VegetationPatchFeature.place calls
+                                // placeGroundPatch(level, config, random, origin,
+                                // replaceable, xRadius, zRadius) then
+                                // distributeVegetation. Invoke placeGroundPatch
+                                // reflectively with the real random.
+                                // pf.feature().value() = ConfiguredFeature; the
+                                // VegetationPatchFeature instance is its
+                                // `feature` field.
+                                Object cfObj = pf.feature().value();
+                                Object vf = ProbeTreeFirstFlip.fieldOf(cfObj, "feature");
+                                Class<?> vfc = vf.getClass();
+                                java.lang.reflect.Method pgp = null;
+                                for (java.lang.reflect.Method m : vfc.getDeclaredMethods()) {
+                                    if (m.getName().equals("placeGroundPatch")) {
+                                        pgp = m; m.setAccessible(true); break;
+                                    }
+                                }
+                                System.err.println("PATCHSCAN " + fname + " cls=" + vf.getClass().getName() + " pgp=" + pgp);
+                                if (pgp != null) {
+                                    // the config lives on the CONFIGURED feature
+                                    Object cfg = ProbeTreeFirstFlip.fieldOf(cfObj, "config");
+                                    // replaceable in the config is a TagKey; place()
+                                    // wraps it: `s -> s.is(config.replaceable())`
+                                    Object replaceTag = ProbeTreeFirstFlip.fieldOf(cfg, "replaceable");
+                                    java.util.function.Predicate<Object> replaceable =
+                                        st -> ((net.minecraft.world.level.block.state.BlockState) st)
+                                            .is((net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>) replaceTag);
+                                    Object xzRadius = ProbeTreeFirstFlip.fieldOf(cfg, "xzRadius");
+                                    int xr = (Integer) xzRadius.getClass()
+                                        .getMethod("sample", net.minecraft.util.RandomSource.class)
+                                        .invoke(xzRadius, random) + 1;
+                                    int zr = (Integer) xzRadius.getClass()
+                                        .getMethod("sample", net.minecraft.util.RandomSource.class)
+                                        .invoke(xzRadius, random) + 1;
+                                    Object surfaceSet = pgp.invoke(vf, level, cfg, random,
+                                            origin, replaceable, xr, zr);
+                                    String outPath = System.getenv("PATCHSET_OUT");
+                                    if (outPath != null) {
+                                        try (var pw = new java.io.PrintWriter(
+                                                new java.io.FileWriter(outPath, true))) {
+                                            pw.println("PATCHSET step=" + step + " gif=" + gif
+                                                + " origin=" + ocx + "," + ocz
+                                                + " name=" + fname + " n="
+                                                + ((java.util.Set<?>) surfaceSet).size());
+                                            pw.println("PATCHDATA " + surfaceSetString(surfaceSet));
+                                        }
+                                    } else {
+                                        System.out.println("PATCHSET step=" + step + " gif=" + gif
+                                            + " origin=" + ocx + "," + ocz
+                                            + " name=" + fname + " n="
+                                            + ((java.util.Set<?>) surfaceSet).size());
+                                    }
+                                }
+                            } catch (Throwable t) {
+                                System.err.println("PATCHSET-ERR " + fname + ": " + t);
+                                t.printStackTrace();
+                            }
+                        }
                         try {
                             accepted = pf.placeWithBiomeCheck(level, generator, random, origin);
                         } catch (Throwable t) {
@@ -560,6 +642,17 @@ public class ProbeFullDecorate {
     /** Bind EVERY block tag from the server jar's data/ tags onto the
      *  registry holders — headless bootstrap leaves tags unbound and every
      *  state.is(TagKey) returns false, silently breaking feature gates. */
+    /** Format a Set<BlockPos> as "x,y;z,y;..." for the diff. */
+    static String surfaceSetString(Object set) {
+        StringBuilder sb = new StringBuilder();
+        for (Object o : (java.util.Set<?>) set) {
+            BlockPos p = (BlockPos) o;
+            if (sb.length() > 0) sb.append(';');
+            sb.append(p.getX()).append(',').append(p.getY()).append(',').append(p.getZ());
+        }
+        return sb.toString();
+    }
+
     static void bindAllBlockTags() throws Exception {
         var zip = new java.util.zip.ZipFile("tools/nbt-ref/vanilla-fresh-424242/versions/26.2/server-26.2.jar");
         var tagDir = "data/minecraft/tags/block/";
