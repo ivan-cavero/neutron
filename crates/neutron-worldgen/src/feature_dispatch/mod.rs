@@ -1157,6 +1157,18 @@ pub(crate) fn dispatch_configured(
                 }
             }
         }
+        // WITNESS CELL (s59, seed 424242, chunk (-12,-6), (-192,13,-93)):
+        // vanilla final = y11 air / y12-13 moss; mine = y11 cave_vines_plant /
+        // y12 moss / y13 stone. Traced end-to-end: density solid y10-14
+        // (ProbeChunkDensity), NO carver reaches y11-13 (ProbeCarveTrace
+        // per-cell CarvingMask probe), no decoration-phase mechanism found
+        // that writes AIR at y11 (dripleaf block_column = stems/leaves only;
+        // sculk discharge is deep_dark-only). The y12+y13 moss = TWO depth-1
+        // moss_patch passes from DIFFERENT origins (border column lx=0) —
+        // the origin-order cascade with a concrete witness. The scan
+        // landing (vertical_range window) depends on the pre-patch scene =
+        // earlier origins' writes → order. The y11 air writer remains
+        // UNRESOLVED (same pattern as the parked s45 sculk family).
         "minecraft:random_boolean_selector" => {
             // RandomBooleanSelectorFeature.place: `random.nextBoolean()`
             // (next(1) != 0), not `nextInt(2)`. Same xoroshiro consume count
