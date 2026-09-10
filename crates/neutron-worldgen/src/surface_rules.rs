@@ -1905,7 +1905,7 @@ mod my_tree_census_424242 {
     #[test]
     #[ignore = "diagnostic: ref-vs-mine dark_oak trunk bases in chunk (6,2)"]
     fn trunk_bases_62_424242() {
-        let dir = "tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region";
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
         let (cx, cz) = (6, 2);
         let ref_bases = ref_trunk_bases(dir, cx, cz);
         let gen = ChunkGenerator::new(424242);
@@ -1992,6 +1992,86 @@ mod my_tree_census_424242 {
                 }
             }
         }
+        out
+    }
+
+    /// Column dumps at a missing-lush-clay position: ref vs mine, chunk (-12,-6).
+    #[test]
+    #[ignore = "diagnostic: column dump at (-192,13,-93)"]
+    fn lush_column_dump_424242() {
+        let (wx, wy, wz) = (-192, 13, -93);
+        let (cx, cz) = (-12, -6);
+        // ref
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region");
+        let ref_bases = ref_column(dir, cx, cz, wx & 15, wz & 15, wy - 2, wy + 14);
+        eprintln!("LUSH-REF: {:?}", ref_bases);
+        // mine
+        let gen = ChunkGenerator::new(424242);
+        let chunk = gen.generate_chunk(cx, cz);
+        let mut mine = Vec::new();
+        for y in wy - 2..=wy + 14 {
+            mine.push((y, format!("{:?}", chunk.block_at((wx & 15) as u32, y, (wz & 15) as u32))));
+        }
+        eprintln!("LUSH-MINE: {:?}", mine);
+        panic!("LUSH-DONE");
+    }
+
+    fn ref_column(dir: &str, cx: i32, cz: i32, lx: i32, lz: i32, y0: i32, y1: i32) -> Vec<(i32, String)> {
+        use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+        use neutron_world::nbt::{compound_get, read_nbt};
+        use neutron_world::region::Region;
+        let mut out = Vec::new();
+        let (rx, rz) = (cx >> 5, cz >> 5);
+        let path = std::path::PathBuf::from(format!("{dir}/r.{rx}.{rz}.mca"));
+        let Ok(region) = Region::open(&path) else { return out };
+        let region = region.with_coords(rx, rz);
+        let Ok(data) = region.get_chunk(cx & 31, cz & 31) else { return out };
+        let Some(data) = data else { return out };
+        let Ok(nbt) = read_nbt(&data) else { return out };
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l.clone(),
+            other => {
+                eprintln!("LUSH-DBG sections tag: {:?}", other.is_some());
+                return out;
+            }
+        };
+        eprintln!("LUSH-DBG sections={}", sections.len());
+        for sec in sections.iter() {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                _ => continue,
+            };
+            let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else { continue };
+            let Some(Tag::List(List::Compound(palette))) = compound_get(bs, "palette") else { continue };
+            let names: Vec<String> = palette.iter().map(|pc| match compound_get(pc, "Name") {
+                Some(Tag::String(s)) => s.to_string(),
+                _ => "minecraft:air".into(),
+            }).collect();
+            if names.is_empty() { continue; }
+            let bits = if names.len() <= 1 { 0u32 } else { ((names.len() - 1).ilog2() + 1).max(4) };
+            let Some(Tag::LongArray(data)) = compound_get(bs, "data") else { continue };
+            let longs: Vec<i64> = data.to_vec();
+            let epl = 64 / bits.max(1);
+            let mask = (1u64 << bits) - 1;
+            for i in 0..4096u32 {
+                if bits == 0 { break; }
+                let li = (i / epl) as usize;
+                if li >= longs.len() { break; }
+                let bo = (i % epl) * bits;
+                let idxp = ((longs[li] as u64) >> bo) & mask;
+                let name = names.get(idxp as usize).cloned().unwrap_or_default();
+                let ly = (i >> 8) as i32;
+                let ilz = ((i >> 4) & 15) as i32;
+                let ilx = (i & 15) as i32;
+                if ilz == lz && ilx == lx {
+                    let y = y_sec * 16 + ly;
+                    if y >= y0 && y <= y1 {
+                        out.push((y, name));
+                    }
+                }
+            }
+        }
+        out.sort_by_key(|e| e.0);
         out
     }
 
