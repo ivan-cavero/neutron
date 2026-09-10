@@ -281,12 +281,22 @@
 > carvers carve more). The lush patch diff = the carver air diff
 > amplified by the environment scan. Fix target: carvers.rs; the s61
 > cells are the witness set.
-> NEXT: bisect the carver air diff — the s61 cells cluster by y band
-> and chunk; re-verify my carver ELs/geometry against the vanilla
-> carver pipeline with a NON-biased instrument (the ProbeCarveTrace
-> cell probe works per-cell but used a plains biome getter — rerun
-> with the real per-cell biome). The carver walk/shape at y -48..64
-> is where my tunnels over-carve.
+> b89bfe5 (s69) CARVER RESIDUAL MEASURED (carver_edge_dump, 8 chunks):
+> open-vs-solid residual = 6,293; FEATURE-FLAGGED = 5,936 (the
+> displaced trees/leaf litter); CLEAN carve-edge = 357 cells — TINY.
+> The s61 '15.7k' was dominated by tree canopy cells, NOT carver air.
+> Carver geometry objective effectively CLOSED. autoexamples=false:
+> carver_edge_dump now registered in Cargo.toml.
+> OPEN: the lush per-attempt size diff (my attempt 0 = 197 cells vs
+> vanilla's 62-attempt total 406) — vanilla's per-attempt sets need
+> the oracle to capture attempts individually (the log-delta
+> aggregates all 62 attempts in one placeWithBiomeCheck).
+> NEXT: two options — (a) extend the vanilla oracle to run
+> placeWithBiomeCheck per attempt (62 separate calls with per-attempt
+> seeds — NOT vanilla-faithful but bounds the size diff), or (b) move
+> to the tree family (164k cells) where the accept-gate cascade is
+> confirmed and the per-attempt oracle (s63-s64) already works. (b)
+> is the bigger meter lever.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
