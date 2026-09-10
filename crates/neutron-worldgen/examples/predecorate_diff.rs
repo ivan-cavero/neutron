@@ -91,6 +91,25 @@ fn main() {
             }
             let extra = mine.iter().filter(|(k, _)| !van.contains_key(*k)).count();
             println!("scene diffs: {} (vanilla-only cells) + {} (mine-only cells)", diffs, extra);
+            if std::env::var_os("SCENE_DIFF_CSV").is_some() {
+                let out_path = std::env::var("SCENE_DIFF_CSV").unwrap();
+                let mut w = std::io::BufWriter::new(std::fs::File::create(&out_path).unwrap());
+                use std::io::Write;
+                writeln!(w, "x,y,z,van,mine").unwrap();
+                for (k, v) in &van {
+                    let m = mine.get(k);
+                    if m != Some(v) {
+                        writeln!(w, "{},{},{},{},{}", k.0, k.1, k.2, v,
+                            m.map(|s| s.clone()).unwrap_or_else(|| "<none>".to_string())).unwrap();
+                    }
+                }
+                for (k, m) in &mine {
+                    if !van.contains_key(k) {
+                        writeln!(w, "{},{},{},<none>,{}", k.0, k.1, k.2, m).unwrap();
+                    }
+                }
+                println!("csv -> {out_path}");
+            }
             let mut pairs: Vec<_> = pairs.into_iter().collect();
             pairs.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
             for ((a, b), n) in pairs.iter().take(12) {
