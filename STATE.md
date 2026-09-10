@@ -363,12 +363,29 @@
 > order = the poll order of the DECORATE-specific tasks, not directly
 > exposed in the raw RES/SUB lines. Trace archived: evidence/lush/
 > trace-boot-424242.log.
-> NEXT: correlate the SUB/RES lines with the per-status pipeline
-> boundaries (the dispatcher's pollTask emits the executed task's chunk
-> + status — check ChunkTaskDispatcher.pollTask's logging for a
-> decorate-specific line), extract the DECORATE call order, and diff
-> vs my origin order. If the trace gives the true order, the tree
-> family (~164k + cascades) closes.
+> 868729b (s80) TRUE DECORATE ORDER EXTRACTED: ChunkTaskPriorityQueue
+> simulated over the MC_DEBUG trace (SUB→level bucket, RES→resort, poll
+> = lowest level's first chunk FIFO): 553 polls, 529 chunks at
+> level <=34 = the true decorate order (evidence/lush/
+> true-decorate-order-424242.txt + the sim replay mode when
+> /tmp/true-decorate-order.txt exists).
+> PARADOX: the true order vs the mined pairs = 53.50% consistency —
+> the REAL server's queue order matches the mined pairs FAR worse than
+> my sim (95.88%). EXPLANATION: the mined pairs were inferred by MY OWN
+> reconstruction (ProbeDecorate's last-writer proxy), which shares
+> assumptions with the sim — the pairs validate the reconstruction,
+> NOT the real server. The final blocks still matched at 98.96%
+> because decoration heals scene diffs (s62: 99.8%).
+> IMPLICATION: the "origin-order cascade" model of the mismatch
+> families needs re-examination against the TRUE order — the displaced
+> trees/patches may not be order-driven at all despite the same-counts-
+> different-positions signature (which the s70 trace showed appears in
+> MY passes too).
+> NEXT: re-run the tree-family window oracle with the TRUE order replayed
+> in my engine (NEUTRON_DECO_BATCHES/origin order from
+> /tmp/true-decorate-order.txt): if the final trees still mismatch, the
+> order model was never the cause — the search returns to the gate
+> logic (water-depth filter / below-block) on the matched positions.
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
