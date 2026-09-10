@@ -269,6 +269,13 @@ pub fn place_placed_feature(
 /// [`place_placed_feature`] with an explicit generation step (the `minecraft:biome`
 /// placement filter must check the feature list of the *actual* step — vanilla
 /// `placeWithBiomeCheck` runs per step).
+/// Env-gated per-attempt trace for the lush patch family (s64 oracle diff).
+fn lush_trace_enabled(placed_id: &str) -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("NEUTRON_LUSH_TRACE").is_some())
+        && (placed_id.contains("lush_caves") || placed_id.contains("moss_patch"))
+}
+
 pub(crate) fn place_placed_feature_step(
     rng: &mut FeatureRandom,
     region: &mut RegionBuf,
@@ -564,7 +571,19 @@ impl<'a> PlacePipeline<'a> {
                     *self.draw_no
                 );
             }
+            if lush_trace_enabled(self.placed_id) {
+                eprintln!(
+                    "MYATTEMPT placed={} x={x} z={z} y={y} ok=false",
+                    placed = self.placed_id
+                );
+            }
             return;
+        }
+        if lush_trace_enabled(self.placed_id) {
+            eprintln!(
+                "MYATTEMPT placed={} x={x} z={z} y={y} ok=true",
+                placed = self.placed_id
+            );
         }
         self.place_one(x, y, z);
     }

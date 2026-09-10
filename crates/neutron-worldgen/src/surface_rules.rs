@@ -2091,6 +2091,21 @@ mod my_tree_census_424242 {
         panic!("CLIMATE-DONE");
     }
 
+    /// MY lush patch attempts at the 9 origins around chunk (-12,-6).
+    #[test]
+    #[ignore = "diagnostic: my lush attempts for the s64 oracle diff"]
+    fn my_lush_attempts_424242() {
+        let gen = ChunkGenerator::new(424242);
+        for (cx, cz) in [
+            (-13i32, -7), (-12, -7), (-11, -7),
+            (-13, -6), (-12, -6), (-11, -6),
+            (-13, -5), (-12, -5), (-11, -5),
+        ] {
+            let _ = gen.generate_chunk(cx, cz);
+        }
+        panic!("LUSH-ATTEMPTS-DONE");
+    }
+
     fn my_tree_census_424242() {
         let gen = ChunkGenerator::new(424242);
         for (cx, cz) in [(-14i32, -14), (-13, -14)] {
