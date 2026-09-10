@@ -337,6 +337,22 @@
 > PARKED: order cascade ~530k (jitter); lush chain (needs scene probe);
 > carver (357, closed). Session-final baselines: 424242 98.9645% /
 > 534,440; 12345 99.1619%; 777 99.2797%.
+> 969036b (s78) RING STRIPS CORRECTED: the ref procedure loads FOUR side
+> strips after the center square (forceload -192/-161, 160/191, etc.);
+> the sim only modeled the WEST strip. Added east/north/south at the
+> EXACT script coordinates; footprint halo bounds widened to -14..14.
+> Mined-pair consistency unchanged (95.88%); full scan BIT-IDENTICAL
+> (534,440 / 98.9645%) — the ring origins' writes don't reach the
+> measured region's final state. Batch structure now faithfully mirrors
+> the ref procedure's forceload commands.
+> PARKED (s78 final): the order cascade ~530k = vanilla's worker-pool
+> race floor; the mined-pair CSV cannot rank order models (s76/s77 both
+> disproven by the full scan). SESSION BASELINES as above.
+> NEXT: the parked cascade needs (a) a completion-order tracer agent in
+> a real vanilla server regenerating the ref world (records the true
+> decorate order; the sim replays THAT order and the tree family
+> closes), or (b) accepting the ~535k ceiling. No cheaper instrument
+> exists — the mined-pair CSV is invalidated (s76).
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
