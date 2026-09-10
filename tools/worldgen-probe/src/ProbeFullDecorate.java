@@ -617,6 +617,7 @@ public class ProbeFullDecorate {
                                 t.printStackTrace();
                             }
                         }
+                        int log0 = ProbeDecorate.LOG.length();
                         try {
                             accepted = pf.placeWithBiomeCheck(level, generator, random, origin);
                         } catch (Throwable t) {
@@ -627,6 +628,32 @@ public class ProbeFullDecorate {
                                 + " origin=" + ocx + "," + ocz
                                 + " name=" + fname + " ok=" + accepted
                                 + " draws=" + (random.draws.size() - drawStart));
+                        }
+                        // s67: the patch's ground writes (clay/moss) appear in
+                        // the LOG delta — the faithful per-attempt surface set
+                        // (placeWithBiomeCheck applies the modifier chain).
+                        if (isPatch && System.getenv("PATCH_TRACE") != null) {
+                            String ground = fname.contains("clay") ? "clay" : "moss_block";
+                            StringBuilder set = new StringBuilder();
+                            int n = 0;
+                            for (String ln : ProbeDecorate.LOG.substring(log0).split("\n")) {
+                                String[] pp = ln.split("\\|");
+                                if (pp.length >= 4 && pp[3].endsWith(ground)) {
+                                    if (set.length() > 0) set.append(';');
+                                    set.append(pp[0]).append(',').append(pp[1]).append(',').append(pp[2]);
+                                    n++;
+                                }
+                            }
+                            String outPath = System.getenv("PATCHSET_OUT");
+                            if (outPath != null) {
+                                try (var pw = new java.io.PrintWriter(
+                                        new java.io.FileWriter(outPath, true))) {
+                                    pw.println("PATCHSET step=" + step + " gif=" + gif
+                                        + " origin=" + ocx + "," + ocz
+                                        + " name=" + fname + " n=" + n);
+                                    pw.println("PATCHDATA " + set);
+                                }
+                            }
                         }
                         if (drawAll && random.draws.size() > drawStart) {
                             System.out.println("GIFDRAW step=" + step + " gif=" + gif

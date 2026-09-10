@@ -565,6 +565,21 @@ pub(crate) fn place_vegetation_patch(
         surface_pts = interior;
     }
 
+    // s67 oracle: dump the surface set (the cells the patch ground-filled).
+    if std::env::var_os("NEUTRON_SURFACE_DUMP").is_some() {
+        let mut pts = Vec::new();
+        for (sx, sy, sz) in surface_pts.iter() {
+            pts.push(format!("{},{},{}", sx, sy, sz));
+        }
+        eprintln!(
+            "MYSURFACE x={} z={} n={} set={}",
+            x,
+            z,
+            pts.len(),
+            pts.join(";")
+        );
+    }
+
     // distributeVegetation. Dry: place opposite of inwards (floor → above).
     // WaterloggedVegetationPatchFeature.placeVegetation calls
     // super.placeVegetation(pos.below()) so the +up offset lands ON the water
