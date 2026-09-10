@@ -316,17 +316,24 @@
 > (bit-identical to the s55 fix state — the diagnostic commits s56-s70
 > introduced no drift). Three-seed ratchet state: 12345 99.1619%,
 > 777 99.2797% (verified s64).
-> NEXT: quantify the ORDER-DEPENDENT gate surface — tree gates are
-> order-independent (heightmap is pre-decoration static; biome is a
-> pure lookup); the order-dependent gates are the ones READING the
-> scene (water-depth filter reads other origins' writes; the moss patch
-> scan reads the scene). Quantify: what fraction of the displaced-tree
-> accepts flip due to a scene-reading gate vs a position/y diff? The
-> s70 trace (my 268 unique positions vs vanilla's 3 accepted in
-> chunk (6,1)) has the data: if my accepts at vanilla's (x,z) with the
-> right y were rejected by the water-depth/below-block gates on
-> order-written cells, the fix is the SCENE (order), else the gate
-> logic itself.
+> 682e3e6 (s72) ORDER-DEPENDENT GATE IDENTIFIED: the heightmap modifier
+> reads the LIVE region state — earlier origins' canopies RAISE the
+> OCEAN_FLOOR height for later origins' attempts. Witness (chunk (6,1)):
+> column (102,18) my passes accept y=72 = vanilla's exactly (stream +
+> heightmap correct); column (107,19) my passes accept y=71 (matches) AND
+> y=76 (stacked on earlier canopies). 80/822 accepts (10%) have y>84 =
+> stacked trees — the order-model cascade's concrete footprint. Vanilla
+> has the same live-heightmap behavior; the divergence is purely the
+> LAST-WRITER ORDER.
+> PARKED (both the order model and its gate surface): the remaining
+> ~530k cells are the jitter cascade; vanilla's worker-pool completion
+> order is likely non-derivable from the seed.
+> NEXT (smaller concrete levers, in order): (1) huge_mushroom 2,868 +
+> simple_block 37k — verify the simple_block decor gates are
+> order-independent (they read heightmap too → order-dependent → skip);
+> (2) the carver residual 357 cells (closed, tiny); (3) multi-seed
+> ratchet maintenance. The 530k order-cascade cells are PARKED pending
+> a faithful-scheduler simulation idea or a changed ref pipeline.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
