@@ -348,11 +348,27 @@
 > PARKED (s78 final): the order cascade ~530k = vanilla's worker-pool
 > race floor; the mined-pair CSV cannot rank order models (s76/s77 both
 > disproven by the full scan). SESSION BASELINES as above.
-> NEXT: the parked cascade needs (a) a completion-order tracer agent in
-> a real vanilla server regenerating the ref world (records the true
-> decorate order; the sim replays THAT order and the tree family
-> closes), or (b) accepting the ~535k ceiling. No cheaper instrument
-> exists — the mined-pair CSV is invalidated (s76).
+> 1638db1 (s79) COMPLETION-ORDER TRACER CAPTURED: vanilla 26.2 has a
+> BUILT-IN dispatcher tracer — MC_DEBUG_ENABLED=true +
+> MC_DEBUG_VERBOSE_SERVER_EVENTS=true logs RES [x,z] old->new (priority
+> resorts) and SUB [x,z] level (pipeline submissions); no agent needed,
+> only a log4j2.xml with root DEBUG (the default root filters the
+> LOGGER.debug lines). CAPTURED a real server boot (seed 424242, view
+> distance 10): 2,116 RES + 647 SUB-at-34, ALL 529 region chunks — the
+> boot spawn generation alone produced the entire ref chunk set (the
+> forceload square was redundant at view-distance 10).
+> OPEN: the naive reconstructions disagree with the mined pairs
+> (level-then-FIFO SUB sort = 53.31%; RES promotion = 9 chunks only) —
+> the pipeline stages INTERLEAVE across chunks; the decorate execution
+> order = the poll order of the DECORATE-specific tasks, not directly
+> exposed in the raw RES/SUB lines. Trace archived: evidence/lush/
+> trace-boot-424242.log.
+> NEXT: correlate the SUB/RES lines with the per-status pipeline
+> boundaries (the dispatcher's pollTask emits the executed task's chunk
+> + status — check ChunkTaskDispatcher.pollTask's logging for a
+> decorate-specific line), extract the DECORATE call order, and diff
+> vs my origin order. If the trace gives the true order, the tree
+> family (~164k + cascades) closes.
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
