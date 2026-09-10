@@ -472,7 +472,7 @@ fn is_sturdy_attach(b: BlockId) -> bool {
 /// shortcut, so vein/sensor/shrieker are NOT sturdy on ANY face. Verified by
 /// the Java flat-floor probe: the full-cube check matches 166 sculk; a
 /// face-aware variant (is_face_sturdy_at) regresses to 162.
-fn is_face_sturdy_full(b: BlockId) -> bool {
+pub(crate) fn is_face_sturdy_full(b: BlockId) -> bool {
     !matches!(
         b,
         BlockId::Air

@@ -314,6 +314,8 @@ pub enum BlockId {
     Torch = 307,
     WhiteCandle = 308,
     WallTorch = 309,
+    Cobweb = 310,
+    Rail = 311,
 }
 
 impl BlockId {
@@ -606,6 +608,8 @@ impl BlockId {
             307 => Some(Self::Torch),
             308 => Some(Self::WhiteCandle),
             309 => Some(Self::WallTorch),
+            310 => Some(Self::Cobweb),
+            311 => Some(Self::Rail),
             _ => None,
         }
     }
@@ -782,6 +786,8 @@ impl BlockId {
             Self::Target => "minecraft:target",
             Self::Torch => "minecraft:torch",
             Self::WallTorch => "minecraft:wall_torch",
+            Self::Cobweb => "minecraft:cobweb",
+            Self::Rail => "minecraft:rail",
             Self::WhiteCandle => "minecraft:white_candle",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
@@ -1192,6 +1198,8 @@ impl BlockId {
             "target" => Some(Self::Target),
             "torch" => Some(Self::Torch),
             "wall_torch" => Some(Self::WallTorch),
+            "cobweb" => Some(Self::Cobweb),
+            "rail" => Some(Self::Rail),
             "white_candle" => Some(Self::WhiteCandle),
             _ => None,
         }
@@ -1483,6 +1491,8 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::Target => "minecraft:target",
         BlockId::Torch => "minecraft:torch",
         BlockId::WallTorch => "minecraft:wall_torch",
+        BlockId::Cobweb => "minecraft:cobweb",
+        BlockId::Rail => "minecraft:rail",
         BlockId::WhiteCandle => "minecraft:white_candle",
     }
 }

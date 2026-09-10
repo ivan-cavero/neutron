@@ -90,6 +90,9 @@ pub struct Piece {
     /// `StructurePiece.orientation` — None for Room/Crossing (NBT O=-1).
     pub(super) orient: Option<Dir>,
     pub(super) entrances: Vec<Bb>,
+    /// Corridor only: `hasRails` / `spiderCorridor` ctor flags.
+    pub(super) rails: bool,
+    pub(super) spider: bool,
 }
 
 /// `findGenerationPoint` + `moveBelowSeaLevel`: the room seed piece plus all
@@ -135,6 +138,8 @@ pub fn generate_start(level_seed: i64, cx: i32, cz: i32) -> Vec<Piece> {
         dir: Dir::North,
         orient: None,
         entrances: Vec::new(),
+        rails: false,
+        spider: false,
     };
     let mut pieces = vec![room];
     add_room_children(0, &mut pieces, &mut rng);
@@ -217,6 +222,8 @@ fn create_random_shaft(
                 dir,
                 orient: None,
                 entrances: Vec::new(),
+                rails: false,
+                spider: false,
             });
         }
     } else if roll >= 70 {
@@ -228,14 +235,14 @@ fn create_random_shaft(
                 dir,
                 orient: Some(dir),
                 entrances: Vec::new(),
+                rails: false,
+                spider: false,
             });
         }
     } else if let Some(bb) = find_corridor(pieces, rng, x, y, z, dir) {
         // Corridor ctor: hasRails = nextInt(3)==0; spider = !rails && nextInt(23)==0
-        let _has_rails = rng.next_int(3) == 0;
-        if !_has_rails {
-            let _spider = rng.next_int(23) == 0;
-        }
+        let has_rails = rng.next_int(3) == 0;
+        let spider = !has_rails && rng.next_int(23) == 0;
         return Some(Piece {
             kind: Kind::Corridor,
             bb,
@@ -243,6 +250,8 @@ fn create_random_shaft(
             dir,
             orient: Some(dir),
             entrances: Vec::new(),
+            rails: has_rails,
+            spider,
         });
     }
     None

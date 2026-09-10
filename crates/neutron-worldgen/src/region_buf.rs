@@ -246,6 +246,20 @@ impl RegionBuf {
     }
 
     /// Copy a generated 16×H×16 chunk column into the region.
+    /// OCEAN_FLOOR-style height (highest non-air/fluid solid) at world `(x, z)`.
+    pub fn height_at(&self, x: i32, z: i32) -> i32 {
+        let n = self.chunks as i32;
+        let lx = (x - self.origin_x).rem_euclid(16) as usize;
+        let lz = (z - self.origin_z).rem_euclid(16) as usize;
+        let cxl = (x - self.origin_x).div_euclid(16);
+        let czl = (z - self.origin_z).div_euclid(16);
+        if cxl < 0 || czl < 0 || cxl >= n || czl >= n {
+            return WORLD_BOTTOM;
+        }
+        let hi = (czl * n + cxl) as usize;
+        self.heightmaps[hi][lz * 16 + lx] as i32
+    }
+
     pub fn put_chunk(&mut self, cx: i32, cz: i32, blocks: &[u16], heightmap: &[i16]) {
         let lx0 = cx * 16 - self.origin_x;
         let lz0 = cz * 16 - self.origin_z;

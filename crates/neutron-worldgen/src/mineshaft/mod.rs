@@ -124,15 +124,13 @@ fn apply_mineshafts_origin_with(
     oz0: i32,
     starts: &[(i32, i32, Vec<pieces::Piece>)],
 ) {
-    // Writable area of this origin: its 3x3 chunks.
-    let w0x = ox0 - 16;
-    let w1x = ox0 + 47;
-    let w0z = oz0 - 16;
-    let w1z = oz0 + 47;
+    // Vanilla placeInChunk processes only pieces whose BB intersects the chunk
+    // being decorated (the origin's CENTER chunk) — pieces outside it never run
+    // for this origin, so their postProcess draws are not consumed.
     let mut selected: Vec<&pieces::Piece> = Vec::new();
     for (_, _, ps) in starts {
         for p in ps {
-            if p.bb.max_x >= w0x && p.bb.min_x <= w1x && p.bb.max_z >= w0z && p.bb.min_z <= w1z {
+            if p.bb.max_x >= ox0 && p.bb.min_x <= ox0 + 15 && p.bb.max_z >= oz0 && p.bb.min_z <= oz0 + 15 {
                 selected.push(p);
             }
         }
@@ -144,7 +142,15 @@ fn apply_mineshafts_origin_with(
     let dec = rng.set_decoration_seed(state.seed, ox0, oz0);
     rng.set_feature_seed(dec, 1, crate::feature_catalog::step::UNDERGROUND_STRUCTURES);
     let owned: Vec<pieces::Piece> = selected.into_iter().cloned().collect();
-    place::place_pieces(region, &owned, state, &mut rng);
+    let clip = pieces::Bb {
+        min_x: ox0,
+        min_y: crate::generator::WORLD_BOTTOM,
+        min_z: oz0,
+        max_x: ox0 + 15,
+        max_y: crate::generator::WORLD_TOP,
+        max_z: oz0 + 15,
+    };
+    place::place_pieces(region, &owned, state, &mut rng, &clip);
 }
 
 #[cfg(test)]

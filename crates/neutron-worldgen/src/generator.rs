@@ -93,6 +93,12 @@ pub fn decorate_region_origin_major(
             "plains",
         );
         let t_ustr = ts3.elapsed().as_millis();
+        // Step 3 structures — mineshaft pieces (vanilla placeInChunk runs in
+        // the same decoration loop, after the step-3 features' seeds are set;
+        // the mineshaft RNG stream is separate: setFeatureSeed(dec, 1, 3)).
+        region.current_writer = crate::writers::MINESHAFT;
+        crate::mineshaft::apply_mineshafts_origin(region, state, ox0, oz0);
+        region.current_writer = crate::writers::TERRAIN;
         // Step 4 — SURFACE_STRUCTURES: ruined portal complexes (vanilla runs
         // structure pieces interleaved per decoration step, before the step's
         // features; anchor chunks place their own complex). Plans were frozen
@@ -389,10 +395,8 @@ impl ChunkGenerator {
         if prof {
             eprintln!("[gen-timing] carvers={}ms", t_carve - t_noise);
         }
-        // Structure pieces (mineshafts) are part of the CARVERS status — placed
-        // once over the region before decoration, visible to every origin.
-        region.current_writer = crate::writers::MINESHAFT;
-        crate::mineshaft::apply_mineshafts_region(&mut region, &self.state);
+        // Mineshafts moved into the per-origin decoration loop (vanilla runs
+        // structure postProcess per origin inside applyBiomeDecoration, step 3).
         region.current_writer = crate::writers::ANCIENT_CITY;
         crate::ancient_city::apply_ancient_city_region(&mut region, &self.state);
         region.current_writer = crate::writers::TERRAIN;
