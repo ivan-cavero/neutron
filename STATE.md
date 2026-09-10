@@ -349,12 +349,20 @@
 > counts equal), lush patches (s68 scan amplification), small decor
 > (s74 displaced selector outcomes). The remaining lever = the order
 > model (jitter, likely non-derivable) or a real-server scene probe.
-> NEXT: nothing actionable remains in the current instrument set. The
-> loop should either (a) invest in the faithful ChunkTaskDispatcher
-> simulation (deco_schedule work, uncertain payoff — vanilla's worker
-> jitter may be non-deterministic), or (b) re-verify the baselines
-> periodically and treat the parked ~535k as the honest ceiling for
-> this instrument generation.
+> 95fe7b5 (s75) VIOLATION STRUCTURE QUANTIFIED: the ordering test now
+> prints per-model violation offsets. ticket-sim 1,870 violations —
+> (0,-1) 778 + (-1,0) 434 (the halo-batch artifact) + (1,0) 298;
+> z-major 753 — dominated by (0,-1) 559. Both violate structured
+> ORE-spill pairs (~2-4% of mined pairs); the true order has ~0.
+> Reconciles s57: z-major fixes ore pairs but regressed the meter
+> because the pairs CSV samples ore spills only — full parity depends
+> on every feature's last-writer relationship.
+> NEXT (per s74): nothing actionable remains in the current instrument
+> set. The options stay: (a) faithful ChunkTaskDispatcher simulation
+> (deco_schedule work; the structured offsets suggest PART of the
+> violations — the halo-batch (-1,0) 434 — are FIXABLE by removing the
+> halo batch from the sim, worth one experiment), or (b) park the
+> ~535k as the honest ceiling for this instrument generation.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
