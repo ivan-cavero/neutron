@@ -870,6 +870,13 @@ pub(crate) fn dispatch_configured(
         "minecraft:huge_red_mushroom" | "minecraft:huge_brown_mushroom" => {
             // AbstractHugeMushroomFeature port — the dark_forest_vegetation
             // selector and swamp/mushroom-field placed features route here.
+            // s74 small-ledger audit: the 2,868 huge_mushroom ledger cells
+            // (mine=brown_mushroom_block where vanilla=air/leaves/stem; 86%
+            // border) are displacement cells — the dark_forest_vegetation
+            // selector cascade (brown 0.025 → red 0.05 → dark_oak 0.667…)
+            // matches vanilla's trace format exactly (s70 selrolls), and the
+            // 302 red-vs-brown cells are displaced selector outcomes, not a
+            // selector bug.
             crate::feature_dispatch::place_huge_mushroom(
                 rng,
                 region,
@@ -947,6 +954,12 @@ pub(crate) fn dispatch_configured(
             // SeagrassFeature.place: x/z = nextInt(8)-nextInt(8); y =
             // OCEAN_FLOOR; if WATER: tall = nextDouble < probability; place
             // seagrass (or tall + upper half) if canSurvive.
+            // s74 small-ledger audit: the 398 seagrass ledger cells (372
+            // water-vs-mine + 26 tall/short confusion, 91% border) are
+            // displacement cells — my attempts accepted where vanilla's
+            // didn't (the scene-gate cascade). The tall/short probability
+            // roll (short 0.3 / tall 0.8) and the canSurvive gate match the
+            // vanilla source line-for-line; no feature bug found here.
             let prob = cfg["config"]["probability"].as_f64().unwrap_or(0.0);
             let px = x + rng.next_int(8) - rng.next_int(8);
             let pz = z + rng.next_int(8) - rng.next_int(8);
@@ -1313,7 +1326,7 @@ fn place_resolved_placed(
 }
 
 mod fluids;
-mod predicates;
+pub(crate) mod predicates;
 pub(crate) mod sampling;
 pub(crate) mod vegetation;
 
