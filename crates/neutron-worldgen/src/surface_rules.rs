@@ -1462,13 +1462,22 @@ mod ref_block_10101 {
     use neutron_world::nbt::{compound_get, read_nbt};
     use neutron_world::Region;
 
-    /// FINDING (s49): the predc1-based "scene divergence" was an ARTIFACT —
+    /// FINDING (s49+s52): the predc1-based "scene divergence" was an ARTIFACT —
     /// the vanilla ProbePreDecorate dump has the deepslate transition
     /// UNAPPLIED (621k stone vs 146k deepslate below y=0, while the real ref
     /// world has deepslate below y≈0 — the parity tool confirms deepslate at
     /// y=-63 on both sides). The probe's buildSurface is not equivalent to
     /// the real server's. The displaced-tree family's cause remains the
     /// origin-order/ticket-sim residual (11-13% violations).
+    ///
+    /// s52 CHAIN: dark_forest_vegetation y = OCEAN_FLOOR heightmap at (x,z)
+    /// (placed_feature JSON) — the heightmap depends on the SCENE. Scene
+    /// terrain diffs (scattered ore/stone/carver cells from the origin-order
+    /// cascade) shift the heightmap → tree attempts land at different y →
+    /// acceptance flips (SurfaceWaterDepthFilter/BiomeFilter) → displaced
+    /// trees. The tree displacement is DOWNSTREAM of terrain diffs; the fix
+    /// is the terrain/ore parity at border origins (the origin-order
+    /// cascade), not the tree feature itself.
     /// FINDING (s41): the ref air at these cells = SculkVeinBlock.onDischarged
     /// (vein with no faces left converts to AIR — SculkVeinBlock.java:81).
     /// The 194k air->deepslate family is sculk-vein discharge air; the sculk
