@@ -438,6 +438,16 @@ pub(crate) fn heightmap_top(
             // fall through to the live scan.
         }
     }
+    // s73 REVERTED: routing OceanFloor through the frozen post-carver snapshot
+    // REGRESSED the (-12,-6) window 9,459 → 21,491 mismatches. The static
+    // reading of ProtoChunk/ChunkStatus says vanilla primes FINAL_HEIGHTMAPS
+    // at CARVERS→FEATURES and never updates them during decoration — but the
+    // frozen snapshot measured WORSE than the live scan, and the live scan
+    // matches vanilla's tree ys at all three witness columns (s70). The real
+    // WorldGenRegion path may re-prime (WorldGenRegion ctor clones/creates
+    // heightmaps per status) or the update happens through a path this
+    // analysis missed. Live scan restored; the freeze infra remains for the
+    // next hypothesis.
     for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
         if heightmap_opaque(region.get(x, y, z), kind) {
             return Some(y);

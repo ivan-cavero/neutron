@@ -20,6 +20,10 @@ pub struct RegionBuf {
     pub blocks: Vec<u16>,
     /// Per-chunk heightmaps, row-major over chunk grid (cz_local * n + cx_local).
     pub heightmaps: Vec<Vec<i16>>,
+    /// Per-chunk OCEAN_FLOOR snapshot frozen at the CARVERS→FEATURES transition
+    /// (vanilla primes FINAL_HEIGHTMAPS at ChunkStatus.CARVERS heightmapsAfter
+    /// and ProtoChunk.setBlockState never updates them during decoration).
+    pub ocean_floor_frozen: Vec<Vec<i16>>,
     /// Per-chunk quart biome grids (layout `section*64 + sy4*16 + bz4*4 + bx4`),
     /// populated by [`RegionBuf::put_chunk_biomes`]. Lets feature steps read
     /// stored biomes instead of re-sampling climate noise.
@@ -71,6 +75,7 @@ impl RegionBuf {
             side,
             blocks: vec![BlockId::Air.as_u16(); volume],
             heightmaps: vec![vec![WORLD_BOTTOM as i16; HEIGHTMAP_SIZE]; (chunks * chunks) as usize],
+            ocean_floor_frozen: vec![vec![WORLD_BOTTOM as i16; HEIGHTMAP_SIZE]; (chunks * chunks) as usize],
             biomes: vec![None; (chunks * chunks) as usize],
             chunks,
             region_random: std::cell::RefCell::new(None),
@@ -286,6 +291,53 @@ impl RegionBuf {
         if hi < self.heightmaps.len() {
             self.heightmaps[hi].copy_from_slice(heightmap);
         }
+    }
+
+    /// Freeze the OCEAN_FLOOR snapshot from the CURRENT blocks (called at the
+    /// CARVERS→FEATURES transition, before decoration writes).
+    pub fn freeze_ocean_floor(&mut self) {
+        for hm in self.ocean_floor_frozen.iter_mut() {
+            for v in hm.iter_mut() {
+                *v = WORLD_BOTTOM as i16;
+            }
+        }
+        let n = self.chunks as usize;
+        for ci in 0..n * n {
+            let czl = ci / n;
+            let cxl = ci % n;
+            let base_x = self.origin_x + cxl as i32 * 16;
+            let base_z = self.origin_z + czl as i32 * 16;
+            for lz in 0..16i32 {
+                for lx in 0..16i32 {
+                    let wx = base_x + lx;
+                    let wz = base_z + lz;
+                    let mut top = WORLD_BOTTOM as i16;
+                    for y in (WORLD_BOTTOM..WORLD_TOP).rev() {
+                        let b = self.get(wx, y, wz);
+                        if crate::feature_dispatch::predicates::blocks_motion(b) {
+                            top = y as i16;
+                            break;
+                        }
+                    }
+                    self.ocean_floor_frozen[ci][lz as usize * 16 + lx as usize] = top;
+                }
+            }
+        }
+    }
+
+    /// Frozen OCEAN_FLOOR top at (x,z) — the post-carver snapshot (None outside
+    /// the stored grid).
+    pub fn ocean_floor_frozen_at(&self, x: i32, z: i32) -> Option<i16> {
+        let cxl = x.div_euclid(16) - self.origin_x / 16;
+        let czl = z.div_euclid(16) - self.origin_z / 16;
+        if cxl < 0 || czl < 0 || cxl >= self.chunks || czl >= self.chunks {
+            return None;
+        }
+        let hi = (czl * self.chunks + cxl) as usize;
+        let hm = self.ocean_floor_frozen.get(hi)?;
+        let lx = x.rem_euclid(16) as usize;
+        let lz = z.rem_euclid(16) as usize;
+        Some(hm[lz * 16 + lx])
     }
 
     /// Frozen per-chunk heightmap top at (x,z) — the post-surface,

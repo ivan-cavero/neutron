@@ -400,6 +400,10 @@ impl ChunkGenerator {
         region.current_writer = crate::writers::ANCIENT_CITY;
         crate::ancient_city::apply_ancient_city_region(&mut region, &self.state);
         region.current_writer = crate::writers::TERRAIN;
+        // Vanilla primes FINAL_HEIGHTMAPS (incl. OCEAN_FLOOR) at the
+        // CARVERS→FEATURES transition and ProtoChunk.setBlockState never
+        // updates them during decoration — freeze our snapshot here.
+        region.freeze_ocean_floor();
         if prof {
             eprintln!("[gen-timing] mineshaft={}ms", t_all.elapsed().as_millis() - t_carve);
         }
