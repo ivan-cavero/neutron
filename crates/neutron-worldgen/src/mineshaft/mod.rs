@@ -42,13 +42,61 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
     let c0z = region.origin_z.div_euclid(16);
     let c1x = c0x + region.chunks - 1;
     let c1z = c0z + region.chunks - 1;
+    let starts = collect_starts(state, c0x, c0z, c1x, c1z);
+    if starts.is_empty() {
+        return;
+    }
+    // Per-origin pass — vanilla runs structure `postProcess` inside
+    // `applyBiomeDecoration` per origin: `placeInChunk` only processes pieces
+    // whose BB intersects the origin's writable area (the 3x3 chunks around
+    // the origin), with the decoration RNG reseeded
+    // `setFeatureSeed(setDecorationSeed(seed, ox, oz), 1, 3)` (mineshaft =
+    // index 1 within step 3). The stream continues across pieces and starts
+    // of the same origin; the LAST origin (in decoration order) to re-run a
+    // piece wins its cells. Earlier single-pass model (one LegacyRandom
+    // seeded `setLargeFeatureSeed(seed, 0, 0)`) produced cave_air fields the
+    // ref never had (chunk (-1,-8) on 424242: 182 cells, all
+    // `vanilla=X mine=cave_air`, y -16..-8).
+    let order = crate::sculk::decoration_origin_order(region.chunks, region.origin_x, region.origin_z);
+    for &(cxl, czl) in order.iter() {
+        let ox0 = region.origin_x + cxl * 16;
+        let oz0 = region.origin_z + czl * 16;
+        apply_mineshafts_origin_with(region, state, ox0, oz0, &starts);
+    }
+}
+
+/// Mineshaft `postProcess` for ONE origin `(ox0, oz0)` — vanilla runs this
+/// inside the decoration loop at step 3 (UNDERGROUND_STRUCTURES), before the
+/// origin's later feature steps read the scene.
+pub fn apply_mineshafts_origin(
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+) {
+    let c0x = ox0.div_euclid(16) - 1;
+    let c0z = oz0.div_euclid(16) - 1;
+    let starts = collect_starts(state, c0x, c0z, c0x + 2, c0z + 2);
+    if starts.is_empty() {
+        return;
+    }
+    apply_mineshafts_origin_with(region, state, ox0, oz0, &starts);
+}
+
+fn collect_starts(
+    state: &WorldgenState,
+    c0x: i32,
+    c0z: i32,
+    c1x: i32,
+    c1z: i32,
+) -> Vec<(i32, i32, Vec<pieces::Piece>)> {
     let mut starts: Vec<(i32, i32, Vec<pieces::Piece>)> = Vec::new();
     for cz in (c0z - SEARCH_RADIUS)..=(c1z + SEARCH_RADIUS) {
         for cx in (c0x - SEARCH_RADIUS)..=(c1x + SEARCH_RADIUS) {
             if !is_mineshaft_chunk(state.seed, cx, cz) {
                 continue;
             }
-            let pieces = pieces::generate_start(state.seed, cx, cz);
+            let pieces = (*pieces::generate_start_cached(state.seed, cx, cz)).clone();
             if pieces.is_empty() {
                 continue;
             }
@@ -66,16 +114,37 @@ pub fn apply_mineshafts_region(region: &mut RegionBuf, state: &WorldgenState) {
             starts.push((cx, cz, pieces));
         }
     }
-    if starts.is_empty() {
+    starts
+}
+
+fn apply_mineshafts_origin_with(
+    region: &mut RegionBuf,
+    state: &WorldgenState,
+    ox0: i32,
+    oz0: i32,
+    starts: &[(i32, i32, Vec<pieces::Piece>)],
+) {
+    // Writable area of this origin: its 3x3 chunks.
+    let w0x = ox0 - 16;
+    let w1x = ox0 + 47;
+    let w0z = oz0 - 16;
+    let w1z = oz0 + 47;
+    let mut selected: Vec<&pieces::Piece> = Vec::new();
+    for (_, _, ps) in starts {
+        for p in ps {
+            if p.bb.max_x >= w0x && p.bb.min_x <= w1x && p.bb.max_z >= w0z && p.bb.min_z <= w1z {
+                selected.push(p);
+            }
+        }
+    }
+    if selected.is_empty() {
         return;
     }
-    // Pass 1 — legacy pre-decoration skeleton (carve/supports/planks), kept
-    // byte-compatible with the closed layout parity work. Per-origin decor
-    // RNG (rails/cobwebs/torches/chest cart/spawner) is not ported yet;
-    // vanilla runs it inside each piece's postProcess.
-    for (_, _, pieces) in &starts {
-        place::place_pieces(region, pieces, state);
-    }
+    let mut rng = crate::feature_rng::FeatureRandom::new(state.seed);
+    let dec = rng.set_decoration_seed(state.seed, ox0, oz0);
+    rng.set_feature_seed(dec, 1, crate::feature_catalog::step::UNDERGROUND_STRUCTURES);
+    let owned: Vec<pieces::Piece> = selected.into_iter().cloned().collect();
+    place::place_pieces(region, &owned, state, &mut rng);
 }
 
 #[cfg(test)]
@@ -165,6 +234,24 @@ mod parity_10101 {
     /// The ref's (-14,0) start has 147 children (measured). My generate_start
     /// must match — the 194k air->deepslate family on 10101 (y -51..-32,
     /// z 12..95, x -224..-113) is mineshaft corridor air the port misses.
+    #[test]
+    #[ignore = "diagnostic: dump mineshaft piece BBs for the ref diff"]
+    /// 424242 mineshaft starts within ±16 chunks.
+    #[test]
+    #[ignore = "diagnostic: scan 424242 mineshaft starts"]
+    fn mineshaft_starts_424242() {
+        let mut hits = Vec::new();
+        for cz in -16..=16 {
+            for cx in -16..=16 {
+                if super::is_mineshaft_chunk(424242, cx, cz) {
+                    hits.push((cx, cz));
+                }
+            }
+        }
+        eprintln!("MS-424242 starts: {hits:?}");
+        panic!("SCAN-DONE");
+    }
+
     #[test]
     #[ignore = "diagnostic: dump mineshaft piece BBs for the ref diff"]
     fn mineshaft_piece_dump_10101() {

@@ -96,6 +96,22 @@ pub struct Piece {
 /// children generated with `setLargeFeatureSeed`.
 /// Generate one mineshaft start's piece tree (diagnostics-visible: parity
 /// examples diff these BBs against vanilla `structures.starts` NBT).
+/// Memo for `generate_start` — the decoration loop calls the per-origin
+/// mineshaft pass 9x per region; each pass needs the same start piece trees.
+static START_MEMO: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<(i64, i32, i32), std::sync::Arc<Vec<Piece>>>>,
+> = std::sync::OnceLock::new();
+
+/// Generate (or fetch from the memo) the piece tree for the mineshaft start
+/// at chunk `(cx, cz)`.
+pub fn generate_start_cached(level_seed: i64, cx: i32, cz: i32) -> std::sync::Arc<Vec<Piece>> {
+    let memo = START_MEMO.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    let mut map = memo.lock().unwrap();
+    map.entry((level_seed, cx, cz))
+        .or_insert_with(|| std::sync::Arc::new(generate_start(level_seed, cx, cz)))
+        .clone()
+}
+
 pub fn generate_start(level_seed: i64, cx: i32, cz: i32) -> Vec<Piece> {
     let mut rng = LegacyRandom::new(0);
     rng.set_large_feature_seed(level_seed, cx, cz);

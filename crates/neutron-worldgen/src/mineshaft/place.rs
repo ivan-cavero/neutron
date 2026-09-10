@@ -1,11 +1,12 @@
 //! Mineshaft piece placement into the region (`postProcess`).
 //!
 //! Carving, supports and the `isInInvalidLocation` gate. RNG order mirrors
-//! vanilla's per-piece `LegacyRandom` draws exactly.
+//! vanilla's `postProcess` draws: the decoration `WorldgenRandom` (Xoroshiro)
+//! shared across pieces, reseeded per origin.
 
 use super::pieces::{Bb, Dir, Kind, Piece};
 use super::WORLD_MIN_Y;
-use crate::legacy_rng::LegacyRandom;
+use crate::feature_rng::FeatureRandom;
 use crate::region_buf::RegionBuf;
 use crate::surface::BlockId;
 use crate::worldgen::WorldgenState;
@@ -64,7 +65,7 @@ fn generate_box(
 fn generate_maybe_box(
     region: &mut RegionBuf,
     p: &Piece,
-    rng: &mut LegacyRandom,
+    rng: &mut FeatureRandom,
     chance: f32,
     x0: i32,
     y0: i32,
@@ -158,7 +159,7 @@ fn is_supporting_box(region: &RegionBuf, p: &Piece, x0: i32, x1: i32, y: i32, z:
 fn place_support(
     region: &mut RegionBuf,
     p: &Piece,
-    rng: &mut LegacyRandom,
+    rng: &mut FeatureRandom,
     x0: i32,
     y0: i32,
     z: i32,
@@ -190,9 +191,20 @@ fn set_planks_block(region: &mut RegionBuf, p: &Piece, x: i32, y: i32, z: i32) {
     region.set(wx, wy, wz, BlockId::OakPlanks);
 }
 
-pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &WorldgenState) {
-    let mut rng = LegacyRandom::new(0);
-    rng.set_large_feature_seed(state.seed, 0, 0);
+/// Piece RNG: vanilla passes the decoration `WorldgenRandom` (Xoroshiro) into
+/// `postProcess`, reseeded per origin via
+/// `setFeatureSeed(decorationSeed, structureIndex, step)` (ChunkGenerator
+/// line 326 + 348). `decorationSeed = setDecorationSeed(seed, ox, oz)`;
+/// mineshaft index within step 3 (UNDERGROUND_STRUCTURES) = 1
+/// (buried_treasure=0, mineshaft=1, mineshaft_mesa=2, trail_ruins=3,
+/// trial_chambers=4). The stream CONTINUES across pieces and starts of the
+/// same origin (StructureStart.placeInChunk passes the same `random`).
+pub(super) fn place_pieces(
+    region: &mut RegionBuf,
+    pieces: &[Piece],
+    state: &WorldgenState,
+    rng: &mut FeatureRandom,
+) {
     for p in pieces {
         if is_in_invalid_location(region, state, p) {
             continue;
@@ -243,10 +255,10 @@ pub(super) fn place_pieces(region: &mut RegionBuf, pieces: &[Piece], state: &Wor
                 };
                 let len = nsec * 5 - 1;
                 generate_box(region, p, 0, 0, 0, 2, 1, len, BlockId::CaveAir);
-                generate_maybe_box(region, p, &mut rng, 0.8, 0, 2, 0, 2, 2, len, BlockId::CaveAir);
+                generate_maybe_box(region, p, rng, 0.8, 0, 2, 0, 2, 2, len, BlockId::CaveAir);
                 for sec in 0..nsec {
                     let z = 2 + sec * 5;
-                    place_support(region, p, &mut rng, 0, 0, z, 2, 2);
+                    place_support(region, p, rng, 0, 0, z, 2, 2);
                 }
                 for x in 0..=2 {
                     for z in 0..=len {
