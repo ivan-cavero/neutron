@@ -24,6 +24,9 @@ neutron-world = { path = "../neutron-world" }
 name = "biome_grid_parity"
 
 [[example]]
+name = "carver_edge_dump"
+
+[[example]]
 name = "carver_many"
 
 [[example]]

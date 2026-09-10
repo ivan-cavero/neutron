@@ -40,7 +40,17 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 const SEED: i64 = 424242;
-const TARGETS: [(i32, i32); 5] = [(7, 2), (8, 0), (-10, 6), (0, 0), (1, 1)];
+const TARGETS: [(i32, i32); 8] = [
+    (7, 2),
+    (8, 0),
+    (-10, 6),
+    (0, 0),
+    (1, 1),
+    // s68: the extra-carve cluster (scene-diff van=stone mine=air hotspots)
+    (-11, -4),
+    (-10, -4),
+    (-14, -4),
+];
 const REGION_DIR: &str =
     "tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region";
 
