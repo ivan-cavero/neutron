@@ -902,6 +902,27 @@ mod ordering_analysis {
         println!("chebyshev-wave: {:.4}", consistency(&seq_c));
         let sim = crate::deco_schedule::simulate_canonical_pregen();
         println!("ticket-sim:     {:.4}", consistency(&sim));
+        {
+            let sim_rank: std::collections::HashMap<(i32, i32), usize> =
+                sim.iter().enumerate().map(|(i, p)| (*p, i)).collect();
+            let mut voffs = std::collections::HashMap::new();
+            let mut vok = 0usize;
+            for (wx, wz, lx, lz) in &pairs {
+                if let (Some(&rw), Some(&rl)) = (sim_rank.get(&(*wx, *wz)), sim_rank.get(&(*lx, *lz))) {
+                    if rw > rl {
+                        vok += 1;
+                    } else {
+                        *voffs.entry((*wx - *lx, *wz - *lz)).or_insert(0usize) += 1;
+                    }
+                }
+            }
+            println!("ticket-sim ok={vok} violations={}", pairs.len() - vok);
+            let mut v: Vec<_> = voffs.into_iter().collect();
+            v.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+            for (off, n) in v.iter().take(6) {
+                println!("  sim-viol offset {off:?}: {n}");
+            }
+        }
         // x-major ascending z, but x DESCENDING (east-to-west sweep)
         let seq_zx: Vec<(i32, i32)> = (-8..8)
             .rev()
