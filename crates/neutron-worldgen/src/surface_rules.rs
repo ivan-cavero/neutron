@@ -2122,6 +2122,31 @@ mod my_tree_census_424242 {
         panic!("TREE-ATTEMPTS-DONE");
     }
 
+    /// Frozen OCEAN_FLOOR vs live scan at the witness columns (s72 fix check).
+    #[test]
+    #[ignore = "diagnostic: frozen vs live OCEAN_FLOOR at witness columns"]
+    fn frozen_ocean_floor_check_424242() {
+        let gen = ChunkGenerator::new(424242);
+        let mut region = crate::region_buf::RegionBuf::new(7, 2, 2);
+        for dz in -2..=2i32 {
+            for dx in -2..=2i32 {
+                let (blocks, hm, _) = gen.generate_noise_and_surface(7 + dx, 2 + dz);
+                region.put_chunk(7 + dx, 2 + dz, &blocks, &hm);
+            }
+        }
+        crate::carvers::apply_carvers_region(&mut region, &gen.state);
+        crate::mineshaft::apply_mineshafts_region(&mut region, &gen.state);
+        region.freeze_ocean_floor();
+        for (x, z) in [(102, 18), (107, 19), (100, 24)] {
+            let frozen = region.ocean_floor_frozen_at(x, z).unwrap_or(-999);
+            let live = crate::feature_dispatch::predicates::heightmap_top(
+                &region, x, z, crate::feature_dispatch::predicates::HeightmapKind::OceanFloor,
+            ).unwrap_or(-999);
+            eprintln!("OF ({x},{z}): frozen={frozen} live={live}");
+        }
+        panic!("OF-DONE");
+    }
+
     fn my_tree_census_424242() {
         let gen = ChunkGenerator::new(424242);
         for (cx, cz) in [(-14i32, -14), (-13, -14)] {
