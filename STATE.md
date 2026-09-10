@@ -291,12 +291,26 @@
 > vanilla's 62-attempt total 406) — vanilla's per-attempt sets need
 > the oracle to capture attempts individually (the log-delta
 > aggregates all 62 attempts in one placeWithBiomeCheck).
-> NEXT: two options — (a) extend the vanilla oracle to run
-> placeWithBiomeCheck per attempt (62 separate calls with per-attempt
-> seeds — NOT vanilla-faithful but bounds the size diff), or (b) move
-> to the tree family (164k cells) where the accept-gate cascade is
-> confirmed and the per-attempt oracle (s63-s64) already works. (b)
-> is the bigger meter lever.
+> 38223d7 (s70) TREE ORACLE DIFF (tree-family window, chunk (7,2)):
+> vanilla ACCEPT_TRACE = 124 dark_forest_vegetation attempts / 42
+> accepted across the 9 origins ((6,1): 16/6 at (107,19,71),
+> (102,18,72), (100,24,72)). MY per-pass trace: my (x,z) positions
+> INCLUDE vanilla's ((107,19),(102,18) present; (100,24) absent) —
+> the placement chain + position stream are CORRECT; the LAST-WRITER
+> origin differs. FINAL STATE (6,1): vanilla 42 dark_oak trunk columns
+> vs mine 44 (near-equal counts), only 2 columns match by position —
+> the displaced-tree signature with a clean mechanism: same counts,
+> different positions, last-writer origin differs.
+> CONCLUSION: the tree family root = the ORDER MODEL (which origin's
+> pass is last), confirmed end-to-end. The order model (ticket-sim,
+> 95.9% pairwise) residual = the 11-13% inverted pairs.
+> NEXT: the order model is the ONLY lever left for ~500k cells. Two
+> directions: (a) mine per-origin LAST-WRITER evidence from the ref
+> (impossible — the ref stores only final blocks), or (b) improve the
+> ticket-sim by simulating vanilla's ACTUAL scheduler more faithfully
+> (the ChunkTaskDispatcher's worker-pool jitter — the s38/s45 notes).
+> The honest position: the remaining ~530k cells need a
+> faithful-scheduler simulation, which is the deco_schedule work.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
