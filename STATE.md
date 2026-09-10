@@ -253,10 +253,21 @@
 > oracle — s64's treeish narrowing removed patch attempts from the
 > tree trace; next iteration re-enable the SURFACE dump for patches
 > (keep ACCEPT too) and diff the surface sets.
-> NEXT: re-extend the oracle for patches: print BOTH the ACCEPT boolean
-> AND the placeGroundPatch surface set (reflection) per origin, then
-> diff against NEUTRON_PATCH_DUMP (my surface set) — the first diverging
-> column is the witness.
+> 0b78def (s66) PATCHSET ORACLE (partial): reflection chain to
+> VegetationPatchFeature.placeGroundPatch BUILT (4 fixes: configured-
+> feature unwrap, config field source, TagKey→Predicate wrap, radius
+> draws) — the surface set writes to a FILE (stdout's async appender
+> swallows the giant lines). KNOWN ARTIFACT: the direct invocation
+> BYPASSES the placement modifiers (origin y = raw corner MINY → the
+> scan starts in solid deepslate → n=0 for all 9 origins). The faithful
+> oracle needs hooking INSIDE place() (instrumented feature class) —
+> the modifiers' height_range origin is what the scan needs.
+> NEXT: instrument the patch oracle properly: instead of a direct
+> placeGroundPatch invoke, run placeWithBiomeCheck (which applies the
+> modifier chain) and capture the surface set via a bytecode-free hook
+> — e.g. a subclassed VegetationPatchFeature registered in a custom
+> Feature registry inside the probe, overriding place() to capture the
+> surface set then calling super. Then diff vs NEUTRON_PATCH_DUMP.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
