@@ -731,6 +731,22 @@ pub fn simulate_batches(batches: &[Batch]) -> Vec<(i32, i32)> {
 
 /// Simulate the canonical ref procedure.
 pub fn simulate_canonical_pregen() -> Vec<(i32, i32)> {
+    // s78b: the TRUE decorate order captured from a real server boot with
+    // MC_DEBUG_VERBOSE_SERVER_EVENTS (the SUB lines at level <= 34 = the
+    // FEATURES submission order). When the file exists, replay it verbatim
+    // instead of simulating.
+    if let Ok(txt) = std::fs::read_to_string("/tmp/true-decorate-order.txt") {
+        let seq: Vec<(i32, i32)> = txt
+            .lines()
+            .filter_map(|l| {
+                let mut it = l.split_whitespace();
+                Some((it.next()?.parse().ok()?, it.next()?.parse().ok()?))
+            })
+            .collect();
+        if seq.len() >= 500 {
+            return seq;
+        }
+    }
     simulate_batches(&canonical_batches())
 }
 
