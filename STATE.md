@@ -136,15 +136,24 @@
 > → 0). 12345 99.1591→99.1616% (−1,276; s53 cost RECOVERED + −966 vs
 > s52). 777 bit-identical. Mineshaft RNG stream now draw-exact through
 > supports+decor rolls.
-> NEXT: remaining mineshaft-writer cells on 424242 (573 in window
-> (-1,-8), y -16..0): vanilla=rail mine=cave_air (32) = per-origin decor
-> RNG (rails/cobwebs/torches INSIDE corridor postProcess) still not
-> ported — vanilla runs rails/cobwebs inside each piece's postProcess
-> (MineshaftPieces postProcess loop), consuming the SAME decoration RNG
-> stream after the supports. Port the corridor decor sequence (rails,
-> cobwebs 0.2/torch 0.05 rolls) to stop the remaining stream divergence
-> at origin re-runs. Tree family ≈ 253k still resolves with terrain
-> parity at borders.
+> f2647cb (s55) CORRIDOR DECOR + CHUNK CLIP: (1) vanilla structure writes
+> are clipped to the DECORATED CHUNK (chunkBB.isInside) — each cell is
+> written by exactly ONE origin (its own); neutron wrote region-wide from
+> every origin (3x3 filter) → wrong-RNG carves + phantom piece passes
+> consuming draws. (2) Corridor postProcess decor ported: spider web
+> layer (0.6 inside), 8 cobwebs/section (isInterior short-circuits
+> BEFORE the draw), 2 chest rolls (nextInt(100), nextLong only in-chunk),
+> spawner roll (nextInt(3); setEntityId draws NOTHING — empty
+> WeightedList returns before drawing), rails (0.7 interior/0.9 per z).
+> BlockId Cobweb(310)/Rail(311), RegionBuf.height_at.
+> 424242 98.9526→98.9645% (−6,123). 12345 −156, 777 −3. ALL SEEDS UP.
+> Window (-1,-8): 9,825 → 9,459. Mineshaft-writer cells now draw-exact.
+> NOTE: /tmp hit ENOSPC mid-session (12G tmpfs) — one corrupted scan
+> (275k artifact) discarded; cache rebuilt.
+> NEXT: re-run the full 424242 ledger with --writers: the terrain/ore
+> writer family under the corrected mineshaft scene (the lush-clay
+> cascade should have shifted). Tree family ≈ 253k next if terrain
+> family is now the smaller residual.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
