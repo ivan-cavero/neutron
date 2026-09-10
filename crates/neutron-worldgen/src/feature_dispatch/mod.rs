@@ -432,6 +432,17 @@ impl<'a> PlacePipeline<'a> {
                     y = sample_height(self.rng, &m["height"]);
                     has_y = true;
                 }
+                // s71 ORDER-DEPENDENT GATE IDENTIFIED: the heightmap read here
+                // is LIVE (region state) — earlier origins' tree canopies RAISE
+                // the OCEAN_FLOOR height for later origins' tree attempts.
+                // Witness (chunk (6,1), seed 424242): column (107,19) — vanilla
+                // accepted y=71; my passes accepted y=71 (matching origins) AND
+                // y=76 (trees stacked on earlier origins' canopies). The final
+                // tree at a column = whichever origin's pass ran LAST in the
+                // decoration order. Same mechanism for the water-depth filter.
+                // Vanilla has the same live-heightmap behavior (its Heightmap
+                // updates on every setBlock) — the divergence is purely the
+                // last-writer ORDER, not the gate logic.
                 "minecraft:heightmap" => {
                     if !has_xz {
                         x = self.origin_min_x() + self.rng.next_int(16);
