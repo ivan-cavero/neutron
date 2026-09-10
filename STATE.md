@@ -198,15 +198,24 @@
 > decoration air mechanism found; probes biased: FixedBiomeSource PLAINS
 > + ProbeChunkDensity shares lineage with the s50-broken probe). Same
 > pattern as the parked s45 sculk family.
-> NEXT: park the lush-clay chain (3 iterations on the witness cell; the
-> remaining mechanism needs a real-server replay probe — a NEW Java probe
-> that runs the FULL vanilla decoration on a real chunk and dumps the
-> pre-moss scene is the missing instrument, ~1 day of work). Move to the
-> next ledger family: simple_block 37k (grass/moss-carpet/hanging-moss
-> decor — same accept-gate cascade) OR block_column 17k (dripleaf
-> columns). Both share the scene-diff root; the highest-value concrete
-> lever left is ANY probe that captures vanilla's PRE-DECORATION scene
-> from a real server (NDEC2-style, fixed biome+bio getter).
+> 996d3d1 (s61) SCENE-PARITY INSTRUMENT BUILT + RUN: the pipeline
+> decorate_oracle (my NDEC1) → ProbeFullDecorate (real vanilla
+> fillFromNoise+buildSurface+applyCarvers, VANILLA_NDEC_OUT re-dump) →
+> predecorate_diff --compare-scenes (cell diff + column mode). Witness
+> column (-192,*,-93) matches EXACTLY → lush divergence is INSIDE
+> decoration (order), confirming s59. Scene diffs in the 5x5 window:
+> 221k stone-vs-deepslate + 12k bedrock + 11k dirt/grass = the probe's
+> buildSurface artifacts (s50 bug class — NOT real; ref has deepslate at
+> y=-63). REAL: 15,711 van=stone mine=air (my carvers carve MORE than
+> vanilla's real carvers) + 12,208 stone-vs-water (aquifer). The b81b047
+> 'carve bit-exact' verdict was measured against broken probes — needs
+> re-verification with a fixed surface path.
+> NEXT: the carver diff (15.7k/window) is now the TOP concrete lever:
+> fix the probe's buildSurface (deepslate/bedrock/surface rules) OR
+> re-verify my carver geometry against the ref NBT directly (the ref's
+> final blocks include decoration, but underground carver air in
+> non-lush biomes is unambiguous). Then re-run the scene diff to isolate
+> the true carver delta and fix carvers.rs.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
