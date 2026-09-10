@@ -221,14 +221,23 @@
 > The persistent families (tree 164k, veg_patch 54k, simple_block 37k)
 > are the DECORATION diverging — the accept-gate cascade on the differing
 > scene, root = origin order (ticket-sim residual 11-13%).
-> NEXT: the accept-gate cascade is confirmed as the sole remaining lever
-> for ~530k cells. The order model cannot be ranked by the mined-pair
-> CSV (s57 disproved col). The remaining instrument: a per-cell
-> decoration replay TRACE from vanilla's real server (the NDEC2 replay
-> probe: ProbeFullDecorate already runs the real decoration loop —
-> extend it to dump per-origin per-feature accept/reject for the
-> witness column, giving vanilla's true accept set to diff against
-> mine).
+> 9385b81 (s63) ACCEPT_TRACE ORACLE: ProbeFullDecorate now dumps vanilla's
+> real per-origin accept/reject for every feature (ACCEPT_TRACE=1). TWO
+> fixes: FEATURES_PER_STEP was built from the FIXED-plains possibleBiomes
+> (every non-plains feature biome-gate-rejected — the s50 bug class);
+> now built from the full overworld biome list. My NDEC1 biome grids
+> VERIFIED CORRECT (lush_caves at the witness column; the earlier
+> dark_forest read was a decoder section-index error).
+> First oracle run (3x3 origins, chunk (-12,-6)): vanilla accepts
+> lush_caves_clay at 6 origins, rejects at 3 — per-origin gate results
+> now comparable against mine. REMAINING PROBE GAP: gif 27 (ceiling
+> vegetation) + gif 30 (lush_caves_vegetation) never attempted at step 9
+> despite lush_caves' JSON listing them — holder-identity or indexMapping
+> mismatch in the probe, under investigation.
+> NEXT: fix the missing gif-27/30 attempts (the probe's possibleThisStep
+> construction), then diff vanilla's per-attempt accept set vs mine for
+> the lush_caves_clay patch (count 62/origin) — the first diverging
+> attempt is the order-model witness.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
