@@ -119,9 +119,17 @@
 > feature places trees + leaf_litter + sub-features in ONE RNG stream
 > (step 9 vegetal); an earlier sub-feature consuming different RNG shifts
 > all subsequent tree positions — matching the cross-chunk displacement.
-> NEXT: bisect the dark_forest_vegetation RNG stream per origin
-> (PROBE_RAW_DRAWS infra exists at /tmp/opencode/probe_dark_raw2.out).
-> Tree family ≈ 281k cells on 424242.
+> 1b686d3 (s52) CHAIN TRACED: dark_forest_vegetation y = OCEAN_FLOOR
+> heightmap at (x,z) — the heightmap depends on the SCENE. Origin-order
+> cascade → scattered terrain/ore diffs at border origins → heightmap
+> shifts → tree attempts land at different y → acceptance flips →
+> displaced trees. The tree displacement is DOWNSTREAM of terrain diffs;
+> the tree feature itself is correct (40/40 anchors at chunk (7,-1)).
+> NEXT: the terrain/ore parity at border origins IS the lever — the
+> scattered ore/stone diffs (e.g. (-214,12,-223) coal_ore extra,
+> (-211,24,-219) diorite extra from ORIGIN_DIVERGENCE_REPORT.md) shift
+> heightmaps. Bisect the ore placement at border origins next. Tree
+> family ≈ 281k cells on 424242 resolves with the terrain parity.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
