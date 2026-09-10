@@ -150,10 +150,23 @@
 > Window (-1,-8): 9,825 → 9,459. Mineshaft-writer cells now draw-exact.
 > NOTE: /tmp hit ENOSPC mid-session (12G tmpfs) — one corrupted scan
 > (275k artifact) discarded; cache rebuilt.
-> NEXT: re-run the full 424242 ledger with --writers: the terrain/ore
-> writer family under the corrected mineshaft scene (the lush-clay
-> cascade should have shifted). Tree family ≈ 253k next if terrain
-> family is now the smaller residual.
+> 01d543b (s56) TREE STREAM VERIFIED: ProbeVegSeed (new) dumps vanilla's
+> raw in_square positions for dark_forest_vegetation (gif 17, step 9).
+> MY attempt 0 = (101,34) EXACT vs vanilla — seed formula, lazy-stream
+> draw order, nextInt semantics all correct. Ref has NO tree at (101,34)
+> → vanilla rejected; my real chain also rejects. Accept gates diverge at
+> later attempts where the SCENE differs → displaced trees = lazy-stream
+> amplification of terrain diffs. ROOT = terrain family (230k writer
+> cells, incl. vanilla-side trees ≈ 125k + tree writer 163k ≈ 289k tree
+> family total). Order A/B (z-major 96.08% vs ticket-sim 95.88% on mined
+> pairs): parity IDENTICAL on tree window (7,2) — order is NOT the lever.
+> Writer map (post-s55): terrain 230k, tree 164k, veg_patch 54k,
+> simple_block 37k, block_column 17k, ore 17k — ALL origin/scene cascade.
+> NEXT: the terrain family's non-tree core: clay->stone 9,566 +
+> moss->stone 9,112 + clay->deepslate 7,456 (lush patches, 87% border).
+> These are scene diffs BEFORE trees: fix the lush_caves clay patch
+> placement gates at border origins (the accept-gate divergence at the
+> FIRST diverging attempt is the unit of failure).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
