@@ -900,5 +900,18 @@ mod ordering_analysis {
             v
         };
         println!("chebyshev-wave: {:.4}", consistency(&seq_c));
+        let sim = crate::deco_schedule::simulate_canonical_pregen();
+        println!("ticket-sim:     {:.4}", consistency(&sim));
+        // x-major ascending z, but x DESCENDING (east-to-west sweep)
+        let seq_zx: Vec<(i32, i32)> = (-8..8)
+            .rev()
+            .flat_map(|x| (-8..8).map(move |z| (x, z)))
+            .collect();
+        println!("x-desc-z-asc:   {:.4}", consistency(&seq_zx));
+        // z-major with z descending
+        let seq_zd: Vec<(i32, i32)> = (-8..8)
+            .flat_map(|x| (-8..8).rev().map(move |z| (x, z)))
+            .collect();
+        println!("z-desc:         {:.4}", consistency(&seq_zd));
     }
 }

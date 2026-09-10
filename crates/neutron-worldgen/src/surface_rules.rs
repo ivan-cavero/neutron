@@ -1900,6 +1900,101 @@ mod my_tree_census_424242 {
     /// MY dark_oak log count for chunks (-14,-14) and (-13,-14) on 424242.
     #[test]
     #[ignore = "diagnostic: my dark_oak log census"]
+    /// Trunk-base positions (lowest dark_oak_log y per column) — ref vs mine,
+    /// chunk (6,2) seed 424242. The mined-pair check for the tree family.
+    #[test]
+    #[ignore = "diagnostic: ref-vs-mine dark_oak trunk bases in chunk (6,2)"]
+    fn trunk_bases_62_424242() {
+        let dir = "tools/nbt-ref/vanilla-fresh-424242/world/dimensions/minecraft/overworld/region";
+        let (cx, cz) = (6, 2);
+        let ref_bases = ref_trunk_bases(dir, cx, cz);
+        let gen = ChunkGenerator::new(424242);
+        let chunk = gen.generate_chunk(cx, cz);
+        let mut my_bases = std::collections::BTreeSet::new();
+        for lz in 0..16u32 {
+            for lx in 0..16u32 {
+                for y in crate::generator::WORLD_BOTTOM..crate::generator::WORLD_TOP {
+                    if chunk.block_at(lx, y, lz) == crate::surface::BlockId::DarkOakLog {
+                        my_bases.insert((cx * 16 + lx as i32, y, cz * 16 + lz as i32));
+                        break;
+                    }
+                }
+            }
+        }
+        let only_ref: Vec<_> = ref_bases.difference(&my_bases).collect();
+        let only_my: Vec<_> = my_bases.difference(&ref_bases).collect();
+        eprintln!("TRUNK ref={} my={} match={}", ref_bases.len(), my_bases.len(),
+            ref_bases.len() - only_ref.len());
+        eprintln!("TRUNK only_ref: {:?}", only_ref);
+        eprintln!("TRUNK only_my:  {:?}", only_my);
+        panic!("TRUNK-DONE");
+    }
+
+    fn ref_trunk_bases(dir: &str, cx: i32, cz: i32) -> std::collections::BTreeSet<(i32, i32, i32)> {
+        use neutron_world::nbt::ussr_nbt::owned::{List, Tag};
+        use neutron_world::nbt::{compound_get, read_nbt};
+        use neutron_world::region::Region;
+        let mut out = std::collections::BTreeSet::new();
+        let (rx, rz) = (cx >> 5, cz >> 5);
+        let path = std::path::PathBuf::from(format!("{dir}/r.{rx}.{rz}.mca"));
+        let Ok(region) = Region::open(&path) else { return out };
+        let region = region.with_coords(rx, rz);
+        let Ok(data) = region.get_chunk(cx & 31, cz & 31) else { return out };
+        let Some(data) = data else { return out };
+        let Ok(nbt) = read_nbt(&data) else { return out };
+        let sections = match compound_get(&nbt.compound, "sections") {
+            Some(Tag::List(List::Compound(l))) => l.clone(),
+            _ => return out,
+        };
+        let wb = crate::generator::WORLD_BOTTOM;
+        let mut blocks = vec![0u16; 384 * 256];
+        for sec in sections.iter() {
+            let y_sec = match compound_get(sec, "Y") {
+                Some(Tag::Byte(y)) => *y as i8 as i32,
+                Some(Tag::Int(y)) => *y,
+                _ => continue,
+            };
+            let Some(Tag::Compound(bs)) = compound_get(sec, "block_states") else { continue };
+            let Some(Tag::List(List::Compound(palette))) = compound_get(bs, "palette") else { continue };
+            let names: Vec<String> = palette.iter().map(|pc| match compound_get(pc, "Name") {
+                Some(Tag::String(s)) => s.to_string(),
+                _ => "minecraft:air".into(),
+            }).collect();
+            if names.is_empty() { continue; }
+            let bits = if names.len() <= 1 { 0u32 } else { ((names.len() - 1).ilog2() + 1).max(4) };
+            let Some(Tag::LongArray(data)) = compound_get(bs, "data") else { continue };
+            let longs: Vec<i64> = data.to_vec();
+            let epl = 64 / bits.max(1);
+            let mask = (1u64 << bits) - 1;
+            for i in 0..4096u32 {
+                if bits == 0 { break; }
+                let li = (i / epl) as usize;
+                if li >= longs.len() { break; }
+                let bo = (i % epl) * bits;
+                let idxp = ((longs[li] as u64) >> bo) & mask;
+                let name = names.get(idxp as usize).cloned().unwrap_or_default();
+                if name == "minecraft:dark_oak_log" {
+                    let ly = (i >> 8) as i32;
+                    let lz = ((i >> 4) & 15) as i32;
+                    let lx = (i & 15) as i32;
+                    let y = y_sec * 16 + ly;
+                    blocks[((y - wb) * 256 + lz * 16 + lx) as usize] = 1;
+                }
+            }
+        }
+        for lz in 0..16i32 {
+            for lx in 0..16i32 {
+                for ly in 0..384i32 {
+                    if blocks[(ly * 256 + lz * 16 + lx) as usize] == 1 {
+                        out.insert((cx * 16 + lx, wb + ly, cz * 16 + lz));
+                        break;
+                    }
+                }
+            }
+        }
+        out
+    }
+
     fn my_tree_census_424242() {
         let gen = ChunkGenerator::new(424242);
         for (cx, cz) in [(-14i32, -14), (-13, -14)] {
