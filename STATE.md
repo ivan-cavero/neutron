@@ -357,12 +357,25 @@
 > Reconciles s57: z-major fixes ore pairs but regressed the meter
 > because the pairs CSV samples ore spills only — full parity depends
 > on every feature's last-writer relationship.
-> NEXT (per s74): nothing actionable remains in the current instrument
-> set. The options stay: (a) faithful ChunkTaskDispatcher simulation
-> (deco_schedule work; the structured offsets suggest PART of the
-> violations — the halo-batch (-1,0) 434 — are FIXABLE by removing the
-> halo batch from the sim, worth one experiment), or (b) park the
-> ~535k as the honest ceiling for this instrument generation.
+> 9c93789 (s76) HALO-BATCH EXPERIMENT: DISPROVEN. Removing the halo
+> batch (rect(-12,-12,-11,11)) from the ticket-sim: mined-pair
+> consistency ROSE to 96.33% (n=34,103) — but the FULL SCAN CRASHED:
+> 1,181,540 mismatches (97.71%) vs baseline 534,440 (+647k REGRESSION).
+> The halo batch is ESSENTIAL: it sequences the halo origins' writes that
+> the west band depends on. The mined-pair subset LIED again — it
+> excludes exactly the cells the halo batch fixes (the n denominators
+> also differ per model: with-halo n=45,391, no-halo n=34,103, z-major
+> n=19,219 — the models cover different pair subsets, so the percentages
+> were never comparable).
+> REVERTED (batch toggle removed with the deco_schedule revert).
+> ALSO committed: the s73 frozen-vs-live diagnostic test (companion to
+> the s73 revert).
+> FINAL POSITION: the mined-pair CSV is NOT a valid ranking instrument
+> for order models (subset bias, proven twice). The only valid meter is
+> the full scan (~35-40 min per order experiment). The parked ~535k
+> stands as the honest ceiling for this instrument generation; further
+> order-model work requires the faithful-scheduler simulation with the
+> full scan as the only judge (~40 min/experiment).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
