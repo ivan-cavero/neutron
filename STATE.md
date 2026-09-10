@@ -337,10 +337,24 @@
 > PARKED: order cascade ~530k (jitter); lush chain (needs scene probe);
 > carver (357, closed). Session-final baselines: 424242 98.9645% /
 > 534,440; 12345 99.1619%; 777 99.2797%.
-> NEXT: with the big families parked, the remaining tractable items are
-> the small ledgers: huge_mushroom 2,868 + sculk_patch 1,226 +
-> seagrass 398 + ruined_portal 440 — verify these are genuinely
-> feature-bug cells (not cascade) with the oracle, fix what's real.
+> 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
+> places brown caps where vanilla has air/leaves; 86% border; the
+> 302 red-vs-brown cells are displaced selector outcomes) and seagrass
+> 398 (372 displaced attempts + 26 tall/short confusion; the probability
+> roll + canSurvive match vanilla line-for-line) — BOTH ARE CASCADE
+> CELLS, no feature bugs. Folded into the parked ~535k.
+> SESSION STATE (s74): 424242 98.9645% / 534,440; 12345 99.1619%;
+> 777 99.2797%. ALL big families traced to the origin-order cascade and
+> PARKED with concrete witnesses: trees (s70 displaced positions,
+> counts equal), lush patches (s68 scan amplification), small decor
+> (s74 displaced selector outcomes). The remaining lever = the order
+> model (jitter, likely non-derivable) or a real-server scene probe.
+> NEXT: nothing actionable remains in the current instrument set. The
+> loop should either (a) invest in the faithful ChunkTaskDispatcher
+> simulation (deco_schedule work, uncertain payoff — vanilla's worker
+> jitter may be non-deterministic), or (b) re-verify the baselines
+> periodically and treat the parked ~535k as the honest ceiling for
+> this instrument generation.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
