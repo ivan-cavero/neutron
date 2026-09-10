@@ -272,12 +272,21 @@
 > per-column depth). The archived sets: evidence/lush/*.txt (+ my log,
 > gitignored — regenerate via NEUTRON_SURFACE_DUMP=1 with
 > my_lush_attempts_424242).
-> NEXT: per-column diff of the two sets (the archived files): for the
-> overlap columns compare the fill depth; for the missing columns check
-> whether vanilla's radius reached them (radius draw diff) or the
-> column scan failed (scene diff). The radius draw: xzRadius sample
-> per attempt (2 draws) — dump vanilla's radius via the oracle (add to
-> PATCHSET line) and mine via NEUTRON_LUSH_TRACE.
+> 1ceca39 (s68) ROOT-CAUSE CHAIN CLOSED: per-attempt diff — MY attempt 0
+> patch = 197 cells/197 columns (depth 1/cell, moss depth semantics
+> correct); vanilla's WHOLE 62-attempt feature = 406 cells/374 columns
+> (same depth semantics). Vanilla's attempts average ~6.5 cells; mine
+> ~100+. The scan succeeds only on air-above-solid: MY SCENE HAS MORE
+> CARVED AIR (s61's 15,711 van=stone mine=air in this window — my
+> carvers carve more). The lush patch diff = the carver air diff
+> amplified by the environment scan. Fix target: carvers.rs; the s61
+> cells are the witness set.
+> NEXT: bisect the carver air diff — the s61 cells cluster by y band
+> and chunk; re-verify my carver ELs/geometry against the vanilla
+> carver pipeline with a NON-biased instrument (the ProbeCarveTrace
+> cell probe works per-cell but used a plains biome getter — rerun
+> with the real per-cell biome). The carver walk/shape at y -48..64
+> is where my tunnels over-carve.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
