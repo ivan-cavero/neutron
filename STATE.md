@@ -162,11 +162,20 @@
 > pairs): parity IDENTICAL on tree window (7,2) — order is NOT the lever.
 > Writer map (post-s55): terrain 230k, tree 164k, veg_patch 54k,
 > simple_block 37k, block_column 17k, ore 17k — ALL origin/scene cascade.
+> 25c2318 (s57) COL-ORDER DISPROVEN (reverted): switched decoration_origin_order
+> default ticket_sim → col (z-major, 96.08% mined-pair fit vs sim 95.88%).
+> FULL SCAN 424242: 534,440 → 603,055 (+68,615 REGRESSION). The mined-pair
+> CSV is a local/partial signal; the full meter disagrees. REVERTED to
+> ticket_sim (534,440 baseline restored). NEUTRON_TRUNK_BASES probe mode
+> added (diagnostic).
 > NEXT: the terrain family's non-tree core: clay->stone 9,566 +
 > moss->stone 9,112 + clay->deepslate 7,456 (lush patches, 87% border).
-> These are scene diffs BEFORE trees: fix the lush_caves clay patch
-> placement gates at border origins (the accept-gate divergence at the
-> FIRST diverging attempt is the unit of failure).
+> These are scene diffs BEFORE trees. The s56 position-stream verification
+> (attempt-0 match) rules OUT the RNG/seed; the divergence is the
+> environment_scan/biome gates on a differing scene. The failure unit =
+> the first diverging attempt's gate. The border origins' scene = the
+> ticket-sim's 11-13% violation set — a BETTER order model is the only
+> remaining lever (the mined-pair CSV can't rank it — full meter only).
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
