@@ -234,10 +234,19 @@
 > vegetation) + gif 30 (lush_caves_vegetation) never attempted at step 9
 > despite lush_caves' JSON listing them — holder-identity or indexMapping
 > mismatch in the probe, under investigation.
-> NEXT: fix the missing gif-27/30 attempts (the probe's possibleThisStep
-> construction), then diff vanilla's per-attempt accept set vs mine for
-> the lush_caves_clay patch (count 62/origin) — the first diverging
-> attempt is the order-model witness.
+> 1a9fd52 (s64) ORACLE COMPLETE: the s63 'missing gif-27/30' was treeish()
+> ROUTING — id.contains("vegetation") captured the moss/clay patches
+> (VegetationPatchFeature) and traced them as trees instead of printing
+> ACCEPT. Narrowed to exclude (Waterlogged)VegetationPatchFeature. The
+> oracle now covers EVERY feature: vanilla's (-12,-6) origin accepts
+> lush_caves_clay (gif 29) + lush_caves_vegetation (gif 30) +
+> lush_caves_ceiling_vegetation (gif 27) — all three moss/clay writers
+> confirmed at the witness chunk. Per-attempt comparison is next.
+> NEXT: dump MY per-attempt accept/position set for lush_caves_clay +
+> lush_caves_vegetation at the 9 origins (env-gated trace in
+> feature_dispatch) and diff against vanilla's oracle output — the
+> first diverging attempt per origin is the order-model witness. Then
+> fix the order model (or the accept-gate) at those attempts.
 > Prior: S30 DOUBLE BREAKTHROUGH on seed 777 (98.7122% → 99.2797%):
 > (1) 55b0f5f surface-rule cave-biome sampled per block (was 8-block cache);
 > (2) 0d3093d REMOVED the 'y ≥ min_surface_level−16 → surface_biome'
