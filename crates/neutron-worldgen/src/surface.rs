@@ -313,6 +313,7 @@ pub enum BlockId {
     Target = 306,
     Torch = 307,
     WhiteCandle = 308,
+    WallTorch = 309,
 }
 
 impl BlockId {
@@ -604,6 +605,7 @@ impl BlockId {
             306 => Some(Self::Target),
             307 => Some(Self::Torch),
             308 => Some(Self::WhiteCandle),
+            309 => Some(Self::WallTorch),
             _ => None,
         }
     }
@@ -779,6 +781,7 @@ impl BlockId {
             Self::StonePressurePlate => "minecraft:stone_pressure_plate",
             Self::Target => "minecraft:target",
             Self::Torch => "minecraft:torch",
+            Self::WallTorch => "minecraft:wall_torch",
             Self::WhiteCandle => "minecraft:white_candle",
             Self::Stone => "minecraft:stone",
             Self::Granite => "minecraft:granite",
@@ -1188,6 +1191,7 @@ impl BlockId {
             "stone_pressure_plate" => Some(Self::StonePressurePlate),
             "target" => Some(Self::Target),
             "torch" => Some(Self::Torch),
+            "wall_torch" => Some(Self::WallTorch),
             "white_candle" => Some(Self::WhiteCandle),
             _ => None,
         }
@@ -1478,6 +1482,7 @@ pub fn vanilla_name(b: BlockId) -> &'static str {
         BlockId::StonePressurePlate => "minecraft:stone_pressure_plate",
         BlockId::Target => "minecraft:target",
         BlockId::Torch => "minecraft:torch",
+        BlockId::WallTorch => "minecraft:wall_torch",
         BlockId::WhiteCandle => "minecraft:white_candle",
     }
 }

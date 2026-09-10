@@ -176,7 +176,37 @@ fn place_support(
         generate_box(region, p, x1, y1, z, x1, y1, z, BlockId::OakPlanks);
     } else {
         generate_box(region, p, x0, y1, z, x1, y1, z, BlockId::OakPlanks);
+        // Vanilla placeSupport else-branch: two wall-torch rolls (0.05 each,
+        // SOUTH at z-1 / NORTH at z+1). These consume the RNG stream even
+        // when the roll fails — skipping them desynced every later draw of
+        // the corridor's support/cobweb/torch sequence.
+        if rng.next_f32() < 0.05 {
+            maybe_generate_block(region, p, x0 + 1, y1, z - 1, BlockId::WallTorch);
+        }
+        if rng.next_f32() < 0.05 {
+            maybe_generate_block(region, p, x0 + 1, y1, z + 1, BlockId::WallTorch);
+        }
     }
+}
+
+/// `StructurePiece.maybeGenerateBlock`: place only when the cell is
+/// air/open (isInterior) and inside the region.
+fn maybe_generate_block(
+    region: &mut RegionBuf,
+    p: &Piece,
+    x: i32,
+    y: i32,
+    z: i32,
+    block: BlockId,
+) {
+    let (wx, wy, wz) = world_pos(p, x, y, z);
+    if region.index(wx, wy, wz).is_none() {
+        return;
+    }
+    if !region.get(wx, wy, wz).is_air() {
+        return;
+    }
+    region.set(wx, wy, wz, block);
 }
 
 fn set_planks_block(region: &mut RegionBuf, p: &Piece, x: i32, y: i32, z: i32) {
