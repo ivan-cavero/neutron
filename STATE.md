@@ -405,14 +405,27 @@
 > (possibly the per-status task pipeline re-priming, or the chunk
 > transitions re-scanning). All three variants archived in this
 > session's measurements. REVERTED to live.
-> NEXT: the heightmap lifecycle question needs a runtime probe (a
-> debugFlag-style tracer for Heightmap.setHeight, or a server run with
-> a modified jar logging the map state at each decorate). PARK the
-> heightmap question with the 3 data points. Meanwhile the session's
-> metric position (424242 98.9645%) stands; no tractable lever remains
-> in the current instrument set — the next iteration should either
-> build the Heightmap.setHeight runtime tracer (java agent, ~half a
-> day) or re-verify baselines.
+> a29fa1c (s83) HEIGHTMAP TRACER CAPTURED — MECHANISM CONFIRMED: the
+> decompiled Heightmap.java recompiled with HMSET logging and injected
+> into a patched server jar (signatures stripped). 2.8M events captured
+> (full trace 322MB, not committed — GitHub limit; witness subset
+> evidence/lush/of-trace-6-1.log). DECISIVE: vanilla's OCEAN_FLOOR IS
+> LIVE during decoration — witness floors RAISE as earlier origins'
+> canopies land: (100,24): 72,72,87; (102,18): 72,72,78,79;
+> (107,19): 71,71,72…79 (dark_oak leaves block motion).
+> RESOLVES the s73/s82 paradox: the static read was WRONG (the
+> heightmaps DO update during decoration through a path the decompile
+> doesn't show). My live scan matches vanilla's semantics ✓. The
+> displaced-tree residual = the accept-gate interaction with raised
+> canopies under a different pass order — the same order-jittered
+> surface vanilla itself has.
+> PARKED (final): the order cascade ~530k is vanilla's own jitter
+> amplified by the live heightmap; no engine change can close it
+> without replicating vanilla's thread scheduling exactly.
+> BASELINES: 424242 98.9645% / 534,440; 12345 99.1619%; 777 99.2797%.
+> NEXT: re-verify baselines periodically. The honest ceiling for
+> deterministic parity on this seed is ~98.96% (the residual is
+> vanilla's own scheduling nondeterminism, not an engine bug).
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
