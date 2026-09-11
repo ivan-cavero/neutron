@@ -413,6 +413,45 @@ pub(crate) fn decoration_origin_order(
     origin_x: i32,
     origin_z: i32,
 ) -> Vec<(i32, i32)> {
+    // s81: NEUTRON_TRUE_ORDER=1 replays the TRUE decorate order captured from a
+    // real server boot (the MC_DEBUG trace, s79-s80, level-then-FIFO poll
+    // order over the SUB events). Region-local translation + deterministic
+    // append of any origins the trace missed.
+    if std::env::var_os("NEUTRON_TRUE_ORDER").is_some() {
+        if let Ok(txt) = std::fs::read_to_string("/tmp/true-decorate-order.txt") {
+            let seq: Vec<(i32, i32)> = txt
+                .lines()
+                .filter_map(|l| {
+                    let mut it = l.split_whitespace();
+                    Some((it.next()?.parse().ok()?, it.next()?.parse().ok()?))
+                })
+                .collect();
+            if seq.len() >= 500 {
+                let ox = origin_x / 16;
+                let oz = origin_z / 16;
+                let mut local: Vec<(i32, i32)> = seq
+                    .iter()
+                    .filter_map(|&(x, z)| {
+                        let a = x - ox;
+                        let b = z - oz;
+                        if (0..chunks).contains(&a) && (0..chunks).contains(&b) {
+                            Some((a, b))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                for b in 0..chunks {
+                    for a in 0..chunks {
+                        if !local.contains(&(a, b)) {
+                            local.push((a, b));
+                        }
+                    }
+                }
+                return local;
+            }
+        }
+    }
     let mid = chunks / 2;
     let mut out: Vec<(i32, i32)> = Vec::with_capacity((chunks * chunks) as usize);
     let order =
