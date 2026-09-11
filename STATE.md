@@ -391,20 +391,28 @@
 > the matched positions. NEUTRON_TRUE_ORDER replay mode kept (env-
 > gated; was ungated initially — fixed the footprint/default-order
 > test failures it caused).
-> NEXT: the gate audit on the matched positions — for the tree window
-> (6,1): my passes accept at vanilla's (107,19) y=71 AND y=76 (stacked
-> trees on live-heightmap); vanilla accepted only y=71. The stacked
-> trees (live heightmap reading earlier origins' canopies) exist in
-> VANILLA TOO (its Heightmap updates on setBlock for LIVE types — but
-> OCEAN_FLOOR placement reads the map primed at CARVERS→FEATURES, frozen).
-> The frozen experiment REGRESSED though (s73) — reconcile: vanilla's
-> OCEAN_FLOOR_WG vs OCEAN_FLOOR distinction! The placement modifier
-> uses OCEAN_FLOOR (primed at CARVERS, frozen), while MY live scan
-> reads OCEAN_FLOOR-like semantics live. Re-check which Heightmap.
-> Types the dark_forest_vegetation JSON requests (it requests
-> OCEAN_FLOOR) and re-test the frozen map with the WG/NON-WG distinction
-> handled correctly (the s73 frozen used MY post-carver scan — verify
-> it primed the same cells vanilla's OCEAN_FLOOR map would).
+> 8d9d781-followup (s82) LAZY PRIMING REGRESSED TOO: implemented the
+> vanilla-faithful lazy per-chunk OCEAN_FLOOR priming
+> (getOrCreateHeightmapUnprimed primes on FIRST decoration read; the
+> chunk completes CARVERS incl. mineshaft overlap writes by then).
+> Tree window: 14,659 mismatches vs live 11,834 — REGRESSED (+2,825).
+> THIRD DATA POINT: live scan 11,834 / bulk frozen 12,794-21,491 / lazy
+> frozen 14,659 — the LIVE scan matches vanilla best across all
+> variants, despite the static decompile reading (ProtoChunk.
+> setBlockState updates no heightmaps; ChunkStatus primes FINAL maps at
+> CARVERS). VANILLA MECHANISM UNRESOLVED: something updates
+> OCEAN_FLOOR during decoration that the decompile doesn't show
+> (possibly the per-status task pipeline re-priming, or the chunk
+> transitions re-scanning). All three variants archived in this
+> session's measurements. REVERTED to live.
+> NEXT: the heightmap lifecycle question needs a runtime probe (a
+> debugFlag-style tracer for Heightmap.setHeight, or a server run with
+> a modified jar logging the map state at each decorate). PARK the
+> heightmap question with the 3 data points. Meanwhile the session's
+> metric position (424242 98.9645%) stands; no tractable lever remains
+> in the current instrument set — the next iteration should either
+> build the Heightmap.setHeight runtime tracer (java agent, ~half a
+> day) or re-verify baselines.
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
