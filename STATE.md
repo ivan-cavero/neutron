@@ -381,11 +381,30 @@
 > trees/patches may not be order-driven at all despite the same-counts-
 > different-positions signature (which the s70 trace showed appears in
 > MY passes too).
-> NEXT: re-run the tree-family window oracle with the TRUE order replayed
-> in my engine (NEUTRON_DECO_BATCHES/origin order from
-> /tmp/true-decorate-order.txt): if the final trees still mismatch, the
-> order model was never the cause — the search returns to the gate
-> logic (water-depth filter / below-block) on the matched positions.
+> 8d9d781 (s81) DEFINITIVE: TRUE vanilla order replayed in my engine →
+> tree window (7,2) = 12,794 mismatches vs ticket-sim 11,834 — the
+> TRUE order is WORSE. OVER TURNS s70: the order model was NEVER the
+> cause of the tree-family mismatches. The displaced-tree signature
+> (same counts, different positions; vanilla positions present in some
+> passes) + this measurement pinpoints the divergence at the GATES
+> (water-depth filter / below-block) or the per-pass scene state at
+> the matched positions. NEUTRON_TRUE_ORDER replay mode kept (env-
+> gated; was ungated initially — fixed the footprint/default-order
+> test failures it caused).
+> NEXT: the gate audit on the matched positions — for the tree window
+> (6,1): my passes accept at vanilla's (107,19) y=71 AND y=76 (stacked
+> trees on live-heightmap); vanilla accepted only y=71. The stacked
+> trees (live heightmap reading earlier origins' canopies) exist in
+> VANILLA TOO (its Heightmap updates on setBlock for LIVE types — but
+> OCEAN_FLOOR placement reads the map primed at CARVERS→FEATURES, frozen).
+> The frozen experiment REGRESSED though (s73) — reconcile: vanilla's
+> OCEAN_FLOOR_WG vs OCEAN_FLOOR distinction! The placement modifier
+> uses OCEAN_FLOOR (primed at CARVERS, frozen), while MY live scan
+> reads OCEAN_FLOOR-like semantics live. Re-check which Heightmap.
+> Types the dark_forest_vegetation JSON requests (it requests
+> OCEAN_FLOOR) and re-test the frozen map with the WG/NON-WG distinction
+> handled correctly (the s73 frozen used MY post-carver scan — verify
+> it primed the same cells vanilla's OCEAN_FLOOR map would).
 > 3194c13 (s74) SMALL-LEDGER AUDIT COMPLETE: huge_mushroom 2,868 (mine
 > places brown caps where vanilla has air/leaves; 86% border; the
 > 302 red-vs-brown cells are displaced selector outcomes) and seagrass
